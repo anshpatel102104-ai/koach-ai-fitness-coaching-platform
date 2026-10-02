@@ -56,8 +56,8 @@ export default function NotificationSettings() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['notif-settings', user?.email],
-    queryFn: () => base44.entities.NotificationSettings.filter({ coach_id: user.email }, '-created_date', 1),
-    enabled: !!user?.email,
+    queryFn: () => base44.entities.NotificationSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    enabled: !!user?.id,
   });
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function NotificationSettings() {
   }, [existing]);
 
   const save = useCallback(async (data) => {
-    const payload = { ...data, coach_id: user?.email };
+    const payload = { ...data, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
     if (settingsId) {
       await base44.entities.NotificationSettings.update(settingsId, payload);
     } else {

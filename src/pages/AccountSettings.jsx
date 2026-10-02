@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,12 +81,18 @@ function PasswordForm({ onClose }) {
     { label: 'At least one special character', met: /[^A-Za-z0-9]/.test(next) },
   ];
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!current) return toast.error('Please enter your current password');
     if (!reqs.every(r => r.met)) return toast.error('Password does not meet all requirements');
     if (next !== confirm) return toast.error('Passwords do not match');
-    toast.success('Password updated successfully ✓');
-    onClose();
+    // Actually update the password (this was a no-op that only toasted success).
+    try {
+      await supabase.auth.updatePassword(next);
+      toast.success('Password updated successfully ✓');
+      onClose();
+    } catch (err) {
+      toast.error(err?.message || 'Could not update password. Please sign in again and retry.');
+    }
   };
 
   return (

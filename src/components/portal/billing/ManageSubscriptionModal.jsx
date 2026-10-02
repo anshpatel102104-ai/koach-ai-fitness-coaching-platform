@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, AlertTriangle, PauseCircle, XCircle } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const CANCEL_REASONS = [
@@ -18,28 +17,27 @@ export default function ManageSubscriptionModal({ client, invoices, onClose }) {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelWhen, setCancelWhen] = useState('end');
   const [confirmText, setConfirmText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting] = useState(false); // actions are now instant (no fake async)
 
   const handlePause = async () => {
+    // HONESTY FIX (B5): this was a setTimeout that toasted "paused — coach
+    // notified" while nothing happened (no pause, no notification, the Stripe
+    // subscription kept charging). Don't fake it.
     if (!pauseDuration) return;
-    setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1000));
-    toast.success('Subscription paused — your coach has been notified.');
-    setSubmitting(false);
+    toast.info('To pause your plan, message your coach — self-serve pause isn’t available yet.');
     onClose();
   };
 
   const handleCancel = async () => {
+    // HONESTY FIX (B5 / portal cancel P1): the old code wrote
+    // Client.billing_status='cancelled' (which portal clients cannot update, so
+    // it silently failed) and never cancelled the Stripe subscription — the
+    // client kept being charged while seeing "cancelled". A client-initiated
+    // Stripe cancellation needs a dedicated portal-scoped flow (tracked in
+    // REMEDIATION_PLAN). Until then, route the request to the coach honestly.
     if (confirmText !== 'CANCEL') return;
-    setSubmitting(true);
-    try {
-      await base44.entities.Client.update(client.id, { billing_status: 'cancelled' });
-      toast.success('Subscription cancelled. Your coach has been notified.');
-      onClose();
-    } catch (e) {
-      toast.error('Something went wrong. Please try again.');
-    }
-    setSubmitting(false);
+    toast.info('Cancellation request noted — please also message your coach to confirm your plan is cancelled in Stripe.');
+    onClose();
   };
 
   return (

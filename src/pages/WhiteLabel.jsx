@@ -63,8 +63,8 @@ export default function WhiteLabel() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['wl-settings', user?.email],
-    queryFn: () => base44.entities.WhiteLabelSettings.filter({ coach_id: user.email }, '-created_date', 1),
-    enabled: !!user?.email,
+    queryFn: () => base44.entities.WhiteLabelSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    enabled: !!user?.id,
   });
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function WhiteLabel() {
   }, [existing]);
 
   const persist = useCallback(async (data, opts = {}) => {
-    const payload = { ...data, coach_id: user?.email };
+    const payload = { ...data, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
     if (settingsId) {
       await base44.entities.WhiteLabelSettings.update(settingsId, payload);
     } else {

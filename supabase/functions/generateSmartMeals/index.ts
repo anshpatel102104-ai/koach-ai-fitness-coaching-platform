@@ -11,15 +11,24 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { ownsClient } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { collectFoodNames, findAllergenViolations } from '../_shared/aiSafety.js';
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Pre-Workout', 'Post-Workout', 'Snack'];
 
-function buildBatchPrompt(mealNames: string[], calories: number, protein_g: number, carbs_g: number, fats_g: number, options_count: number, totalMeals: number) {
+function avoidLine(allergies?: string, dislikedFoods?: string, diet?: string) {
+  const parts = [];
+  if (diet) parts.push(`Diet: ${diet}.`);
+  if (allergies) parts.push(`ALLERGIES (never include, non-negotiable): ${allergies}.`);
+  if (dislikedFoods) parts.push(`Avoid disliked: ${dislikedFoods}.`);
+  return parts.join(' ');
+}
+
+function buildBatchPrompt(mealNames: string[], calories: number, protein_g: number, carbs_g: number, fats_g: number, options_count: number, totalMeals: number, avoid = '') {
   const perMealCal = Math.round(calories / totalMeals);
   return `You are a sports dietitian. Generate exactly ${mealNames.length} meal(s): ${mealNames.join(', ')}.
 Each meal must have ${options_count} distinct options.
 Per-meal target: ~${perMealCal} kcal, proportional protein/carbs/fats from daily totals of ${protein_g}g P / ${carbs_g || 'balanced'} C / ${fats_g || 'balanced'} F.
-Each option: 2-4 foods with accurate macros. Give each a short label (e.g. "High Protein", "Quick & Easy").
+${avoid ? avoid + '\n' : ''}Each option: 2-4 foods with accurate macros. Give each a short label (e.g. "High Protein", "Quick & Easy").
 Return ONLY valid JSON with a "meals" array (${mealNames.length} item${mealNames.length > 1 ? 's' : ''}); each meal: {"meal_name":"...","time":"...","options":[{"label":"...","foods":[{"food_name":"...","portion":"...","calories":0,"protein":0,"carbs":0,"fats":0}]}]}.`;
 }
 
@@ -43,7 +52,10 @@ Deno.serve(async (req) => {
       mode, meal,
       client_id,
       nutrition_plan_id,
+      allergies, disliked_foods, diet,
     } = body;
+
+    const avoid = avoidLine(allergies, disliked_foods, diet);
 
     const meter = await meterAiGeneration(svc, caller.profile);
     if (!meter.allowed) return jsonResponse(meter.body, meter.status);
@@ -56,8 +68,14 @@ This meal = roughly 1/${meal.total_meals || 4} of daily totals.
 Each option should have similar calories/macros. Give each option a short label.
 Return ONLY a single meal JSON object: {"meal_name":"...","time":"...","options":[{"label":"...","foods":[{"food_name":"...","portion":"...","calories":0,"protein":0,"carbs":0,"fats":0}]}]}.`;
 
-      const llm = await invokeClaude({ prompt, maxTokens: 2048, expectJson: true });
+      const promptWithAvoid = avoid ? `${prompt}\n${avoid}` : prompt;
+      const llm = await invokeClaude({ prompt: promptWithAvoid, maxTokens: 2048, expectJson: true });
       if (!llm.ok) return jsonResponse({ error: llm.error }, llm.status ?? 500);
+      // Deterministic allergen check on the regenerated meal (B-SAFETY).
+      const violations = findAllergenViolations(collectFoodNames(llm.parsed), allergies);
+      if (violations.length) {
+        return jsonResponse({ error: 'allergen_violation', violations }, 422);
+      }
       return jsonResponse({ meal: llm.parsed });
     }
 
@@ -69,11 +87,11 @@ Return ONLY a single meal JSON object: {"meal_name":"...","time":"...","options"
     const secondHalf = allMealNames.slice(midpoint);
 
     const batchPromises = [
-      invokeClaude({ prompt: buildBatchPrompt(firstHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals), maxTokens: 4096, expectJson: true }),
+      invokeClaude({ prompt: buildBatchPrompt(firstHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, expectJson: true }),
     ];
     if (secondHalf.length > 0) {
       batchPromises.push(
-        invokeClaude({ prompt: buildBatchPrompt(secondHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals), maxTokens: 4096, expectJson: true }),
+        invokeClaude({ prompt: buildBatchPrompt(secondHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, expectJson: true }),
       );
     }
 
@@ -86,6 +104,14 @@ Return ONLY a single meal JSON object: {"meal_name":"...","time":"...","options"
       ...(firstResult?.parsed?.meals || []),
       ...(secondResult?.parsed?.meals || []),
     ];
+
+    // Deterministic allergen check BEFORE any persistence (B-SAFETY). The main
+    // meal generator previously had no allergy input at all and wrote plans to
+    // nutrition_plans with zero allergen checking.
+    const violations = findAllergenViolations(collectFoodNames({ meals }), allergies);
+    if (violations.length) {
+      return jsonResponse({ error: 'allergen_violation', violations }, 422);
+    }
 
     // ── Persist to nutrition_plans (draft) before returning ─────────────────
     if (meals.length > 0) {

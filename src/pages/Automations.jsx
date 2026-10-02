@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase as base44 } from '@/api/supabaseClient';
 import {
@@ -276,12 +276,15 @@ export default function Automations() {
 
   const { runAutomations } = useAutomationEngine(rules, clients, checkIns, plans, badges, queryClient);
 
-  // Auto-run on load
-  useEffect(() => {
-    if (rules.length > 0 && clients.length > 0) {
-      runAutomations();
-    }
-  }, []); // eslint-disable-line
+  // SECURITY / DATA-INTEGRITY (B2): the auto-run-on-mount was removed. The
+  // browser engine has no cross-run idempotency (it does not read prior
+  // automation_logs), so firing it on every page load/refresh sent duplicate
+  // client messages and — worst — applied `adjust_calories` as a repeated
+  // read-modify-write, silently shifting a client's calorie target on each
+  // refresh. Automations must run on a schedule via the server function
+  // (supabase/functions/runAutomations), which IS idempotent per window and now
+  // tenant-scoped. The manual "Run Now" button remains for explicit coach use;
+  // migrate it to invoke the server function as a follow-up.
 
   const createMutation = useMutation({ mutationFn: d => base44.entities.AutomationRule.create(d), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
   const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.AutomationRule.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });

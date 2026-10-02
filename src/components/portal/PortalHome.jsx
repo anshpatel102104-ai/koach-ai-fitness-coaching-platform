@@ -6,11 +6,11 @@ import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, ChevronRight, Play, Check, User } from 'lucide-react';
 
-function PortalBellButton({ navigate, userEmail }) {
+function PortalBellButton({ navigate, userId }) {
   const { data: notifs = [] } = useQuery({
-    queryKey: ['portal-notifications', userEmail],
-    queryFn: () => base44.entities.Notification.filter({ recipient_id: userEmail, is_dismissed: false }, '-created_date', 30),
-    enabled: !!userEmail,
+    queryKey: ['portal-notifications', userId],
+    queryFn: () => base44.entities.Notification.filter({ recipient_id: userId, is_dismissed: false }, '-created_date', 30),
+    enabled: !!userId,
     refetchInterval: 30000,
   });
   const unread = notifs.filter(n => !n.is_read).length;
@@ -412,9 +412,9 @@ export default function PortalHome({ user }) {
   }, [existingLog]);
 
   const { data: recentLogs = [] } = useQuery({
-    queryKey: ['portal-recent-logs', user?.id],
-    queryFn: () => base44.entities.DailyLog.filter({ client_id: user?.id || 'me' }, '-date', 30),
-    enabled: !!user,
+    queryKey: ['portal-recent-logs', myClient?.id],
+    queryFn: () => base44.entities.DailyLog.filter({ client_id: myClient.id }, '-date', 30),
+    enabled: !!myClient?.id,
   });
 
   const { data: messages = [] } = useQuery({
@@ -428,10 +428,14 @@ export default function PortalHome({ user }) {
   const saveMutation = useMutation({
     mutationFn: (data) => logId
       ? base44.entities.DailyLog.update(logId, data)
-      : base44.entities.DailyLog.create({ ...data, client_id: user?.id || 'me', date: TODAY }),
+      : base44.entities.DailyLog.create({ ...data, client_id: myClient.id, date: TODAY }),
     onSuccess: (res) => { if (!logId && res?.id) setLogId(res.id); },
   });
-  const saveLog = useCallback((updated) => { setLog(updated); saveMutation.mutate(updated); }, [logId]);
+  const saveLog = useCallback((updated) => {
+    setLog(updated);
+    if (!logId && !myClient?.id) return; // can't create a log without the resolved client id
+    saveMutation.mutate(updated);
+  }, [logId, myClient?.id]);
 
   const dayOfWeek = new Date().getDay();
   const workouts = myProgram?.workouts || [];
@@ -479,7 +483,7 @@ export default function PortalHome({ user }) {
             <p className="text-primary text-sm font-semibold mt-1">{motivLine}</p>
           </div>
           <div className="flex items-center gap-2 ml-4">
-            <PortalBellButton navigate={navigate} userEmail={user?.email} />
+            <PortalBellButton navigate={navigate} userId={user?.id} />
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate('/portal/profile')}
               className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>

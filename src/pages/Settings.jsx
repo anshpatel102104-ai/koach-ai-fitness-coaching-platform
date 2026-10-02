@@ -202,13 +202,19 @@ function SecurityTab() {
     { label: 'One special character', met: /[^A-Za-z0-9]/.test(next) },
   ];
 
-  const handlePasswordSubmit = () => {
+  const handlePasswordSubmit = async () => {
     if (!current) return toast.error('Enter your current password');
     if (!reqs.every(r => r.met)) return toast.error('Password does not meet all requirements');
     if (next !== confirm) return toast.error('Passwords do not match');
-    toast.success('Password updated successfully ✓');
-    setShowPasswordForm(false);
-    setCurrent(''); setNext(''); setConfirm('');
+    // Actually update the password (this was a no-op that only toasted success).
+    try {
+      await base44.auth.updatePassword(next);
+      toast.success('Password updated successfully ✓');
+      setShowPasswordForm(false);
+      setCurrent(''); setNext(''); setConfirm('');
+    } catch (err) {
+      toast.error(err?.message || 'Could not update password. Please sign in again and retry.');
+    }
   };
 
   return (

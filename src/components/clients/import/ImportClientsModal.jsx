@@ -35,8 +35,9 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
     setStep(1);
     setAiLoading(true);
     try {
+      const coach = await base44.auth.me(); // coach_id is uuid (profiles.id), not the literal 'me'
       const job = await base44.entities.ClientImportJob.create({
-        coach_id: 'me', status: 'pending', file_name: fileName,
+        coach_id: coach.id, status: 'pending', file_name: fileName,
         headers, sample_rows: rows.slice(0, 5), all_rows: rows, total_rows: rows.length,
       });
       setJobId(job.id);

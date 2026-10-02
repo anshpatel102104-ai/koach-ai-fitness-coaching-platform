@@ -12,7 +12,7 @@
 //
 // Env: RESEND_API_KEY, FROM_NAME/FROM_EMAIL (VITE_* fallbacks), plus the
 // standard SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, callerClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
 
 function isServiceRoleCall(req) {
@@ -21,12 +21,38 @@ function isServiceRoleCall(req) {
   return Boolean(serviceKey) && token === serviceKey;
 }
 
+/**
+ * SECURITY (S5): a verified session must not be able to send mail to an
+ * ARBITRARY address from our verified domain (phishing + denial-of-wallet).
+ * A session caller may only email a recipient they legitimately own:
+ *   - their own account email, OR
+ *   - a client they can see (RLS-scoped), OR
+ *   - a team member they can see (RLS-scoped).
+ * We do the lookups with the caller-scoped (RLS) client, so "can the caller
+ * see a row with this email" IS the tenant check. The service-role path
+ * (trigger/cron/other functions) is unrestricted, as before.
+ */
+async function callerMayEmail(req, caller, to) {
+  const target = String(to).trim().toLowerCase();
+  if (!target) return false;
+  if (caller?.auth?.email && caller.auth.email.toLowerCase() === target) return true;
+  const rls = callerClient(req);
+  const { data: clientMatch } = await rls
+    .from('clients').select('id').ilike('email', target).limit(1);
+  if (clientMatch?.length) return true;
+  const { data: teamMatch } = await rls
+    .from('team_members').select('id').ilike('email', target).limit(1);
+  return Boolean(teamMatch?.length);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {
-    if (!isServiceRoleCall(req)) {
-      const caller = await getCaller(req);
+    const serviceCall = isServiceRoleCall(req);
+    let caller = null;
+    if (!serviceCall) {
+      caller = await getCaller(req);
       if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
@@ -34,6 +60,11 @@ Deno.serve(async (req) => {
 
     if (!to || !subject || !html) {
       return jsonResponse({ error: 'Missing required fields: to, subject, html' }, 400);
+    }
+
+    // Recipient allowlist for session callers (service-role path is trusted).
+    if (!serviceCall && !(await callerMayEmail(req, caller, to))) {
+      return jsonResponse({ error: 'Recipient not permitted for this account' }, 403);
     }
     if (!Deno.env.get('RESEND_API_KEY')) {
       return jsonResponse({ error: 'RESEND_API_KEY not configured' }, 500);

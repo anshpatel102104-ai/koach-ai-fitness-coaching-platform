@@ -291,8 +291,8 @@ export default function CoachProfile() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['coach-profile', user?.email],
-    queryFn: () => base44.entities.CoachProfile.filter({ coach_id: user.email }, '-created_date', 1),
-    enabled: !!user?.email,
+    queryFn: () => base44.entities.CoachProfile.filter({ coach_id: user.id }, '-created_date', 1),
+    enabled: !!user?.id,
   });
 
   useEffect(() => {
@@ -307,7 +307,7 @@ export default function CoachProfile() {
         first_name: user.full_name?.split(' ')[0] || '',
         last_name: user.full_name?.split(' ').slice(1).join(' ') || '',
         business_email: user.email || '',
-        coach_id: user.email,
+        coach_id: user.id, // uuid (profiles.id), not email
       }));
     }
   }, [existing, user]);
@@ -324,7 +324,7 @@ export default function CoachProfile() {
       if (profileId) {
         await base44.entities.CoachProfile.update(profileId, payload);
       } else {
-        const created = await base44.entities.CoachProfile.create({ ...payload, coach_id: user?.email });
+        const created = await base44.entities.CoachProfile.create({ ...payload, coach_id: user?.id });
         setProfileId(created.id);
       }
       setSavedAt(new Date());

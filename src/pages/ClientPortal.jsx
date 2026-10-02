@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { supabasePortal as base44 } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Home, Dumbbell, BarChart2, MessageSquare, Users, CalendarDays } from 'lucide-react';
 import { addDays, parseISO, differenceInDays } from 'date-fns';
@@ -34,9 +34,9 @@ function BottomNav({ user, hideForActiveWorkout }) {
   const location = useLocation();
 
   const { data: clients = [] } = useQuery({
-    queryKey: ['portal-client-nav', user?.id],
-    queryFn: () => base44.entities.Client.filter({ user_id: user.id }, '-created_date', 1),
-    enabled: !!user?.id,
+    queryKey: ['portal-client-nav', user?.email],
+    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    enabled: !!user?.email,
   });
   const myClient = clients[0];
 

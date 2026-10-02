@@ -80,13 +80,13 @@ export default function PaymentTracking() {
     return list;
   }, [allEntries, statusFilter, search, sort]);
 
-  const handleRefundConfirm = async (refundData) => {
-    await base44.entities.Payment.update(refundTarget.id, {
-      status: 'refunded',
-      description: `${refundTarget.description || ''} [Refund: ${refundData.reason}]`,
-    });
-    qc.invalidateQueries({ queryKey: ['payments-tracking'] });
-    toast.success(`Refund of $${refundData.amount.toFixed(2)} processed`);
+  const handleRefundConfirm = async (_refundData) => {
+    // HONESTY FIX (B5): this used to set status='refunded' and toast "Refund
+    // processed" while NO Stripe refund ever happened — the coach believed the
+    // client was repaid when they were not. Refunds move real money and must be
+    // issued in Stripe. Do not write a misleading status. (A real stripeRefund
+    // edge function is tracked in REMEDIATION_PLAN.)
+    toast.info('Issue this refund from your Stripe dashboard — refunds are not processed here yet.');
     setRefundTarget(null);
   };
 

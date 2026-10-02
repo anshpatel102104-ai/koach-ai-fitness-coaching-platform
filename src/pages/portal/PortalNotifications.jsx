@@ -243,35 +243,35 @@ export default function PortalNotifications({ user }) {
   const myClient = clients[0];
 
   const { data: notifications = [], refetch } = useQuery({
-    queryKey: ['portal-notifications', user?.email],
+    queryKey: ['portal-notifications', user?.id],
     queryFn: () => base44.entities.Notification.filter(
-      { recipient_id: user.email, is_dismissed: false },
+      { recipient_id: user.id, is_dismissed: false },
       '-created_date',
       60
     ),
-    enabled: !!user?.email,
+    enabled: !!user?.id,
     refetchInterval: 30000,
   });
 
   // Mark all as read when page opens
   useEffect(() => {
-    if (!user?.email || notifications.length === 0) return;
+    if (!user?.id || notifications.length === 0) return;
     const unread = notifications.filter(n => !n.is_read);
     if (unread.length === 0) return;
     Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true }))).then(() => {
       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
     });
-  }, [notifications.length, user?.email]);
+  }, [notifications.length, user?.id]);
 
   // Real-time
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
     const unsub = base44.entities.Notification.subscribe((event) => {
-      if (event.data?.recipient_id !== user.email) return;
+      if (event.data?.recipient_id !== user.id) return;
       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
     });
     return unsub;
-  }, [user?.email]);
+  }, [user?.id]);
 
   const markAllRead = async () => {
     const unread = notifications.filter(n => !n.is_read);

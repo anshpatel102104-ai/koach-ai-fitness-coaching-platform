@@ -31,15 +31,20 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'getClientInvoices') {
+      // SECURITY (B-STRIPE-XT / IDOR): client_id is REQUIRED and ownership is
+      // always verified. The previous `if (client_id)` guard was skippable — a
+      // caller could omit client_id and read ANY Stripe customer's invoices.
       const { customer_id, client_id } = payload;
-      if (client_id) {
-        const client = await ownsClient(svc, userId, client_id);
-        if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
-        if (client.stripe_customer_id && client.stripe_customer_id !== customer_id) {
-          return jsonResponse({ error: 'Forbidden: customer ID mismatch' }, 403);
-        }
+      if (!client_id) return jsonResponse({ error: 'client_id is required' }, 400);
+      const client = await ownsClient(svc, userId, client_id);
+      if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
+      // The customer queried must be THIS client's stored customer.
+      const targetCustomer = client.stripe_customer_id;
+      if (!targetCustomer) return jsonResponse({ invoices: [] });
+      if (customer_id && customer_id !== targetCustomer) {
+        return jsonResponse({ error: 'Forbidden: customer ID mismatch' }, 403);
       }
-      const invoices = await stripe.invoices.list({ customer: customer_id, limit: 20 });
+      const invoices = await stripe.invoices.list({ customer: targetCustomer, limit: 20 });
       return jsonResponse({ invoices: invoices.data });
     }
 
@@ -108,8 +113,26 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'getCharges') {
-      const charges = await stripe.charges.list({ limit: 100 });
-      return jsonResponse({ charges: charges.data });
+      // SECURITY (B-STRIPE-XT): all coaches share one Stripe account (no
+      // Connect), so an unscoped charges.list() returned EVERY coach's client
+      // revenue to any caller. Scope to the caller's own clients' Stripe
+      // customers. (Proper isolation needs Stripe Connect — tracked in
+      // REMEDIATION_PLAN Phase 8.)
+      const { data: myClients } = await svc
+        .from('clients')
+        .select('stripe_customer_id')
+        .or(`user_id.eq.${userId},created_by.eq.${userId}`);
+      const ownedCustomers = new Set(
+        (myClients ?? []).map((c) => c.stripe_customer_id).filter(Boolean),
+      );
+      if (ownedCustomers.size === 0) return jsonResponse({ charges: [] });
+      // Fetch per owned customer so we never read another tenant's charges.
+      const results = [];
+      for (const cust of ownedCustomers) {
+        const charges = await stripe.charges.list({ customer: cust, limit: 100 });
+        results.push(...charges.data);
+      }
+      return jsonResponse({ charges: results });
     }
 
     return jsonResponse({ error: 'Unknown action' }, 400);

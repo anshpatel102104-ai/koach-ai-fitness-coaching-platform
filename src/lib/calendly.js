@@ -1,17 +1,18 @@
 const CALENDLY_API = 'https://api.calendly.com';
 
-const calendlyRequest = async (endpoint, method = 'GET', body = null) => {
-  const token = import.meta.env.VITE_CALENDLY_TOKEN;
-  if (!token) throw new Error('VITE_CALENDLY_TOKEN not set');
-  const response = await fetch(`${CALENDLY_API}${endpoint}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : null,
-  });
-  return response.json();
+// SECURITY (S3): the Calendly Personal Access Token must NEVER be read in the
+// browser — VITE_* vars are inlined into the production bundle, so reading
+// VITE_CALENDLY_TOKEN here shipped a full-account Calendly credential to every
+// visitor. There is no server-side Calendly proxy yet, so the direct-from-
+// browser integration is disabled until one exists (tracked in
+// REMEDIATION_PLAN Phase 9 / integrations). Build a `calendlyProxy` edge
+// function (holding CALENDLY_TOKEN in server env, caller-auth + ownership
+// scoped) and route these calls through it.
+const calendlyRequest = async (_endpoint, _method = 'GET', _body = null) => {
+  throw new Error(
+    'Calendly is not connected. A server-side Calendly proxy is required — ' +
+    'the access token can no longer be used from the browser.',
+  );
 };
 
 export const getCalendlyUser = () => calendlyRequest('/users/me');
@@ -36,4 +37,5 @@ export const createSingleUseLink = (eventTypeUri, maxUses = 1) =>
     owner_type: 'EventType',
   });
 
-export const isCalendlyEnabled = () => !!import.meta.env.VITE_CALENDLY_TOKEN;
+// Disabled until a server-side proxy exists (S3). No secret is read in the browser.
+export const isCalendlyEnabled = () => false;

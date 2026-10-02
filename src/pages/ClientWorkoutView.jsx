@@ -266,6 +266,13 @@ export default function ClientWorkoutView() {
 
   useEffect(() => { me().then(setUser).catch(() => {}); }, []);
 
+  const { data: clients = [] } = useQuery({
+    queryKey: ['cwv-client', user?.email],
+    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    enabled: !!user?.email,
+  });
+  const myClient = clients[0];
+
   const { data: program } = useQuery({
     queryKey: ['program', programId],
     queryFn: () => base44.entities.WorkoutProgram.filter({ id: programId }).then(r => r[0]),
@@ -300,9 +307,10 @@ export default function ClientWorkoutView() {
   const progress = totalSets > 0 ? doneSets / totalSets : 0;
 
   const handleComplete = (rating, note) => {
+    if (!myClient?.id) { toast.error('Still loading your profile — try again in a moment'); return; }
     const durationMinutes = Math.round((Date.now() - startTime) / 60000);
     saveMutation.mutate({
-      client_id: user?.id || user?.email || '',
+      client_id: myClient.id,
       program_id: programId,
       workout_day_name: workout?.day_name || '',
       workout_day_index: dayIdx,

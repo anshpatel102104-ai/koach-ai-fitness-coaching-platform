@@ -13,6 +13,7 @@ import CoachPricingScreen from '@/components/onboarding/CoachPricingScreen';
 import CoachAccountScreen from '@/components/onboarding/CoachAccountScreen';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/api/supabaseClient';
 
 // Step 1–6: onboarding, Step 7: create account, Step 8: pricing (→ Stripe)
 const FLOW = [
@@ -35,7 +36,7 @@ const LS_RESUME_PRICING  = 'koach_resume_pricing';
 
 export default function PremiumOnboarding() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings, user, checkUserAuth, navigateToLogin, updateMe } = useAuth();
+  const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings, user, updateMe } = useAuth();
   const [step, setStep] = useState('splash');
   const [direction, setDirection] = useState(1);
   const [data, setData] = useState(() => {
@@ -113,16 +114,29 @@ export default function PremiumOnboarding() {
 
   const idx = FLOW.indexOf(step);
 
-  const next = (newData = {}) => {
+  const next = async (newData = {}) => {
     const merged = { ...data, ...newData };
     setData(merged);
 
     if (step === 'coach_account') {
-      // Stash onboarding data to localStorage before redirecting for account creation
-      localStorage.setItem(LS_ONBOARDING_DATA, JSON.stringify(merged));
+      // Actually create the Supabase account. The old flow stashed the data
+      // (including the plaintext password) and redirected to login WITHOUT ever
+      // calling signup — so the primary /start path could not create an account.
+      const { account_email, account_name, account_password, ...onboarding } = merged;
+      // Persist only NON-credential onboarding fields for the post-auth profile
+      // flush. The plaintext password is never written to localStorage.
+      localStorage.setItem(LS_ONBOARDING_DATA, JSON.stringify(onboarding));
       localStorage.setItem(LS_RESUME_PRICING, '1');
-      // Redirect to Base44 signup; on return, we'll land back at /start?resume=checkout
-      navigateToLogin();
+      const { needsConfirmation } = await supabase.auth.signup({
+        email: account_email, password: account_password, full_name: account_name,
+      });
+      if (needsConfirmation) {
+        // Project requires email confirmation → finish after they confirm.
+        navigate('/login?confirm=1', { replace: true });
+        return;
+      }
+      await flushOnboardingData(); // save business_name/niche/etc. to the new profile
+      setStep('coach_pricing');
       return;
     }
 

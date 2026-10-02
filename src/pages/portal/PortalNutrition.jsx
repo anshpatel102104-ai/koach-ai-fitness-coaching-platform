@@ -43,15 +43,17 @@ export default function PortalNutrition({ user }) {
   const [nutritionPlan, setNutritionPlan] = useState(null);
   const [coachName, setCoachName]         = useState(null);
   const [pdfView, setPdfView]             = useState('plan'); // 'plan' or 'log'
+  const [myClient, setMyClient]           = useState(null);
 
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
-  const clientId = user?.id;
+  const clientId = myClient?.id;
 
-  // Fetch nutrition plan for targets
+  // Resolve this client's row (by email) + nutrition plan for targets
   useEffect(() => {
-    if (!clientId) return;
-    base44.entities.Client.filter({ user_id: clientId }).then(clients => {
+    if (!user?.email) return;
+    base44.entities.Client.filter({ email: user.email }, '-created_date', 1).then(clients => {
       const client = clients[0];
+      setMyClient(client || null);
       if (client?.assigned_nutrition_id) {
         base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }).then(plans => {
           if (plans[0]) setNutritionPlan(plans[0]);
@@ -63,7 +65,7 @@ export default function PortalNutrition({ user }) {
         }).catch(() => {});
       }
     }).catch(() => {});
-  }, [clientId]);
+  }, [user?.email]);
 
   const targets = useMemo(() => ({
     calories: nutritionPlan?.calories || DEFAULT_TARGETS.calories,

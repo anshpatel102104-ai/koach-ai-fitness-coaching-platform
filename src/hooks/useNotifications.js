@@ -13,7 +13,7 @@ export function useNotifications() {
   const fetchNotifications = useCallback(async (currentUser, reset = false) => {
     if (!currentUser) return;
     const data = await base44.entities.Notification.filter(
-      { recipient_id: currentUser.email, is_dismissed: false },
+      { recipient_id: currentUser.id, is_dismissed: false }, // recipient_id is uuid (auth user id)
       '-created_date',
       PAGE_SIZE
     );
@@ -43,7 +43,7 @@ export function useNotifications() {
   useEffect(() => {
     if (!user) return;
     const unsub = base44.entities.Notification.subscribe((event) => {
-      if (event.data?.recipient_id !== user.email) return;
+      if (event.data?.recipient_id !== user.id) return;
       if (event.type === 'create') {
         setNotifications(prev => [event.data, ...prev]);
       } else if (event.type === 'update') {

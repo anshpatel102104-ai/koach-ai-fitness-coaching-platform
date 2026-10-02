@@ -6,6 +6,7 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { collectFoodNames, findAllergenViolations } from '../_shared/aiSafety.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -70,6 +71,16 @@ Rules:
 
     if (!parsed || !parsed.training_day) {
       return jsonResponse({ error: 'AI returned an invalid meal plan structure' }, 500);
+    }
+
+    // Deterministic allergen check across both day plans (B-SAFETY). Prompting
+    // ("Avoid: ...") is not sufficient for a health-safety constraint.
+    const allergenViolations = findAllergenViolations(
+      [...collectFoodNames(parsed.training_day), ...collectFoodNames(parsed.rest_day)],
+      allergies,
+    );
+    if (allergenViolations.length) {
+      return jsonResponse({ error: 'allergen_violation', violations: allergenViolations }, 422);
     }
 
     const trainingMeals = parsed.training_day?.meals || [];

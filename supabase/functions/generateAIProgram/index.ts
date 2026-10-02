@@ -8,6 +8,7 @@
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { collectExerciseNames, findInjuryViolations } from '../_shared/aiSafety.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -153,6 +154,14 @@ Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
     // Validate minimum required fields (verbatim)
     if (!program || !program.title || !Array.isArray(program.workouts) || program.workouts.length === 0) {
       return jsonResponse({ error: 'AI returned an invalid program structure. Missing title or workouts.' }, 500);
+    }
+
+    // Deterministic contraindication check (B-SAFETY): reject a program that
+    // includes a movement the client must avoid, rather than trusting the
+    // prompt rule. Coaches regenerate rather than receive an unsafe program.
+    const injuryViolations = findInjuryViolations(collectExerciseNames(program), profile.movements_to_avoid);
+    if (injuryViolations.length) {
+      return jsonResponse({ error: 'contraindicated_exercise', violations: injuryViolations }, 422);
     }
 
     // Enrich exercises with library metadata (thumbnail, video) where names match

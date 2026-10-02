@@ -117,7 +117,19 @@ Deno.serve(async (req) => {
 
       if (event.type === 'checkout.session.completed') {
         const subId = obj.subscription;
-        if (subId) await syncSubscriptionToUser(svc, await stripe.subscriptions.retrieve(subId));
+        if (subId) {
+          await syncSubscriptionToUser(svc, await stripe.subscriptions.retrieve(subId));
+        } else if (obj.metadata?.listing_id) {
+          // One-time store purchase fulfillment (B-STORE). Idempotent on the
+          // session id; also increments plan_listings.sales_count.
+          await svc.rpc('record_store_purchase', {
+            p_session: obj.id,
+            p_listing: obj.metadata.listing_id,
+            p_coach: obj.metadata.coach_id || null,
+            p_email: obj.customer_details?.email || obj.customer_email || null,
+            p_amount: (obj.amount_total ?? 0) / 100,
+          });
+        }
       }
 
       if (event.type === 'invoice.payment_succeeded') {

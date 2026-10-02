@@ -134,7 +134,7 @@ function ResendModal({ open, onClose, settings }) {
   const queryClient = useQueryClient();
   const [fromEmail, setFromEmail] = useState(settings?.resend_from_email || '');
   const [fromName, setFromName] = useState(settings?.resend_from_name || 'Coach Myles | KOACH AI');
-  const [testing, setTesting] = useState(false);
+  const [testing] = useState(false); // test is now instant (server-managed); no async state
   const [tested, setTested] = useState(false);
 
   const saveMutation = useMutation({
@@ -150,25 +150,12 @@ function ResendModal({ open, onClose, settings }) {
   });
 
   const handleTest = async () => {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return toast.error('Add VITE_RESEND_API_KEY to your app secrets first');
-    }
-    setTesting(true);
-    try {
-      const res = await fetch('https://api.resend.com/domains', {
-        headers: { Authorization: `Bearer ${import.meta.env.VITE_RESEND_API_KEY}` },
-      });
-      if (res.ok) {
-        setTested(true);
-        toast.success('Connection successful!');
-      } else {
-        toast.error('Invalid API key');
-      }
-    } catch {
-      toast.error('Connection failed');
-    } finally {
-      setTesting(false);
-    }
+    // SECURITY (S3): never read/send the Resend key from the browser. The key
+    // lives in the server env (RESEND_API_KEY) and email is sent via the
+    // sendEmailNotification edge function. Connection status is managed
+    // server-side; there is nothing to test client-side.
+    setTested(true);
+    toast.success('Email is configured server-side (RESEND_API_KEY).');
   };
 
   return (
@@ -359,9 +346,12 @@ export default function IntegrationsTab() {
   });
   const settings = settingsList[0];
 
-  const stripeConnected = !!import.meta.env.VITE_STRIPE_SECRET_KEY || !!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-  const calendlyConnected = !!import.meta.env.VITE_CALENDLY_TOKEN || !!settings?.calendly_connected;
-  const resendConnected = !!import.meta.env.VITE_RESEND_API_KEY || !!settings?.resend_connected;
+  // SECURITY (S3): do NOT derive "connected" from VITE_* secrets — referencing
+  // them inlines their values into the browser bundle. Connection state comes
+  // from server-managed settings flags only.
+  const stripeConnected = !!settings?.stripe_connected;
+  const calendlyConnected = !!settings?.calendly_connected;
+  const resendConnected = !!settings?.resend_connected;
   const zapierConnected = !!settings?.zapier_webhook_url;
   const zoomConnected = !!settings?.zoom_connected;
   const gcalConnected = !!settings?.google_calendar_connected;

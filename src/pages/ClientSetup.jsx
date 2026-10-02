@@ -80,6 +80,17 @@ export default function ClientSetup() {
       // single-uses the token. The client then signs in with email + password.
       const res = await supabase.functions.invoke('setupPortalAccount', { token, password });
       if (!res.data?.success) throw new Error(res.data?.error || 'Setup failed');
+      // existing_account (S1): this email already had an account, which was
+      // LINKED without changing its password. Signing in with the just-typed
+      // password would fail — send them to login to use their existing
+      // credentials (or the password-reset flow) instead.
+      if (res.data.existing_account) {
+        setError('');
+        setStatus('valid');
+        setSubmitting(false);
+        window.location.assign('/login?existing=1');
+        return;
+      }
       await supabase.auth.login({ email: res.data.email, password });
       setStatus('success');
       setTimeout(() => { window.location.assign('/portal'); }, 800);

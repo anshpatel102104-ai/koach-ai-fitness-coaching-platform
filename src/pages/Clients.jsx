@@ -101,7 +101,11 @@ export default function Clients() {
       const teamId = await getMyTeamId(currentUser?.id);
       const client = await base44.entities.Client.create({ ...data, ...(teamId ? { team_id: teamId } : {}) });
       if (sendInvite && data.email) {
-        await base44.functions.invoke('sendClientInvite', { clientName: data.name, clientEmail: data.email });
+        // clientId is required by the function (it stores the invite token hash
+        // on THIS client row under the caller's RLS). Without it the invite 400s.
+        await base44.functions.invoke('sendClientInvite', {
+          clientId: client.id, clientName: data.name, clientEmail: data.email,
+        });
       }
       return client;
     },

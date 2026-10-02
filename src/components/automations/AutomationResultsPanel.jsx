@@ -27,7 +27,7 @@ async function executeAction(rule, client, allCheckIns) {
 
     case 'notify_coach':
       await base44.entities.Notification.create({
-        recipient_id: 'coach',
+        recipient_id: client.user_id,
         type: 'general',
         title: `Automation: ${rule.name}`,
         body: `${client.name} triggered rule "${rule.name}"`,
@@ -75,7 +75,7 @@ async function executeAction(rule, client, allCheckIns) {
     case 'suggest_adjustment':
       await Promise.all([
         base44.entities.Notification.create({
-          recipient_id: 'coach',
+          recipient_id: client.user_id,
           type: 'general',
           title: `Plan adjustment needed: ${client.name}`,
           body: rule.action_message || `Review and adjust ${client.name}'s plan — triggered by rule "${rule.name}"`,

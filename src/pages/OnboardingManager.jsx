@@ -162,11 +162,11 @@ export default function OnboardingManager() {
       const goalMap = { fat_loss: 'weight_loss', hybrid: 'muscle_gain' };
       const teamId = await getMyTeamId(user?.id);
 
-      // Generate a secure random invite token
-      const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
-      const inviteToken = Array.from(tokenBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-      const tokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
+      // NOTE (B9 / S1): the invite token is generated + hashed + emailed by the
+      // sendClientInvite edge function below — never built or stored in the
+      // browser. The old code wrote a plaintext token into `invite_token`, a
+      // column that was renamed to `invite_token_hash` (so the insert threw),
+      // and emailed a link that nothing could validate.
       const client = await base44.entities.Client.create({
         name: resp.name,
         email: resp.email,
@@ -182,47 +182,20 @@ export default function OnboardingManager() {
           resp.motivation && `Motivation: ${resp.motivation}`,
           resp.schedule_preferences && `Schedule: ${resp.schedule_preferences}`,
         ].filter(Boolean).join('\n\n'),
-        invite_token: inviteToken,
-        invite_token_expires: tokenExpires,
         ...(teamId ? { team_id: teamId } : {}),
       });
 
       await base44.entities.OnboardingResponse.update(resp.id, { status: 'converted', client_id: client.id });
 
-      // Send branded setup email via Resend
-      const setupUrl = `${window.location.origin}/client-setup/${inviteToken}`;
       const coachName = user?.full_name || 'Your Coach';
-      const html = `
-        <div style="font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:var(--tc-card);border-radius:16px;overflow:hidden;border:1px solid var(--tc-border);">
-          <div style="background:linear-gradient(135deg,var(--kc-0a0a0a),var(--kc-1a2744));padding:36px 32px 28px;text-align:center;">
-            <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:8px;">
-              <span style="font-size:22px;font-weight:900;color:var(--tc-primary-foreground);letter-spacing:-0.04em;">KOACH</span>
-              <span style="font-size:22px;font-weight:300;color:var(--tc-primary);letter-spacing:-0.04em;">AI</span>
-            </div>
-            <p style="color:color-mix(in srgb, white 40%, transparent);font-size:12px;margin:0;">Your coaching portal is ready</p>
-          </div>
-          <div style="padding:36px 32px;">
-            <h1 style="font-size:24px;font-weight:800;color:var(--tc-foreground);margin:0 0 8px;letter-spacing:-0.02em;">Welcome, ${resp.name?.split(' ')[0]} 👋</h1>
-            <p style="color:var(--tc-muted-foreground);font-size:15px;line-height:1.6;margin:0 0 24px;">${coachName} has approved your application and set up your personal coaching portal. Click below to create your password and get started.</p>
-            <div style="text-align:center;margin:28px 0;">
-              <a href="${setupUrl}" style="display:inline-block;background:linear-gradient(135deg,var(--tc-primary),var(--tc-primary));color:var(--tc-primary-foreground);font-weight:700;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:12px;box-shadow:0 4px 20px color-mix(in srgb, var(--tc-primary) 30%, transparent);">Set Up My Account →</a>
-            </div>
-            <div style="background:var(--tc-background);border-radius:10px;padding:16px 20px;margin:24px 0 0;">
-              <p style="font-size:12px;color:var(--tc-muted-foreground);margin:0 0 4px;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Setup link</p>
-              <p style="font-size:12px;color:var(--tc-muted-foreground);margin:0;word-break:break-all;">${setupUrl}</p>
-            </div>
-            <p style="color:var(--tc-muted-foreground);font-size:12px;margin:20px 0 0;text-align:center;">This link expires in 7 days. If you didn't request this, you can safely ignore this email.</p>
-          </div>
-          <div style="background:var(--tc-background);padding:16px 32px;text-align:center;border-top:1px solid var(--tc-muted);">
-            <p style="color:var(--tc-muted-foreground);font-size:11px;margin:0;">Sent by KOACH AI · Powered by elite coaching technology</p>
-          </div>
-        </div>`;
-
-      await base44.functions.invoke('sendEmailNotification', {
-        to: resp.email,
-        toName: resp.name,
-        subject: `${coachName} approved you — set up your coaching portal`,
-        html,
+      // Generate the (hashed) invite token and send the branded setup email
+      // server-side. Single source of truth for invites; no plaintext token in
+      // the browser.
+      await base44.functions.invoke('sendClientInvite', {
+        clientId: client.id,
+        clientName: resp.name,
+        clientEmail: resp.email,
+        welcomeMessage: `${coachName} approved your application — welcome to your coaching portal!`,
       });
 
       return client;

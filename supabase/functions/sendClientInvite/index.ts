@@ -99,8 +99,12 @@ Deno.serve(async (req) => {
       console.error('sendClientInvite: mailer not available yet (Step 5):', mailErr?.message ?? mailErr);
     }
 
-    // Return setupUrl for dev/preview; plaintext token is never persisted/logged.
-    return json({ success: true, setupUrl });
+    // SECURITY (S1): do NOT return the plaintext token / setupUrl. The token is
+    // a bearer credential that grants portal account setup for this client; the
+    // only place it may travel is inside the emailed link. Returning it in the
+    // HTTP response let any caller read a live token out of the JSON and drive
+    // setupPortalAccount directly. Report only whether the email was sent.
+    return json({ success: true });
   } catch (err) {
     console.error('sendClientInvite error:', err?.message ?? err);
     return json({ error: 'Server error' }, 500);

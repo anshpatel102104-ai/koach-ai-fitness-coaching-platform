@@ -46,8 +46,8 @@ export default function BusinessSettings() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['business-settings', user?.email],
-    queryFn: () => base44.entities.BusinessSettings.filter({ coach_id: user.email }, '-created_date', 1),
-    enabled: !!user?.email,
+    queryFn: () => base44.entities.BusinessSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    enabled: !!user?.id,
   });
 
   const { data: forms = [] } = useQuery({
@@ -76,7 +76,7 @@ export default function BusinessSettings() {
   const save = useCallback(async () => {
     setSaving(true);
     try {
-      const payload = { ...s, coach_id: user?.email };
+      const payload = { ...s, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
       if (settingsId) {
         await base44.entities.BusinessSettings.update(settingsId, payload);
       } else {

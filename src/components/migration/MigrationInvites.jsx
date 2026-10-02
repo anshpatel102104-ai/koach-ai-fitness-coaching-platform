@@ -30,6 +30,7 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
     for (const client of toInvite) {
       try {
         await base44.functions.invoke('sendClientInvite', {
+          clientId: client.id, // required — the function stores the token hash on this client row
           clientName: client.name,
           clientEmail: client.email,
         });

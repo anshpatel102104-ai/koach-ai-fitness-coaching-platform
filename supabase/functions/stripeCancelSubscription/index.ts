@@ -5,7 +5,7 @@
 // can only cancel their own subscription. The "already gone" handling that lets
 // account deletion proceed safely is preserved verbatim. Secrets from env only.
 import Stripe from 'npm:stripe@14.21.0';
-import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingDeniedFor } from '../_shared/teamRole.js';
 
 Deno.serve(async (req) => {
@@ -23,8 +23,33 @@ Deno.serve(async (req) => {
       if (denied) return jsonResponse(denied, 403);
     }
 
-    // Never trust a client-supplied id — use the caller's stored subscription.
-    const subscriptionId = caller.profile.stripe_subscription_id;
+    // SECURITY (B-CANCEL): decide WHICH subscription to cancel.
+    //   - No id (or the caller's own id) → cancel the caller's own SaaS plan.
+    //   - A different id (a CLIENT's subscription, from StripeSubscriptionTable)
+    //     → cancel it ONLY after verifying it belongs to one of the caller's
+    //       clients. The previous version ignored the body entirely and always
+    //       cancelled the caller's own plan, so clicking "cancel" on a client
+    //       row killed the coach's KOACH subscription.
+    let requestedId = null;
+    try { requestedId = (await req.json())?.subscription_id ?? null; } catch { /* no body */ }
+
+    const ownSub = caller.profile.stripe_subscription_id;
+    let subscriptionId = ownSub;
+
+    if (requestedId && requestedId !== ownSub) {
+      const svc = serviceClient();
+      const { data: pay } = await svc
+        .from('payments')
+        .select('client_id')
+        .eq('stripe_payment_id', requestedId)
+        .limit(1)
+        .maybeSingle();
+      if (!pay?.client_id) return jsonResponse({ error: 'Forbidden: subscription not found for your account' }, 403);
+      const client = await ownsClient(svc, caller.auth.id, pay.client_id);
+      if (!client) return jsonResponse({ error: 'Forbidden: subscription not owned by you' }, 403);
+      subscriptionId = requestedId;
+    }
+
     if (!subscriptionId) return jsonResponse({ status: 'no_active_subscription' });
 
     try {

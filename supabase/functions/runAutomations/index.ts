@@ -35,10 +35,32 @@ function windowStart(now: Date, mode: string): string {
   return d.toISOString();
 }
 
+// SECURITY (B-AUTOSEC): this function runs with the service role and performs
+// cross-tenant reads + writes. Like its sibling scheduled/trigger functions
+// (onEntityEvent, sendCheckInReminders) it must ONLY be callable by the service
+// key (pg_cron / internal), never by an ordinary caller holding the public
+// anon key. verify_jwt is not a sufficient gate (the anon key satisfies it).
+function isServiceRoleCall(req: Request): boolean {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  return Boolean(serviceKey) && token === serviceKey;
+}
+
+// A rule may only act on clients that belong to the rule's owner. Without this
+// the rules × clients cross-join let one coach's rule mutate every coach's
+// clients (send messages, flag at-risk, adjust calories, award badges).
+function ruleOwnsClient(rule: Record<string, unknown>, client: Record<string, unknown>): boolean {
+  const owner = rule.created_by;
+  if (!owner) return false; // fail closed — an unowned rule acts on no one
+  return client.user_id === owner || client.created_by === owner;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const json = (b: unknown, status = 200) =>
     new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+
+  if (!isServiceRoleCall(req)) return json({ error: 'Unauthorized' }, 401);
 
   try {
     const admin = createClient(
@@ -80,6 +102,7 @@ Deno.serve(async (req) => {
     for (const rule of rules ?? []) {
       for (const client of clients ?? []) {
         if (!isEligibleClient(client)) continue;
+        if (!ruleOwnsClient(rule, client)) continue; // tenant scoping (B-AUTOSEC)
         const key = `${rule.id}:${client.id}`;
         if (seen.has(key)) { skipped++; continue; } // already handled this window
         seen.add(key);

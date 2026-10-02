@@ -36,6 +36,15 @@ export async function sendResendEmail({ to, toName, subject, html, text, replyTo
   };
   if (replyTo) payload.reply_to = replyTo;
 
+  // Deliverability + compliance (Phase 9): advertise an unsubscribe endpoint.
+  // The footer links here too; this header lets inbox providers surface a
+  // one-click unsubscribe.
+  const appUrl = Deno.env.get('APP_URL') || 'https://app.koachai.net';
+  payload.headers = {
+    'List-Unsubscribe': `<${appUrl}/unsubscribe?email=${encodeURIComponent(to)}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',

@@ -364,17 +364,19 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
         });
       }
 
-      // 5. Create in-app notification for the client
-      await base44.entities.Notification.create({
-        recipient_id: selectedClient?.email || selectedClientId,
-        category: 'ai',
-        type: 'meal_plan_assigned',
-        title: 'Your new meal plan is ready! 🥗',
-        body: `${planName} — ${result.calories} kcal/day`,
-        is_read: false,
-        related_client_id: selectedClientId,
-        priority: 'high',
-      });
+      // 5. Create in-app notification for the client (only if they have a portal account)
+      if (selectedClient?.portal_user_id) {
+        await base44.entities.Notification.create({
+          recipient_id: selectedClient.portal_user_id,
+          category: 'ai',
+          type: 'meal_plan_assigned',
+          title: 'Your new meal plan is ready! 🥗',
+          body: `${planName} — ${result.calories} kcal/day`,
+          is_read: false,
+          related_client_id: selectedClientId,
+          priority: 'high',
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ['nutrition'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });

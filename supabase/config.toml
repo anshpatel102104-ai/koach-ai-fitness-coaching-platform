@@ -1,0 +1,45 @@
+# Supabase project configuration (SECURITY S15).
+#
+# Before this file existed, per-function `verify_jwt` was undeclared in the repo
+# and lived only in code comments — unreviewable and prone to drift. It is now
+# pinned here. Note: `verify_jwt = true` is satisfied by ANY project-signed JWT,
+# including the public anon key that ships in the browser bundle, so it is a
+# coarse gate, not real authorization. Every function below still enforces its
+# own in-function auth (session ownership, service-role check, or a signed
+# webhook/invite token).
+#
+# Default is verify_jwt = true; only the intentionally public / non-user-JWT
+# endpoints are set to false, each with an in-function guard:
+
+project_id = "phjmcihgodvhbiaksvyl"
+
+# Stripe posts with a webhook signature, not a Supabase JWT (sig verified in-fn).
+[functions.stripeWebhook]
+verify_jwt = false
+
+# Public invite/portal bootstrap — authorized by the hashed invite token in-fn.
+[functions.validateInviteToken]
+verify_jwt = false
+
+[functions.setupPortalAccount]
+verify_jwt = false
+
+# Public lead-intake endpoint (rate-limit/CAPTCHA tracked in remediation).
+[functions.submitOnboardingIntake]
+verify_jwt = false
+
+# Invoked by Postgres triggers / pg_cron via pg_net with the service-role key;
+# each verifies the service-role bearer in-function (isServiceRoleCall).
+[functions.onEntityEvent]
+verify_jwt = false
+
+[functions.sendCheckInReminders]
+verify_jwt = false
+
+[functions.runAutomations]
+verify_jwt = false
+
+# Accepts the service-role key (triggers/other functions) OR a verified session
+# with a recipient allowlist; both paths are checked in-function.
+[functions.sendEmailNotification]
+verify_jwt = false

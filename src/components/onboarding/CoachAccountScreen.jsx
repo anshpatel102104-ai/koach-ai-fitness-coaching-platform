@@ -32,7 +32,9 @@ export default function CoachAccountScreen({ onNext, onBack, data }) {
     setError('');
     setLoading(true);
     try {
-      onNext({
+      // await: onNext now performs the actual Supabase signup, so a failure
+      // (e.g. email already registered) must surface here and re-enable the form.
+      await onNext({
         account_email: form.email.trim(),
         account_name: form.full_name.trim(),
         account_password: form.password,

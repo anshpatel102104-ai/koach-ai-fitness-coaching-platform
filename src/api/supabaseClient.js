@@ -98,6 +98,11 @@ const PORTAL_OVERRIDES = {
   CheckIn: { table: 'check_ins_portal_view' },
   Session: { table: 'coaching_sessions_portal_view', readOnly: true },
   CoachingSession: { table: 'coaching_sessions_portal_view', readOnly: true },
+  // S6: portal client reads go through the column-restricted view (no
+  // notes/lifecycle_notes/monthly_rate/stripe_customer_id/invite token). The
+  // base `clients` table no longer grants portal SELECT (migration
+  // 20260823000400). Read-only: portal clients don't create/update client rows.
+  Client: { table: 'clients_portal_view', readOnly: true },
 };
 
 const FIELD_RENAMES = {
@@ -218,14 +223,23 @@ function makeEntity(name, { table, readOnly = false }) {
     },
     async update(id, payload) {
       assertWritable('update');
+      // Use .select() (array) and assert a row came back. Previously this used
+      // .maybeSingle(), which returns null with NO error when an UPDATE matches
+      // zero rows (record missing, or RLS/validation denied the write) — so the
+      // caller's onSuccess fired and the UI reported "Saved!" while nothing was
+      // written (the phantom-save class of bugs). Surface it instead.
       const { data, error } = await getSupabase()
         .from(table)
         .update(renameKeys(payload))
         .eq('id', id)
-        .select()
-        .maybeSingle();
+        .select();
       throwIf(error);
-      return aliasRow(data);
+      if (!data || data.length === 0) {
+        throw new Error(
+          `${name}.update(${id}) affected no rows — the record is missing or the write was not permitted.`,
+        );
+      }
+      return aliasRow(data[0]);
     },
     async delete(id) {
       assertWritable('delete');

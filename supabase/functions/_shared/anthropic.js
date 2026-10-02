@@ -50,24 +50,49 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
     ? [...imageUrls.map((url) => ({ type: 'image', source: { type: 'url', url } })), { type: 'text', text: prompt }]
     : prompt;
 
+  const payload = JSON.stringify({
+    model: model || anthropicModel(),
+    max_tokens: maxTokens,
+    ...(system ? { system } : {}),
+    messages: [{ role: 'user', content }],
+  });
+
+  // One request with a hard timeout (a hung connection otherwise holds the edge
+  // function until the platform kills it). Retry ONCE on a network error or a
+  // transient 429/5xx.
+  const TIMEOUT_MS = 60_000;
+  const doFetch = async () => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    try {
+      return await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': API_VERSION,
+          'content-type': 'application/json',
+        },
+        body: payload,
+        signal: ctrl.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   let response;
-  try {
-    response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': API_VERSION,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model || anthropicModel(),
-        max_tokens: maxTokens,
-        ...(system ? { system } : {}),
-        messages: [{ role: 'user', content }],
-      }),
-    });
-  } catch (e) {
-    return { ok: false, error: `Claude API unreachable: ${e.message}`, status: 502 };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await doFetch();
+    } catch (e) {
+      if (attempt === 0) continue; // network error / timeout → retry once
+      const reason = e?.name === 'AbortError' ? 'timed out' : `unreachable: ${e.message}`;
+      return { ok: false, error: `Claude API ${reason}`, status: 504 };
+    }
+    if ((response.status === 429 || response.status >= 500) && attempt === 0) {
+      continue; // transient → retry once
+    }
+    break;
   }
 
   if (!response.ok) {

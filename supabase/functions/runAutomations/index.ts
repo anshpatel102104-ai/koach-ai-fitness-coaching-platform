@@ -115,8 +115,12 @@ Deno.serve(async (req) => {
         if (result.triggered) {
           const actions = resolveActions(rule);
           const lastCI = [...clientCheckIns].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+          // Only the rule owner's plans are visible to its actions: a coach
+          // controls their client's assigned_nutrition_id, so without this an
+          // adjust_calories rule could rewrite another tenant's plan.
+          const ownerPlans = (plans ?? []).filter((p) => p.created_by === rule.created_by);
           for (const action of actions) {
-            await executeAction(admin, action, client, lastCI, clientCheckIns, plans ?? [], badges ?? []);
+            await executeAction(admin, action, client, lastCI, clientCheckIns, ownerPlans, badges ?? []);
           }
           actionsTaken = actions.map((a) => a.type).join(', ');
           fired++;

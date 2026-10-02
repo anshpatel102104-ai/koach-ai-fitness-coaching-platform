@@ -21,6 +21,17 @@ function isServiceRoleCall(req) {
   return Boolean(serviceKey) && token === serviceKey;
 }
 
+// A single plain address: no lists, display names, or header-injection chars.
+// Session callers must send exactly one recipient (an array or "a@x, b@y"
+// would otherwise slip extra recipients past the allowlist below).
+const SINGLE_EMAIL = /^[^\s@,;<>"'()\\]+@[^\s@,;<>"'()\\]+\.[^\s@,;<>"'()\\]+$/;
+
+// ilike treats % and _ as wildcards; escape them so the allowlist lookup is an
+// exact (case-insensitive) match — "%" must not match every visible client.
+function exactIlike(value) {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 /**
  * SECURITY (S5): a verified session must not be able to send mail to an
  * ARBITRARY address from our verified domain (phishing + denial-of-wallet).
@@ -33,15 +44,17 @@ function isServiceRoleCall(req) {
  * (trigger/cron/other functions) is unrestricted, as before.
  */
 async function callerMayEmail(req, caller, to) {
-  const target = String(to).trim().toLowerCase();
-  if (!target) return false;
+  if (typeof to !== 'string') return false;
+  const target = to.trim().toLowerCase();
+  if (!SINGLE_EMAIL.test(target)) return false;
   if (caller?.auth?.email && caller.auth.email.toLowerCase() === target) return true;
   const rls = callerClient(req);
+  const pattern = exactIlike(target);
   const { data: clientMatch } = await rls
-    .from('clients').select('id').ilike('email', target).limit(1);
+    .from('clients').select('id').ilike('email', pattern).limit(1);
   if (clientMatch?.length) return true;
   const { data: teamMatch } = await rls
-    .from('team_members').select('id').ilike('email', target).limit(1);
+    .from('team_members').select('id').ilike('email', pattern).limit(1);
   return Boolean(teamMatch?.length);
 }
 
@@ -70,7 +83,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'RESEND_API_KEY not configured' }, 500);
     }
 
-    const result = await sendResendEmail({ to, subject, html, replyTo });
+    // Session callers may only set Reply-To to their own address (the
+    // EmailCenter passes user.email); anything else would let a caller route
+    // replies from our domain to an arbitrary inbox.
+    const callerEmail = caller?.auth?.email?.toLowerCase();
+    const safeReplyTo = serviceCall
+      ? replyTo
+      : (typeof replyTo === 'string' && callerEmail && replyTo.trim().toLowerCase() === callerEmail
+        ? replyTo.trim() : undefined);
+
+    const result = await sendResendEmail({
+      to: serviceCall ? to : to.trim(), subject, html, replyTo: safeReplyTo,
+    });
     if (!result.ok) {
       return jsonResponse({ error: result.error || 'Resend API error', details: result.details }, 500);
     }

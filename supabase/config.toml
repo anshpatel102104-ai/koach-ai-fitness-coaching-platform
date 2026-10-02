@@ -43,3 +43,8 @@ verify_jwt = false
 # with a recipient allowlist; both paths are checked in-function.
 [functions.sendEmailNotification]
 verify_jwt = false
+
+# Coach-initiated (verified session) OR the pg_cron weekly sweep (service-role
+# key, which is not a JWT); both are authenticated in-function.
+[functions.weeklyDigest]
+verify_jwt = false

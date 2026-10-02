@@ -75,10 +75,43 @@ export function collectExerciseNames(program) {
   return out;
 }
 
+// Allow a simple plural/verb suffix so "squat" also catches "Back Squats" and
+// "jump" catches "Jumping Jacks" — over-flagging is the safe direction here.
 function matchesTerm(haystack, term) {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  try { return new RegExp(`\\b${escaped}\\b`, 'i').test(haystack); }
+  try { return new RegExp(`\\b${escaped}(?:s|es|ing)?\\b`, 'i').test(haystack); }
   catch { return haystack.toLowerCase().includes(term); }
+}
+
+// Injured area → movement patterns that load it. Used when a coach records an
+// injury ("knee injury", "ACL repair") without also listing every movement to
+// avoid: the injury text alone must still block contraindicated exercises in
+// code, not just in the prompt.
+const INJURY_CONTRAINDICATIONS = {
+  knee: ['squat', 'lunge', 'split squat', 'step-up', 'step up', 'pistol', 'leg extension',
+    'jump', 'box jump', 'plyometric', 'burpee', 'sissy squat', 'bulgarian', 'hack squat'],
+  acl: ['squat', 'lunge', 'jump', 'box jump', 'plyometric', 'pistol', 'leg extension', 'step-up'],
+  meniscus: ['squat', 'lunge', 'pistol', 'jump', 'leg extension'],
+  shoulder: ['overhead press', 'military press', 'push press', 'upright row', 'behind the neck',
+    'dip', 'snatch', 'handstand', 'arnold press'],
+  rotator: ['overhead press', 'military press', 'upright row', 'behind the neck', 'dip', 'snatch'],
+  'lower back': ['deadlift', 'good morning', 'back extension', 'barbell row', 'bent over row',
+    'jefferson curl', 'sit-up', 'sit up'],
+  spine: ['deadlift', 'good morning', 'back squat', 'jefferson curl'],
+  hernia: ['deadlift', 'squat', 'leg press', 'good morning'],
+  wrist: ['front squat', 'clean', 'push-up', 'push up', 'handstand'],
+  ankle: ['jump', 'box jump', 'plyometric', 'calf raise', 'sprint', 'skipping'],
+};
+
+/** Movement terms implied by free-text injuries (e.g. "left knee, ACL"). */
+export function injuryAvoidTerms(injuriesText) {
+  const text = parseTermList(injuriesText).join(' ');
+  if (!text) return [];
+  const out = new Set();
+  for (const [area, moves] of Object.entries(INJURY_CONTRAINDICATIONS)) {
+    if (new RegExp(`\\b${area}`, 'i').test(text)) moves.forEach((m) => out.add(m));
+  }
+  return [...out];
 }
 
 /**

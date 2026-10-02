@@ -8,7 +8,7 @@
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
-import { collectExerciseNames, findInjuryViolations } from '../_shared/aiSafety.js';
+import { collectExerciseNames, findInjuryViolations, injuryAvoidTerms, parseTermList } from '../_shared/aiSafety.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -159,7 +159,13 @@ Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
     // Deterministic contraindication check (B-SAFETY): reject a program that
     // includes a movement the client must avoid, rather than trusting the
     // prompt rule. Coaches regenerate rather than receive an unsafe program.
-    const injuryViolations = findInjuryViolations(collectExerciseNames(program), profile.movements_to_avoid);
+    // Avoid list = explicit movements_to_avoid PLUS the patterns implied by any
+    // recorded injury, so "knee injury" alone still blocks squats/lunges/jumps.
+    const avoidTerms = [
+      ...parseTermList(profile.movements_to_avoid),
+      ...injuryAvoidTerms(profile.injuries),
+    ];
+    const injuryViolations = findInjuryViolations(collectExerciseNames(program), avoidTerms);
     if (injuryViolations.length) {
       return jsonResponse({ error: 'contraindicated_exercise', violations: injuryViolations }, 422);
     }

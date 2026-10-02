@@ -64,8 +64,9 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userErr } = await asCaller.auth.getUser();
     if (userErr || !user) return json({ error: 'Unauthorized' }, 401);
 
-    const { clientName, clientEmail, clientId, welcomeMessage } = await req.json();
-    if (!clientEmail) return json({ error: 'Missing clientEmail' }, 400);
+    // clientEmail is accepted for backward compatibility but NOT trusted — see
+    // the recipient note below.
+    const { clientName, clientId, welcomeMessage } = await req.json();
     if (!clientId) return json({ error: 'Missing clientId' }, 400);
 
     const coachName = user.user_metadata?.full_name || 'Your coach';
@@ -74,12 +75,24 @@ Deno.serve(async (req) => {
     const { token, tokenHash } = await generateInviteToken();
     const expires = new Date(Date.now() + INVITE_TTL_DAYS * 86400_000).toISOString();
 
-    // Store ONLY the hash. RLS ensures the caller owns this client.
-    const { error: updErr } = await asCaller
+    // Store ONLY the hash. RLS ensures the caller owns this client; zero rows
+    // back means the client doesn't exist or isn't the caller's.
+    const { data: invited, error: updErr } = await asCaller
       .from('clients')
       .update({ invite_token_hash: tokenHash, invite_token_expires: expires })
-      .eq('id', clientId);
+      .eq('id', clientId)
+      .select('email')
+      .maybeSingle();
     if (updErr) return json({ error: updErr.message }, 403);
+    if (!invited) return json({ error: 'Client not found' }, 403);
+
+    // SECURITY (S1): the token is mailed ONLY to the email on the client row —
+    // the same address setupPortalAccount provisions. Trusting a request-body
+    // address let a coach mail the token to themselves and then claim a
+    // confirmed account for someone else's email. (A later email change on the
+    // row clears the token — migration 20261002000100.)
+    const clientEmail = invited.email;
+    if (!clientEmail) return json({ error: 'Client has no email on file' }, 400);
 
     const setupUrl = `${APP_URL}/client-setup/${token}`; // plaintext only here
     const html = buildInviteEmailHtml({ clientName, coachName, setupUrl, welcomeMessage });

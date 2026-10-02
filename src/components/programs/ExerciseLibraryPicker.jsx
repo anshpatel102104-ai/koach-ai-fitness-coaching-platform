@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, Play, Dumbbell, Star, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const MUSCLE_COLORS = {
   chest: 'bg-destructive/10 text-destructive', back: 'bg-success/10 text-success',
@@ -158,7 +159,7 @@ export default function ExerciseLibraryPicker({ open, onClose, onSelect }) {
                   {/* Thumbnail or icon */}
                   <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {ex.thumbnail_url
-                      ? <img src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover" />
+                      ? <SignedImg src={ex.thumbnail_url} alt={ex.name} className="w-full h-full object-cover" />
                       : ex.video_url
                       ? <div className="w-full h-full bg-primary/10 flex items-center justify-center"><Play className="w-4 h-4 text-primary" fill="currentColor" /></div>
                       : <Dumbbell className="w-5 h-5 text-muted-foreground" />}

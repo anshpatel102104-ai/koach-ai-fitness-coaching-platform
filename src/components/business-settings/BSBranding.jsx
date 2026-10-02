@@ -3,6 +3,7 @@ import { Palette, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { BSSection, BSRow, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const BRAND_COLORS = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-destructive)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--kc-0891b2)', 'var(--kc-db2777)', 'var(--tc-foreground)'];
 
@@ -17,7 +18,7 @@ export default function BSBranding({ s, set }) {
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
     set('logo_url', file_url);
   };
 
@@ -27,7 +28,7 @@ export default function BSBranding({ s, set }) {
       <BSRow label="Business logo">
         <div className="flex items-center gap-4">
           {s.logo_url && (
-            <img src={s.logo_url} alt="logo" className="h-12 w-auto rounded-xl border border-border object-contain bg-card p-1" />
+            <SignedImg src={s.logo_url} alt="logo" className="h-12 w-auto rounded-xl border border-border object-contain bg-card p-1" />
           )}
           <button onClick={() => logoRef.current?.click()}
             className="px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">

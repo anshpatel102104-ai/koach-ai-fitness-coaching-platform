@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function getInitials(name = '') {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -75,7 +76,7 @@ export default function ProgramAssignedClientsPanel({
                       style={{ background: bgColor, color: textColor }}
                     >
                       {client.avatar_url
-                        ? <img src={client.avatar_url} alt={client.name} className="w-8 h-8 rounded-full object-cover" />
+                        ? <SignedImg src={client.avatar_url} alt={client.name} className="w-8 h-8 rounded-full object-cover" />
                         : getInitials(client.name)
                       }
                     </div>

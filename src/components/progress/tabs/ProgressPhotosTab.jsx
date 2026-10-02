@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns';
 import { ImagePlus, ArrowLeftRight, X, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const VIEWS = ['Front', 'Side', 'Back', 'All'];
 
@@ -40,7 +41,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.uploadFile({ file });
+      const { file_url } = await base44.uploadFile({ file, scope: client?.id ? { clientId: client.id } : undefined });
       // Add to most recent check-in or create new
       const sorted = [...checkIns].sort((a, b) => new Date(b.date) - new Date(a.date));
       const recent = sorted[0];
@@ -107,10 +108,10 @@ export default function ProgressPhotosTab({ client, checkIns }) {
             onTouchMove={handleSliderMouseMove}
           >
             {/* Right (after) */}
-            <img src={compareB.url} alt="after" className="absolute inset-0 w-full h-full object-cover" />
+            <SignedImg src={compareB.url} alt="after" className="absolute inset-0 w-full h-full object-cover" />
             {/* Left (before) — clipped */}
             <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPos}%` }}>
-              <img src={compareA.url} alt="before" className="absolute inset-0 h-full object-cover" style={{ width: `${100 / (sliderPos / 100)}%` }} />
+              <SignedImg src={compareA.url} alt="before" className="absolute inset-0 h-full object-cover" style={{ width: `${100 / (sliderPos / 100)}%` }} />
             </div>
             {/* Divider */}
             <div className="absolute top-0 bottom-0 w-0.5 bg-card shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
@@ -168,7 +169,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
                     'relative rounded-xl overflow-hidden cursor-pointer group transition-all',
                     selA ? 'ring-2 ring-primary' : selB ? 'ring-2 ring-ai' : compareMode ? 'ring-2 ring-transparent hover:ring-primary' : 'hover:scale-[1.02]'
                   )}>
-                  <img src={photo.url} alt="progress" className="w-full aspect-square object-cover" />
+                  <SignedImg src={photo.url} alt="progress" className="w-full aspect-square object-cover" />
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                     <p className="text-[9px] text-white font-semibold">{format(parseISO(photo.date), 'MMM d, yy')}</p>
                     {photo.weight && <p className="text-[8px] text-white/70">{photo.weight} lbs</p>}
@@ -195,7 +196,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       {expanded && (
         <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4" onClick={() => setExpanded(null)}>
           <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
-            <img src={expanded.url} alt="expanded" className="w-full rounded-xl shadow-2xl" />
+            <SignedImg src={expanded.url} alt="expanded" className="w-full rounded-xl shadow-2xl" />
             <div className="absolute bottom-4 left-4 text-white">
               <p className="text-sm font-semibold">{format(parseISO(expanded.date), 'MMMM d, yyyy')}</p>
               {expanded.weight && <p className="text-xs opacity-70">{expanded.weight} lbs</p>}

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Camera } from 'lucide-react';
 import { supabasePortal as base44 } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function ProgressRing({ pct = 0, size = 64, stroke = 5 }) {
   const r = (size - stroke * 2) / 2;
@@ -69,7 +70,7 @@ export default function ProfileHeader({ user, client, program, checkIns }) {
         <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden relative"
           style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
           {client?.avatar_url ? (
-            <img src={client.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            <SignedImg src={client.avatar_url} alt="avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-white font-black text-xl">{initials}</span>
           )}

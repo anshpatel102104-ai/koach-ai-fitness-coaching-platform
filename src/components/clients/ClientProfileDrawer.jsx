@@ -5,6 +5,7 @@ import LifecycleBadge from './LifecycleBadge';
 import ClientFeedbackHistory from './ClientFeedbackHistory';
 import { compositeAdherenceScore } from '@/lib/adherence';
 import { format } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const goalLabels = {
   weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', strength: 'Strength',
@@ -53,7 +54,7 @@ export default function ClientProfileDrawer({ client, checkIns = [], onClose, on
         <div className="flex flex-col items-center pt-6 pb-5 px-5 text-center border-b border-border">
           <div className="w-16 h-16 rounded-full bg-accent/10 text-primary flex items-center justify-center font-bold text-xl mb-3 overflow-hidden">
             {client.avatar_url
-              ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+              ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
               : initials}
           </div>
           <h3 className="text-lg font-bold text-foreground leading-tight">{client.name}</h3>

@@ -55,3 +55,36 @@ export async function meterAiGeneration(svc, profile, now = new Date()) {
   if (error) throw new Error(`meterAiGeneration: ${error.message}`);
   return { allowed: true, used: count + 1, limit: aiLimit };
 }
+
+/**
+ * Who pays for an AI call. Coach sessions pay from their own quota. A client
+ * portal session (a real auth user linked via clients.portal_user_id) draws on
+ * the OWNING COACH's quota — the portal user's own profile row is a bare
+ * starter-tier row that would otherwise cap clients at 15 calls/month, and the
+ * coach is the plan holder. Returns the profile row to meter, or null when the
+ * caller is a portal client whose coach cannot be resolved (deny).
+ */
+export async function resolveMeteredProfile(svc, caller) {
+  const { data: link } = await svc.from('clients')
+    .select('user_id, created_by')
+    .eq('portal_user_id', caller.auth.id)
+    .limit(1)
+    .maybeSingle();
+  if (!link) return caller.profile;
+  const coachId = link.user_id || link.created_by;
+  if (!coachId) return null;
+  const { data: coach } = await svc.from('profiles').select('*').eq('id', coachId).maybeSingle();
+  return coach ?? null;
+}
+
+/**
+ * One-call guard for the insight functions: resolve the payer, then
+ * check + increment. Returns null when the call may proceed, else a ready-made
+ * Response-shaped { body, status } to return.
+ */
+export async function meterInsightCall(svc, caller) {
+  const payer = await resolveMeteredProfile(svc, caller);
+  if (!payer) return { status: 403, body: { error: 'No coach account found for this client' } };
+  const meter = await meterAiGeneration(svc, payer);
+  return meter.allowed ? null : { status: meter.status, body: meter.body };
+}

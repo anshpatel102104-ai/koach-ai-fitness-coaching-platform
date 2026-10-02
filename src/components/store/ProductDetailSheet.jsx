@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const CATEGORY_STYLES = {
   workout:   { icon: Dumbbell, gradient: 'from-accent/10 to-accent/10', badge: 'bg-accent/10 text-primary' },
@@ -65,7 +66,7 @@ export default function ProductDetailSheet({ listing, clients = [], open, onClos
         {/* Hero image or dark header */}
         {listing.image_url ? (
           <div className="relative" style={{ aspectRatio: '16/9' }}>
-            <img src={listing.image_url} alt={listing.title} className="w-full h-full object-cover" />
+            <SignedImg src={listing.image_url} alt={listing.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-4 left-5 right-5">
               <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full capitalize mb-2 inline-block', cat.badge)}>

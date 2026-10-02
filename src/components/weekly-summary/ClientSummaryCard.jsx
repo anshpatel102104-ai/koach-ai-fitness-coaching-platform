@@ -3,6 +3,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 import { TrendingDown, TrendingUp, Minus, AlertTriangle, CheckCircle2, Clock, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function WeightTrend({ checkIns }) {
   const withWeight = checkIns.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -73,7 +74,7 @@ export default function ClientSummaryCard({ client, checkIns, sessions }) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {client.avatar_url ? (
-            <img src={client.avatar_url} alt={client.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+            <SignedImg src={client.avatar_url} alt={client.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
           ) : (
             <div className={cn('w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0', avatarBg)}>
               {client.name?.[0]?.toUpperCase()}

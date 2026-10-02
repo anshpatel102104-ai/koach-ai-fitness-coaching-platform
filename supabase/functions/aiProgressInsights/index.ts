@@ -8,7 +8,8 @@
 //   - clientSummary    (components/progress/ClientAnalyticsView)
 // Context arrives in the request body; the caller-scoped analytics `ctx` is
 // computed client-side and passed through. Uses the shared Anthropic client.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 
 const MOOD_SCORE: Record<string, number> = { great: 5, good: 4, okay: 3, tired: 2, stressed: 1 };
@@ -21,6 +22,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, client, checkIn, prevCheckIn, recentCheckIns = [], ctx, isClientFacing, recent } = body;
+    if (action === 'checkInSummary' && !checkIn) return jsonResponse({ error: 'Missing checkIn' }, 400);
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['checkInSummary', 'progressAnalysis', 'clientSummary'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: checkInSummary ── coach dashboard quick summary of one check-in
     if (action === 'checkInSummary') {

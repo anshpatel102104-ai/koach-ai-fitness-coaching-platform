@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Edit, Star, AlertTriangle, Clock, Timer, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg, SignedVideo } from '@/components/shared/SignedImage';
 
 const MUSCLE_TAG_COLORS = {
   chest:     'bg-destructive/10 text-destructive',
@@ -46,7 +47,7 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
   if (url) {
     if (isDirect) {
       return (
-        <video className="w-full aspect-video rounded-xl bg-black object-contain"
+        <SignedVideo className="w-full aspect-video rounded-xl bg-black object-contain"
           src={url} controls playsInline preload="metadata" poster={thumb || imageUrl} />
       );
     }
@@ -60,7 +61,7 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
     return (
       <div className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group" onClick={() => setPlaying(true)}>
         {displayThumb
-          ? <img src={displayThumb} alt={name} className="w-full h-full object-cover" />
+          ? <SignedImg src={displayThumb} alt={name} className="w-full h-full object-cover" />
           : <div className="w-full h-full bg-muted" />}
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
           <div className="w-14 h-14 rounded-full bg-[var(--kc-w-95)] shadow-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -75,7 +76,7 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
   if (imageUrl) {
     return (
       <div className="w-full rounded-xl overflow-hidden bg-muted">
-        <img src={imageUrl} alt={name} className="w-full object-cover max-h-64" onError={e => { e.target.style.display = 'none'; }} />
+        <SignedImg src={imageUrl} alt={name} className="w-full object-cover max-h-64" onError={e => { e.target.style.display = 'none'; }} />
       </div>
     );
   }

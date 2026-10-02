@@ -9,6 +9,7 @@ import {
   CreditCard, Lock, Smartphone, Star, HelpCircle, MessageSquare, LogOut
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ── Sign Out Confirmation Modal ── */
 function SignOutModal({ onCancel }) {
@@ -206,7 +207,7 @@ export default function PortalProfile({ user }) {
           <div className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden"
             style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
             {myClient?.avatar_url
-              ? <img src={myClient.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ? <SignedImg src={myClient.avatar_url} alt="avatar" className="w-full h-full object-cover" />
               : <span className="text-white font-black text-2xl">{initials}</span>
             }
           </div>

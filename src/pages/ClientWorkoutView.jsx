@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { SignedVideo } from '@/components/shared/SignedImage';
 
 /* ── Rest Timer ── */
 function RestTimer({ seconds, onDone }) {
@@ -113,7 +114,7 @@ function ExerciseCard({ ex, exIdx, log, onLogSet }) {
                     allowFullScreen
                   />
                 ) : (
-                  <video src={ex.video_url || ex._library_exercise?.video_url} controls className="w-full h-full object-cover" />
+                  <SignedVideo src={ex.video_url || ex._library_exercise?.video_url} controls className="w-full h-full object-cover" />
                 )}
               </div>
             </div>

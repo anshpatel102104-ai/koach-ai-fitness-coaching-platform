@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload } from 'lucide-react';
 import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
   { id: 'weight', label: 'Weight' },
@@ -154,7 +155,7 @@ export default function LogUpdateModal({ open, defaultTab = 'weight', onClose, o
                   <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                     {photoUrls.map((url, i) => (
                       <div key={i} className="relative flex-shrink-0 w-20 h-20">
-                        <img src={url} alt="" className="w-full h-full object-cover rounded-xl" />
+                        <SignedImg src={url} alt="" className="w-full h-full object-cover rounded-xl" />
                         <button onClick={() => setPhotoUrls(prev => prev.filter((_, idx) => idx !== i))}
                           className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
                           style={{ background: 'rgb(var(--destructive))' }}>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WLSection, WLRow, WLToggle, WLInput, WLColorPicker, WLSelect, WLDivider } from './WLHelpers';
 import { toast } from 'sonner';
 import { Send } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const HEADER_HEIGHTS = [
   { value: 'compact', label: 'Compact' },
@@ -85,7 +86,7 @@ export default function WLEmailBranding({ s, set, locked, eliteLocked }) {
       <div className="rounded-2xl border border-border overflow-hidden">
         <div className="flex items-center justify-center py-8 px-6" style={{ background: s.email_header_bg || s.primary_color || 'var(--tc-primary)' }}>
           {s.logo_primary_url && s.email_show_logo !== false
-            ? <img src={s.logo_primary_url} alt="logo" className="h-12 object-contain" />
+            ? <SignedImg src={s.logo_primary_url} alt="logo" className="h-12 object-contain" />
             : <span className="text-white font-black text-xl">{s.business_name || 'Your Business'}</span>
           }
         </div>

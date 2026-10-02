@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { supabasePortal as base44 } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { ArrowLeft, MessageSquare, Send } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { stressed: '😫', tired: '😕', okay: '😐', good: '🙂', great: '😄' };
 const MOOD_LABEL = { stressed: 'Stressed', tired: 'Tired', okay: 'Okay', good: 'Good', great: 'Great' };
@@ -101,7 +102,7 @@ export default function CheckInDetailView({ checkIn, client, onBack, onMessage }
               <p className="text-white/30 text-[10px] font-bold uppercase tracking-wider mb-3">Progress Photos</p>
               <div className="grid grid-cols-3 gap-2">
                 {checkIn.photo_urls.map((url, i) => (
-                  <img key={i} src={url} alt="" className="rounded-xl aspect-square object-cover" />
+                  <SignedImg key={i} src={url} alt="" className="rounded-xl aspect-square object-cover" />
                 ))}
               </div>
             </div>

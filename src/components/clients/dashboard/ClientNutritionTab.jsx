@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ExternalLink, Download, AlertCircle } from 'lucide-react';
 import { startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { SignedLink, SignedIframe } from '@/components/shared/SignedImage';
 
 function weekNutritionCompliance(checkIns, weekStart, weekEnd) {
   const inRange = checkIns.filter(ci => {
@@ -53,17 +54,17 @@ function PDFViewer({ pdfUrl, fileName }) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm text-foreground">Plan Document</h3>
-        <a
+        <SignedLink
           href={pdfUrl}
           download={fileName || 'nutrition-plan.pdf'}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border hover:bg-secondary transition-colors"
         >
           <Download className="w-3.5 h-3.5" />
           Download
-        </a>
+        </SignedLink>
       </div>
       <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ height: '600px' }}>
-        <iframe
+        <SignedIframe
           src={pdfUrl}
           title="Nutrition Plan PDF"
           className="w-full h-full"

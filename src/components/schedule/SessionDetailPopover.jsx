@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const sessionTypeColors = {
   check_in: 'bg-accent text-primary border-l-4 border-primary',
@@ -83,7 +84,7 @@ export default function SessionDetailPopover({
         <div className={cn('p-4 border-b border-border flex items-start justify-between', colors)}>
           <div className="flex items-center gap-3">
             {avatar ? (
-              <img src={avatar} alt={client?.name} className="w-10 h-10 rounded-full object-cover" />
+              <SignedImg src={avatar} alt={client?.name} className="w-10 h-10 rounded-full object-cover" />
             ) : (
               <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold', colors)}>
                 {initials}

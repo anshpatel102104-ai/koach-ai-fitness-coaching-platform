@@ -8,6 +8,7 @@ import ProgressBodyStatsTab from './tabs/ProgressBodyStatsTab';
 import ProgressMeasurementsTab from './tabs/ProgressMeasurementsTab';
 import ProgressPhotosTab from './tabs/ProgressPhotosTab';
 import ProgressPerformanceTab from './tabs/ProgressPerformanceTab';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
   { key: 'ai', label: '✨ AI Analysis' },
@@ -58,7 +59,7 @@ export default function ClientProgressDetail({ client, checkIns, sessions, allCl
           <div className="w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground font-bold flex-shrink-0"
             style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
             {client.avatar_url
-              ? <img src={client.avatar_url} alt={client.name} className="w-12 h-12 rounded-full object-cover" />
+              ? <SignedImg src={client.avatar_url} alt={client.name} className="w-12 h-12 rounded-full object-cover" />
               : client.name?.[0]?.toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">

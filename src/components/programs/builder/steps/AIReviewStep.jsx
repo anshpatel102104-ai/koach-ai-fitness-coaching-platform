@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Dumbbell, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 
 const SECTION_COLOR = {
@@ -84,7 +85,7 @@ function DayCard({ workout }) {
                 style={{ height: 28, background: SECTION_COLOR[ex.section] || 'var(--tc-muted-foreground)' }}
               />
               {ex.image_url ? (
-                <img src={ex.image_url} alt={ex.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                <SignedImg src={ex.image_url} alt={ex.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
               ) : (
                 <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted">
                   <Dumbbell className="w-3.5 h-3.5 text-muted-foreground" />

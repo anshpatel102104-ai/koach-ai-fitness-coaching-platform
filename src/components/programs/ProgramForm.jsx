@@ -11,6 +11,7 @@ import { Plus, Trash2, GripVertical, Play, BookOpen, ChevronDown, ChevronUp, Lin
 import { cn } from '@/lib/utils';
 import ExerciseDetailModal from '@/components/exercises/ExerciseDetailModal';
 import ExercisePickerModal from '@/components/exercises/ExercisePickerModal';
+import { openFileUrl } from '@/lib/storageUrls';
 
 const SET_TYPES = [
   { value: 'straight', label: 'Straight Set' },
@@ -321,7 +322,7 @@ export default function ProgramForm({ open, onOpenChange, onSubmit, program }) {
                                   onRemove={() => removeExercise(wIdx, eIdx)}
                                   onPickLibrary={() => setPickerTarget({ wIdx, eIdx })}
                                   onWatchDemo={() => {
-                                    if (ex.video_url) window.open(ex.video_url, '_blank');
+                                    if (ex.video_url) openFileUrl(ex.video_url);
                                     else if (ex._library_exercise) setDemoExercise(ex._library_exercise);
                                   }}
                                 />

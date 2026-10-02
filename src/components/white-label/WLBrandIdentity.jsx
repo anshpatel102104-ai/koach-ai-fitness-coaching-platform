@@ -1,5 +1,6 @@
 import React from 'react';
 import { WLSection, WLRow, WLInput, WLUploadButton, WLColorPicker, WLDivider } from './WLHelpers';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function WLBrandIdentity({ s, set, locked }) {
   return (
@@ -44,7 +45,7 @@ export default function WLBrandIdentity({ s, set, locked }) {
             <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-border flex items-center justify-center flex-shrink-0"
               style={{ background: s.app_icon_url ? 'transparent' : s.app_icon_bg_color || 'var(--tc-primary)' }}>
               {s.app_icon_url
-                ? <img src={s.app_icon_url} alt="icon" className="w-full h-full object-cover" />
+                ? <SignedImg src={s.app_icon_url} alt="icon" className="w-full h-full object-cover" />
                 : <span className="text-white text-xl font-black">{(s.business_name || s.app_name || 'K')[0]}</span>
               }
             </div>

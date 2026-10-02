@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import CheckInResponseGenerator from './CheckInResponseGenerator';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 
@@ -187,7 +188,7 @@ export default function CheckInReviewDrawer({ checkIn, client, allCheckIns, curr
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border flex-shrink-0 bg-card">
           <div className="relative">
             {client?.avatar_url ? (
-              <img src={client.avatar_url} alt={clientName} className="w-10 h-10 rounded-full object-cover border border-border" />
+              <SignedImg src={client.avatar_url} alt={clientName} className="w-10 h-10 rounded-full object-cover border border-border" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                 {clientName[0]?.toUpperCase()}
@@ -302,9 +303,9 @@ export default function CheckInReviewDrawer({ checkIn, client, allCheckIns, curr
               </p>
               <div className="flex gap-2 flex-wrap">
                 {checkIn.photo_urls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="progress" className="w-20 h-20 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
-                  </a>
+                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                    <SignedImg src={url} alt="progress" className="w-20 h-20 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
+                  </SignedLink>
                 ))}
               </div>
             </div>

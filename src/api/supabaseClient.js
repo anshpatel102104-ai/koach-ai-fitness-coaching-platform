@@ -424,24 +424,57 @@ const functions = {
 // Deliberately NOT named `integrations.Core.*` — the Base44 integrations surface
 // is fully retired from the frontend (LLM/email calls go to ported Edge
 // Functions; file upload goes here). Call sites use `base44.uploadFile({ file })`.
-const STORAGE_BUCKET = 'uploads';
+// Two buckets (migrations 20260823000100 + 20261002000200):
+//   uploads  PRIVATE — client photos, progress pics, documents, message/community
+//            media. The DB stores a `storage://uploads/<uid>/<file>` reference and
+//            components turn it into a short-lived signed URL at display time
+//            (see lib/storageUrls.js, components/shared/SignedImage.jsx).
+//   branding PUBLIC  — logos, app icon, coach avatar, store/product images (shown
+//            to anonymous visitors and inside emails). Stores the public URL.
+// Both key objects as `<auth.uid()>/[<scope>/]<ts>-<rand>-<name>` (the first
+// segment is required by the RLS insert policies). Reads on `uploads` go through
+// app.can_read_upload(): own folder; coach/team -> their clients' folders;
+// clients -> `<coach>/shared/`, `<coach>/client/<their client id>/`; and
+// `<uid>/community/` within one coach's client group.
+export const UPLOADS_BUCKET = 'uploads';
+export const BRANDING_BUCKET = 'branding';
+export const STORAGE_REF_PREFIX = `storage://${UPLOADS_BUCKET}/`;
+
 /**
- * base44.uploadFile({ file }) -> { file_url }. Uploads to the public `uploads`
- * Supabase Storage bucket (provisioned by migration 20260716000100) under a
- * collision-resistant key and returns the public URL. Same call/return shape as
- * the old Base44 Core.UploadFile so call sites only change the method name.
+ * base44.uploadFile({ file, bucket? }) -> { file_url }.
+ *   bucket 'uploads' (default): returns a `storage://uploads/...` reference.
+ *   bucket 'branding':          returns the object's public URL.
+ * `scope` (uploads only) widens who may read the file beyond uploader+coach:
+ *   'shared'          every client of the uploading coach (exercise media, meal
+ *                     images, plan PDFs, group covers)
+ *   'community'       other members of the uploader's coach's group
+ *   { clientId }      one specific client of the uploading coach (a message
+ *                     attachment or a photo logged on that client's behalf)
  */
-async function uploadFile({ file }) {
+async function uploadFile({ file, bucket = UPLOADS_BUCKET, scope = undefined }) {
+  if (bucket !== UPLOADS_BUCKET && bucket !== BRANDING_BUCKET) throw new Error(`Unknown storage bucket: ${bucket}`);
   const sb = getSupabase();
+  const { data: { session } } = await sb.auth.getSession();
+  const uid = session?.user?.id;
+  if (!uid) throw new Error('Sign in to upload files');
   const safeName = (file?.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
   const rand = Math.random().toString(36).slice(2);
-  const path = `${Date.now()}-${rand}-${safeName}`;
+  let prefix = '';
+  if (scope && bucket === UPLOADS_BUCKET) {
+    if (scope === 'shared' || scope === 'community') prefix = `${scope}/`;
+    else if (scope.clientId) prefix = `client/${scope.clientId}/`;
+    else throw new Error('Invalid upload scope');
+  }
+  const path = `${uid}/${prefix}${Date.now()}-${rand}-${safeName}`;
   const { data, error } = await sb.storage
-    .from(STORAGE_BUCKET)
-    .upload(path, file, { cacheControl: '3600', upsert: false });
+    .from(bucket)
+    .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file?.type || undefined });
   throwIf(error);
-  const { data: pub } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(data.path);
-  return { file_url: pub.publicUrl };
+  if (bucket === BRANDING_BUCKET) {
+    const { data: pub } = sb.storage.from(BRANDING_BUCKET).getPublicUrl(data.path);
+    return { file_url: pub.publicUrl };
+  }
+  return { file_url: `${STORAGE_REF_PREFIX}${data.path}` };
 }
 
 export const supabase = {

@@ -4,6 +4,7 @@ import { supabase as base44 } from '@/api/supabaseClient';
 import { Input } from '@/components/ui/input';
 import { Search, Plus, Play, Dumbbell, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const MUSCLE_GROUPS = ['all','chest','back','shoulders','biceps','triceps','legs','glutes','core','full_body','cardio'];
 const EQUIPMENT = ['all','barbell','dumbbell','cable','machine','bodyweight','kettlebell','resistance_band','trx'];
@@ -105,7 +106,7 @@ export default function BuilderExercisePicker({ onAdd }) {
               >
                 <div className="w-8 h-8 rounded-md bg-secondary/80 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {ex.thumbnail_url ? (
-                    <img src={ex.thumbnail_url} alt="" className="w-full h-full object-cover rounded-md" />
+                    <SignedImg src={ex.thumbnail_url} alt="" className="w-full h-full object-cover rounded-md" />
                   ) : ex.video_url ? (
                     <Play className="w-3 h-3 text-primary" />
                   ) : (

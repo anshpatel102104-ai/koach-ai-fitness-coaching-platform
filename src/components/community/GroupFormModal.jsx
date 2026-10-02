@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, X, Check, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function avatarColor(name) {
   const colors = ['bg-accent text-primary', 'bg-ai/10 text-ai', 'bg-success/10 text-success', 'bg-warning/10 text-warning', 'bg-destructive/10 text-destructive'];
@@ -62,7 +63,7 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, scope: 'shared' });
     setCoverUrl(file_url);
     setUploading(false);
   };
@@ -105,7 +106,7 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
             <div className="mt-1 flex items-center gap-3">
               {coverUrl ? (
                 <div className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                  <img src={coverUrl} alt="cover" className="w-full h-full object-cover" />
+                  <SignedImg src={coverUrl} alt="cover" className="w-full h-full object-cover" />
                   <button type="button" onClick={() => setCoverUrl('')}
                     className="absolute top-1 right-1 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center">
                     <X className="w-2.5 h-2.5 text-white" />

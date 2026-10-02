@@ -11,7 +11,8 @@
 // NOTE: weeklyInsight / nutritionQA are called from the CLIENT PORTAL. getCaller
 // accepts any verified session (coach or portal-client JWT), so portal callers
 // are authorized here without exposing the LLM key to the browser.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 
 Deno.serve(async (req) => {
@@ -22,6 +23,12 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['foodSwaps', 'weeklyInsight', 'nutritionQA'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: foodSwaps ── 3 macro-matched swap suggestions for a food
     if (action === 'foodSwaps') {

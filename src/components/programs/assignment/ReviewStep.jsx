@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Check, Bell, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ReviewStep({
   selectedClients,
@@ -33,7 +34,7 @@ export default function ReviewStep({
           {clientData.map((client) => (
             <div key={client.id} className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                {client.avatar_url && <img src={client.avatar_url} alt={client.name} />}
+                {client.avatar_url && <SignedImg src={client.avatar_url} alt={client.name} />}
                 <AvatarFallback>{client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <span className="text-sm font-medium">{client.name}</span>

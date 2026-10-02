@@ -1,5 +1,6 @@
 import React from 'react';
 import { Lock } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export function WLSection({ title, emoji, description, locked, children }) {
   return (
@@ -92,12 +93,12 @@ export function WLUploadButton({ label, hint, url, onChange, accept = 'image/*' 
     const file = e.target.files?.[0];
     if (!file) return;
     const { supabase: base44 } = await import('@/api/supabaseClient');
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
     onChange(file_url);
   };
   return (
     <div className="flex items-center gap-4">
-      {url && <img src={url} alt="preview" className="h-12 w-12 rounded-xl object-contain border border-border bg-muted p-1 flex-shrink-0" />}
+      {url && <SignedImg src={url} alt="preview" className="h-12 w-12 rounded-xl object-contain border border-border bg-muted p-1 flex-shrink-0" />}
       <div>
         <button onClick={() => ref.current?.click()} type="button"
           className="px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">

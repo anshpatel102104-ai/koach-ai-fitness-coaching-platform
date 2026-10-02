@@ -5,6 +5,7 @@ import { Dumbbell, Calendar, ChevronRight, Layers, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const DIFFICULTY_STYLES = {
   beginner:     'bg-success/10 text-success border-success',
@@ -55,7 +56,7 @@ export default function ProfileProgramsTab({ client }) {
         <div className="p-4">
           {assigned.image_url && (
             <div className="w-full h-32 rounded-xl overflow-hidden mb-4 border border-border">
-              <img src={assigned.image_url} alt={assigned.title} className="w-full h-full object-cover" />
+              <SignedImg src={assigned.image_url} alt={assigned.title} className="w-full h-full object-cover" />
             </div>
           )}
 

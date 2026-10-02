@@ -4,6 +4,7 @@ import { supabase as base44 } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 import { Calendar, Video, MapPin, Phone, Clipboard, MessageSquare, Play, CalendarPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TYPE_LABELS = {
   video_call:   { label: 'Video Call',      Icon: Video },
@@ -112,7 +113,7 @@ function SessionCard({ session, clients, onMessage }) {
           style={{ background: avatarBg, color: ringColor }}
         >
           {client?.avatar_url
-            ? <img src={client.avatar_url} alt={clientName} className="w-full h-full object-cover rounded-full" />
+            ? <SignedImg src={client.avatar_url} alt={clientName} className="w-full h-full object-cover rounded-full" />
             : initials}
         </div>
         <div className="flex-1 min-w-0">

@@ -2,6 +2,7 @@ import React from 'react';
 import { User, ClipboardList, MoreVertical, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { SignedImg } from '@/components/shared/SignedImage';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
@@ -41,7 +42,7 @@ export default function ConversationHeader({ client, allMessages, onLogCheckIn, 
         <div className="relative flex-shrink-0">
           <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden">
             {client.avatar_url
-              ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+              ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
               : initials
             }
           </div>

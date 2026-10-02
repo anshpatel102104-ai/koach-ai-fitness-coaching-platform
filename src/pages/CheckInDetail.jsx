@@ -14,6 +14,7 @@ import { checkInScore, averageAdherenceScore, scoreColor } from '@/lib/adherence
 import CheckInResponseBox from '@/components/checkin/CheckInResponseBox';
 import AIProgramSuggestions from '@/components/checkin/AIProgramSuggestions';
 import CheckInNutritionTab from '@/components/checkin/CheckInNutritionTab';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 const MOOD_LABEL = { great: 'Great', good: 'Good', okay: 'Okay', tired: 'Tired', stressed: 'Stressed' };
@@ -28,13 +29,13 @@ function PhotoGallery({ urls }) {
     <div className="space-y-2">
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Progress Photos</p>
       <div className="relative bg-secondary/30 rounded-2xl overflow-hidden aspect-[4/3]">
-        <a href={urls[idx]} target="_blank" rel="noreferrer">
-          <img
+        <SignedLink href={urls[idx]} target="_blank" rel="noreferrer">
+          <SignedImg
             src={urls[idx]}
             alt={labels[idx] || `Photo ${idx + 1}`}
             className="w-full h-full object-cover"
           />
-        </a>
+        </SignedLink>
         {urls.length > 1 && (
           <>
             <button

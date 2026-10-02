@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { startOfWeek, addDays, format, isToday } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const DIFFICULTY_STYLE = {
   beginner:     { label: 'Beginner',     bg: 'bg-success/10', text: 'text-success' },
@@ -125,7 +126,7 @@ function AssignedProgramSection({ client, allPrograms, assignedProgram, onRefetc
   return (
     <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
       {assignedProgram.image_url && (
-        <img src={assignedProgram.image_url} alt={assignedProgram.title} className="w-full h-28 object-cover" />
+        <SignedImg src={assignedProgram.image_url} alt={assignedProgram.title} className="w-full h-28 object-cover" />
       )}
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">

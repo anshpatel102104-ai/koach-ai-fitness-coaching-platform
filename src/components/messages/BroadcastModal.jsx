@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { generateBroadcastMessage } from '@/lib/aiMessageAssistant';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const FILTERS = [
   { key: 'all', label: 'All Clients' },
@@ -234,7 +235,7 @@ export default function BroadcastModal({ clients, onClose, onSend, checkIns = []
                     >
                       <div className={cn('w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0', bg, text)}>
                         {client.avatar_url
-                          ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                          ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
                           : initials}
                       </div>
                       <span className="flex-1 text-sm font-medium text-foreground truncate">{client.name}</span>

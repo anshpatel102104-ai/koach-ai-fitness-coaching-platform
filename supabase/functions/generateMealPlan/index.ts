@@ -14,6 +14,7 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectFoodNames, findAllergenViolations, parseTermList } from '../_shared/aiSafety.js';
+import { validateMealPlan } from '../_shared/aiShape.js';
 
 const num = { type: 'number' };
 const str = { type: 'string' };
@@ -166,7 +167,7 @@ ${rules}`;
       return jsonResponse({
         error: 'AI returned an invalid meal plan structure',
         diagnostics: { coerce_notes: [...(trainRes.coerceNotes ?? []), ...(restRes.coerceNotes ?? [])], train_keys: Object.keys(train ?? {}), rest_keys: Object.keys(rest ?? {}), train_preview: preview(train), rest_preview: preview(rest), stop_reasons: [trainRes.stopReason, restRes.stopReason], output_tokens: [trainRes.outputTokens, restRes.outputTokens] },
-      }, 500);
+      }, 502);
     }
 
     const parsed = {
@@ -186,6 +187,14 @@ ${rules}`;
       },
       supplements: [] as unknown[],
     };
+
+    // Strict shape check AFTER lenient repair/coercion: every day, every meal (name, foods, macros).
+    // A partial plan is rejected, never returned.
+    const shapeProblems = validateMealPlan(parsed, { numMeals, calories: Number(calories), restCalories });
+    if (shapeProblems.length) {
+      console.error('generateMealPlan: incomplete plan', JSON.stringify(shapeProblems.slice(0, 10)));
+      return jsonResponse({ error: 'incomplete_plan', problems: shapeProblems.slice(0, 20) }, 502);
+    }
 
     // Deterministic allergen check across both day plans (B-SAFETY). Prompting
     // is not sufficient for a health-safety constraint; reject before returning.

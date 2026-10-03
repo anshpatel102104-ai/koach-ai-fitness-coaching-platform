@@ -5,6 +5,7 @@
 // generateSmartMeals); InvokeLLM â†’ the shared Anthropic client. The exercise
 // library read is scoped to the CALLER (Base44's user-context list) and the
 // library-enrichment pass is verbatim.
+import { validateProgram } from '../_shared/aiShape.js';
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
@@ -227,6 +228,13 @@ Use day_number ${i + 1} and a descriptive day_name starting with "Day ${i + 1} â
     // Validate minimum required fields (verbatim)
     if (!program || !program.title || !Array.isArray(program.workouts) || program.workouts.length === 0) {
       return jsonResponse({ error: 'AI returned an invalid program structure. Missing title or workouts.' }, 500);
+    }
+
+    // Strict shape check after lenient repair: every day present, every exercise has name/sets/reps.
+    const shapeProblems = validateProgram(program, { daysPerWeek: dpw });
+    if (shapeProblems.length) {
+      console.error('generateAIProgram: incomplete program', JSON.stringify(shapeProblems.slice(0, 10)));
+      return jsonResponse({ error: 'incomplete_program', problems: shapeProblems.slice(0, 20) }, 502);
     }
 
     // Deterministic contraindication check (B-SAFETY): reject a program that

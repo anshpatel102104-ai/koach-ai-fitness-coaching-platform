@@ -86,3 +86,19 @@ export const SMART_MEALS_BATCH = tool('submit_meals', 'Submit the generated meal
 export const SMART_MEAL_SINGLE = {
   name: 'submit_meal', description: 'Submit the regenerated meal.', input_schema: MEAL_OPTS,
 };
+
+// ── generateExerciseLibrary ──
+export const EXERCISE_LIBRARY = tool('submit_exercises', 'Submit the exercise library entries.', {
+  exercises: {
+    type: 'array',
+    items: obj({
+      name: str,
+      muscle_group: { type: 'string', enum: ['legs', 'back', 'chest', 'shoulders', 'biceps', 'triceps', 'core', 'cardio', 'full_body'] },
+      secondary_muscles: strs,
+      equipment: { type: 'string', enum: ['barbell', 'dumbbell', 'cable', 'machine', 'bodyweight', 'kettlebell', 'resistance_band', 'trx', 'other'] },
+      movement_pattern: { type: 'string', enum: ['push', 'pull', 'hinge', 'squat', 'carry', 'rotation', 'isometric', 'cardio'] },
+      difficulty: { type: 'string', enum: ['beginner', 'intermediate', 'advanced'] },
+      description: str, form_cues: strs, common_mistakes: strs, video_url: str, thumbnail_url: str, default_rest_seconds: num,
+    }),
+  },
+});

@@ -6,8 +6,9 @@
 // Base44. Direct Anthropic call → shared client.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, EXERCISE_LIBRARY } from '../_shared/aiTools.js';
 
-const PROMPT = `Return ONLY a valid JSON array of exactly 50 exercises with no additional text or markdown:
+const PROMPT = `Submit exactly 50 exercises by calling the provided tool (respond with that tool call only). Keep description ≤ 20 words. Each exercise object has this shape (inside the tool's "exercises" array):
 [
   {
     "name": "Exercise Name",
@@ -42,7 +43,7 @@ Use REAL YouTube video IDs from actual tutorials. Get video IDs from these chann
 Extract the video ID from URLs like https://www.youtube.com/watch?v=VIDEOID
 Then use thumbnail: https://img.youtube.com/vi/VIDEOID/maxresdefault.jpg
 
-CRITICAL: Return ONLY the JSON array, no markdown code blocks, no explanations.`;
+CRITICAL: Tool arguments must be real JSON arrays/objects, never JSON encoded inside a string.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -51,12 +52,13 @@ Deno.serve(async (req) => {
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
     if (!anthropicConfigured()) return jsonResponse({ error: 'API key not configured' }, 500);
 
-    const llm = await invokeClaude({ prompt: PROMPT, maxTokens: 8000, expectJson: true });
+    const llm = await invokeClaude({ prompt: PROMPT, maxTokens: 16000, timeoutMs: 135_000, tool: EXERCISE_LIBRARY, system: TOOL_SYSTEM });
     if (!llm.ok) return jsonResponse({ error: llm.error }, llm.status ?? 500);
 
-    const exercises = llm.parsed;
-    if (!Array.isArray(exercises) || exercises.length === 0) {
-      return jsonResponse({ error: 'Invalid exercise data received' }, 400);
+    const exercises = llm.parsed?.exercises;
+    // Strict check: reject (insert nothing) unless every entry is complete.
+    if (!Array.isArray(exercises) || exercises.length === 0 || exercises.some((e) => !e || typeof e.name !== 'string' || !e.name.trim() || !e.muscle_group)) {
+      return jsonResponse({ error: 'Invalid exercise data received', diagnostics: { coerce_notes: llm.coerceNotes, count: Array.isArray(exercises) ? exercises.length : null } }, 502);
     }
 
     const svc = serviceClient();

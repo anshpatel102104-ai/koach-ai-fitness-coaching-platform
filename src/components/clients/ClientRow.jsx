@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import LifecycleBadge, { LIFECYCLE_CONFIG } from './LifecycleBadge';
 import PriorityScoreBadge from '@/components/intelligence/PriorityScoreBadge';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const LIFECYCLE_ORDER = ['lead', 'active', 'at_risk', 'completed', 'alumni'];
 
@@ -114,7 +115,7 @@ export default function ClientRow({ client, score, priorityScore, lastCheckIn, c
         client.avatar_url ? '' : `${avatarBg} ${avatarText}`
       )}>
         {client.avatar_url
-          ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+          ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
           : initials}
       </div>
 

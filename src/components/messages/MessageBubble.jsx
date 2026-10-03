@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Pin, Mic, Video, Tag, Check, CheckCheck, Download, FileText, Megaphone, Play, Pause, AlertCircle } from 'lucide-react';
 import { TAG_COLORS } from './MessageTemplates';
+import { SignedImg, SignedAudio, SignedVideo, SignedLink } from '@/components/shared/SignedImage';
 
 // ── Custom voice player ──────────────────────────────────────────────────────
 function VoicePlayer({ url, durationSeconds, isCoach }) {
@@ -74,7 +75,7 @@ function VoicePlayer({ url, durationSeconds, isCoach }) {
   return (
     <div className="flex items-center gap-2.5 min-w-[220px] py-0.5">
       {/* Hidden native audio element */}
-      <audio ref={audioRef} src={url} preload="metadata" />
+      <SignedAudio ref={audioRef} src={url} preload="metadata" />
 
       {/* Play / Pause */}
       <button
@@ -131,7 +132,7 @@ function ImageAttachment({ url }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <>
-      <img
+      <SignedImg
         src={url}
         alt="attachment"
         onClick={() => setExpanded(true)}
@@ -142,7 +143,7 @@ function ImageAttachment({ url }) {
           className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
           onClick={() => setExpanded(false)}
         >
-          <img src={url} alt="full" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" />
+          <SignedImg src={url} alt="full" className="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl" />
         </div>
       )}
     </>
@@ -152,7 +153,7 @@ function ImageAttachment({ url }) {
 function FileAttachment({ url, isCoach }) {
   const fileName = url.split('/').pop()?.split('?')[0] || 'attachment';
   return (
-    <a
+    <SignedLink
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -168,7 +169,7 @@ function FileAttachment({ url, isCoach }) {
         {fileName}
       </span>
       <Download className={cn('w-3.5 h-3.5 flex-shrink-0 ml-auto', isCoach ? 'text-white/70' : 'text-primary')} />
-    </a>
+    </SignedLink>
   );
 }
 
@@ -198,7 +199,7 @@ export default function MessageBubble({ msg, onTogglePin, isFirst = true, isLast
           {isLast ? (
             <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-[11px] overflow-hidden">
               {clientAvatar
-                ? <img src={clientAvatar} alt={clientName} className="w-full h-full object-cover" />
+                ? <SignedImg src={clientAvatar} alt={clientName} className="w-full h-full object-cover" />
                 : (clientName?.[0] || '?').toUpperCase()
               }
             </div>
@@ -265,7 +266,7 @@ export default function MessageBubble({ msg, onTogglePin, isFirst = true, isLast
               <div className="flex items-center gap-2 mb-1">
                 <Video className="w-3.5 h-3.5 opacity-70" />
                 <span className="text-xs opacity-70">Video Reply</span>
-                {url && <video controls src={url} className="max-w-[200px] rounded mt-1" />}
+                {url && <SignedVideo controls src={url} className="max-w-[200px] rounded mt-1" />}
               </div>
             )}
             {/* Image attachment */}

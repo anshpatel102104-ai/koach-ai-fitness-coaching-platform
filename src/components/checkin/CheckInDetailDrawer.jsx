@@ -8,6 +8,7 @@ import { scoreColor, checkInScore } from '@/lib/adherence';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 
@@ -139,9 +140,9 @@ export default function CheckInDetailDrawer({ checkIn, client, allCheckIns, curr
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Progress Photos</p>
               <div className="flex gap-2 flex-wrap">
                 {checkIn.photo_urls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="progress" className="w-20 h-20 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
-                  </a>
+                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                    <SignedImg src={url} alt="progress" className="w-20 h-20 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
+                  </SignedLink>
                 ))}
               </div>
             </div>

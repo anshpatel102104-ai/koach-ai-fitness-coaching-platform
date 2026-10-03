@@ -7,8 +7,10 @@
 //   - programSuggestions (components/checkin/AIProgramSuggestions)
 // All context arrives in the request body; no DB reads/writes. Uses the shared
 // Anthropic client (the same one verify:ai exercises).
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, REVIEW_CHECKIN, PROGRAM_SUGGESTIONS } from '../_shared/aiTools.js';
 
 function num(n: unknown): number | null {
   return typeof n === 'number' && !Number.isNaN(n) ? n : null;
@@ -24,11 +26,17 @@ Deno.serve(async (req) => {
     const { action, client, checkIn, recentCheckIns = [], nutritionPlan } = body;
     const clientName = body.clientName || client?.name || checkIn?.client_name || 'Client';
     if (!checkIn) return jsonResponse({ error: 'Missing checkIn' }, 400);
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['reviewCheckIn', 'programSuggestions'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: reviewCheckIn ── coach-facing summary + suggested reply + flags
     if (action === 'reviewCheckIn') {
       const result = await invokeClaude({
-        expectJson: true,
+        tool: REVIEW_CHECKIN, system: TOOL_SYSTEM,
         prompt: `You are a professional fitness coach AI assistant. Analyze this weekly check-in data and provide:
 1. A 2-3 sentence summary for the coach (what went well, what needs attention)
 2. A suggested coach response (2-3 sentences, encouraging and actionable)
@@ -70,7 +78,7 @@ Return ONLY valid JSON:
         ? Math.round(slice.reduce((s, c) => s + (c.compliance_nutrition || 0), 0) / denom) : null;
 
       const result = await invokeClaude({
-        expectJson: true,
+        tool: PROGRAM_SUGGESTIONS, system: TOOL_SYSTEM,
         prompt: `You are an elite fitness coach analyzing a client check-in to generate smart program adjustment suggestions.
 
 CLIENT: ${clientName}

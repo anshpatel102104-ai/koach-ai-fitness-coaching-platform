@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import CommunityFeedTab from '@/components/portal/community/CommunityFeedTab';
 import CommunityGroupChat from '@/components/portal/community/CommunityGroupChat';
 import CommunityMembersTab from '@/components/portal/community/CommunityMembersTab';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
   { id: 'feed', label: 'Feed', icon: MessageSquare },
@@ -162,7 +163,7 @@ export default function PortalCommunity({ user }) {
                   style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
                   {group.cover_image_url ? (
                     <div className="h-24 overflow-hidden">
-                      <img src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover" />
+                      <SignedImg src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="h-24 flex items-center justify-center"

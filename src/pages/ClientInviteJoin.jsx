@@ -4,6 +4,7 @@ import { supabase as base44 } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import KoachLogo from '@/components/brand/KoachLogo.jsx';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const SPECIALTIES = [
   'Weight Loss', 'Muscle Building', 'Athletic Performance', 'General Fitness',
@@ -314,7 +315,7 @@ function Step3({ data, set, onNext, onBack, onSkip }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
     set('avatar_url', file_url);
     setUploading(false);
   };
@@ -331,7 +332,7 @@ function Step3({ data, set, onNext, onBack, onSkip }) {
             <Label>Profile Photo (optional)</Label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 64, height: 64, borderRadius: 16, background: 'color-mix(in srgb, white 5%, transparent)', border: '1.5px dashed color-mix(in srgb, white 12%, transparent)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {data.avatar_url ? <img src={data.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 24 }}>📷</span>}
+                {data.avatar_url ? <SignedImg src={data.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 24 }}>📷</span>}
               </div>
               <div>
                 <button type="button" onClick={() => fileRef.current?.click()} style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'color-mix(in srgb, var(--tc-primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-primary) 30%, transparent)', color: 'var(--tc-primary)', cursor: 'pointer' }}>

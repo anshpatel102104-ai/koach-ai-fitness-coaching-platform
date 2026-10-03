@@ -5,14 +5,81 @@
 // generateSmartMeals); InvokeLLM → the shared Anthropic client. The exercise
 // library read is scoped to the CALLER (Base44's user-context list) and the
 // library-enrichment pass is verbatim.
+import { validateProgram } from '../_shared/aiShape.js';
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectExerciseNames, findInjuryViolations, injuryAvoidTerms, parseTermList } from '../_shared/aiSafety.js';
 
+// Structured output: the program is generated one training day per structured tool
+// call (in parallel), so every response is schema-valid and small, and a
+// response cut off at max_tokens is rejected rather than silently truncated.
+const str = { type: 'string' };
+const WORKOUT = {
+  type: 'object',
+  required: ['day_name', 'day_number', 'workout_notes', 'exercises'],
+  properties: {
+    day_name: str, day_number: { type: 'number' }, workout_notes: str,
+    exercises: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['name', 'sets', 'reps', 'rest_seconds', 'rpe', 'section', 'notes', 'prescription'],
+        properties: {
+          name: str, sets: { type: 'number' }, reps: str, rest_seconds: { type: 'number' }, rpe: str,
+          section: { type: 'string', enum: ['warmup', 'main', 'finisher', 'cooldown'] },
+          notes: str, prescription: str,
+        },
+      },
+    },
+  },
+};
+const META = {
+  type: 'object',
+  required: ['title', 'description', 'category', 'difficulty', 'coach_rationale'],
+  properties: {
+    title: str, description: str,
+    category: { type: 'string', enum: ['strength', 'hypertrophy', 'fat_loss', 'athletic', 'mobility', 'custom'] },
+    difficulty: { type: 'string', enum: ['beginner', 'intermediate', 'advanced', 'elite'] },
+    coach_rationale: {
+      type: 'object', required: ['split', 'weekly_volume', 'rep_range_rationale', 'progression_approach'],
+      properties: { split: str, weekly_volume: str, rep_range_rationale: str, progression_approach: str },
+    },
+  },
+};
+const dayTool = (withMeta: boolean) => ({
+  name: 'submit_training_day',
+  description: 'Submit one training day' + (withMeta ? ' plus the program-level title, description and coach rationale.' : '.'),
+  input_schema: {
+    type: 'object',
+    required: withMeta ? ['workout', 'program'] : ['workout'],
+    properties: { workout: WORKOUT, ...(withMeta ? { program: META } : {}) },
+  },
+});
+const SPLIT_TOOL = {
+  name: 'submit_split',
+  description: 'Submit the ordered list of training-day focuses.',
+  input_schema: {
+    type: 'object', required: ['days'],
+    properties: { days: { type: 'array', items: { type: 'string' } } },
+  },
+};
+
+// Default day-by-day split by training frequency (used when the coach leaves the split to the AI).
+const DEFAULT_SPLITS: Record<number, string[]> = {
+  1: ['Full Body'],
+  2: ['Upper Body', 'Lower Body'],
+  3: ['Full Body A', 'Full Body B', 'Full Body C'],
+  4: ['Upper Strength', 'Lower Strength', 'Upper Hypertrophy', 'Lower Hypertrophy'],
+  5: ['Push', 'Pull', 'Legs', 'Upper', 'Lower'],
+  6: ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs'],
+  7: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Full Body', 'Conditioning / Active Recovery'],
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
+    const t0 = Date.now();
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
 
@@ -30,14 +97,6 @@ Deno.serve(async (req) => {
 
     const dpw = Number(profile.days_per_week) || 4;
     const preferredSplit = profile.preferred_split || 'Let AI decide';
-
-    const splitGuidance = (() => {
-      if (preferredSplit && preferredSplit !== 'Let AI decide') return preferredSplit;
-      if (dpw <= 3) return 'Full Body (3x/week) or Upper/Lower (2x/week)';
-      if (dpw === 4) return 'Upper/Lower split (2x upper, 2x lower)';
-      if (dpw === 5) return 'Push/Pull/Legs + Upper + Lower or PPL + Full Body';
-      return 'Push/Pull/Legs or Body Part Split';
-    })();
 
     const levelVolumeGuidance = (() => {
       const level = profile.fitness_level;
@@ -72,9 +131,30 @@ Deno.serve(async (req) => {
       ? `EXERCISE LIBRARY (use these names EXACTLY where appropriate — they have demo videos and thumbnails attached):\n${libraryNames.slice(0, 100).join(', ')}`
       : '';
 
-    const prompt = `You are an elite strength and conditioning coach with 20 years of experience programming for athletes and general population clients. Generate a highly specific, expert-quality workout program.
+    // Hard avoid list = explicit movements + patterns implied by recorded injuries.
+    const avoidTerms = [
+      ...parseTermList(profile.movements_to_avoid),
+      ...injuryAvoidTerms(profile.injuries),
+    ];
+    const avoidLine = avoidTerms.length
+      ? `HARD RULE — NEVER include any of these movements or close variations (a program containing one is rejected): ${[...new Set(avoidTerms)].join(', ')}. Substitute with safe alternatives (e.g. for a knee injury use hip-hinge, leg curl, hip thrust, glute bridge, upper-body work).`
+      : '';
 
-CLIENT PROFILE:
+    // Day-by-day split: deterministic for "Let AI decide"; a small outline call only for a custom split.
+    let dayFocuses: string[];
+    if (preferredSplit === 'Let AI decide') {
+      dayFocuses = DEFAULT_SPLITS[Math.min(Math.max(dpw, 1), 7)];
+    } else {
+      const outline = await invokeClaude({
+        prompt: `List the ${dpw} training-day focuses, in order, for this split: ${preferredSplit}. Respond only by calling the submit_split tool.`,
+        tool: SPLIT_TOOL, maxTokens: 1024, timeoutMs: 30_000,
+      });
+      if (!outline.ok) return jsonResponse({ error: outline.error, diagnostics: outline.diagnostics }, outline.status ?? 500);
+      dayFocuses = (outline.parsed.days as string[]).slice(0, dpw);
+      if (dayFocuses.length < dpw) return jsonResponse({ error: 'AI returned an invalid split outline' }, 500);
+    }
+
+    const context = `CLIENT PROFILE:
 - Primary Goal: ${profile.goal}
 - Experience Level: ${profile.fitness_level} (${profile.years_lifting ? profile.years_lifting + ' years lifting' : 'years unspecified'})
 - Age: ${profile.age || 'not specified'}, Gender: ${profile.gender || 'not specified'}
@@ -95,65 +175,66 @@ PROGRAM PREFERENCES:
 - Extra coaching notes: ${preferences.extra_notes || 'none'}
 
 PROGRAMMING GUIDELINES:
-Split guidance: ${splitGuidance}
+Weekly split (in order): ${dayFocuses.map((d, i) => `Day ${i + 1} — ${d}`).join(' | ')}
 Volume guidance: ${levelVolumeGuidance}
 Goal-specific prescription: ${goalGuidance}
 
 ${libraryContext}
 
-REQUIREMENTS FOR THE PROGRAM:
-1. Choose the optimal training split for this client's days/week and goal. Explicitly assign which muscle groups go on which day.
-2. Within each training day, sequence exercises correctly: warmup movements first (section: "warmup"), then compound primary lifts (section: "main"), then accessory work (section: "main"), then finisher if appropriate (section: "finisher"), then cooldown if needed (section: "cooldown").
-3. For EVERY exercise specify: exact sets (number), rep range as a string (e.g. "4-6", "8-12", "12-15"), rest in seconds (number), and RPE as a string (e.g. "8", "7-8", "9").
-4. Write coaching notes for each exercise — a specific technique cue or coaching instruction (e.g. "Drive through heels, brace core throughout ROM").
-5. Apply a progression prescription — specify in notes or prescription how this exercise progresses week to week (e.g. "Add 2.5kg when all reps completed at top of range").
-6. Generate the TEMPLATE WEEK (a single repeating week that defines the program structure). The program builder will handle repeating it.
-7. If injuries or movements to avoid are specified, NEVER include those movements. Substitute with appropriate alternatives.
-8. Prioritize exercises from the provided library (match names EXACTLY) so thumbnails and videos carry over. You may add exercises not in the library as needed.
-9. Include a coach_rationale object explaining the programming decisions in detail.
+${avoidLine}`;
 
-Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
-{
-  "title": "Descriptive program name (e.g. '12-Week Intermediate Upper/Lower Hypertrophy')",
-  "description": "2-3 sentence description of the program philosophy and approach",
-  "category": "strength | hypertrophy | fat_loss | athletic | mobility | custom",
-  "difficulty": "beginner | intermediate | advanced | elite",
-  "duration_weeks": <number>,
-  "days_per_week": <number>,
-  "coach_rationale": {
-    "split": "Explain why this split was chosen for this client's days/week and goal",
-    "weekly_volume": "List key muscle groups and weekly set count (e.g. Chest: 14 sets, Back: 16 sets, Quads: 18 sets)",
-    "rep_range_rationale": "Explain why these rep ranges match the goal and experience level",
-    "progression_approach": "Explain how load/volume progresses across the program duration"
-  },
-  "workouts": [
-    {
-      "day_name": "Day 1 — Upper Strength (Chest/Back focus)",
-      "day_number": 1,
-      "workout_notes": "Brief intent for this session",
-      "exercises": [
-        {
-          "name": "Exercise name (match library if possible)",
-          "sets": 4,
-          "reps": "4-6",
-          "rest_seconds": 180,
-          "rpe": "8",
-          "section": "warmup | main | finisher | cooldown",
-          "notes": "Specific coaching cue",
-          "prescription": "4 × 4-6 @ RPE 8 — add 2.5kg when reps complete"
-        }
-      ]
+    const dayRequirements = `REQUIREMENTS:
+1. Sequence exercises correctly: warmup (section "warmup"), compound primary lifts (section "main"), accessory work (section "main"), finisher if appropriate ("finisher"), cooldown if needed ("cooldown").
+2. For EVERY exercise: exact sets (number), rep range string (e.g. "4-6"), rest in seconds (number), RPE string (e.g. "8").
+3. A specific coaching cue in "notes" and a week-to-week progression in "prescription" (e.g. "4 × 4-6 @ RPE 8 — add 2.5kg when reps complete").
+4. Prioritize exercises from the provided library (match names EXACTLY) so thumbnails and videos carry over; you may add others.
+5. Weekly set volume across the whole split should follow the volume guidance; this day should only train its own focus.
+6. Keep text fields brief (notes ≤ 20 words, prescription ≤ 15 words). Tool arguments must be real JSON objects/arrays — never JSON encoded inside a string.`;
+
+    // One structured tool call per training day, in parallel. Day 1 also returns the program-level fields.
+    const dayResults = await Promise.all(dayFocuses.map((focus, i) => invokeClaude({
+      prompt: `Generate training day ${i + 1} of ${dayFocuses.length} ("${focus}") of an expert workout program by calling the submit_training_day tool (respond with that tool call only).${i === 0 ? ' Also provide the program title, description, category, difficulty and a detailed coach_rationale covering the whole split.' : ''}
+
+${context}
+
+${dayRequirements}
+Use day_number ${i + 1} and a descriptive day_name starting with "Day ${i + 1} — ${focus}".`,
+      tool: dayTool(i === 0), maxTokens: 8000, timeoutMs: i === 0 ? 125_000 : 115_000,
+    })));
+    for (const r of dayResults) {
+      if (!r.ok) return jsonResponse({ error: r.error, diagnostics: r.diagnostics }, r.status ?? 500);
     }
-  ]
-}`;
-
-    const llm = await invokeClaude({ prompt, maxTokens: 8192, expectJson: true });
-    if (!llm.ok) return jsonResponse({ error: llm.error }, llm.status ?? 500);
-    const program = llm.parsed;
+    const metaOut = dayResults[0].parsed.program;
+    if (!metaOut || !dayResults.every((r) => r.parsed?.workout?.exercises?.length)) {
+      const preview = (o: unknown) => JSON.stringify(o ?? null)?.slice(0, 300);
+      console.error('generateAIProgram: invalid structure', preview(dayResults[0].parsed));
+      return jsonResponse({
+        error: 'AI returned an invalid program structure',
+        diagnostics: { coerce_notes: dayResults.flatMap((r) => r.coerceNotes ?? []), keys: dayResults.map((r) => Object.keys(r.parsed ?? {})), preview: preview(dayResults[0].parsed), stop_reasons: dayResults.map((r) => r.stopReason), output_tokens: dayResults.map((r) => r.outputTokens) },
+      }, 500);
+    }
+    const program = {
+      title: metaOut.title,
+      description: metaOut.description,
+      category: metaOut.category,
+      difficulty: metaOut.difficulty,
+      duration_weeks: Number(preferences.duration) || null,
+      days_per_week: dpw,
+      coach_rationale: metaOut.coach_rationale,
+      workouts: dayResults.map((r, i) => ({ ...r.parsed.workout, day_number: i + 1 })),
+      _meta: { elapsed_ms: Date.now() - t0, calls: dayResults.length + (preferredSplit === 'Let AI decide' ? 0 : 1), output_tokens: dayResults.map((r) => r.outputTokens), stop_reasons: dayResults.map((r) => r.stopReason) },
+    } as Record<string, unknown> & { workouts: Record<string, unknown>[] };
 
     // Validate minimum required fields (verbatim)
     if (!program || !program.title || !Array.isArray(program.workouts) || program.workouts.length === 0) {
       return jsonResponse({ error: 'AI returned an invalid program structure. Missing title or workouts.' }, 500);
+    }
+
+    // Strict shape check after lenient repair: every day present, every exercise has name/sets/reps.
+    const shapeProblems = validateProgram(program, { daysPerWeek: dpw });
+    if (shapeProblems.length) {
+      console.error('generateAIProgram: incomplete program', JSON.stringify(shapeProblems.slice(0, 10)));
+      return jsonResponse({ error: 'incomplete_program', problems: shapeProblems.slice(0, 20) }, 502);
     }
 
     // Deterministic contraindication check (B-SAFETY): reject a program that
@@ -161,10 +242,6 @@ Return ONLY valid JSON (no markdown, no code fences) with this exact structure:
     // prompt rule. Coaches regenerate rather than receive an unsafe program.
     // Avoid list = explicit movements_to_avoid PLUS the patterns implied by any
     // recorded injury, so "knee injury" alone still blocks squats/lunges/jumps.
-    const avoidTerms = [
-      ...parseTermList(profile.movements_to_avoid),
-      ...injuryAvoidTerms(profile.injuries),
-    ];
     const injuryViolations = findInjuryViolations(collectExerciseNames(program), avoidTerms);
     if (injuryViolations.length) {
       return jsonResponse({ error: 'contraindicated_exercise', violations: injuryViolations }, 422);

@@ -4,6 +4,7 @@ import { format, subDays, isAfter } from 'date-fns';
 import { Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase as base44 } from '@/api/supabaseClient';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TOOLTIP_STYLE = {
   contentStyle: { background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 },
@@ -185,7 +186,7 @@ export default function ClientAnalyticsView({ client, checkIns }) {
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div className="flex-1 aspect-video bg-secondary rounded-lg overflow-hidden">
-              <img src={allPhotos[photoIndex]?.url} alt="progress" className="w-full h-full object-cover" />
+              <SignedImg src={allPhotos[photoIndex]?.url} alt="progress" className="w-full h-full object-cover" />
             </div>
             <button
               onClick={() => setPhotoIndex(Math.min(allPhotos.length - 1, photoIndex + 1))}

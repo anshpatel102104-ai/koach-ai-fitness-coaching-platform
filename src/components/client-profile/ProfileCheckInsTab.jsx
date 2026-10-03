@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const moodEmoji = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😤' };
 
@@ -144,9 +145,9 @@ function CheckInCard({ ci, clientId }) {
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Photos</p>
               <div className="grid grid-cols-3 gap-2">
                 {ci.photo_urls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="progress" className="w-full aspect-square object-cover rounded-xl hover:opacity-90 transition-opacity" />
-                  </a>
+                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                    <SignedImg src={url} alt="progress" className="w-full aspect-square object-cover rounded-xl hover:opacity-90 transition-opacity" />
+                  </SignedLink>
                 ))}
               </div>
             </div>

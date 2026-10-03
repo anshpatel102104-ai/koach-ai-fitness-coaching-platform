@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Plus, X, Check, UtensilsCrossed } from 'lucide-react';
 import { getMealStatus } from '@/lib/nutritionUtils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function MealMacroBar({ logged, target }) {
   const pct = target > 0 ? Math.min(110, (logged / target) * 100) : 0;
@@ -59,7 +60,7 @@ export default function MealCard({ meal, loggedFoods = [], mealTarget = 500, onA
 
       {/* Meal hero image */}
       {meal.image_url && !imgError ? (
-        <img
+        <SignedImg
           src={meal.image_url}
           alt={meal.name}
           loading="lazy"

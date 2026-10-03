@@ -11,6 +11,7 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { ownsClient } from '../_shared/edgeClients.js';
 import { meterAiGeneration } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, SMART_MEALS_BATCH, SMART_MEAL_SINGLE } from '../_shared/aiTools.js';
 import { collectFoodNames, findAllergenViolations } from '../_shared/aiSafety.js';
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Pre-Workout', 'Post-Workout', 'Snack'];
@@ -69,7 +70,7 @@ Each option should have similar calories/macros. Give each option a short label.
 Return ONLY a single meal JSON object: {"meal_name":"...","time":"...","options":[{"label":"...","foods":[{"food_name":"...","portion":"...","calories":0,"protein":0,"carbs":0,"fats":0}]}]}.`;
 
       const promptWithAvoid = avoid ? `${prompt}\n${avoid}` : prompt;
-      const llm = await invokeClaude({ prompt: promptWithAvoid, maxTokens: 2048, expectJson: true });
+      const llm = await invokeClaude({ prompt: promptWithAvoid, maxTokens: 2048, tool: SMART_MEAL_SINGLE, system: TOOL_SYSTEM });
       if (!llm.ok) return jsonResponse({ error: llm.error }, llm.status ?? 500);
       // Deterministic allergen check on the regenerated meal (B-SAFETY).
       const violations = findAllergenViolations(collectFoodNames(llm.parsed), allergies);
@@ -87,11 +88,11 @@ Return ONLY a single meal JSON object: {"meal_name":"...","time":"...","options"
     const secondHalf = allMealNames.slice(midpoint);
 
     const batchPromises = [
-      invokeClaude({ prompt: buildBatchPrompt(firstHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, expectJson: true }),
+      invokeClaude({ prompt: buildBatchPrompt(firstHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, tool: SMART_MEALS_BATCH, system: TOOL_SYSTEM }),
     ];
     if (secondHalf.length > 0) {
       batchPromises.push(
-        invokeClaude({ prompt: buildBatchPrompt(secondHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, expectJson: true }),
+        invokeClaude({ prompt: buildBatchPrompt(secondHalf, calories, protein_g, carbs_g, fats_g, options_count, totalMeals, avoid), maxTokens: 4096, tool: SMART_MEALS_BATCH, system: TOOL_SYSTEM }),
       );
     }
 

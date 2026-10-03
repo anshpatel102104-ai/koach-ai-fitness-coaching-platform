@@ -1,6 +1,7 @@
 import React from 'react';
 import { GripVertical, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const sessionTypeIcons = {
   check_in: '📞',
@@ -79,7 +80,7 @@ export default function EventCard({
 
           {/* Avatar */}
           {avatar ? (
-            <img src={avatar} alt={client?.name} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+            <SignedImg src={avatar} alt={client?.name} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
           ) : (
             <div className={cn(
               'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0',

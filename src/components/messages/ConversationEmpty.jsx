@@ -1,4 +1,5 @@
 import React from 'react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const OPENERS = [
   'Welcome to KOACH AI! 🎉',
@@ -13,7 +14,7 @@ export default function ConversationEmpty({ client, onSelect }) {
     <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-4">
       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl overflow-hidden">
         {client.avatar_url
-          ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+          ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
           : initials
         }
       </div>

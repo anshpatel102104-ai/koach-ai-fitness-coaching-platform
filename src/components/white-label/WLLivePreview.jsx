@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Monitor, Smartphone, Tablet, X, Home, Dumbbell, Salad, BarChart2, MessageSquare } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const SCREENS = [
   { id: 'home', label: 'Home', icon: Home },
@@ -40,7 +41,7 @@ function PortalMockup({ s, screen }) {
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 flex-shrink-0" style={{ background: card }}>
         {s.logo_primary_url
-          ? <img src={s.logo_primary_url} alt="logo" className="h-5 object-contain" />
+          ? <SignedImg src={s.logo_primary_url} alt="logo" className="h-5 object-contain" />
           : <span className="font-black text-sm" style={{ color: textPrimary }}>{businessName}</span>
         }
         <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold"

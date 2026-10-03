@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SignedImg } from '@/components/shared/SignedImage';
 import {
   Camera, Plus, X, Check,
   MapPin, Award, ChevronDown, ExternalLink,
@@ -184,7 +185,7 @@ function ProfilePreviewCard({ profile }) {
         <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center text-xl font-black"
           style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 0 3px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
           {profile.avatar_url
-            ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            ? <SignedImg src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
             : name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
           }
         </div>
@@ -354,7 +355,7 @@ export default function CoachProfile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
     set('avatar_url', file_url);
   };
 
@@ -407,7 +408,7 @@ export default function CoachProfile() {
                 <div className="w-28 h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl font-black text-primary-foreground"
                   style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 0 4px white, 0 0 0 6px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
                   {profile.avatar_url
-                    ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                    ? <SignedImg src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
                     : initials
                   }
                 </div>

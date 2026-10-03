@@ -7,8 +7,10 @@
 //   - businessInsights (components/business/bi/BIAIInsights)
 //   - clientAlerts     (components/dashboard/ClientAlerts)
 // Context arrives in the request body. Uses the shared Anthropic client.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, INTERVENTION_PLAN, BUSINESS_INSIGHTS, CLIENT_ALERTS } from '../_shared/aiTools.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -18,12 +20,18 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['interventionPlan', 'businessInsights', 'clientAlerts'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: interventionPlan ── at-risk client intervention plan
     if (action === 'interventionPlan') {
       const { clientName, goal, riskFactors, riskScore, avgAdherence } = body;
       const result = await invokeClaude({
-        expectJson: true,
+        tool: INTERVENTION_PLAN, system: TOOL_SYSTEM,
         prompt: `You are a fitness coach AI advisor. Generate a personalized intervention plan for an at-risk client.
 
 Client: ${clientName}
@@ -49,7 +57,7 @@ Respond with JSON only:
     if (action === 'businessInsights') {
       const m = body.metrics || {};
       const result = await invokeClaude({
-        expectJson: true,
+        tool: BUSINESS_INSIGHTS, system: TOOL_SYSTEM,
         prompt: `You are an expert business intelligence analyst for a fitness coaching business. Analyze this data and generate 4-5 specific, actionable business insights.
 
 Business Data:
@@ -95,7 +103,7 @@ Return ONLY valid JSON: { "insights": [ { "category": "...", "headline": "...", 
         });
 
       const result = await invokeClaude({
-        expectJson: true,
+        tool: CLIENT_ALERTS, system: TOOL_SYSTEM,
         prompt: `You are an AI fitness coach assistant. Analyze the following client data and identify any alerts or issues.
 Look for: weight plateaus, weight spikes, missed check-ins, declining compliance, poor sleep trends.
 Return a JSON array of up to 5 alerts, each with: { client_name, alert_type, message, severity ("high"|"medium"|"low") }.

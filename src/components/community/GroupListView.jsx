@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { Users, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 function avatarColor(name) {
   const colors = ['bg-accent text-primary', 'bg-ai/10 text-ai', 'bg-success/10 text-success', 'bg-warning/10 text-warning', 'bg-destructive/10 text-destructive'];
@@ -58,7 +59,7 @@ export default function GroupListView({ groups, clients, isCoach, onSelect, onEd
                 {/* Cover */}
                 {group.cover_image_url ? (
                   <div className="h-24 overflow-hidden">
-                    <img src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover" />
+                    <SignedImg src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover" />
                   </div>
                 ) : (
                   <div className="h-24 flex items-center justify-center"

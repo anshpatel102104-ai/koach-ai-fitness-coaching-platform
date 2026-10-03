@@ -20,6 +20,7 @@ import TopRecommendationBadge from './TopRecommendationBadge';
 import RecommendationCard from './RecommendationCard';
 import CheckInStatusBadge from './CheckInStatusBadge';
 import { generateRecommendations } from '@/lib/decisionEngine';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 
@@ -226,9 +227,9 @@ export default function CheckInClientCard({ checkIn, client, allClientCIs = [], 
               <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2">Progress Photos</p>
               <div className="flex gap-2 flex-wrap">
                 {checkIn.photo_urls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="progress" className="w-24 h-24 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
-                  </a>
+                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                    <SignedImg src={url} alt="progress" className="w-24 h-24 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
+                  </SignedLink>
                 ))}
               </div>
             </div>

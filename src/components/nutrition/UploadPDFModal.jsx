@@ -82,7 +82,7 @@ export default function UploadPDFModal({ open, onOpenChange, onSubmit }) {
     setUploading(true);
     try {
       // Upload PDF file
-      const uploadResult = await base44.uploadFile({ file });
+      const uploadResult = await base44.uploadFile({ file, scope: 'shared' });
       const pdfUrl = uploadResult.file_url;
 
       // Create plan

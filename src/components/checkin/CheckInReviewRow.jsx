@@ -2,6 +2,7 @@ import React from 'react';
 import { differenceInHours, differenceInDays, parseISO, format } from 'date-fns';
 import { CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 
@@ -51,7 +52,7 @@ export default function CheckInReviewRow({ checkIn, client, onReview }) {
         {/* Avatar */}
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
           {client?.avatar_url
-            ? <img src={client.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+            ? <SignedImg src={client.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
             : initial}
         </div>
 
@@ -84,7 +85,7 @@ export default function CheckInReviewRow({ checkIn, client, onReview }) {
         {checkIn.photo_urls?.length > 0 && (
           <div className="hidden sm:flex gap-1 flex-shrink-0">
             {checkIn.photo_urls.slice(0, 2).map((url, i) => (
-              <img key={i} src={url} alt="" className="w-9 h-9 rounded-lg object-cover border border-border" />
+              <SignedImg key={i} src={url} alt="" className="w-9 h-9 rounded-lg object-cover border border-border" />
             ))}
             {checkIn.photo_urls.length > 2 && (
               <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center">

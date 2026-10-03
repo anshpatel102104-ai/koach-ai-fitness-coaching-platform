@@ -8,6 +8,7 @@ import { checkInScore } from '@/lib/adherence';
 import AdherenceScore from '@/components/adherence/AdherenceScore';
 import CheckInMetrics from './CheckInMetrics';
 import CheckInResponseBox from './CheckInResponseBox';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
 
@@ -112,9 +113,9 @@ export default function CheckInCard({ checkIn, client, defaultOpen = false }) {
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Progress Photos</p>
               <div className="flex gap-2 flex-wrap">
                 {checkIn.photo_urls.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noreferrer">
-                    <img src={url} alt="progress" className="w-28 h-28 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
-                  </a>
+                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                    <SignedImg src={url} alt="progress" className="w-28 h-28 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
+                  </SignedLink>
                 ))}
               </div>
             </div>

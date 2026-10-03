@@ -8,9 +8,10 @@
 // fast/cheap model class Base44 pinned (haiku).
 import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { KOACH_FIELDS, deterministicMap, mergeResults } from '../_shared/importMapping.js';
-import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
+import { invokeClaude, anthropicConfigured, normalizeModelId } from '../_shared/anthropic.js';
 
-const HAIKU_MODEL = Deno.env.get('ANTHROPIC_FAST_MODEL') || 'claude-haiku-4-5-20251001';
+// Sanitized like ANTHROPIC_MODEL (a pasted secret with a trailing '.' made every call 404).
+const HAIKU_MODEL = normalizeModelId(Deno.env.get('ANTHROPIC_FAST_MODEL')) || 'claude-haiku-4-5-20251001';
 
 async function aiEnhanceMapping(headers: string[], sample_rows: unknown[], deterministicResult: { mapping: Record<string, unknown> }) {
   if (!anthropicConfigured()) return null;
@@ -47,7 +48,7 @@ Respond ONLY with a JSON object:
 
 Include ALL ${headers.length} headers in both objects.`;
 
-  const llm = await invokeClaude({ prompt, model: HAIKU_MODEL, maxTokens: 1024, expectJson: true });
+  const llm = await invokeClaude({ prompt, model: HAIKU_MODEL, maxTokens: 1024, expectJson: true, thinking: null });
   if (!llm.ok) return null;
   return llm.parsed;
 }

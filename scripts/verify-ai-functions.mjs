@@ -105,7 +105,14 @@ class Q {
     }
   }
 }
-const svc = { from: (t) => new Q(t) };
+const svc = {
+  from: (t) => new Q(t),
+  // Mirrors supabase-js .rpc for the atomic quota function.
+  rpc: async (fn, a) => {
+    const r = await db.query(`select * from public.${fn}($1,$2,$3)`, [a.p_profile, a.p_limit, a.p_month]);
+    return { data: r.rows, error: null };
+  },
+};
 
 // ── seed ────────────────────────────────────────────────────────────────────
 const COACH_A = '00000000-0000-0000-0000-0000000000d1';

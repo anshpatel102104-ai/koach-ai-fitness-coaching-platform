@@ -17,6 +17,7 @@ import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
@@ -177,7 +178,7 @@ export default function ClientQuickPanel({ client, checkIns = [], onClose, onEdi
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-accent/10 text-primary flex items-center justify-center font-bold text-sm overflow-hidden flex-shrink-0">
               {client.avatar_url
-                ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
                 : <span className="text-base">{initials}</span>
               }
             </div>
@@ -493,7 +494,7 @@ export default function ClientQuickPanel({ client, checkIns = [], onClose, onEdi
                   {ci.photo_urls?.length > 0 && (
                     <div className="flex gap-1.5 flex-wrap pt-1">
                       {ci.photo_urls.map((url, i) => (
-                        <img key={i} src={url} alt="" className="w-14 h-14 object-cover rounded-lg border border-border" />
+                        <SignedImg key={i} src={url} alt="" className="w-14 h-14 object-cover rounded-lg border border-border" />
                       ))}
                     </div>
                   )}
@@ -597,7 +598,7 @@ export default function ClientQuickPanel({ client, checkIns = [], onClose, onEdi
                         <p className="text-[11px] text-muted-foreground mb-2">{format(new Date(ci.date), 'MMM d, yyyy')}</p>
                         <div className="grid grid-cols-4 gap-2">
                           {ci.photo_urls.map((url, i) => (
-                            <img key={i} src={url} alt="Progress" className="w-full aspect-square object-cover rounded-xl border border-border" />
+                            <SignedImg key={i} src={url} alt="Progress" className="w-full aspect-square object-cover rounded-xl border border-border" />
                           ))}
                         </div>
                       </div>

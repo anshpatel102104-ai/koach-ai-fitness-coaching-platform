@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import CommunityFeed from './CommunityFeed';
 import Leaderboard from './Leaderboard';
 import WeeklyChallenges from './WeeklyChallenges';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
   { key: 'feed',        icon: MessageSquare, label: 'Feed',        settingKey: 'feed_enabled' },
@@ -40,7 +41,7 @@ export default function GroupDetailView({ group, clients, currentUser, isCoach, 
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--tc-sidebar)' }}>
         {group.cover_image_url && (
           <div className="h-28 overflow-hidden relative">
-            <img src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover opacity-60" />
+            <SignedImg src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover opacity-60" />
           </div>
         )}
         <div className="p-5">

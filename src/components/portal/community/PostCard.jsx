@@ -4,6 +4,7 @@ import { supabasePortal as base44 } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, MoreHorizontal, Flag, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const REACTIONS = [
   { emoji: '🔥', key: 'fire' },
@@ -145,7 +146,7 @@ export default function PostCard({ post, user, myClient, queryClient }) {
       {/* Media */}
       {post.media_urls?.length > 0 && (
         <div className="px-4 pb-3">
-          <img src={post.media_urls[0]} alt="post media"
+          <SignedImg src={post.media_urls[0]} alt="post media"
             onClick={() => setImageExpanded(!imageExpanded)}
             className={`w-full rounded-2xl object-cover cursor-pointer transition-all ${imageExpanded ? 'max-h-96' : 'max-h-52'}`} />
         </div>

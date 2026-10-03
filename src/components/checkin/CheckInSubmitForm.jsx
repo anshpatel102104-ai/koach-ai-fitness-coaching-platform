@@ -10,6 +10,7 @@ import {
   Minus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ── Steps config ── */
 const STEPS = [
@@ -71,7 +72,7 @@ function PhotoSlot({ label, url, onUpload, onRemove, uploading }) {
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
         ) : url ? (
           <>
-            <img src={url} alt={label} className="w-full h-full object-cover rounded-2xl" />
+            <SignedImg src={url} alt={label} className="w-full h-full object-cover rounded-2xl" />
             <button
               type="button"
               onClick={e => { e.preventDefault(); onRemove(); }}

@@ -110,7 +110,7 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
     const file = e.target.files[0];
     if (!file) return;
     setFileUploading(true);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
     set('download_file_url', file_url);
     setFileUploading(false);
   };

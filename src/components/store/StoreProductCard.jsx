@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Dumbbell, Salad, Users, Package, Layers, EyeOff, Star, Edit, Eye, ShoppingCart, Loader2 } from 'lucide-react';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const CATEGORY_STYLES = {
   workout:   { badge: 'bg-accent/10 text-primary',   icon: Dumbbell, gradient: 'from-accent/10 to-accent/10' },
@@ -49,7 +50,7 @@ export default function StoreProductCard({ listing, onEdit, onView }) {
       {/* Thumbnail */}
       <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
         {listing.image_url ? (
-          <img src={listing.image_url} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <SignedImg src={listing.image_url} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className={cn('w-full h-full flex items-center justify-center bg-gradient-to-br', cat.gradient)}>
             <CatIcon className="w-12 h-12 opacity-15" />

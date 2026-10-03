@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import ExerciseDetailsPanel from '@/components/programs/builder/ExerciseDetailsPanel';
 import ExerciseLibraryPanel from '@/components/programs/builder/ExerciseLibraryPanel';
 import ExercisePickerModal from '@/components/programs/builder/ExercisePickerModal';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ─────────────────────────────────────────────────
    Constants
@@ -384,7 +385,7 @@ function ExerciseRow({ ex, exLibMap, dragProvided, isDragging, isSelected, onCli
       <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden relative"
         style={{ background: 'var(--tc-sidebar)' }}>
         {thumb ? (
-          <img src={thumb} alt={ex.name} className="w-full h-full object-cover" />
+          <SignedImg src={thumb} alt={ex.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Dumbbell className="w-4 h-4 text-[var(--tc-muted-foreground)]" />

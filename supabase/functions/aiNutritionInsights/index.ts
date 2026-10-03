@@ -11,8 +11,10 @@
 // NOTE: weeklyInsight / nutritionQA are called from the CLIENT PORTAL. getCaller
 // accepts any verified session (coach or portal-client JWT), so portal callers
 // are authorized here without exposing the LLM key to the browser.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, FOOD_SWAPS } from '../_shared/aiTools.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -22,12 +24,18 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['foodSwaps', 'weeklyInsight', 'nutritionQA'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: foodSwaps ── 3 macro-matched swap suggestions for a food
     if (action === 'foodSwaps') {
       const { food = {}, mealName } = body;
       const result = await invokeClaude({
-        expectJson: true,
+        tool: FOOD_SWAPS, system: TOOL_SYSTEM,
         prompt: `Suggest exactly 3 food swap alternatives for "${food.food_name}" (${food.portion || ''}) in a ${mealName} meal. Each swap should have similar macros: ~${food.calories || 0} kcal, ~${food.protein || 0}g protein, ~${food.carbs || 0}g carbs, ~${food.fats || 0}g fats. Be brief and practical.
 Return ONLY valid JSON: { "swaps": [ { "name": "...", "portion": "...", "note": "..." } ] }`,
       });

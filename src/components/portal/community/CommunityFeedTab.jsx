@@ -8,6 +8,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import PostCard from './PostCard';
 import ChallengeCard from './ChallengeCard';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const REACTION_EMOJIS = ['🔥', '💪', '❤️', '🏆', '👏'];
 
@@ -22,7 +23,7 @@ function PostComposer({ user, myClient, onPost, onClose, groupId }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await base44.uploadFile({ file, scope: 'community' });
     setMediaUrl(file_url);
     setUploading(false);
   };
@@ -81,7 +82,7 @@ function PostComposer({ user, myClient, onPost, onClose, groupId }) {
 
         {mediaUrl && (
           <div className="relative mt-2 rounded-xl overflow-hidden">
-            <img src={mediaUrl} alt="attachment" className="w-full max-h-40 object-cover" />
+            <SignedImg src={mediaUrl} alt="attachment" className="w-full max-h-40 object-cover" />
             <button onClick={() => setMediaUrl(null)}
               className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
               <X className="w-3 h-3 text-white" />

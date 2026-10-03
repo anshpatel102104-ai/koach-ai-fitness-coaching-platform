@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, X } from 'lucide-react';
 import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const ANGLES = [
   { key: 'front', label: 'Front', icon: '🧍' },
@@ -48,7 +49,7 @@ export default function CheckInQuestionPhoto({ value, onChange }) {
             {photos[a.key] ? (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 className="relative rounded-2xl overflow-hidden aspect-square">
-                <img src={photos[a.key]} alt={a.label} className="w-full h-full object-cover" />
+                <SignedImg src={photos[a.key]} alt={a.label} className="w-full h-full object-cover" />
                 <button onClick={() => removePhoto(a.key)}
                   className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
                   style={{ background: 'rgba(0,0,0,0.7)' }}>

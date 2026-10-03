@@ -17,6 +17,7 @@ import { evaluateClientRisk } from '@/lib/riskEngine';
 import { generateRecommendations, PRIORITY_STYLES, CATEGORY_ICONS } from '@/lib/decisionEngine';
 import { applyRecommendation, getConfirmText } from '@/lib/applyRecommendation';
 import { Link } from 'react-router-dom';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ─── Constants ─── */
 const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
@@ -507,7 +508,7 @@ function ClientReviewCard({ item, onMarkReviewed, markSaving }) {
             <Camera className="w-3 h-3" /> Progress Photos ({photos.length})
           </p>
           <a href={photos[photoIdx]} target="_blank" rel="noreferrer">
-            <img src={photos[photoIdx]} alt="progress" className="w-full h-52 object-cover rounded-xl border border-border hover:opacity-95 transition-opacity" />
+            <SignedImg src={photos[photoIdx]} alt="progress" className="w-full h-52 object-cover rounded-xl border border-border hover:opacity-95 transition-opacity" />
           </a>
           {photos.length > 1 && (
             <div className="flex gap-1.5 mt-2 justify-center">

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Users } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ReferralLanding() {
   const [searchParams] = useSearchParams();
@@ -73,7 +74,7 @@ export default function ReferralLanding() {
         style={{ background: 'linear-gradient(135deg, var(--tc-muted) 0%, var(--tc-muted) 100%)' }}>
         
         {coach.avatar_url && (
-          <img src={coach.avatar_url} alt={coach.first_name}
+          <SignedImg src={coach.avatar_url} alt={coach.first_name}
             className="w-20 h-20 rounded-full mx-auto mb-4 object-cover border-4 border-white"
             style={{ boxShadow: '0 4px 16px color-mix(in srgb, black 10%, transparent)' }} />
         )}

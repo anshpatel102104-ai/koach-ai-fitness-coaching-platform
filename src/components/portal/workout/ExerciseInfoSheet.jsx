@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { SignedImg, SignedVideo } from '@/components/shared/SignedImage';
 
 const MUSCLE_COLORS = {
   chest:     'bg-destructive/10 text-destructive',
@@ -44,7 +45,7 @@ function VideoEmbed({ url, imageUrl, name }) {
   if (url) {
     if (isDirect) {
       return (
-        <video className="w-full rounded-2xl bg-black" style={{ maxHeight: 240 }}
+        <SignedVideo className="w-full rounded-2xl bg-black" style={{ maxHeight: 240 }}
           src={url} controls playsInline preload="metadata" poster={displayImg} />
       );
     }
@@ -58,7 +59,7 @@ function VideoEmbed({ url, imageUrl, name }) {
       <div className="relative w-full rounded-2xl overflow-hidden cursor-pointer" style={{ height: 220 }}
         onClick={() => setPlaying(true)}>
         {displayImg
-          ? <img src={displayImg} alt={name} className="w-full h-full object-cover" />
+          ? <SignedImg src={displayImg} alt={name} className="w-full h-full object-cover" />
           : <div className="w-full h-full bg-muted" />}
         <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
           <div className="w-14 h-14 rounded-full bg-card shadow-xl flex items-center justify-center">
@@ -75,7 +76,7 @@ function VideoEmbed({ url, imageUrl, name }) {
   if (imageUrl) {
     return (
       <div className="w-full rounded-2xl overflow-hidden bg-muted" style={{ maxHeight: 240 }}>
-        <img src={imageUrl} alt={name} className="w-full object-cover"
+        <SignedImg src={imageUrl} alt={name} className="w-full object-cover"
           onError={e => { e.target.parentElement.style.display = 'none'; }} />
       </div>
     );

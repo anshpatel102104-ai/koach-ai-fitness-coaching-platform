@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeftRight, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ProgressPhotos({ checkIns }) {
   const [compareMode, setCompareMode] = useState(false);
@@ -41,7 +42,7 @@ export default function ProgressPhotos({ checkIns }) {
             <div className="grid grid-cols-2 gap-4">
               {[compareA, compareB].map((p, i) => (
                 <div key={i} className="relative">
-                  <img src={p.url} alt="compare" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                  <SignedImg src={p.url} alt="compare" className="w-full aspect-[3/4] object-cover rounded-lg" />
                   <p className="text-center text-xs text-muted-foreground mt-1">{format(new Date(p.date), 'MMM d, yyyy')}</p>
                   <button onClick={() => i === 0 ? setCompareA(null) : setCompareB(null)}
                     className="absolute top-2 right-2 bg-black/50 rounded-full p-0.5">
@@ -63,7 +64,7 @@ export default function ProgressPhotos({ checkIns }) {
               onClick={() => compareMode ? selectForCompare(photo) : null}
               className={`relative rounded-lg overflow-hidden cursor-pointer group ${compareMode ? 'ring-2 ' + (selected ? 'ring-primary' : 'ring-transparent hover:ring-primary') : ''}`}
             >
-              <img src={photo.url} alt="progress" className="w-full aspect-square object-cover" />
+              <SignedImg src={photo.url} alt="progress" className="w-full aspect-square object-cover" />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
                 <p className="text-[9px] text-white font-medium">{format(new Date(photo.date), 'MMM d')}</p>
               </div>

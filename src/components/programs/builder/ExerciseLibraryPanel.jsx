@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { Search, Dumbbell, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const MUSCLE_OPTIONS = ['chest','back','shoulders','biceps','triceps','legs','glutes','core','full_body','cardio'];
 const EQUIPMENT_OPTIONS = ['barbell','dumbbell','cable','machine','bodyweight','kettlebell','resistance_band','trx'];
@@ -45,7 +46,7 @@ function ExerciseCard({ ex, onAdd }) {
       {/* Thumbnail */}
       <div className="w-9 h-9 rounded-lg flex-shrink-0 overflow-hidden" style={{ background: 'var(--tc-sidebar)' }}>
         {thumb ? (
-          <img src={thumb} alt={ex.name} className="w-full h-full object-cover" />
+          <SignedImg src={thumb} alt={ex.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Dumbbell className="w-4 h-4 text-[var(--tc-muted-foreground)]" />

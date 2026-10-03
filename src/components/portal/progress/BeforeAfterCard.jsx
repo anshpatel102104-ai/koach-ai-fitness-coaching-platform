@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Plus, Camera } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function BeforeAfterCard({ checkIns, client, onAddPhoto }) {
   const [selectedBefore, setSelectedBefore] = useState(0);
@@ -64,7 +65,7 @@ export default function BeforeAfterCard({ checkIns, client, onAddPhoto }) {
             { photo: afterPhoto, label: 'After', color: 'rgb(var(--success))' },
           ].map(({ photo, label, color }) => (
             <div key={label} className="relative rounded-xl overflow-hidden aspect-[3/4]">
-              <img src={photo?.url} alt={label} className="w-full h-full object-cover" />
+              <SignedImg src={photo?.url} alt={label} className="w-full h-full object-cover" />
               <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5"
                 style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
                 <p className="text-[10px] font-bold" style={{ color }}>{label}</p>
@@ -75,7 +76,7 @@ export default function BeforeAfterCard({ checkIns, client, onAddPhoto }) {
         </div>
       ) : (
         <div className="relative rounded-xl overflow-hidden h-48 mb-3">
-          <img src={allPhotos[0]?.url} alt="Progress" className="w-full h-full object-cover" />
+          <SignedImg src={allPhotos[0]?.url} alt="Progress" className="w-full h-full object-cover" />
           <div className="absolute bottom-0 left-0 right-0 px-3 py-2"
             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
             <p className="text-white/70 text-xs">{format(parseISO(allPhotos[0]?.date), 'MMM d, yyyy')}</p>
@@ -102,7 +103,7 @@ export default function BeforeAfterCard({ checkIns, client, onAddPhoto }) {
             }}
               className="relative flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden"
               style={{ border: `2px solid ${i === selectedBefore || i === (selectedAfter === -1 ? allPhotos.length - 1 : selectedAfter) ? 'rgb(var(--primary))' : 'transparent'}` }}>
-              <img src={photo.url} alt="" className="w-full h-full object-cover" />
+              <SignedImg src={photo.url} alt="" className="w-full h-full object-cover" />
               <div className="absolute bottom-0 left-0 right-0 px-1 py-0.5" style={{ background: 'rgba(0,0,0,0.6)' }}>
                 <p className="text-[7px] text-white/70 text-center">{format(parseISO(photo.date), 'MMM d')}</p>
               </div>

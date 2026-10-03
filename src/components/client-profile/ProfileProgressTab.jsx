@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
 const METRICS = [
   { key: 'weight',        label: 'Scale Weight',    unit: 'lbs',  color: 'var(--tc-primary)', icon: Scale },
@@ -411,9 +412,9 @@ export default function ProfileProgressTab({ client, checkIns }) {
                 <p className="text-xs font-semibold text-muted-foreground mb-3">{format(new Date(ci.date), 'MMMM d, yyyy')}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {ci.photo_urls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noreferrer">
-                      <img src={url} alt="progress" className="w-full aspect-square object-cover rounded-xl hover:opacity-90 transition-opacity" />
-                    </a>
+                    <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
+                      <SignedImg src={url} alt="progress" className="w-full aspect-square object-cover rounded-xl hover:opacity-90 transition-opacity" />
+                    </SignedLink>
                   ))}
                 </div>
               </div>

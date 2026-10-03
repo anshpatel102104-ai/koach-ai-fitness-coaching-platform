@@ -19,6 +19,7 @@ import SaucesSeasonings from '@/components/portal/nutrition/SaucesSeasonings';
 import GroceryList from '@/components/portal/nutrition/GroceryList';
 import CoachNote from '@/components/portal/nutrition/CoachNote';
 import { MEAL_DEFINITIONS, calcDayTotals } from '@/lib/nutritionUtils';
+import { SignedLink, SignedIframe } from '@/components/shared/SignedImage';
 
 const DEFAULT_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
 
@@ -258,17 +259,17 @@ export default function PortalNutrition({ user }) {
         <div className="px-4 mt-4 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-sm text-foreground">{nutritionPlan.title}</h2>
-            <a
+            <SignedLink
               href={nutritionPlan.pdf_file_url}
               download={`${nutritionPlan.title}.pdf`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Download
-            </a>
+            </SignedLink>
           </div>
           <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ height: '600px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-            <iframe
+            <SignedIframe
               src={nutritionPlan.pdf_file_url}
               title="Nutrition Plan PDF"
               className="w-full h-full"

@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ClientPickerStep({ selectedClients, onSelectClients, allClients }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,7 +98,7 @@ export default function ClientPickerStep({ selectedClients, onSelectClients, all
                 />
 
                 <Avatar className="h-8 w-8">
-                  {client.avatar_url && <img src={client.avatar_url} alt={client.name} />}
+                  {client.avatar_url && <SignedImg src={client.avatar_url} alt={client.name} />}
                   <AvatarFallback>{client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
 

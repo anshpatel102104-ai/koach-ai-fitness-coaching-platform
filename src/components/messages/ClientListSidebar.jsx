@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const FILTER_CHIPS = [
   { key: 'all', label: 'All' },
@@ -149,7 +150,7 @@ export default function ClientListSidebar({ clients, allMessages, checkIns = [],
               {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full bg-primary" />}
               <div className="relative flex-shrink-0">
                 <div className={cn('w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden', client.avatar_url ? '' : `${avatarBg} ${avatarText}`)}>
-                  {client.avatar_url ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" /> : initials}
+                  {client.avatar_url ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" /> : initials}
                 </div>
                 {online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border-2 border-white" />}
               </div>

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TrendingDown, TrendingUp, Minus, Image, Star, Scale, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ClientProgressDetail from '@/components/progress/ClientProgressDetail';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ── helpers ── */
 function calcProgressScore(client, checkIns) {
@@ -258,7 +259,7 @@ function ClientProgressRow({ row, onViewProgress }) {
         <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-primary-foreground font-bold text-sm"
           style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
           {client.avatar_url
-            ? <img src={client.avatar_url} alt={client.name} className="w-10 h-10 rounded-full object-cover" />
+            ? <SignedImg src={client.avatar_url} alt={client.name} className="w-10 h-10 rounded-full object-cover" />
             : client.name?.[0]?.toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">

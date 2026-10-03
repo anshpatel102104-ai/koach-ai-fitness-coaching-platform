@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw, Clock, Timer, UtensilsCrossed } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { getFoodImageUrl, getMealImageUrl } from '@/lib/foodImages';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const SWAP_SUGGESTIONS = {
   chicken: ['Turkey breast (same macros)', 'Tilapia fillet', 'Egg whites (3 large)'],
@@ -105,7 +106,7 @@ function MealCard({ meal, index }) {
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       {heroImage ? (
-        <img
+        <SignedImg
           src={heroImage}
           alt={mealName}
           loading="lazy"

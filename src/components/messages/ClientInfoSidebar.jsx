@@ -5,6 +5,7 @@ import { differenceInDays, parseISO, format } from 'date-fns';
 import { ExternalLink, ClipboardList, Salad } from 'lucide-react';
 import { BADGE_CONFIG } from '@/lib/badges';
 import AIFollowUpChip from './AIFollowUpChip';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const AVATAR_COLORS = [
   ['bg-accent', 'text-primary'],
@@ -53,7 +54,7 @@ export default function ClientInfoSidebar({ client, checkIns = [], badges = [], 
       {/* Client header */}
       <div className="p-4 border-b border-border text-center">
         <div className={cn('w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-3 overflow-hidden', client.avatar_url ? '' : `${avatarBg} ${avatarText}`)}>
-          {client.avatar_url ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" /> : initials}
+          {client.avatar_url ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" /> : initials}
         </div>
         <p className="font-semibold text-foreground text-sm">{client.name}</p>
         {client.email && <p className="text-xs text-muted-foreground mt-0.5 truncate">{client.email}</p>}

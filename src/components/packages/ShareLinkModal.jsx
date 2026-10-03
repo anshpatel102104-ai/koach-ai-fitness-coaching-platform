@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Copy, ExternalLink, Check } from 'lucide-react';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ShareLinkModal({ pkg, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -26,7 +27,7 @@ export default function ShareLinkModal({ pkg, onClose }) {
           {/* Preview */}
           <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--tc-muted)', marginBottom: 20 }}>
             <div style={{ height: 80, background: `linear-gradient(135deg, ${pkg.color_theme || 'var(--tc-primary)'}, ${pkg.color_theme || 'var(--tc-ai)'}99)`, position: 'relative' }}>
-              {pkg.image_url && <img src={pkg.image_url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }} />}
+              {pkg.image_url && <SignedImg src={pkg.image_url} alt="cover" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }} />}
             </div>
             <div style={{ padding: '12px 16px' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--tc-foreground)' }}>{pkg.name}</div>

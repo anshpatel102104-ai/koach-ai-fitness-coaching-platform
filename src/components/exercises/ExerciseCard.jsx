@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { supabase as base44 } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { SignedImg } from '@/components/shared/SignedImage';
+import { openFileUrl } from '@/lib/storageUrls';
 
 const MUSCLE_COLORS = {
   chest: 'text-chart-1 bg-chart-1/10',
@@ -37,7 +39,7 @@ function MediaThumbnail({ url, imageUrl, thumbnailUrl, name }) {
   if (displayImg) {
     return (
       <div className="relative w-full h-full">
-        <img src={displayImg} alt={name} className="w-full h-full object-cover"
+        <SignedImg src={displayImg} alt={name} className="w-full h-full object-cover"
           onError={e => { e.target.style.display = 'none'; }} />
         {url && (
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -98,7 +100,7 @@ export default function ExerciseCard({ exercise, onView, onEdit, onDelete, compa
   const handleOpenVideo = (e) => {
     e.stopPropagation();
     if (exercise.video_url) {
-      window.open(exercise.video_url, '_blank');
+      openFileUrl(exercise.video_url);
     }
   };
 

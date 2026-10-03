@@ -8,8 +8,10 @@
 //   - clientSummary    (components/progress/ClientAnalyticsView)
 // Context arrives in the request body; the caller-scoped analytics `ctx` is
 // computed client-side and passed through. Uses the shared Anthropic client.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, CHECKIN_SUMMARY, PROGRESS_CLIENT, PROGRESS_COACH } from '../_shared/aiTools.js';
 
 const MOOD_SCORE: Record<string, number> = { great: 5, good: 4, okay: 3, tired: 2, stressed: 1 };
 
@@ -21,6 +23,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, client, checkIn, prevCheckIn, recentCheckIns = [], ctx, isClientFacing, recent } = body;
+    if (action === 'checkInSummary' && !checkIn) return jsonResponse({ error: 'Missing checkIn' }, 400);
+    // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
+    if (!['checkInSummary', 'progressAnalysis', 'clientSummary'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
+    // Every action below makes one Claude call: charge it to the AI quota
+    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    const blocked = await meterInsightCall(serviceClient(), caller);
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: checkInSummary ── coach dashboard quick summary of one check-in
     if (action === 'checkInSummary') {
@@ -37,7 +46,7 @@ Deno.serve(async (req) => {
         : 'insufficient data';
 
       const result = await invokeClaude({
-        expectJson: true,
+        tool: CHECKIN_SUMMARY, system: TOOL_SYSTEM,
         prompt: `You are an AI fitness coach generating a quick check-in summary for a coach dashboard.
 Be concise, specific, and data-driven. Write like a smart colleague briefing a coach.
 
@@ -139,7 +148,7 @@ Generate a JSON response with exactly this structure:
   "plateau_warning": "plateau prediction or warning, or empty string"
 }`;
 
-      const result = await invokeClaude({ expectJson: true, prompt });
+      const result = await invokeClaude({ tool: isClientFacing ? PROGRESS_CLIENT : PROGRESS_COACH, system: TOOL_SYSTEM, prompt });
       if (!result.ok) return jsonResponse({ error: result.error }, result.status ?? 500);
       return jsonResponse(result.parsed);
     }

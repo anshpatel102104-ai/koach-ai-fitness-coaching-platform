@@ -24,6 +24,7 @@ import ProfileCheckInsTab from '@/components/client-profile/ProfileCheckInsTab';
 import ProfileProgressTab from '@/components/client-profile/ProfileProgressTab';
 import ProfileMessagesTab from '@/components/client-profile/ProfileMessagesTab';
 import ProfileConnectedAppsTab from '@/components/client-profile/ProfileConnectedAppsTab';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
   { key: 'overview',       label: 'Overview',   short: 'Overview' },
@@ -158,7 +159,7 @@ export default function ClientProfile() {
             <div className="relative flex-shrink-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-accent/10 to-accent/10 text-primary flex items-center justify-center font-bold text-2xl overflow-hidden border border-border shadow-sm">
                 {client.avatar_url
-                  ? <img src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
+                  ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" />
                   : initials}
               </div>
               {/* Online dot */}

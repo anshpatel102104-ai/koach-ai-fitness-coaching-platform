@@ -4,6 +4,7 @@ import { supabase as base44 } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Check, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import KoachLogo from '@/components/brand/KoachLogo.jsx';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 const INCLUSION_LABELS = {
   custom_program: 'Custom workout program',
@@ -94,7 +95,7 @@ export default function PackageLanding() {
       {/* Hero */}
       <div style={{ position: 'relative', minHeight: 420, display: 'flex', alignItems: 'flex-end', padding: '120px 24px 60px', overflow: 'hidden' }}>
         {pkg.image_url && (
-          <img src={pkg.image_url} alt="cover" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
+          <SignedImg src={pkg.image_url} alt="cover" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
         )}
         <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--kc-0f0f1a) 80%, transparent) 60%, var(--kc-0f0f1a) 100%)` }} />
         <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto', width: '100%' }}>

@@ -16,6 +16,7 @@ import MetricsTab from './MetricsTab';
 import ClientNutritionTab from './ClientNutritionTab';
 import ClientCalendarTab from './ClientCalendarTab';
 import { motion } from 'framer-motion';
+import { SignedImg } from '@/components/shared/SignedImage';
 
 // ── Two-level navigation structure ──────────────────────────────────────────
 // Each section has a list of sub-tabs. 'key' matches the original tab keys so
@@ -215,7 +216,7 @@ export default function ClientDashboardModal({ client, checkIns = [], onClose, o
             <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 overflow-hidden"
               style={{ background: 'var(--kc-1e2d45)', border: '1.5px solid color-mix(in srgb, white 12%, transparent)', color: 'var(--tc-primary)' }}>
               {localClient.avatar_url
-                ? <img src={localClient.avatar_url} alt={localClient.name} className="w-full h-full object-cover" />
+                ? <SignedImg src={localClient.avatar_url} alt={localClient.name} className="w-full h-full object-cover" />
                 : <span>{initials}</span>
               }
             </div>

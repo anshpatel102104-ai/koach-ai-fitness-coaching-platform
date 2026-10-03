@@ -10,6 +10,7 @@ import FeatureLock from '@/components/subscription/FeatureLock';
 import { TAG_COLORS } from './MessageTemplates';
 import { differenceInDays } from 'date-fns';
 import AIReplyAssistant from './AIReplyAssistant';
+import { SignedAudio } from '@/components/shared/SignedImage';
 
 const TAGS = ['general', 'check_in', 'urgent', 'nutrition', 'training', 'motivation'];
 
@@ -251,7 +252,7 @@ function VoiceRecorderPreview({ audioUrl, uploadState, seconds, onDiscard, onRet
       </div>
       {/* Playback row */}
       {audioUrl && (
-        <audio
+        <SignedAudio
           src={audioUrl}
           controls
           className="w-full"
@@ -351,7 +352,7 @@ export default function ComposeBar({ client, allMessages, checkIns = [], onSend,
       const ext = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : 'webm';
       // Convert blob to File so UploadFile gets the correct filename/content-type
       const file = new File([blob], `voice-message-${Date.now()}.${ext}`, { type: blob.type });
-      const result = await base44.uploadFile({ file });
+      const result = await base44.uploadFile({ file, scope: client?.id ? { clientId: client.id } : undefined });
       // Replace blob URL with persistent CDN URL
       URL.revokeObjectURL(blobUrl);
       setAudioUrl(result.file_url);

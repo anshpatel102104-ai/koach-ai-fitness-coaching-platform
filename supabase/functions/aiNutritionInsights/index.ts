@@ -14,6 +14,7 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, FOOD_SWAPS } from '../_shared/aiTools.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
     if (action === 'foodSwaps') {
       const { food = {}, mealName } = body;
       const result = await invokeClaude({
-        expectJson: true,
+        tool: FOOD_SWAPS, system: TOOL_SYSTEM,
         prompt: `Suggest exactly 3 food swap alternatives for "${food.food_name}" (${food.portion || ''}) in a ${mealName} meal. Each swap should have similar macros: ~${food.calories || 0} kcal, ~${food.protein || 0}g protein, ~${food.carbs || 0}g carbs, ~${food.fats || 0}g fats. Be brief and practical.
 Return ONLY valid JSON: { "swaps": [ { "name": "...", "portion": "...", "note": "..." } ] }`,
       });

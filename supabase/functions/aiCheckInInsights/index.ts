@@ -10,6 +10,7 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, REVIEW_CHECKIN, PROGRAM_SUGGESTIONS } from '../_shared/aiTools.js';
 
 function num(n: unknown): number | null {
   return typeof n === 'number' && !Number.isNaN(n) ? n : null;
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
     // ── ACTION: reviewCheckIn ── coach-facing summary + suggested reply + flags
     if (action === 'reviewCheckIn') {
       const result = await invokeClaude({
-        expectJson: true,
+        tool: REVIEW_CHECKIN, system: TOOL_SYSTEM,
         prompt: `You are a professional fitness coach AI assistant. Analyze this weekly check-in data and provide:
 1. A 2-3 sentence summary for the coach (what went well, what needs attention)
 2. A suggested coach response (2-3 sentences, encouraging and actionable)
@@ -77,7 +78,7 @@ Return ONLY valid JSON:
         ? Math.round(slice.reduce((s, c) => s + (c.compliance_nutrition || 0), 0) / denom) : null;
 
       const result = await invokeClaude({
-        expectJson: true,
+        tool: PROGRAM_SUGGESTIONS, system: TOOL_SYSTEM,
         prompt: `You are an elite fitness coach analyzing a client check-in to generate smart program adjustment suggestions.
 
 CLIENT: ${clientName}

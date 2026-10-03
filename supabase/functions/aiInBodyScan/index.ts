@@ -6,6 +6,7 @@
 // shared Anthropic client). Prompt ported verbatim from the frontend.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, INBODY_SCAN } from '../_shared/aiTools.js';
 import { meterInsightCall } from '../_shared/aiMetering.js';
 import { parseUploadRef, UPLOADS_BUCKET } from '../_shared/uploadRef.js';
 
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
     const blocked = await meterInsightCall(svc, caller);
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 
-    const result = await invokeClaude({ expectJson: true, imageUrls: [signed.signedUrl], prompt: EXTRACT_PROMPT });
+    const result = await invokeClaude({ tool: INBODY_SCAN, system: TOOL_SYSTEM, imageUrls: [signed.signedUrl], prompt: EXTRACT_PROMPT });
     if (!result.ok) return jsonResponse({ error: result.error }, result.status ?? 500);
     return jsonResponse(result.parsed);
   } catch (error) {

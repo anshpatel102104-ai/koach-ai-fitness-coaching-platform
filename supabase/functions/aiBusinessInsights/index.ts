@@ -10,6 +10,7 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { meterInsightCall } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { TOOL_SYSTEM, INTERVENTION_PLAN, BUSINESS_INSIGHTS, CLIENT_ALERTS } from '../_shared/aiTools.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
     if (action === 'interventionPlan') {
       const { clientName, goal, riskFactors, riskScore, avgAdherence } = body;
       const result = await invokeClaude({
-        expectJson: true,
+        tool: INTERVENTION_PLAN, system: TOOL_SYSTEM,
         prompt: `You are a fitness coach AI advisor. Generate a personalized intervention plan for an at-risk client.
 
 Client: ${clientName}
@@ -56,7 +57,7 @@ Respond with JSON only:
     if (action === 'businessInsights') {
       const m = body.metrics || {};
       const result = await invokeClaude({
-        expectJson: true,
+        tool: BUSINESS_INSIGHTS, system: TOOL_SYSTEM,
         prompt: `You are an expert business intelligence analyst for a fitness coaching business. Analyze this data and generate 4-5 specific, actionable business insights.
 
 Business Data:
@@ -102,7 +103,7 @@ Return ONLY valid JSON: { "insights": [ { "category": "...", "headline": "...", 
         });
 
       const result = await invokeClaude({
-        expectJson: true,
+        tool: CLIENT_ALERTS, system: TOOL_SYSTEM,
         prompt: `You are an AI fitness coach assistant. Analyze the following client data and identify any alerts or issues.
 Look for: weight plateaus, weight spikes, missed check-ins, declining compliance, poor sleep trends.
 Return a JSON array of up to 5 alerts, each with: { client_name, alert_type, message, severity ("high"|"medium"|"low") }.

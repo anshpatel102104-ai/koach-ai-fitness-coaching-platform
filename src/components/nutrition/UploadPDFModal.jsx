@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ function ClientPickerSimple({ selected, onChange }) {
   const [search, setSearch] = useState('');
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-picker-pdf'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   const filtered = clients.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()));
@@ -82,7 +82,7 @@ export default function UploadPDFModal({ open, onOpenChange, onSubmit }) {
     setUploading(true);
     try {
       // Upload PDF file
-      const uploadResult = await base44.uploadFile({ file, scope: 'shared' });
+      const uploadResult = await db.uploadFile({ file, scope: 'shared' });
       const pdfUrl = uploadResult.file_url;
 
       // Create plan
@@ -99,11 +99,11 @@ export default function UploadPDFModal({ open, onOpenChange, onSubmit }) {
         meals: [],
       };
 
-      const savedPlan = await base44.entities.NutritionPlan.create(planData);
+      const savedPlan = await db.entities.NutritionPlan.create(planData);
 
       // Assign to client
       if (selectedClient) {
-        await base44.entities.Client.update(selectedClient, { assigned_nutrition_id: savedPlan.id });
+        await db.entities.Client.update(selectedClient, { assigned_nutrition_id: savedPlan.id });
       }
 
       toast.success('PDF plan uploaded and assigned!');

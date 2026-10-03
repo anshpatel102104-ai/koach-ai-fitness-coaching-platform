@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 const TABS = [
@@ -34,7 +34,7 @@ export default function LogUpdateModal({ open, defaultTab = 'weight', onClose, o
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await portalDb.uploadFile({ file });
     setPhotoUrls(prev => [...prev, file_url]);
     setUploading(false);
   };

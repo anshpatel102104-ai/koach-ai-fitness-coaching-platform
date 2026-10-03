@@ -1,5 +1,5 @@
 /* Minimal Vite config for the dark-mode audit harness: React + path alias
- * only (no base44 plugin), with auth/data modules aliased to local mocks. */
+ * only, with the auth module aliased to a local mock. */
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
@@ -14,7 +14,6 @@ export default defineConfig({
     alias: [
       // mocks must resolve before the generic @/ alias
       { find: '@/lib/AuthContext', replacement: path.resolve(root, 'darkmode-audit/mocks/AuthContext.jsx') },
-      { find: '@/api/base44Client', replacement: path.resolve(root, 'darkmode-audit/mocks/base44Client.js') },
       { find: '@', replacement: path.resolve(root, 'src') },
     ],
   },

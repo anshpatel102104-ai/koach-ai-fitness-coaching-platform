@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday, isYesterday } from 'date-fns';
 import {
@@ -129,7 +129,7 @@ function ConversationView({ myClient, onBack }) {
 
   const { data: messages = [], refetch } = useQuery({
     queryKey: ['portal-msgs-conv', myClient?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: myClient.id }, '-created_date', 100),
+    queryFn: () => portalDb.entities.Message.filter({ client_id: myClient.id }, '-created_date', 100),
     enabled: !!myClient?.id,
     refetchInterval: 10000,
   });
@@ -148,7 +148,7 @@ function ConversationView({ myClient, onBack }) {
   // Mark read
   useEffect(() => {
     const unread = messages.filter(m => m.sender === 'coach' && !m.is_read);
-    unread.forEach(m => base44.entities.Message.update(m.id, { is_read: true }).catch(() => {}));
+    unread.forEach(m => portalDb.entities.Message.update(m.id, { is_read: true }).catch(() => {}));
   }, [messages]);
 
   // Auto-resize textarea
@@ -170,7 +170,7 @@ function ConversationView({ myClient, onBack }) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.focus();
     }
-    await base44.entities.Message.create({
+    await portalDb.entities.Message.create({
       client_id: myClient.id,
       client_name: myClient.name,
       sender: 'client',
@@ -334,14 +334,14 @@ export default function PortalMessages({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-msgs', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: messages = [] } = useQuery({
     queryKey: ['portal-msgs-home', myClient?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: myClient.id }, '-created_date', 20),
+    queryFn: () => portalDb.entities.Message.filter({ client_id: myClient.id }, '-created_date', 20),
     enabled: !!myClient?.id,
     refetchInterval: 15000,
   });

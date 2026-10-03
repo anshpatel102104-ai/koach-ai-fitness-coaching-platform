@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { Users, UserPlus, Mail, Crown, Check, Clock, X, Loader2, ChevronDown, ShieldAlert } from 'lucide-react';
@@ -115,7 +115,7 @@ function InviteModal({ teamId, userId, onClose, onInvited }) {
     setLoading(true);
     try {
       // Step 1: Create the TeamMember record — this MUST succeed regardless of email
-      await base44.entities.TeamMember.create({
+      await db.entities.TeamMember.create({
         team_id: teamId,
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -136,7 +136,7 @@ function InviteModal({ teamId, userId, onClose, onInvited }) {
             <p style="color:var(--tc-muted-foreground)">Hi ${name.trim()},</p>
             <p style="color:var(--tc-muted-foreground)">You've been invited to join a coaching team on KOACH AI.</p>
             <p style="margin:24px 0">
-              <a href="https://app.base44.com" style="background:var(--tc-primary);color:var(--tc-primary-foreground);padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
+              <a href="${window.location.origin}" style="background:var(--tc-primary);color:var(--tc-primary-foreground);padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
                 Accept Invite &rarr;
               </a>
             </p>
@@ -145,7 +145,7 @@ function InviteModal({ teamId, userId, onClose, onInvited }) {
           </div>`;
 
         await Promise.race([
-          base44.functions.invoke('sendEmailNotification', {
+          db.functions.invoke('sendEmailNotification', {
             to: email.trim().toLowerCase(),
             subject: "You've been invited to join a KOACH AI team",
             html: htmlBody,
@@ -240,7 +240,7 @@ export default function Team() {
   // Find or create the owner's team
   const { data: teams = [], isLoading: loadingTeam } = useQuery({
     queryKey: ['my-team'],
-    queryFn: () => base44.entities.Team.filter({ owner_coach_id: user?.id }),
+    queryFn: () => db.entities.Team.filter({ owner_coach_id: user?.id }),
     enabled: !!user?.id,
   });
   const team = teams[0];
@@ -248,16 +248,16 @@ export default function Team() {
   // Load team members
   const { data: members = [], isLoading: loadingMembers } = useQuery({
     queryKey: ['team-members', team?.id],
-    queryFn: () => base44.entities.TeamMember.filter({ team_id: team.id }),
+    queryFn: () => db.entities.TeamMember.filter({ team_id: team.id }),
     enabled: !!team?.id,
   });
 
   // Seed owner as TeamMember if not already present
   const seedOwnerMember = async (teamId) => {
-    const existing = await base44.entities.TeamMember.filter({ team_id: teamId });
+    const existing = await db.entities.TeamMember.filter({ team_id: teamId });
     const ownerExists = existing.some(m => m.user_id === user.id || m.email === user.email);
     if (!ownerExists) {
-      await base44.entities.TeamMember.create({
+      await db.entities.TeamMember.create({
         team_id: teamId,
         user_id: user.id,
         name: user.full_name || 'Team Owner',
@@ -279,20 +279,20 @@ export default function Team() {
 
   // If no team exists yet, seed it
   const handleSeedTeam = async () => {
-    const res = await base44.functions.invoke('seedTeam', {});
+    const res = await db.functions.invoke('seedTeam', {});
     qc.invalidateQueries({ queryKey: ['my-team'] });
     toast.success('Team created!');
   };
 
   const handleRemove = async (member) => {
     if (!confirm(`Remove ${member.name} from the team?`)) return;
-    await base44.entities.TeamMember.delete(member.id);
+    await db.entities.TeamMember.delete(member.id);
     qc.invalidateQueries({ queryKey: ['team-members', team?.id] });
     toast.success(`${member.name} removed from team`);
   };
 
   const handleChangeRole = async (member, newRole) => {
-    await base44.entities.TeamMember.update(member.id, { role_label: newRole });
+    await db.entities.TeamMember.update(member.id, { role_label: newRole });
     qc.invalidateQueries({ queryKey: ['team-members', team?.id] });
     toast.success(`${member.name} is now ${newRole === 'owner' ? 'an Owner' : 'a Coach'}`);
   };

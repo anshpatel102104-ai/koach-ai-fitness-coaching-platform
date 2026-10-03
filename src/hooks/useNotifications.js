@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
 export function useNotifications() {
@@ -12,7 +12,7 @@ export function useNotifications() {
 
   const fetchNotifications = useCallback(async (currentUser, reset = false) => {
     if (!currentUser) return;
-    const data = await base44.entities.Notification.filter(
+    const data = await db.entities.Notification.filter(
       { recipient_id: currentUser.id, is_dismissed: false }, // recipient_id is uuid (auth user id)
       '-created_date',
       PAGE_SIZE
@@ -24,7 +24,7 @@ export function useNotifications() {
   }, []);
 
   const fetchBadges = useCallback(async () => {
-    const all = await base44.entities.ClientBadge.list('-created_date', 20);
+    const all = await db.entities.ClientBadge.list('-created_date', 20);
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     setBadges(all.filter(b => {
       const d = new Date(b.earned_date || b.created_date).getTime();
@@ -42,7 +42,7 @@ export function useNotifications() {
   // Real-time subscription for notifications
   useEffect(() => {
     if (!user) return;
-    const unsub = base44.entities.Notification.subscribe((event) => {
+    const unsub = db.entities.Notification.subscribe((event) => {
       if (event.data?.recipient_id !== user.id) return;
       if (event.type === 'create') {
         setNotifications(prev => [event.data, ...prev]);
@@ -75,13 +75,13 @@ export function useNotifications() {
 
   const markRead = useCallback(async (id) => {
     if (String(id).startsWith('badge_')) return;
-    await base44.entities.Notification.update(id, { is_read: true });
+    await db.entities.Notification.update(id, { is_read: true });
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
   }, []);
 
   const markAllRead = useCallback(async () => {
     const unread = notifications.filter(n => !n.is_read);
-    await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
+    await Promise.all(unread.map(n => db.entities.Notification.update(n.id, { is_read: true })));
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   }, [notifications]);
 
@@ -90,12 +90,12 @@ export function useNotifications() {
       setBadges(prev => prev.filter(b => `badge_${b.id}` !== id));
       return;
     }
-    await base44.entities.Notification.update(id, { is_dismissed: true, is_read: true });
+    await db.entities.Notification.update(id, { is_dismissed: true, is_read: true });
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
   const dismissAll = useCallback(async () => {
-    await Promise.all(notifications.map(n => base44.entities.Notification.update(n.id, { is_dismissed: true, is_read: true })));
+    await Promise.all(notifications.map(n => db.entities.Notification.update(n.id, { is_dismissed: true, is_read: true })));
     setNotifications([]);
     setBadges([]);
   }, [notifications]);

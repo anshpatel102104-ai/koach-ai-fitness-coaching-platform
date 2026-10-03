@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Sparkles, Loader2, TrendingUp, Users, DollarSign, Clock, Target, RefreshCw } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInDays, parseISO, startOfMonth } from 'date-fns';
 
 const INSIGHT_ICONS = { revenue: DollarSign, retention: Users, pricing: TrendingUp, efficiency: Clock, growth: Target };
@@ -31,7 +31,7 @@ export default function BIAIInsights({ clients, checkIns, leads, payments }) {
       return sd && sd >= startOfMonth(new Date());
     }).length;
 
-    const res = await base44.functions.invoke('aiBusinessInsights', {
+    const res = await db.functions.invoke('aiBusinessInsights', {
       action: 'businessInsights',
       metrics: {
         mrr,

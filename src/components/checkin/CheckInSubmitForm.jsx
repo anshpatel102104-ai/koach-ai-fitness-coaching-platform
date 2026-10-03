@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,7 +140,7 @@ export default function CheckInSubmitForm({ clientId, clientName, lastCheckIn, o
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingSlot(slot);
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await db.uploadFile({ file });
     setPhotos(p => ({ ...p, [slot]: file_url }));
     setUploadingSlot(null);
   };
@@ -148,7 +148,7 @@ export default function CheckInSubmitForm({ clientId, clientName, lastCheckIn, o
   const handleSubmit = async () => {
     setSaving(true);
     const photoUrls = Object.values(photos).filter(Boolean);
-    await base44.entities.CheckIn.create({
+    await db.entities.CheckIn.create({
       client_id: clientId,
       client_name: clientName,
       date: format(new Date(), 'yyyy-MM-dd'),

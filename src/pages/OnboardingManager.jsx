@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -154,7 +154,7 @@ export default function OnboardingManager() {
 
   const { data: responses = [], isLoading } = useQuery({
     queryKey: ['onboarding-responses'],
-    queryFn: () => base44.entities.OnboardingResponse.list('-created_date', 100),
+    queryFn: () => db.entities.OnboardingResponse.list('-created_date', 100),
   });
 
   const approveMutation = useMutation({
@@ -167,7 +167,7 @@ export default function OnboardingManager() {
       // browser. The old code wrote a plaintext token into `invite_token`, a
       // column that was renamed to `invite_token_hash` (so the insert threw),
       // and emailed a link that nothing could validate.
-      const client = await base44.entities.Client.create({
+      const client = await db.entities.Client.create({
         name: resp.name,
         email: resp.email,
         phone: resp.phone || '',
@@ -185,13 +185,13 @@ export default function OnboardingManager() {
         ...(teamId ? { team_id: teamId } : {}),
       });
 
-      await base44.entities.OnboardingResponse.update(resp.id, { status: 'converted', client_id: client.id });
+      await db.entities.OnboardingResponse.update(resp.id, { status: 'converted', client_id: client.id });
 
       const coachName = user?.full_name || 'Your Coach';
       // Generate the (hashed) invite token and send the branded setup email
       // server-side. Single source of truth for invites; no plaintext token in
       // the browser.
-      await base44.functions.invoke('sendClientInvite', {
+      await db.functions.invoke('sendClientInvite', {
         clientId: client.id,
         clientName: resp.name,
         clientEmail: resp.email,
@@ -218,7 +218,7 @@ export default function OnboardingManager() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-list'],
-    queryFn: () => base44.entities.Client.list('-created_date', 200),
+    queryFn: () => db.entities.Client.list('-created_date', 200),
     enabled: canAIOnboard,
   });
 

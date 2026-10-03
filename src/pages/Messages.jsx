@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Send, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isToday, isYesterday, format } from 'date-fns';
@@ -30,30 +30,30 @@ export default function Messages() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ['messages'],
-    queryFn: () => base44.entities.Message.list('-created_date', 500),
+    queryFn: () => db.entities.Message.list('-created_date', 500),
   });
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-messages'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 300),
+    queryFn: () => db.entities.CheckIn.list('-date', 300),
   });
 
 
   // Real-time subscription
   useEffect(() => {
-    const unsub = base44.entities.Message.subscribe(() => {
+    const unsub = db.entities.Message.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['messages'] });
     });
     return unsub;
   }, [queryClient]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Message.create(data),
+    mutationFn: (data) => db.entities.Message.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['messages'] }),
     onError: (err) => {
       console.error('Message send error:', err);
@@ -62,7 +62,7 @@ export default function Messages() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Message.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Message.update(id, data),
   });
 
   const selectedClient = clients.find(c => c.id === selectedClientId);

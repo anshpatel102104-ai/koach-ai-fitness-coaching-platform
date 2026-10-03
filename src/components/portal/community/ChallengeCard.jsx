@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { differenceInDays, parseISO } from 'date-fns';
 import { Trophy } from 'lucide-react';
 
@@ -17,7 +17,7 @@ export default function ChallengeCard({ challenge, myClient, queryClient }) {
       const participants = isJoined
         ? (challenge.participants || []).filter(id => id !== myClient?.id)
         : [...(challenge.participants || []), myClient?.id];
-      return base44.entities.Challenge.update(challenge.id, { participants });
+      return portalDb.entities.Challenge.update(challenge.id, { participants });
     },
     onSuccess: () => queryClient?.invalidateQueries({ queryKey: ['challenges-active'] }),
   });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Copy, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,16 +45,16 @@ export default function EmailTemplateLibrary({ coachId }) {
 
   const { data: userTemplates = [] } = useQuery({
     queryKey: ['email-templates', coachId],
-    queryFn: () => base44.entities.EmailTemplate.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.EmailTemplate.filter({ coach_id: coachId }),
     enabled: !!coachId,
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
       if (data.id) {
-        return base44.entities.EmailTemplate.update(data.id, data);
+        return db.entities.EmailTemplate.update(data.id, data);
       } else {
-        return base44.entities.EmailTemplate.create({ ...data, coach_id: coachId });
+        return db.entities.EmailTemplate.create({ ...data, coach_id: coachId });
       }
     },
     onSuccess: () => {

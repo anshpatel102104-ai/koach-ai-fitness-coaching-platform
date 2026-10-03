@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ClipboardList, Search, X, Plus, Bell, Send, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,7 @@ export default function CheckInReview() {
 
   // Real-time subscription
   useEffect(() => {
-    const unsub = base44.entities.CheckIn.subscribe(() => {
+    const unsub = db.entities.CheckIn.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
     });
     return unsub;
@@ -61,12 +61,12 @@ export default function CheckInReview() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: checkIns = [], isLoading } = useQuery({
     queryKey: ['checkins-review'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 400),
+    queryFn: () => db.entities.CheckIn.list('-date', 400),
   });
 
   const clientMap = useMemo(

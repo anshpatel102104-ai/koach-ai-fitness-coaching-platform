@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Pencil, Trash2, Loader2, Database } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -54,29 +54,29 @@ export default function FoodDatabaseTab() {
 
   const { data: foods = [], isLoading } = useQuery({
     queryKey: ['food-database'],
-    queryFn: () => base44.entities.FoodItem.list('-created_date', 500),
+    queryFn: () => db.entities.FoodItem.list('-created_date', 500),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.FoodItem.create(data),
+    mutationFn: (data) => db.entities.FoodItem.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food added!'); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.FoodItem.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.FoodItem.update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food updated!'); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.FoodItem.delete(id),
+    mutationFn: (id) => db.entities.FoodItem.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Removed'); },
   });
 
   async function seedDefaults() {
     setSeeding(true);
-    const existing = await base44.entities.FoodItem.list('-created_date', 500);
+    const existing = await db.entities.FoodItem.list('-created_date', 500);
     const existingNames = new Set(existing.map(f => f.name?.toLowerCase()));
     const toCreate = DEFAULT_FOODS.filter(f => !existingNames.has(f.name.toLowerCase()));
     for (const food of toCreate) {
-      await base44.entities.FoodItem.create(food);
+      await db.entities.FoodItem.create(food);
     }
     qc.invalidateQueries({ queryKey: ['food-database'] });
     if (toCreate.length === 0) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Loader2 } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 
 const QUICK_PROMPTS = [
   "What can I eat for breakfast that fits my macros?",
@@ -24,7 +24,7 @@ export default function AIAssistant({ plan, todayLogged }) {
     setMessages(m => [...m, { role: 'user', content: text }]);
     setQuery('');
     setLoading(true);
-    const res = await base44.functions.invoke('aiNutritionInsights', {
+    const res = await portalDb.functions.invoke('aiNutritionInsights', {
       action: 'nutritionQA', macroContext, question: text,
     });
     setMessages(m => [...m, { role: 'ai', content: res.data?.text || '' }]);

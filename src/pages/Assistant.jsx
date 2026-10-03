@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sparkles, PlusCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -95,12 +95,12 @@ function AssistantSidebar({ clients, selectedClient, onSelectClient, onQuickActi
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-assistant'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
     staleTime: 60_000,
   });
   const { data: plans = [] } = useQuery({
     queryKey: ['nutrition-plans'],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
     staleTime: 60_000,
   });
 
@@ -226,11 +226,11 @@ export default function Assistant() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
   const { data: conversations = [], refetch: refetchConvos } = useQuery({
     queryKey: ['ai-conversations'],
-    queryFn: () => base44.entities.AIConversation.list('-created_date', 10),
+    queryFn: () => db.entities.AIConversation.list('-created_date', 10),
     staleTime: 30_000,
   });
 

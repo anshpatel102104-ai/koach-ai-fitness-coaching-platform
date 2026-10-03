@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import {
   ChevronLeft, CheckCircle2, Sparkles, MessageSquare,
@@ -212,7 +212,7 @@ function FeedbackComposer({ checkIn, client, allCIs, onSent }) {
 
   const generateAI = async () => {
     setAiLoading(true);
-    const result = (await base44.functions.invoke('aiMessageAssistant', { action: 'generateCheckInResponse', client, checkIn, recentCheckIns: allCIs })).data?.message || '';
+    const result = (await db.functions.invoke('aiMessageAssistant', { action: 'generateCheckInResponse', client, checkIn, recentCheckIns: allCIs })).data?.message || '';
     setText(result);
     setAiLoading(false);
   };
@@ -221,8 +221,8 @@ function FeedbackComposer({ checkIn, client, allCIs, onSent }) {
     if (!text.trim()) return;
     setSending(true);
     await Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, { coach_notes: text, coach_responded: true, review_status: 'reviewed' }),
-      base44.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: text.trim(), tag: 'check_in', is_read: false }),
+      db.entities.CheckIn.update(checkIn.id, { coach_notes: text, coach_responded: true, review_status: 'reviewed' }),
+      db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: text.trim(), tag: 'check_in', is_read: false }),
     ]);
     setSending(false);
     toast.success('Feedback sent! 🎉');
@@ -280,13 +280,13 @@ function ApplyChangesPanel({ checkIn, client, onCalDone, onCardioDone }) {
   const adjustCal = async (delta) => {
     if (!client?.assigned_nutrition_id) { toast.error('No nutrition plan assigned'); return; }
     setSaving(true);
-    const plans = await base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
+    const plans = await db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
     const plan = plans[0];
     if (plan) {
       const newCals = Math.max(1000, (plan.calories || 2000) + delta);
       await Promise.all([
-        base44.entities.NutritionPlan.update(plan.id, { calories: newCals }),
-        base44.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: `Your daily calorie target has been updated to ${newCals} kcal (${delta > 0 ? '+' : ''}${delta} kcal adjustment).`, tag: 'nutrition', is_read: false }),
+        db.entities.NutritionPlan.update(plan.id, { calories: newCals }),
+        db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: `Your daily calorie target has been updated to ${newCals} kcal (${delta > 0 ? '+' : ''}${delta} kcal adjustment).`, tag: 'nutrition', is_read: false }),
       ]);
       const label = `${delta > 0 ? '+' : ''}${delta} kcal → ${newCals}`;
       toast.success(`Calories adjusted: ${label}`);
@@ -302,8 +302,8 @@ function ApplyChangesPanel({ checkIn, client, onCalDone, onCardioDone }) {
       ? 'Your cardio has been increased — add 1 extra session or 20 min to your current sessions this week.'
       : 'Your cardio has been reduced — drop 1 session or reduce duration by 15–20 min this week.';
     await Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, { coach_notes: (checkIn.coach_notes ? checkIn.coach_notes + '\n' : '') + '[Cardio] ' + msg }),
-      base44.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: msg, tag: 'training', is_read: false }),
+      db.entities.CheckIn.update(checkIn.id, { coach_notes: (checkIn.coach_notes ? checkIn.coach_notes + '\n' : '') + '[Cardio] ' + msg }),
+      db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: msg, tag: 'training', is_read: false }),
     ]);
     const label = dir === 'up' ? '+1 cardio session' : '−1 cardio session';
     toast.success(`Cardio adjusted: ${label}`);
@@ -400,10 +400,10 @@ function ClientReviewCard({ item, onMarkReviewed, markSaving }) {
   const sendAI = async () => {
     if (aiSending || aiDone || feedbackSent) return;
     setAiSending(true);
-    const result = (await base44.functions.invoke('aiMessageAssistant', { action: 'generateCheckInResponse', client, checkIn, recentCheckIns: clientCIs })).data?.message || '';
+    const result = (await db.functions.invoke('aiMessageAssistant', { action: 'generateCheckInResponse', client, checkIn, recentCheckIns: clientCIs })).data?.message || '';
     await Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, { coach_notes: result, coach_responded: true, review_status: 'reviewed' }),
-      base44.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: result, tag: 'check_in', is_read: false }),
+      db.entities.CheckIn.update(checkIn.id, { coach_notes: result, coach_responded: true, review_status: 'reviewed' }),
+      db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: result, tag: 'check_in', is_read: false }),
     ]);
     setAiDone(true);
     setFeedbackSent(true);
@@ -641,12 +641,12 @@ export default function FastReview() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: checkIns = [], isLoading } = useQuery({
     queryKey: ['checkins-fast'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
   });
 
   const queue = useMemo(() => buildQueue(checkIns, clients), [checkIns, clients]);
@@ -666,7 +666,7 @@ export default function FastReview() {
   const handleMark = async () => {
     if (!current) return;
     setMarkSaving(true);
-    await base44.entities.CheckIn.update(current.ci.id, { coach_responded: true, review_status: 'reviewed' });
+    await db.entities.CheckIn.update(current.ci.id, { coach_responded: true, review_status: 'reviewed' });
     setReviewed(r => ({ ...r, [current.ci.id]: true }));
     queryClient.invalidateQueries({ queryKey: ['checkins-fast'] });
     setMarkSaving(false);

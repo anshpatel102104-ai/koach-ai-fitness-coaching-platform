@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import TodayView from '@/components/dashboard/TodayView';
 import TrialBanner from '@/components/dashboard/TrialBanner';
@@ -27,14 +27,14 @@ export default function Dashboard() {
 
   // Real-time subscriptions — invalidate on any change
   useEffect(() => {
-    const unsubCI = base44.entities.CheckIn.subscribe(() => {
+    const unsubCI = db.entities.CheckIn.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['checkins'] });
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
     });
-    const unsubMsg = base44.entities.Message.subscribe(() => {
+    const unsubMsg = db.entities.Message.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['messages-unread'] });
     });
-    const unsubClient = base44.entities.Client.subscribe(() => {
+    const unsubClient = db.entities.Client.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     });
     return () => { unsubCI(); unsubMsg(); unsubClient(); };
@@ -47,23 +47,23 @@ export default function Dashboard() {
     refetch: refetchClients,
   } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date'),
+    queryFn: () => db.entities.Client.list('-created_date'),
   });
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 100),
+    queryFn: () => db.entities.CheckIn.list('-date', 100),
   });
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages-unread'],
-    queryFn: () => base44.entities.Message.filter({ is_read: false }, '-created_date', 30),
+    queryFn: () => db.entities.Message.filter({ is_read: false }, '-created_date', 30),
   });
 
   const { data: payments = [] } = useQuery({
     queryKey: ['payments-dashboard'],
-    queryFn: () => base44.entities.Payment.filter({ status: 'pending' }, '-created_date', 50).then(pending =>
-      base44.entities.Payment.filter({ status: 'failed' }, '-created_date', 50).then(failed => [...pending, ...failed])
+    queryFn: () => db.entities.Payment.filter({ status: 'pending' }, '-created_date', 50).then(pending =>
+      db.entities.Payment.filter({ status: 'failed' }, '-created_date', 50).then(failed => [...pending, ...failed])
     ),
   });
 

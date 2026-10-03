@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Users, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -14,7 +14,7 @@ export default function GroupListView({ groups, clients, isCoach, onSelect, onEd
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CommunityGroup.delete(id),
+    mutationFn: (id) => db.entities.CommunityGroup.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-groups'] }),
   });
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   format, startOfWeek, addDays, addWeeks, addMonths,
   subWeeks, subMonths, subDays, startOfMonth, endOfMonth,
@@ -44,17 +44,17 @@ export default function Schedule() {
   // ── Data ────────────────────────────────────────────────────────────────
   const { data: sessions = [] } = useQuery({
     queryKey: ['sessions'],
-    queryFn: () => base44.entities.Session.list('-date', 200),
+    queryFn: () => db.entities.Session.list('-date', 200),
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: coachSettings = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
 
   const settings = coachSettings[0];
@@ -93,7 +93,7 @@ export default function Schedule() {
   const { data: googleEventsData, isFetching: gcalFetching } = useQuery({
     queryKey: ['google-calendar-events', monthStart, monthEnd],
     queryFn: async () => {
-      const res = await base44.functions.invoke('googleCalendarProxy', {
+      const res = await db.functions.invoke('googleCalendarProxy', {
         action: 'getEvents',
         payload: { timeMin: monthStart, timeMax: monthEnd },
       });
@@ -127,12 +127,12 @@ export default function Schedule() {
 
   // ── Mutations ────────────────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Session.create(data),
+    mutationFn: (data) => db.entities.Session.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Session.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Session.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] }),
   });
 
@@ -141,12 +141,12 @@ export default function Schedule() {
       const session = sessions.find(s => s.id === id);
       // Delete from Google Calendar if linked
       if (session?.google_event_id && gcalConnected) {
-        await base44.functions.invoke('googleCalendarProxy', {
+        await db.functions.invoke('googleCalendarProxy', {
           action: 'deleteEvent',
           payload: { eventId: session.google_event_id },
         });
       }
-      return base44.entities.Session.delete(id);
+      return db.entities.Session.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
@@ -157,8 +157,8 @@ export default function Schedule() {
   const settingsMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['coach-settings'] }),
   });
 
@@ -195,7 +195,7 @@ export default function Schedule() {
             end_time: new Date(endDate).toISOString(),
             notes: form.notes,
           });
-          const res = await base44.functions.invoke('googleCalendarProxy', {
+          const res = await db.functions.invoke('googleCalendarProxy', {
             action: 'createEvent',
             payload: { event: gcalEvent },
           });
@@ -230,7 +230,7 @@ export default function Schedule() {
           if (client) {
             const dateStr = form.date ? new Date(form.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : form.date;
             const timeStr = form.time || '';
-            await base44.entities.Message.create({
+            await db.entities.Message.create({
               client_id: form.client_id,
               client_name: client.name,
               content: `Hi ${client.name}! Your coaching session is booked 🎉\n\n📅 ${dateStr}\n⏰ ${timeStr}\n\n🔗 Join Zoom: ${zoomMeeting.join_url}${zoomMeeting.password ? `\n\nPassword: ${zoomMeeting.password}` : ''}\n\nSee you then!`,

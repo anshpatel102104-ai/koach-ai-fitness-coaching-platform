@@ -2,7 +2,7 @@
  * AI Message Assistant — core context builder & generation engine
  * Used by ComposeBar, BroadcastModal, CheckInResponseGenerator
  */
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInDays, format } from 'date-fns';
 
 export const TONES = [
@@ -148,7 +148,7 @@ export async function generateAIReply(client, messages, checkIns, tone = 'auto',
 
   // Prompt template + tone/situational maps live in the aiMessageAssistant Edge
   // Function (action: richReply); the pure context builders above run here.
-  const res = await base44.functions.invoke('aiMessageAssistant', {
+  const res = await db.functions.invoke('aiMessageAssistant', {
     action: 'richReply',
     context,
     tone,
@@ -179,7 +179,7 @@ export async function generateBroadcastMessage(selectedClients, allClients, filt
 
   const today = format(new Date(), 'EEEE, MMMM d');
 
-  const res = await base44.functions.invoke('aiMessageAssistant', {
+  const res = await db.functions.invoke('aiMessageAssistant', {
     action: 'richBroadcast',
     summaries,
     filter,
@@ -204,7 +204,7 @@ export async function generateCheckInResponse(client, checkIn, previousCheckIns 
     ? (checkIn.compliance_training || 0) - prevCI.compliance_training
     : null;
 
-  const res = await base44.functions.invoke('aiMessageAssistant', {
+  const res = await db.functions.invoke('aiMessageAssistant', {
     action: 'richCheckInResponse',
     checkIn,
     client,

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { X, BookmarkPlus, Loader2 } from 'lucide-react';
 import { scaleMacros, gramsFromServing } from '@/lib/nutritionUtils';
 import { toast } from 'sonner';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 const UNITS = ['g', 'oz', 'cup', 'tbsp', 'tsp', 'piece', 'serving'];
 
@@ -43,7 +43,7 @@ export default function FoodDetailSheet({ food, mealName, onAdd, onClose, dailyT
   const handleSave = async () => {
     setSaving(true);
     try {
-      await base44.entities.FoodItem.create({
+      await db.entities.FoodItem.create({
         name: food.name, brand: food.brand || '',
         calories: food.calories, protein: food.protein, carbs: food.carbs, fats: food.fats,
         fiber: food.fiber || 0, sodium: food.sodium || 0,

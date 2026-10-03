@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Star, CheckCircle2, XCircle, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,12 +11,12 @@ export default function TestimonialCollector({ coachId }) {
 
   const { data: testimonials = [] } = useQuery({
     queryKey: ['testimonials', coachId],
-    queryFn: () => base44.entities.Testimonial.filter({ coach_id: coachId }, '-submitted_at'),
+    queryFn: () => db.entities.Testimonial.filter({ coach_id: coachId }, '-submitted_at'),
     enabled: !!coachId,
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id) => base44.entities.Testimonial.update(id, { status: 'approved', approved_at: new Date().toISOString() }),
+    mutationFn: (id) => db.entities.Testimonial.update(id, { status: 'approved', approved_at: new Date().toISOString() }),
     onSuccess: () => {
       toast.success('Testimonial approved');
       queryClient.invalidateQueries({ queryKey: ['testimonials', coachId] });
@@ -24,7 +24,7 @@ export default function TestimonialCollector({ coachId }) {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id) => base44.entities.Testimonial.update(id, { status: 'rejected' }),
+    mutationFn: (id) => db.entities.Testimonial.update(id, { status: 'rejected' }),
     onSuccess: () => {
       toast.success('Testimonial rejected');
       queryClient.invalidateQueries({ queryKey: ['testimonials', coachId] });
@@ -34,7 +34,7 @@ export default function TestimonialCollector({ coachId }) {
   const toggleFeatureMutation = useMutation({
     mutationFn: (id) => {
       const testimonial = testimonials.find(t => t.id === id);
-      return base44.entities.Testimonial.update(id, { is_featured: !testimonial.is_featured });
+      return db.entities.Testimonial.update(id, { is_featured: !testimonial.is_featured });
     },
     onSuccess: () => {
       toast.success('Testimonial updated');

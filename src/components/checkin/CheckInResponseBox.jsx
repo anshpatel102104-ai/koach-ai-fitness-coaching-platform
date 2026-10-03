@@ -3,7 +3,7 @@ import { Sparkles, Loader2, BookOpen, Check, ChevronDown, Send, RefreshCw, Penci
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 const TEMPLATES = [
   { label: 'Great Check-in', text: "Awesome check-in this week! Your consistency is really showing. Keep up the great work and let's build on this momentum! 💪" },
@@ -27,7 +27,7 @@ export default function CheckInResponseBox({ checkIn, client, allClientCIs = [],
     setAiLoading(true);
     setAiDraft('');
     try {
-      const res = await base44.functions.invoke('aiMessageAssistant', {
+      const res = await db.functions.invoke('aiMessageAssistant', {
         action: 'generateCheckInResponse',
         client,
         checkIn,
@@ -52,7 +52,7 @@ export default function CheckInResponseBox({ checkIn, client, allClientCIs = [],
 
     // Deliver message instantly to client's inbox
     if (checkIn?.client_id && reply.trim()) {
-      await base44.entities.Message.create({
+      await db.entities.Message.create({
         client_id: checkIn.client_id,
         client_name: checkIn.client_name,
         sender: 'coach',

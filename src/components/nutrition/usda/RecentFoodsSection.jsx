@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, TrendingUp, Plus, Loader2 } from 'lucide-react';
 import { getRecentFoods } from '@/lib/nutritionUtils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export default function RecentFoodsSection({ onAdd }) {
   const [recent, setRecent] = useState([]);
@@ -10,7 +10,7 @@ export default function RecentFoodsSection({ onAdd }) {
 
   useEffect(() => {
     setRecent(getRecentFoods());
-    base44.entities.FoodItem.list('-created_date', 20)
+    db.entities.FoodItem.list('-created_date', 20)
       .then(setMyFoods).catch(() => {})
       .finally(() => setLoadingMy(false));
   }, []);

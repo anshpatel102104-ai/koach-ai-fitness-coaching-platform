@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -49,7 +49,7 @@ function AssignPlanModal({ open, onClose, plans, clientId, onAssigned }) {
     const plan = plans.find(p => p.id === selected);
     const existing = plan.assigned_clients || [];
     if (!existing.includes(clientId)) {
-      await base44.entities.NutritionPlan.update(selected, {
+      await db.entities.NutritionPlan.update(selected, {
         assigned_clients: [...existing, clientId],
       });
     }
@@ -119,7 +119,7 @@ function AssignedPlanSection({ client, plans, allPlans, onOpenAssign }) {
 
   const unassign = async () => {
     if (!assigned) return;
-    await base44.entities.NutritionPlan.update(assigned.id, {
+    await db.entities.NutritionPlan.update(assigned.id, {
       assigned_clients: (assigned.assigned_clients || []).filter(id => id !== client.id),
     });
     qc.invalidateQueries({ queryKey: ['nutrition-plans-all'] });
@@ -224,7 +224,7 @@ function TodayFoodLog({ client, assignedPlan }) {
 
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['food-log', client.id, today],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: client.id, logged_date: today }),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: client.id, logged_date: today }),
   });
 
   const grouped = useMemo(() => {
@@ -326,7 +326,7 @@ function WeeklyAdherenceGrid({ client, assignedPlan }) {
 
   const { data: logs = [] } = useQuery({
     queryKey: ['food-log-week', client.id, startDate, endDate],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: client.id }),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: client.id }),
     select: (data) => data.filter(l => l.logged_date >= startDate && l.logged_date <= endDate),
   });
 
@@ -456,7 +456,7 @@ export default function ProfileNutritionTab({ client }) {
 
   const { data: allPlans = [], isLoading } = useQuery({
     queryKey: ['nutrition-plans-all'],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
   });
 
   const assignedPlan = allPlans.find(p =>

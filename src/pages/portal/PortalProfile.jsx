@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -131,32 +131,32 @@ export default function PortalProfile({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-profile', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['portal-checkins-profile', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
     enabled: !!myClient?.id,
   });
 
   const { data: badges = [] } = useQuery({
     queryKey: ['portal-badges-profile', myClient?.id],
-    queryFn: () => base44.entities.ClientBadge.filter({ client_id: myClient.id }, '-earned_date', 50),
+    queryFn: () => portalDb.entities.ClientBadge.filter({ client_id: myClient.id }, '-earned_date', 50),
     enabled: !!myClient?.id,
   });
 
   const { data: workoutSessions = [] } = useQuery({
     queryKey: ['portal-ws-profile', myClient?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 100),
+    queryFn: () => portalDb.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 100),
     enabled: !!myClient?.id,
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['portal-invoices-profile', myClient?.id],
-    queryFn: () => base44.entities.Invoice.filter({ client_id: myClient.id }, '-issue_date', 50),
+    queryFn: () => portalDb.entities.Invoice.filter({ client_id: myClient.id }, '-issue_date', 50),
     enabled: !!myClient?.id,
   });
   const unpaidCount = invoices.filter(i => ['sent', 'viewed', 'overdue', 'draft'].includes(i.status)).length;
@@ -183,8 +183,8 @@ export default function PortalProfile({ user }) {
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !myClient?.id) return;
-    const { file_url } = await base44.uploadFile({ file });
-    await base44.entities.Client.update(myClient.id, { avatar_url: file_url });
+    const { file_url } = await portalDb.uploadFile({ file });
+    await portalDb.entities.Client.update(myClient.id, { avatar_url: file_url });
     queryClient.invalidateQueries({ queryKey: ['portal-client-profile'] });
   };
 

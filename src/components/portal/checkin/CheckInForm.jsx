@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { AnimatePresence } from 'framer-motion';
 import CheckInFormScreen from './CheckInFormScreen';
 import CheckInReview from './CheckInReview';
@@ -21,7 +21,7 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
   // Get check-in form (assume one assigned form)
   const { data: forms = [] } = useQuery({
     queryKey: ['checkin-forms'],
-    queryFn: () => base44.entities.CheckInForm.filter({ is_active: true }, '-created_date', 1),
+    queryFn: () => portalDb.entities.CheckInForm.filter({ is_active: true }, '-created_date', 1),
   });
   const form = forms[0];
 
@@ -53,7 +53,7 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const checkIn = await base44.entities.CheckIn.create({
+      const checkIn = await portalDb.entities.CheckIn.create({
         client_id: client.id,
         client_name: client.name,
         date: new Date().toISOString().split('T')[0],

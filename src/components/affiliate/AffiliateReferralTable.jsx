@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Download } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -16,7 +16,7 @@ export default function AffiliateReferralTable({ profile }) {
 
   const { data: referrals = [] } = useQuery({
     queryKey: ['affiliate-commissions', profile.coach_id],
-    queryFn: () => base44.entities.AffiliateCommission.filter({ affiliate_id: profile.coach_id }, '-signup_date'),
+    queryFn: () => db.entities.AffiliateCommission.filter({ affiliate_id: profile.coach_id }, '-signup_date'),
   });
 
   const filtered = filterStatus === 'all' ? referrals : referrals.filter(r => r.status === filterStatus);

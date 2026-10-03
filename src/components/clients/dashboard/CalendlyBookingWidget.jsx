@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { getEventTypes, createSingleUseLink, getScheduledEvents } from '@/lib/calendly';
 import { Calendar, Send, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export default function CalendlyBookingWidget({ client }) {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
   const settings = settingsList[0];
   const isConnected = !!settings?.calendly_connected && !!settings?.calendly_user_uri;
@@ -57,7 +57,7 @@ export default function CalendlyBookingWidget({ client }) {
       const result = await createSingleUseLink(uri);
       const bookingUrl = result?.resource?.booking_url;
       if (!bookingUrl) throw new Error(result?.message || 'Failed to generate link');
-      await base44.entities.Message.create({
+      await db.entities.Message.create({
         client_id: client.id,
         client_name: client.name,
         content: `Hi ${client.name}! Here's your personal booking link to schedule our next session:\n\n🗓 ${bookingUrl}\n\nThis link is just for you — pick a time that works!`,

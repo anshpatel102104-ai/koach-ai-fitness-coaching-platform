@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { templates, TEMPLATE_OPTIONS } from '@/lib/emailTemplates';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ export default function EmailCenter() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -145,7 +145,7 @@ export default function EmailCenter() {
 
       for (const client of targets) {
         const r = getRendered(client);
-        await base44.functions.invoke('sendEmailNotification', {
+        await db.functions.invoke('sendEmailNotification', {
           to: client.email,
           toName: client.name,
           subject: customSubject || r.subject,
@@ -168,7 +168,7 @@ export default function EmailCenter() {
     if (!testEmailAddress) { toast.error('Enter a test email address'); return; }
     setSending(true);
     try {
-      await base44.functions.invoke('sendEmailNotification', {
+      await db.functions.invoke('sendEmailNotification', {
         to: testEmailAddress,
         toName: 'Test User',
         subject: `[TEST] ${displaySubject}`,

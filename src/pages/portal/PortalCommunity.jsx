@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, MessageSquare, Trophy, ChevronRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -28,12 +28,12 @@ function GroupDetail({ group, user, myClient, allClients, queryClient }) {
 
   const { data: posts = [] } = useQuery({
     queryKey: ['community-posts', group.id],
-    queryFn: () => base44.entities.CommunityPost.filter({ group_id: group.id, is_hidden: false }, '-created_date', 50),
+    queryFn: () => portalDb.entities.CommunityPost.filter({ group_id: group.id, is_hidden: false }, '-created_date', 50),
     refetchInterval: 30000,
   });
 
   useEffect(() => {
-    const unsub = base44.entities.CommunityPost.subscribe(() => {
+    const unsub = portalDb.entities.CommunityPost.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['community-posts', group.id] });
     });
     return unsub;
@@ -97,19 +97,19 @@ export default function PortalCommunity({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-community-client', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: allClients = [] } = useQuery({
     queryKey: ['community-all-clients'],
-    queryFn: () => base44.entities.Client.list('-created_date', 100),
+    queryFn: () => portalDb.entities.Client.list('-created_date', 100),
   });
 
   const { data: groups = [] } = useQuery({
     queryKey: ['community-groups'],
-    queryFn: () => base44.entities.CommunityGroup.list('-created_date'),
+    queryFn: () => portalDb.entities.CommunityGroup.list('-created_date'),
   });
 
   // Client only sees groups they belong to

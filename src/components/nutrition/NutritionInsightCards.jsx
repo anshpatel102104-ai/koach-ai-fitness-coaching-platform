@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { TrendingDown, AlertTriangle, TrendingUp, Bell, CheckCircle2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
 function buildInsights(plans, clients) {
@@ -48,11 +48,11 @@ function SkeletonCard() {
 export default function NutritionInsightCards() {
   const { data: plans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['nutrition-plans-insights'],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
   });
   const { data: clients = [], isLoading: clientsLoading } = useQuery({
     queryKey: ['clients-insights'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   if (plansLoading || clientsLoading) {

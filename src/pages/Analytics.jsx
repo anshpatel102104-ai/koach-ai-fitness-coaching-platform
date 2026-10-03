@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { TrendingDown, TrendingUp, Activity, Weight, BarChart3, UserCheck, ArrowUp, ArrowDown, Minus, AlertTriangle, Zap, Shield } from 'lucide-react';
 import AnalyticsStatCard from '@/components/analytics/AnalyticsStatCard';
 import AnalyticsTrendCard from '@/components/analytics/AnalyticsTrendCard';
@@ -250,8 +250,8 @@ function RetentionFunnel({ clients }) {
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState('30');
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
-  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins-analytics'], queryFn: () => base44.entities.CheckIn.list('-date', 500) });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => db.entities.Client.list() });
+  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins-analytics'], queryFn: () => db.entities.CheckIn.list('-date', 500) });
 
   const months = useMemo(() => getMonthRanges(6), []);
   const retentionTrend = useMemo(() => calcRetentionTrend(clients, months), [clients, months]);

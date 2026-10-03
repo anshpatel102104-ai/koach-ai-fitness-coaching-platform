@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -56,7 +56,7 @@ export default function NotificationSettings() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['notif-settings', user?.email],
-    queryFn: () => base44.entities.NotificationSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    queryFn: () => db.entities.NotificationSettings.filter({ coach_id: user.id }, '-created_date', 1),
     enabled: !!user?.id,
   });
 
@@ -71,9 +71,9 @@ export default function NotificationSettings() {
   const save = useCallback(async (data) => {
     const payload = { ...data, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
     if (settingsId) {
-      await base44.entities.NotificationSettings.update(settingsId, payload);
+      await db.entities.NotificationSettings.update(settingsId, payload);
     } else {
-      const created = await base44.entities.NotificationSettings.create(payload);
+      const created = await db.entities.NotificationSettings.create(payload);
       setSettingsId(created.id);
     }
     setSaved(true);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useTeamRole } from '@/lib/useTeamRole';
 import { ShieldAlert } from 'lucide-react';
@@ -105,9 +105,9 @@ export default function Subscription() {
     }
   }, []);
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
-  const { data: programs = [] } = useQuery({ queryKey: ['programs'], queryFn: () => base44.entities.WorkoutProgram.list() });
-  const { data: nutritionPlans = [] } = useQuery({ queryKey: ['nutrition-plans'], queryFn: () => base44.entities.NutritionPlan.list() });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => db.entities.Client.list() });
+  const { data: programs = [] } = useQuery({ queryKey: ['programs'], queryFn: () => db.entities.WorkoutProgram.list() });
+  const { data: nutritionPlans = [] } = useQuery({ queryKey: ['nutrition-plans'], queryFn: () => db.entities.NutritionPlan.list() });
 
   // Block non-owners from accessing billing (after all hooks)
   if (!loadingRole && !isOwner) return <CoachBillingBlock />;
@@ -129,7 +129,7 @@ export default function Subscription() {
 
   const handleOpenPortal = async () => {
     setOpeningPortal(true);
-    const res = await base44.functions.invoke('stripeCheckout', {
+    const res = await db.functions.invoke('stripeCheckout', {
       action: 'portal',
       cancel_url: window.location.href,
     });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import HabitCard from './HabitCard';
@@ -14,7 +14,7 @@ export default function HabitsSection({ client }) {
   // All habits for this client
   const { data: habits = [], isLoading: habitsLoading } = useQuery({
     queryKey: ['habits', client.id],
-    queryFn: () => base44.entities.Habit.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Habit.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => {
       // Active first, then by created date
@@ -26,7 +26,7 @@ export default function HabitsSection({ client }) {
   // All completions for this client (covers last 30 days + any existing)
   const { data: completions = [], isLoading: completionsLoading } = useQuery({
     queryKey: ['habit-completions', client.id],
-    queryFn: () => base44.entities.HabitCompletion.filter({ client_id: client.id }),
+    queryFn: () => db.entities.HabitCompletion.filter({ client_id: client.id }),
     enabled: !!client?.id,
   });
 
@@ -46,10 +46,10 @@ export default function HabitsSection({ client }) {
 
   const handleDelete = async (habit) => {
     if (!confirm(`Delete habit "${habit.name}"?`)) return;
-    await base44.entities.Habit.delete(habit.id);
+    await db.entities.Habit.delete(habit.id);
     // Also remove completions for this habit
     const toDelete = completions.filter(c => c.habit_id === habit.id);
-    await Promise.all(toDelete.map(c => base44.entities.HabitCompletion.delete(c.id)));
+    await Promise.all(toDelete.map(c => db.entities.HabitCompletion.delete(c.id)));
     toast.success('Habit deleted');
     refreshAll();
   };
@@ -60,10 +60,10 @@ export default function HabitsSection({ client }) {
       // Find and delete the completion record
       const existing = completions.find(c => c.habit_id === habit.id && c.date === dateStr);
       if (existing) {
-        await base44.entities.HabitCompletion.delete(existing.id);
+        await db.entities.HabitCompletion.delete(existing.id);
       }
     } else {
-      await base44.entities.HabitCompletion.create({
+      await db.entities.HabitCompletion.create({
         habit_id: habit.id,
         client_id: client.id,
         date: dateStr,

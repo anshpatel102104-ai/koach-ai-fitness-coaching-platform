@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { TIERS, TIER_ORDER, getUserTier } from '@/lib/subscription';
 import { Check, X, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 
@@ -104,7 +104,7 @@ export default function StripeUpgradeModal({ open, onClose, user, onUserUpdate }
     if (tierKey === userTier.key) return;
     setLoading(tierKey);
 
-    const res = await base44.functions.invoke('stripeCheckout', {
+    const res = await db.functions.invoke('stripeCheckout', {
       action: 'checkout',
       tier: tierKey,
       success_url: `${window.location.origin}/subscription?success=1`,

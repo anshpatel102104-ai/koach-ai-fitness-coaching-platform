@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   Plus, Dumbbell, Star, Search, X, List,
   ChevronDown, LayoutGrid
@@ -118,11 +118,11 @@ export default function ExerciseLibrary() {
 
   const { data: exercises = [], isLoading } = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('-created_date', 500),
+    queryFn: () => db.entities.ExerciseLibrary.list('-created_date', 500),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ExerciseLibrary.delete(id),
+    mutationFn: (id) => db.entities.ExerciseLibrary.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exercises'] }),
   });
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { createStripeCustomer, sendStripeInvoice, getClientInvoices } from '@/lib/stripe';
 import { sendZapierEvent } from '@/lib/zapier';
 import { DollarSign, ExternalLink, Send, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -59,7 +59,7 @@ export default function PaymentsTab({ client }) {
         const res = await createStripeCustomer(client);
         customerId = res.customer?.id;
         if (customerId) {
-          await base44.entities.Client.update(client.id, { stripe_customer_id: customerId });
+          await db.entities.Client.update(client.id, { stripe_customer_id: customerId });
           queryClient.invalidateQueries({ queryKey: ['clients'] });
         } else {
           throw new Error('Failed to create Stripe customer');

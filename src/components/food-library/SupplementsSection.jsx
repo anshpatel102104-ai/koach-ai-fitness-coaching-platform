@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Trash2, Edit2, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -113,26 +113,26 @@ export default function SupplementsSection() {
 
   const { data: supplements = [], isLoading } = useQuery({
     queryKey: ['supplement-library'],
-    queryFn: () => base44.entities.SupplementLibrary.list('-created_date', 100),
+    queryFn: () => db.entities.SupplementLibrary.list('-created_date', 100),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.SupplementLibrary.create(data),
+    mutationFn: (data) => db.entities.SupplementLibrary.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Supplement added!'); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.SupplementLibrary.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.SupplementLibrary.update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Updated!'); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.SupplementLibrary.delete(id),
+    mutationFn: (id) => db.entities.SupplementLibrary.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Removed'); },
   });
 
   const seedPresets = async () => {
     for (const p of PRESETS) {
       const exists = supplements.find(s => s.name === p.name);
-      if (!exists) await base44.entities.SupplementLibrary.create(p);
+      if (!exists) await db.entities.SupplementLibrary.create(p);
     }
     qc.invalidateQueries({ queryKey: ['supplement-library'] });
     toast.success('Common supplements added!');

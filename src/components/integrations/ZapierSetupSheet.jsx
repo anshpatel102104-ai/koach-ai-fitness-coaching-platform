@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,13 +62,13 @@ export default function ZapierSetupSheet({ open, onClose }) {
 
   const { data: settings = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
     enabled: open,
   });
 
   const { data: logs = [] } = useQuery({
     queryKey: ['zapier-logs'],
-    queryFn: () => base44.entities.ZapierLog.list('-sent_at', 10),
+    queryFn: () => db.entities.ZapierLog.list('-sent_at', 10),
     enabled: open,
   });
 
@@ -89,9 +89,9 @@ export default function ZapierSetupSheet({ open, onClose }) {
         zapier_connected: !!webhookUrl,
       };
       if (currentSettings?.id) {
-        return base44.entities.CoachSettings.update(currentSettings.id, payload);
+        return db.entities.CoachSettings.update(currentSettings.id, payload);
       } else {
-        return base44.entities.CoachSettings.create(payload);
+        return db.entities.CoachSettings.create(payload);
       }
     },
     onSuccess: () => {

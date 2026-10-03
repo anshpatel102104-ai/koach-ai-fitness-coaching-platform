@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format, subDays, parseISO, isSameDay } from 'date-fns';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -34,7 +34,7 @@ export default function WeeklySnapshot({ recentLogs, checkIns, program }) {
   useEffect(() => {
     if (!insight && doneCount > 0) {
       setLoadingInsight(true);
-      base44.functions.invoke('aiNutritionInsights', {
+      portalDb.functions.invoke('aiNutritionInsights', {
         action: 'weeklyInsight', doneCount, adherence,
       }).then(res => { setInsight(res.data?.text || ''); setLoadingInsight(false); }).catch(() => setLoadingInsight(false));
     }

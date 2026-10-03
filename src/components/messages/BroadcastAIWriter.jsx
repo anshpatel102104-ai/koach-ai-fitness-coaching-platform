@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Check, RotateCw } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
 const TONE_COLORS = {
@@ -36,7 +36,7 @@ export default function BroadcastAIWriter({ clients, selectedClientIds, filter, 
     }[filter] || 'selected clients';
 
     try {
-      const res = await base44.functions.invoke('aiMessageAssistant', {
+      const res = await db.functions.invoke('aiMessageAssistant', {
         action: 'generateBroadcast',
         selectedClientIds: [...selectedClientIds],
         clients: selectedClients.slice(0, 5),

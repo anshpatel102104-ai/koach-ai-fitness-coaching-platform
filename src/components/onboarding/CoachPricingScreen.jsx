@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Zap, Loader2 } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 
@@ -91,7 +91,7 @@ export default function CoachPricingScreen({ onNext, onBack, resuming }) {
     setLoading(true);
     try {
       const origin = window.location.origin;
-      const res = await base44.functions.invoke('stripeCheckout', {
+      const res = await db.functions.invoke('stripeCheckout', {
         tier: selected,
         billing_cycle: billing,
         success_url: `${origin}/?checkout=success`,

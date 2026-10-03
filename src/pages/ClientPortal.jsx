@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Home, Dumbbell, BarChart2, MessageSquare, Users, CalendarDays } from 'lucide-react';
 import { addDays, parseISO, differenceInDays } from 'date-fns';
@@ -35,27 +35,27 @@ function BottomNav({ user, hideForActiveWorkout }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-nav', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: messages = [] } = useQuery({
     queryKey: ['portal-msgs-nav', myClient?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: myClient.id }, '-created_date', 50),
+    queryFn: () => portalDb.entities.Message.filter({ client_id: myClient.id }, '-created_date', 50),
     enabled: !!myClient?.id,
     refetchInterval: 30000,
   });
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['portal-checkins-nav', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 5),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 5),
     enabled: !!myClient?.id,
   });
 
   const { data: communityPosts = [] } = useQuery({
     queryKey: ['portal-community-nav'],
-    queryFn: () => base44.entities.CommunityPost.filter({ is_announcement: true, is_hidden: false }, '-created_date', 5),
+    queryFn: () => portalDb.entities.CommunityPost.filter({ is_announcement: true, is_hidden: false }, '-created_date', 5),
     refetchInterval: 60000,
   });
 

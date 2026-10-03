@@ -5,7 +5,7 @@ import { TIERS, TIER_ORDER, FEATURE_INFO, getUserTier } from '@/lib/subscription
 import { Check, X, Zap, ArrowRight, Sparkles, TrendingUp, Trophy, ShoppingBag,
   ClipboardList, DollarSign, Globe, Smartphone, Users, Palette, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 
@@ -48,7 +48,7 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
       // Route every plan change through Stripe. The server verifies payment and
       // is the only thing allowed to set subscription_tier — the browser never
       // writes the tier directly (that would be a free-upgrade bypass).
-      const res = await base44.functions.invoke('stripeCheckout', {
+      const res = await db.functions.invoke('stripeCheckout', {
         action: 'checkout',
         tier: tierKey,
         billing_cycle: billing === 'yearly' ? 'annual' : 'monthly',

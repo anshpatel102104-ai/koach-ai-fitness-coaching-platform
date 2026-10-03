@@ -2,7 +2,7 @@ import React from 'react';
 import { Users, UserPlus, BarChart2, Scale, UtensilsCrossed, Pill, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 
 const LIFECYCLE_COLORS = {
@@ -26,7 +26,7 @@ function getAvatarColor(name) {
 export default function PlanDetailSidebar({ plan, onAssign }) {
   const { data: allClients = [] } = useQuery({
     queryKey: ['clients-sidebar'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
     enabled: !!plan?.id,
   });
 

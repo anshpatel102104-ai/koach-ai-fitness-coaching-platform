@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,8 +77,8 @@ function ZapierModal({ open, onClose, settings }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Zapier webhook saved!');
@@ -140,8 +140,8 @@ function ResendModal({ open, onClose, settings }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Resend connected!');
@@ -225,8 +225,8 @@ function ZoomModal({ open, onClose, settings }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Zoom credentials saved!');
@@ -288,8 +288,8 @@ function CalendlyModal({ open, onClose, settings }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Calendly connected!');
@@ -342,7 +342,7 @@ export default function IntegrationsTab() {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
   const settings = settingsList[0];
 

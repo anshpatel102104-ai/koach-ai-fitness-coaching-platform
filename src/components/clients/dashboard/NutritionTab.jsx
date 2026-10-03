@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Apple, Utensils, CheckCircle2, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,7 @@ function AssignDialog({ clientId, allPlans, onClose }) {
     if (!selected) return;
     setSaving(true);
     // Update the client's assigned_nutrition_id
-    await base44.entities.Client.update(clientId, { assigned_nutrition_id: selected });
+    await db.entities.Client.update(clientId, { assigned_nutrition_id: selected });
     await qc.invalidateQueries({ queryKey: ['client-nutrition', clientId] });
     await qc.invalidateQueries({ queryKey: ['nutrition'] });
     await qc.invalidateQueries({ queryKey: ['clients'] });
@@ -130,7 +130,7 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
     e.stopPropagation();
     setCreating(true);
     try {
-      const newPlan = await base44.entities.NutritionPlan.create({
+      const newPlan = await db.entities.NutritionPlan.create({
         title: `${client.name}'s Plan`,
         tracking_mode: 'macros',
         calories: 2000,
@@ -139,7 +139,7 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
         fats_g: 60,
       });
       // Assign via client record
-      await base44.entities.Client.update(client.id, { assigned_nutrition_id: newPlan.id });
+      await db.entities.Client.update(client.id, { assigned_nutrition_id: newPlan.id });
       await qc.invalidateQueries({ queryKey: ['nutrition-client', client.id] });
       await qc.invalidateQueries({ queryKey: ['nutrition'] });
       await qc.invalidateQueries({ queryKey: ['clients'] });
@@ -269,7 +269,7 @@ function TodayFoodLog({ client, assignedPlan }) {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['nutrition', 'food-log', client.id, today],
     queryFn: async () => {
-      const all = await base44.entities.FoodLog.list();
+      const all = await db.entities.FoodLog.list();
       return all.filter(l => l.client_id === client.id && l.logged_date === today);
     },
     enabled: !!client?.id,
@@ -374,7 +374,7 @@ function WeeklyAdherenceGrid({ client }) {
   const { data: logs = [] } = useQuery({
     queryKey: ['nutrition', 'food-log-week', client.id, startDate],
     queryFn: async () => {
-      const all = await base44.entities.FoodLog.list();
+      const all = await db.entities.FoodLog.list();
       return all.filter(l => l.client_id === client.id && l.logged_date >= startDate && l.logged_date <= endDate);
     },
     enabled: !!client?.id,
@@ -449,7 +449,7 @@ function WeeklyAdherenceGrid({ client }) {
 export default function NutritionTab({ client }) {
   const { data: allPlans = [], isLoading, refetch } = useQuery({
     queryKey: ['client-nutrition', client.id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ client_id: client.id }),
+    queryFn: () => db.entities.NutritionPlan.filter({ client_id: client.id }),
     staleTime: 0,
     refetchOnMount: true,
   });

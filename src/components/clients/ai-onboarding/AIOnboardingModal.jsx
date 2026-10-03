@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Sparkles, Loader2, CheckCircle } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import AIOnboardingQuestionnaire from './AIOnboardingQuestionnaire';
 import AIOnboardingReview from './AIOnboardingReview';
@@ -76,8 +76,8 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
     try {
       // Run both in parallel
       const [progRes, mealRes] = await Promise.all([
-        base44.functions.invoke('generateAIProgram', { profile, preferences }),
-        base44.functions.invoke('generateMealPlan', mealParams),
+        db.functions.invoke('generateAIProgram', { profile, preferences }),
+        db.functions.invoke('generateMealPlan', mealParams),
       ]);
 
       if (progRes.data?.error) throw new Error(progRes.data.error);
@@ -94,7 +94,7 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
 
   const handleApprove = async (finalProgram, finalMealPlan) => {
     // Save program
-    const programRecord = await base44.entities.WorkoutProgram.create({
+    const programRecord = await db.entities.WorkoutProgram.create({
       title: finalProgram.title,
       description: finalProgram.description,
       category: finalProgram.category || 'custom',
@@ -108,7 +108,7 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
     // Save nutrition plan
     const trainingMeals = finalMealPlan?.training_day?.meals || finalMealPlan?.meals || [];
     const totalCals = trainingMeals.reduce((s, m) => s + (m.calories || 0), 0) || 2000;
-    const nutritionRecord = await base44.entities.NutritionPlan.create({
+    const nutritionRecord = await db.entities.NutritionPlan.create({
       title: `${client.name} — AI Nutrition Plan`,
       description: finalMealPlan?.coach_notes?.why_these_calories || 'AI-generated nutrition plan',
       calories: totalCals,
@@ -118,7 +118,7 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
     });
 
     // Assign both to the client
-    await base44.entities.Client.update(client.id, {
+    await db.entities.Client.update(client.id, {
       assigned_program_id: programRecord.id,
       assigned_nutrition_id: nutritionRecord.id,
     });

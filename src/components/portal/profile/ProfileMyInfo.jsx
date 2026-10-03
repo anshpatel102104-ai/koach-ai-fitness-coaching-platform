@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProfileSectionCard from './ProfileSectionCard';
 
@@ -41,7 +41,7 @@ export default function ProfileMyInfo({ user, client, queryClient }) {
 
   const save = async () => {
     if (client?.id) {
-      await base44.entities.Client.update(client.id, { name: editValues.name, phone: editValues.phone });
+      await portalDb.entities.Client.update(client.id, { name: editValues.name, phone: editValues.phone });
     }
     setSaved(true);
     setDirty(false);

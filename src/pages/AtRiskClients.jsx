@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   AlertTriangle, ChevronDown, ChevronUp, MessageSquare, Settings, ArrowRight,
@@ -41,7 +41,7 @@ function AIInterventionPanel({ entry, client, onClose, onSend }) {
     setLoading(true);
     const flagSummary = entry.flags.map(f => f.label + (f.detail ? `: ${f.detail}` : '')).join(', ');
     try {
-      const res = await base44.functions.invoke('aiBusinessInsights', {
+      const res = await db.functions.invoke('aiBusinessInsights', {
         action: 'interventionPlan',
         clientName: client.name,
         riskFactors: flagSummary,
@@ -134,7 +134,7 @@ function RiskCard({ entry, messages, onSendNudge, onResolve, selected, onSelect 
   const firstFlagDate = clientCheckIns.length > 0 ? differenceInDays(new Date(), parseISO(clientCheckIns[clientCheckIns.length - 1].date)) : 0;
 
   const updateClientMutation = useMutation({
-    mutationFn: ({ data }) => base44.entities.Client.update(client.id, data),
+    mutationFn: ({ data }) => db.entities.Client.update(client.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Client status updated');
@@ -142,7 +142,7 @@ function RiskCard({ entry, messages, onSendNudge, onResolve, selected, onSelect 
   });
 
   const sendMsgMutation = useMutation({
-    mutationFn: (content) => base44.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
+    mutationFn: (content) => db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages'] }); toast.success('Message sent!'); }
   });
 
@@ -362,7 +362,7 @@ function BulkActionBar({ selectedIds, clients, atRisk, onClear }) {
     mutationFn: ({ ids, message }) =>
       Promise.all(ids.map(id => {
         const c = clients.find(c => c.id === id);
-        return base44.entities.Message.create({ client_id: id, client_name: c?.name, sender: 'coach', content: message });
+        return db.entities.Message.create({ client_id: id, client_name: c?.name, sender: 'coach', content: message });
       })),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages'] }); toast.success(`Message sent to ${selectedIds.length} clients`); onClear(); }
   });
@@ -408,9 +408,9 @@ export default function AtRiskClients() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('name') });
-  const { data: checkIns = [], isLoading, refetch } = useQuery({ queryKey: ['checkins-risk'], queryFn: () => base44.entities.CheckIn.list('-date', 400) });
-  const { data: messages = [] } = useQuery({ queryKey: ['messages'], queryFn: () => base44.entities.Message.list('-created_date', 500) });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => db.entities.Client.list('name') });
+  const { data: checkIns = [], isLoading, refetch } = useQuery({ queryKey: ['checkins-risk'], queryFn: () => db.entities.CheckIn.list('-date', 400) });
+  const { data: messages = [] } = useQuery({ queryKey: ['messages'], queryFn: () => db.entities.Message.list('-created_date', 500) });
 
   const atRisk = useMemo(() => getAtRiskClients(clients, checkIns), [clients, checkIns]);
 

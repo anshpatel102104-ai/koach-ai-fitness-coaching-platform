@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { format } from 'date-fns';
 import { useLocation } from 'react-router-dom';
@@ -109,7 +109,7 @@ function InvoicingTab() {
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => base44.entities.Invoice.list('-created_date', 500),
+    queryFn: () => db.entities.Invoice.list('-created_date', 500),
   });
 
   const filtered = React.useMemo(() => {
@@ -139,35 +139,35 @@ function InvoicingTab() {
   }), [invoices]);
 
   const handleSave = async (data) => {
-    if (editingInvoice?.id) { await base44.entities.Invoice.update(editingInvoice.id, data); toast.success('Invoice updated'); }
-    else { await base44.entities.Invoice.create(data); toast.success('Invoice created'); }
+    if (editingInvoice?.id) { await db.entities.Invoice.update(editingInvoice.id, data); toast.success('Invoice updated'); }
+    else { await db.entities.Invoice.create(data); toast.success('Invoice created'); }
     qc.invalidateQueries({ queryKey: ['invoices'] });
     setShowForm(false); setEditingInvoice(null);
   };
 
   const handleMarkPaid = async (inv) => {
-    await base44.entities.Invoice.update(inv.id, { status: 'paid', paid_date: format(new Date(), 'yyyy-MM-dd') });
+    await db.entities.Invoice.update(inv.id, { status: 'paid', paid_date: format(new Date(), 'yyyy-MM-dd') });
     qc.invalidateQueries({ queryKey: ['invoices'] });
     toast.success(`${inv.invoice_number} marked as paid`);
   };
 
   const handleDelete = async (inv) => {
     if (!confirm(`Delete ${inv.invoice_number}?`)) return;
-    await base44.entities.Invoice.delete(inv.id);
+    await db.entities.Invoice.delete(inv.id);
     qc.invalidateQueries({ queryKey: ['invoices'] });
     toast.success('Invoice deleted');
   };
 
   const handleSendReminder = async (inv) => {
     toast.success(`Reminder sent to ${inv.client_name}`);
-    if (inv.status === 'draft') { await base44.entities.Invoice.update(inv.id, { status: 'sent' }); qc.invalidateQueries({ queryKey: ['invoices'] }); }
+    if (inv.status === 'draft') { await db.entities.Invoice.update(inv.id, { status: 'sent' }); qc.invalidateQueries({ queryKey: ['invoices'] }); }
   };
 
   const handleDuplicate = async (inv) => {
     const { id, created_date, updated_date, created_by, ...rest } = inv;
     const nums = invoices.map(i => parseInt((i.invoice_number || '').replace('INV-', '') || '0')).filter(Boolean);
     const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
-    await base44.entities.Invoice.create({ ...rest, invoice_number: `INV-${String(next).padStart(4, '0')}`, status: 'draft', paid_date: undefined, issue_date: format(new Date(), 'yyyy-MM-dd') });
+    await db.entities.Invoice.create({ ...rest, invoice_number: `INV-${String(next).padStart(4, '0')}`, status: 'draft', paid_date: undefined, issue_date: format(new Date(), 'yyyy-MM-dd') });
     qc.invalidateQueries({ queryKey: ['invoices'] });
     toast.success('Invoice duplicated as draft');
   };
@@ -252,7 +252,7 @@ function PackagesTab() {
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['coaching-packages'],
-    queryFn: () => base44.entities.CoachingPackage.list('-created_date', 100),
+    queryFn: () => db.entities.CoachingPackage.list('-created_date', 100),
   });
 
   const active = packages.filter(p => !p.is_archived);
@@ -261,8 +261,8 @@ function PackagesTab() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['coaching-packages'] });
 
   const handleSave = async (data) => {
-    if (editingPkg?.id) { await base44.entities.CoachingPackage.update(editingPkg.id, data); toast.success('Package updated'); }
-    else { await base44.entities.CoachingPackage.create(data); toast.success('Package created! 🎉'); }
+    if (editingPkg?.id) { await db.entities.CoachingPackage.update(editingPkg.id, data); toast.success('Package updated'); }
+    else { await db.entities.CoachingPackage.create(data); toast.success('Package created! 🎉'); }
     refresh(); setShowForm(false); setEditingPkg(null);
   };
 
@@ -292,10 +292,10 @@ function PackagesTab() {
             : displayed.map(pkg => (
               <PackageCard key={pkg.id} pkg={pkg}
                 onEdit={() => { setEditingPkg(pkg); setShowForm(true); }}
-                onDuplicate={async () => { const { id, created_date, updated_date, created_by, enrolled_count, total_revenue, ...rest } = pkg; await base44.entities.CoachingPackage.create({ ...rest, name: `${rest.name} (Copy)`, is_active: false, slug: `${rest.slug || 'package'}-copy` }); toast.success('Duplicated'); refresh(); }}
-                onArchive={async () => { await base44.entities.CoachingPackage.update(pkg.id, tab === 'archived' ? { is_archived: false } : { is_archived: true, is_active: false }); toast.success(tab === 'archived' ? 'Restored' : 'Archived'); refresh(); }}
-                onDelete={async () => { if (!confirm(`Delete "${pkg.name}"?`)) return; await base44.entities.CoachingPackage.delete(pkg.id); toast.success('Deleted'); refresh(); }}
-                onToggleActive={async () => { await base44.entities.CoachingPackage.update(pkg.id, { is_active: !pkg.is_active }); refresh(); }}
+                onDuplicate={async () => { const { id, created_date, updated_date, created_by, enrolled_count, total_revenue, ...rest } = pkg; await db.entities.CoachingPackage.create({ ...rest, name: `${rest.name} (Copy)`, is_active: false, slug: `${rest.slug || 'package'}-copy` }); toast.success('Duplicated'); refresh(); }}
+                onArchive={async () => { await db.entities.CoachingPackage.update(pkg.id, tab === 'archived' ? { is_archived: false } : { is_archived: true, is_active: false }); toast.success(tab === 'archived' ? 'Restored' : 'Archived'); refresh(); }}
+                onDelete={async () => { if (!confirm(`Delete "${pkg.name}"?`)) return; await db.entities.CoachingPackage.delete(pkg.id); toast.success('Deleted'); refresh(); }}
+                onToggleActive={async () => { await db.entities.CoachingPackage.update(pkg.id, { is_active: !pkg.is_active }); refresh(); }}
                 onShare={() => setSharingPkg(pkg)}
               />
             ))
@@ -314,12 +314,12 @@ function PaymentsTab() {
   const [showCreate, setShowCreate] = useState(false);
   const { data: dashData, isLoading, refetch } = useQuery({
     queryKey: ['stripe-dashboard'],
-    queryFn: async () => { const res = await base44.functions.invoke('stripeGetDashboard', {}); return res.data; },
+    queryFn: async () => { const res = await db.functions.invoke('stripeGetDashboard', {}); return res.data; },
     refetchInterval: 60000,
   });
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   return (
@@ -423,10 +423,10 @@ export default function Business() {
     localStorage.setItem(TAB_STORAGE_KEY, key);
   };
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients-bi'], queryFn: () => base44.entities.Client.list('-created_date', 200) });
-  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins-bi'], queryFn: () => base44.entities.CheckIn.list('-date', 500) });
-  const { data: payments = [] } = useQuery({ queryKey: ['payments-bi'], queryFn: () => base44.entities.Payment.list('-created_date', 200) });
-  const { data: leads = [] } = useQuery({ queryKey: ['leads-bi'], queryFn: () => base44.entities.Lead.list('-created_date', 200) });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients-bi'], queryFn: () => db.entities.Client.list('-created_date', 200) });
+  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins-bi'], queryFn: () => db.entities.CheckIn.list('-date', 500) });
+  const { data: payments = [] } = useQuery({ queryKey: ['payments-bi'], queryFn: () => db.entities.Payment.list('-created_date', 200) });
+  const { data: leads = [] } = useQuery({ queryKey: ['leads-bi'], queryFn: () => db.entities.Lead.list('-created_date', 200) });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--tc-background)' }}>

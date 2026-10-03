@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInWeeks, differenceInDays, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -241,7 +241,7 @@ export default function AIProgressAnalyzer({
     if (!hasEnoughData) return;
     setLoading(true);
     setAnalysis(null);
-    const res = await base44.functions.invoke('aiProgressInsights', {
+    const res = await db.functions.invoke('aiProgressInsights', {
       action: 'progressAnalysis', client, ctx, isClientFacing,
     });
     setAnalysis(res.data);

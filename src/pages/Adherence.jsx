@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { subWeeks, parseISO } from 'date-fns';
 import { Trophy, Zap, AlertTriangle, Crown, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -113,18 +113,18 @@ export default function Adherence() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const unsub = base44.entities.CheckIn.subscribe((event) => {
+    const unsub = db.entities.CheckIn.subscribe((event) => {
       if (event.type === 'create') queryClient.invalidateQueries({ queryKey: ['checkins'] });
     });
     return unsub;
   }, [queryClient]);
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list('name') });
-  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins'], queryFn: () => base44.entities.CheckIn.list('-date', 500) });
-  const { data: badges = [] } = useQuery({ queryKey: ['badges'], queryFn: () => base44.entities.ClientBadge.list('-earned_date', 500) });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => db.entities.Client.list('name') });
+  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins'], queryFn: () => db.entities.CheckIn.list('-date', 500) });
+  const { data: badges = [] } = useQuery({ queryKey: ['badges'], queryFn: () => db.entities.ClientBadge.list('-earned_date', 500) });
 
   const awardMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClientBadge.create(data),
+    mutationFn: (data) => db.entities.ClientBadge.create(data),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['badges'] });
       queryClient.invalidateQueries({ queryKey: ['recent-badges'] });

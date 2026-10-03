@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export default function ManualDayBuilder({ day, onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(true);
@@ -18,7 +18,7 @@ export default function ManualDayBuilder({ day, onUpdate, onRemove }) {
 
   const { data: exercises = [] } = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('name'),
+    queryFn: () => db.entities.ExerciseLibrary.list('name'),
   });
 
   const handleAddExercise = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import KoachLogo from '@/components/brand/KoachLogo.jsx';
@@ -315,7 +315,7 @@ function Step3({ data, set, onNext, onBack, onSkip }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     set('avatar_url', file_url);
     setUploading(false);
   };
@@ -522,11 +522,11 @@ export default function ClientInviteJoin() {
         avatar_url: data.avatar_url,
       });
       try {
-        const existing = await base44.entities.CoachSettings.list();
+        const existing = await db.entities.CoachSettings.list();
         if (existing.length > 0) {
-          await base44.entities.CoachSettings.update(existing[0].id, { zapier_connected: false });
+          await db.entities.CoachSettings.update(existing[0].id, { zapier_connected: false });
         } else {
-          await base44.entities.CoachSettings.create({ zapier_connected: false });
+          await db.entities.CoachSettings.create({ zapier_connected: false });
         }
       } catch (_) {}
       next();

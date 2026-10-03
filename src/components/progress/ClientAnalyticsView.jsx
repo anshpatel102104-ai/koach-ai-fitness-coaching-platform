@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, subDays, isAfter } from 'date-fns';
 import { Sparkles, Loader2, RefreshCw, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 const TOOLTIP_STYLE = {
@@ -65,7 +65,7 @@ export default function ClientAnalyticsView({ client, checkIns }) {
         training: ci.compliance_training, nutrition: ci.compliance_nutrition,
         notes: ci.notes,
       }));
-      const res = await base44.functions.invoke('aiProgressInsights', {
+      const res = await db.functions.invoke('aiProgressInsights', {
         action: 'clientSummary', client, recent,
       });
       setAiSummary(res.data?.text || '');

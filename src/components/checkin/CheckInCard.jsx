@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { ChevronDown, ChevronUp, AlertTriangle, Clock, ImageIcon, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ export default function CheckInCard({ checkIn, client, defaultOpen = false }) {
   const isOverdue = daysAgo > 14;
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkIn.id, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['checkins-review'] }),
   });
 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dumbbell, Salad, Users, Package, Layers, Edit, Trash2, Copy, Check, EyeOff, UserPlus, ShoppingCart, Loader2, Star } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { SignedImg } from '@/components/shared/SignedImage';
 
@@ -47,7 +47,7 @@ export default function ProductDetailSheet({ listing, clients = [], open, onClos
 
   const handleBuyNow = async () => {
     setBuyingOut(true);
-    const res = await base44.functions.invoke('storeCheckout', {
+    const res = await db.functions.invoke('storeCheckout', {
       listing_id: listing.id,
       success_url: `${window.location.origin}/store?purchase=success`,
       cancel_url: `${window.location.origin}/store`,

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { MessageCircle } from 'lucide-react';
@@ -19,7 +19,7 @@ export default function QuickMessageModal({ clients = [], suggestedTemplate = ''
   const sendMutation = useMutation({
     mutationFn: async () => {
       await Promise.all(clients.map(c =>
-        base44.entities.Message.create({
+        db.entities.Message.create({
           client_id: c.id,
           client_name: c.name,
           sender: 'coach',

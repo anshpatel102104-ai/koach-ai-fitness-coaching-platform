@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInDays, parseISO, format, startOfWeek, endOfWeek } from 'date-fns';
 import {
   Users, AlertTriangle, CheckCircle2,
@@ -40,17 +40,17 @@ export default function WeeklySummary() {
 
   const { data: clients = [], isLoading: loadingClients, refetch } = useQuery({
     queryKey: ['ws-clients'],
-    queryFn:  () => base44.entities.Client.filter({ lifecycle_status: 'active' }, 'name'),
+    queryFn:  () => db.entities.Client.filter({ lifecycle_status: 'active' }, 'name'),
   });
 
   const { data: allCheckIns = [], isLoading: loadingCI } = useQuery({
     queryKey: ['ws-checkins'],
-    queryFn:  () => base44.entities.CheckIn.list('-date', 500),
+    queryFn:  () => db.entities.CheckIn.list('-date', 500),
   });
 
   const { data: allSessions = [] } = useQuery({
     queryKey: ['ws-sessions'],
-    queryFn:  () => base44.entities.WorkoutSession.list('-created_date', 300),
+    queryFn:  () => db.entities.WorkoutSession.list('-created_date', 300),
   });
 
   const loading = loadingClients || loadingCI;

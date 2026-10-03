@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Check, Loader2, Users } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function ApplyTemplateModal({ template, onClose }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date'),
+    queryFn: () => db.entities.Client.list('-created_date'),
   });
 
   const applyTemplate = async () => {
@@ -25,13 +25,13 @@ export default function ApplyTemplateModal({ template, onClose }) {
     const client = clients.find(c => c.id === selectedClientId);
 
     // 1. Create workout program
-    const program = await base44.entities.WorkoutProgram.create(template.program);
+    const program = await db.entities.WorkoutProgram.create(template.program);
 
     // 2. Create nutrition plan
-    const nutrition = await base44.entities.NutritionPlan.create(template.nutrition);
+    const nutrition = await db.entities.NutritionPlan.create(template.nutrition);
 
     // 3. Assign both to client
-    await base44.entities.Client.update(selectedClientId, {
+    await db.entities.Client.update(selectedClientId, {
       assigned_program_id: program.id,
       assigned_nutrition_id: nutrition.id,
       goal: template.clientGoal,
@@ -39,11 +39,11 @@ export default function ApplyTemplateModal({ template, onClose }) {
     });
 
     // 4. Create automation rules (skip duplicates by name)
-    const existingRules = await base44.entities.AutomationRule.list();
+    const existingRules = await db.entities.AutomationRule.list();
     const existingNames = new Set(existingRules.map(r => r.name));
     for (const rule of template.automationRules) {
       if (!existingNames.has(rule.name)) {
-        await base44.entities.AutomationRule.create(rule);
+        await db.entities.AutomationRule.create(rule);
       }
     }
 

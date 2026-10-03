@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 import { Calendar, Video, MapPin, Phone, Clipboard, MessageSquare, Play, CalendarPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -202,7 +202,7 @@ export default function TodaySchedule({ clients = [] }) {
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['sessions-today'],
-    queryFn: () => base44.entities.Session.filter({ date: todayStr }),
+    queryFn: () => db.entities.Session.filter({ date: todayStr }),
   });
 
   const todaySessions = useMemo(() => {

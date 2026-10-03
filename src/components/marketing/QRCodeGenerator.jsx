@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Download } from 'lucide-react';
 
 export default function QRCodeGenerator({ coachId }) {
@@ -11,7 +11,7 @@ export default function QRCodeGenerator({ coachId }) {
 
   const { data: links = [] } = useQuery({
     queryKey: ['marketing-links', coachId],
-    queryFn: () => base44.entities.MarketingLink.filter({ coach_id: coachId }, '-created_at'),
+    queryFn: () => db.entities.MarketingLink.filter({ coach_id: coachId }, '-created_at'),
     enabled: !!coachId,
   });
 

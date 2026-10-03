@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Trophy, Dumbbell, Footprints, Flame, Target, TrendingDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateStreak, averageAdherenceScore } from '@/lib/adherence';
@@ -23,7 +23,7 @@ export default function Leaderboard({ clients }) {
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-leaderboard'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 500),
+    queryFn: () => db.entities.CheckIn.list('-date', 500),
   });
 
   const ranked = useMemo(() => {

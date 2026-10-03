@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,7 @@ import { Bell, ChevronRight, Play, Check, User } from 'lucide-react';
 function PortalBellButton({ navigate, userId }) {
   const { data: notifs = [] } = useQuery({
     queryKey: ['portal-notifications', userId],
-    queryFn: () => base44.entities.Notification.filter({ recipient_id: userId, is_dismissed: false }, '-created_date', 30),
+    queryFn: () => portalDb.entities.Notification.filter({ recipient_id: userId, is_dismissed: false }, '-created_date', 30),
     enabled: !!userId,
     refetchInterval: 30000,
   });
@@ -377,34 +377,34 @@ export default function PortalHome({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-profile', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: programs = [] } = useQuery({
     queryKey: ['portal-program', myClient?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
+    queryFn: () => portalDb.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_program_id,
   });
   const myProgram = programs[0];
 
   const { data: nutritionPlans = [] } = useQuery({
     queryKey: ['portal-nutrition', myClient?.assigned_nutrition_id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: myClient.assigned_nutrition_id }, '-created_date', 1),
+    queryFn: () => portalDb.entities.NutritionPlan.filter({ id: myClient.assigned_nutrition_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_nutrition_id,
   });
   const myNutrition = nutritionPlans[0];
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['portal-checkins', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 20),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 20),
     enabled: !!myClient?.id,
   });
 
   const { data: existingLog } = useQuery({
     queryKey: ['portal-daily-log', TODAY],
-    queryFn: () => base44.entities.DailyLog.filter({ date: TODAY }, '-created_date', 1),
+    queryFn: () => portalDb.entities.DailyLog.filter({ date: TODAY }, '-created_date', 1),
     enabled: !!user,
   });
   useEffect(() => {
@@ -413,13 +413,13 @@ export default function PortalHome({ user }) {
 
   const { data: recentLogs = [] } = useQuery({
     queryKey: ['portal-recent-logs', myClient?.id],
-    queryFn: () => base44.entities.DailyLog.filter({ client_id: myClient.id }, '-date', 30),
+    queryFn: () => portalDb.entities.DailyLog.filter({ client_id: myClient.id }, '-date', 30),
     enabled: !!myClient?.id,
   });
 
   const { data: messages = [] } = useQuery({
     queryKey: ['portal-messages', myClient?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: myClient?.id }, '-created_date', 20),
+    queryFn: () => portalDb.entities.Message.filter({ client_id: myClient?.id }, '-created_date', 20),
     enabled: !!myClient?.id,
   });
   const latestCoachMsg = messages.find(m => m.sender === 'coach');
@@ -427,8 +427,8 @@ export default function PortalHome({ user }) {
 
   const saveMutation = useMutation({
     mutationFn: (data) => logId
-      ? base44.entities.DailyLog.update(logId, data)
-      : base44.entities.DailyLog.create({ ...data, client_id: myClient.id, date: TODAY }),
+      ? portalDb.entities.DailyLog.update(logId, data)
+      : portalDb.entities.DailyLog.create({ ...data, client_id: myClient.id, date: TODAY }),
     onSuccess: (res) => { if (!logId && res?.id) setLogId(res.id); },
   });
   const saveLog = useCallback((updated) => {

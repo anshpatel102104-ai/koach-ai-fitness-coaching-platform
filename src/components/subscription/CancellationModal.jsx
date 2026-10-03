@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Check } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { getUserTier } from '@/lib/subscription';
@@ -50,7 +50,7 @@ export default function CancellationModal({ user, onClose, onUserUpdate }) {
 
   const handleCancelAnyway = async () => {
     setLoading(true);
-    const res = await base44.functions.invoke('stripeCheckout', { action: 'cancel' });
+    const res = await db.functions.invoke('stripeCheckout', { action: 'cancel' });
     setLoading(false);
 
     if (res.data?.canceled) {
@@ -64,7 +64,7 @@ export default function CancellationModal({ user, onClose, onUserUpdate }) {
 
   const handleReactivate = async () => {
     setLoading(true);
-    await base44.functions.invoke('stripeCheckout', { action: 'reactivate' });
+    await db.functions.invoke('stripeCheckout', { action: 'reactivate' });
     setLoading(false);
     const updated = await me();
     if (onUserUpdate) onUserUpdate(updated);

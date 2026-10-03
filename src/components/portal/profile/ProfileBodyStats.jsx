@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProfileSectionCard from './ProfileSectionCard';
@@ -25,7 +25,7 @@ export default function ProfileBodyStats({ client, checkIns, queryClient }) {
 
   const save = async () => {
     if (client?.id) {
-      await base44.entities.Client.update(client.id, {
+      await portalDb.entities.Client.update(client.id, {
         current_weight: parseFloat(values.current_weight) || client?.current_weight,
         target_weight: parseFloat(values.target_weight) || client?.target_weight,
         height: values.height,

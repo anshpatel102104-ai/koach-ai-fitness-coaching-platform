@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { format, subDays } from 'date-fns';
 import { AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Copy, Loader2, Salad, Pill, FlaskConical, Droplets, Leaf, Download } from 'lucide-react';
@@ -52,15 +52,15 @@ export default function PortalNutrition({ user }) {
   // Resolve this client's row (by email) + nutrition plan for targets
   useEffect(() => {
     if (!user?.email) return;
-    base44.entities.Client.filter({ email: user.email }, '-created_date', 1).then(clients => {
+    portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1).then(clients => {
       const client = clients[0];
       setMyClient(client || null);
       if (client?.assigned_nutrition_id) {
-        base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }).then(plans => {
+        portalDb.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }).then(plans => {
           if (plans[0]) setNutritionPlan(plans[0]);
         }).catch(() => {});
         // Fetch coach name
-        base44.entities.User.list().then(users => {
+        portalDb.entities.User.list().then(users => {
           const coach = users.find(u => u.role === 'admin');
           if (coach) setCoachName(coach.full_name);
         }).catch(() => {});
@@ -79,7 +79,7 @@ export default function PortalNutrition({ user }) {
   useEffect(() => {
     if (!clientId) return;
     setLoading(true);
-    base44.entities.FoodLog.filter({ client_id: clientId, logged_date: dateStr }, '-created_date', 100)
+    portalDb.entities.FoodLog.filter({ client_id: clientId, logged_date: dateStr }, '-created_date', 100)
       .then(logs => setFoodLogs(logs.filter(l => l.food_name))) // filter out sentinel entries
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -88,8 +88,8 @@ export default function PortalNutrition({ user }) {
   // Real-time subscription
   useEffect(() => {
     if (!clientId) return;
-    const unsub = base44.entities.FoodLog.subscribe(() => {
-      base44.entities.FoodLog.filter({ client_id: clientId, logged_date: dateStr }, '-created_date', 100)
+    const unsub = portalDb.entities.FoodLog.subscribe(() => {
+      portalDb.entities.FoodLog.filter({ client_id: clientId, logged_date: dateStr }, '-created_date', 100)
         .then(logs => setFoodLogs(logs.filter(l => l.food_name)))
         .catch(() => {});
     });
@@ -118,7 +118,7 @@ export default function PortalNutrition({ user }) {
       logged_by:        'client',
     };
     try {
-      const created = await base44.entities.FoodLog.create(entry);
+      const created = await portalDb.entities.FoodLog.create(entry);
       setFoodLogs(prev => [...prev, created]);
     } catch {
       toast.error('Failed to log food');
@@ -131,7 +131,7 @@ export default function PortalNutrition({ user }) {
     const log = mealLogs[index];
     if (!log) return;
     try {
-      await base44.entities.FoodLog.delete(log.id);
+      await portalDb.entities.FoodLog.delete(log.id);
       setFoodLogs(prev => prev.filter(l => l.id !== log.id));
     } catch {
       toast.error('Failed to remove food');
@@ -142,7 +142,7 @@ export default function PortalNutrition({ user }) {
     const yesterdayStr = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
     setCopyingYesterday(true);
     try {
-      const yesterdayLogs = await base44.entities.FoodLog.filter(
+      const yesterdayLogs = await portalDb.entities.FoodLog.filter(
         { client_id: clientId, logged_date: yesterdayStr }, '-created_date', 100
       );
       const toLog = yesterdayLogs.filter(l => l.food_name);
@@ -151,7 +151,7 @@ export default function PortalNutrition({ user }) {
         return;
       }
       const created = await Promise.all(
-        toLog.map(l => base44.entities.FoodLog.create({
+        toLog.map(l => portalDb.entities.FoodLog.create({
           client_id: clientId, logged_date: dateStr,
           meal_name: l.meal_name, food_name: l.food_name,
           calories: l.calories, protein: l.protein, carbs: l.carbs, fats: l.fats,

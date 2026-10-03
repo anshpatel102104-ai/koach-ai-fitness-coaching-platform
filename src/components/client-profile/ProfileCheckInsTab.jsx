@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ClipboardCheck, ChevronDown, ChevronUp, CheckCircle2, Flag, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
@@ -40,7 +40,7 @@ function CheckInCard({ ci, clientId }) {
   const queryClient = useQueryClient();
 
   const updateStatus = useMutation({
-    mutationFn: (status) => base44.entities.CheckIn.update(ci.id, { review_status: status }),
+    mutationFn: (status) => db.entities.CheckIn.update(ci.id, { review_status: status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkins', clientId] });
       toast.success('Status updated');

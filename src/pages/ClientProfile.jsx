@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// Step 2 cutover: Clients/CRM surface runs on Supabase via the base44-shaped
-// facade — call sites unchanged. Other pages remain on base44Client for now.
-import { supabase as base44 } from '@/api/supabaseClient';
+// Step 2 cutover: Clients/CRM surface runs on Supabase via the entity-shaped
+// facade — call sites unchanged.
+import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Edit, MessageSquare, Dumbbell, ClipboardCheck,
@@ -63,24 +63,24 @@ export default function ClientProfile() {
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['client', clientId],
-    queryFn: () => base44.entities.Client.filter({ id: clientId }).then(r => r[0]),
+    queryFn: () => db.entities.Client.filter({ id: clientId }).then(r => r[0]),
     enabled: !!clientId,
   });
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins', clientId],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: clientId }, '-date', 50),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: clientId }, '-date', 50),
     enabled: !!clientId,
   });
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', clientId],
-    queryFn: () => base44.entities.Message.filter({ client_id: clientId }, '-created_date', 50),
+    queryFn: () => db.entities.Message.filter({ client_id: clientId }, '-created_date', 50),
     enabled: !!clientId,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.update(clientId, data),
+    mutationFn: (data) => db.entities.Client.update(clientId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client', clientId] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });

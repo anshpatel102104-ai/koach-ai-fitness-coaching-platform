@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Dumbbell, Calendar, Clock, CheckCircle2, ChevronRight, Plus, RefreshCw, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +76,7 @@ function AssignedProgramSection({ client, allPrograms, assignedProgram, onRefetc
 
   const assignMutation = useMutation({
     mutationFn: (programId) =>
-      base44.entities.Client.update(client.id, { assigned_program_id: programId }),
+      db.entities.Client.update(client.id, { assigned_program_id: programId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       queryClient.invalidateQueries({ queryKey: ['programs-tab', client.id] });
@@ -323,14 +323,14 @@ function ProgramProgress({ assignedProgram, workoutSessions, client }) {
 export default function ProgramsTab({ client }) {
   const { data: allPrograms = [], isLoading, refetch } = useQuery({
     queryKey: ['programs-tab', client.id],
-    queryFn: () => base44.entities.WorkoutProgram.list('-created_date'),
+    queryFn: () => db.entities.WorkoutProgram.list('-created_date'),
     staleTime: 0,
     refetchOnMount: true,
   });
 
   const { data: workoutSessions = [] } = useQuery({
     queryKey: ['workout-sessions-tab', client.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: client.id }),
+    queryFn: () => db.entities.WorkoutSession.filter({ client_id: client.id }),
     enabled: !!client.id,
   });
 

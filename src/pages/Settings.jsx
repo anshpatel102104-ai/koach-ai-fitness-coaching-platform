@@ -3,7 +3,7 @@ import { User, Plug, Bell, Shield, Zap, ChevronRight, Briefcase, Gift, Share2, L
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -122,7 +122,7 @@ function DeleteAccountModal({ user, onClose }) {
     try {
       // Cancel Stripe subscription first if active
       if (hasActiveSub && user?.stripe_subscription_id) {
-        await base44.functions.invoke('stripeCancelSubscription', {
+        await db.functions.invoke('stripeCancelSubscription', {
           subscription_id: user.stripe_subscription_id,
         });
       }
@@ -208,7 +208,7 @@ function SecurityTab() {
     if (next !== confirm) return toast.error('Passwords do not match');
     // Actually update the password (this was a no-op that only toasted success).
     try {
-      await base44.auth.updatePassword(next);
+      await db.auth.updatePassword(next);
       toast.success('Password updated successfully ✓');
       setShowPasswordForm(false);
       setCurrent(''); setNext(''); setConfirm('');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Sparkles, BookOpen, Users, Search, SlidersHorizontal, Salad, Pill, FlaskConical, Droplets, Leaf } from 'lucide-react';
 import { toast } from 'sonner';
@@ -52,11 +52,11 @@ export default function Nutrition() {
 
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['nutrition'],
-    queryFn: () => base44.entities.NutritionPlan.list('-created_date'),
+    queryFn: () => db.entities.NutritionPlan.list('-created_date'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.NutritionPlan.create(data),
+    mutationFn: (data) => db.entities.NutritionPlan.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nutrition'] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-client'] });
@@ -68,7 +68,7 @@ export default function Nutrition() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.NutritionPlan.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.NutritionPlan.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nutrition'] });
       queryClient.invalidateQueries({ queryKey: ['nutrition-client'] });
@@ -80,7 +80,7 @@ export default function Nutrition() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.NutritionPlan.delete(id),
+    mutationFn: (id) => db.entities.NutritionPlan.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['nutrition'] }),
   });
 

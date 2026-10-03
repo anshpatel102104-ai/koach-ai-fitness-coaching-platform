@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, X, CheckCircle2, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 function parseCSV(text) {
@@ -63,7 +63,7 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
     const ok = [], fail = [];
     for (const client of parsed) {
       try {
-        await base44.entities.Client.create(client);
+        await db.entities.Client.create(client);
         ok.push(client);
       } catch {
         fail.push(client);

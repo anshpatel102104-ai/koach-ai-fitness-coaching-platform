@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { ArrowLeft, MessageSquare, Send } from 'lucide-react';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -26,7 +26,7 @@ export default function CheckInDetailView({ checkIn, client, onBack, onMessage }
   const handleReply = async () => {
     if (!reply.trim() || !client?.id) return;
     setSending(true);
-    await base44.entities.Message.create({
+    await portalDb.entities.Message.create({
       client_id: client.id,
       client_name: client.name,
       sender: 'client',

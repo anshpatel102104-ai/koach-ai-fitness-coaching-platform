@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Copy, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,11 +11,11 @@ export default function AffiliateLinksSection({ profile }) {
 
   const { data: links = [] } = useQuery({
     queryKey: ['affiliate-links', profile.coach_id],
-    queryFn: () => base44.entities.AffiliateLink.filter({ coach_id: profile.coach_id }, '-created_at'),
+    queryFn: () => db.entities.AffiliateLink.filter({ coach_id: profile.coach_id }, '-created_at'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.AffiliateLink.create({
+    mutationFn: (data) => db.entities.AffiliateLink.create({
       coach_id: profile.coach_id,
       affiliate_code: profile.affiliate_code,
       utm_medium: 'affiliate',
@@ -31,7 +31,7 @@ export default function AffiliateLinksSection({ profile }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.AffiliateLink.delete(id),
+    mutationFn: (id) => db.entities.AffiliateLink.delete(id),
     onSuccess: () => {
       toast.success('Link deleted');
       queryClient.invalidateQueries({ queryKey: ['affiliate-links', profile.coach_id] });

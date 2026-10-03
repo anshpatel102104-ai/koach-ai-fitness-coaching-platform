@@ -225,7 +225,7 @@ const AuthenticatedApp = () => {
         <Route path="/fast-review" element={<FastReview />} />
       </Route>
       <Route path="/start" element={<PremiumOnboarding />} />
-      {/* Supabase-auth pages (Step 3a; active when VITE_AUTH_PROVIDER=supabase) */}
+      {/* Supabase-auth pages */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

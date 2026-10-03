@@ -6,7 +6,7 @@
  * Returns: { teamRole: 'owner' | 'coach', isOwner: boolean, isLoading: boolean }
  */
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 
 export function useTeamRole() {
@@ -22,11 +22,11 @@ export function useTeamRole() {
     queryFn: async () => {
       // Try by user_id first; then by email as fallback
       const byUserId = user?.id
-        ? await base44.entities.TeamMember.filter({ user_id: user.id })
+        ? await db.entities.TeamMember.filter({ user_id: user.id })
         : [];
       if (byUserId.length > 0) return byUserId;
       const byEmail = user?.email
-        ? await base44.entities.TeamMember.filter({ email: user.email })
+        ? await db.entities.TeamMember.filter({ email: user.email })
         : [];
       return byEmail;
     },

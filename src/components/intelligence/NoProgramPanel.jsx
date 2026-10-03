@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, Dumbbell, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ function ClientProgramRow({ client, programs, onAssigned }) {
   const queryClient = useQueryClient();
 
   const assignMutation = useMutation({
-    mutationFn: () => base44.entities.Client.update(client.id, { assigned_program_id: selected }),
+    mutationFn: () => db.entities.Client.update(client.id, { assigned_program_id: selected }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success(`Program assigned to ${client.name}`);
@@ -59,7 +59,7 @@ export default function NoProgramPanel({ clients, onClose }) {
 
   const { data: programs = [] } = useQuery({
     queryKey: ['programs'],
-    queryFn: () => base44.entities.WorkoutProgram.list('-created_date', 30),
+    queryFn: () => db.entities.WorkoutProgram.list('-created_date', 30),
   });
 
   const visible = clients.filter(c => !assignedIds.has(c.id));

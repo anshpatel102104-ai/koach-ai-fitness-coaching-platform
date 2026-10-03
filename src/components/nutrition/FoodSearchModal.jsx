@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { UtensilsCrossed } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { addRecentFood } from '@/lib/nutritionUtils';
 import { useFoodSearch } from '@/components/nutrition/usda/useFoodSearch';
@@ -68,7 +68,7 @@ export default function FoodSearchModal({ open, onOpenChange, mealName, onAddFoo
 
   const handleSave = async (food) => {
     try {
-      await base44.entities.FoodItem.create({
+      await db.entities.FoodItem.create({
         name: food.name, brand: food.brand || '',
         calories: food.calories, protein: food.protein, carbs: food.carbs, fats: food.fats,
         fiber: food.fiber || 0, sodium: food.sodium || 0,

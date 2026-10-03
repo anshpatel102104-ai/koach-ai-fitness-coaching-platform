@@ -9,7 +9,7 @@
  *                                 real clients table constraints
  *   - _shared/checkinReminders.js — Friday sweep: per-coach scoping, portal
  *                                 vs email channels, and the NEW per-week
- *                                 idempotency (Base44 had none)
+ *                                 idempotency (legacy had none)
  *   - migration 13 objects      — push_subscriptions table + unique index +
  *                                 coach_settings Google token columns
  *
@@ -145,7 +145,7 @@ await db.query(`insert into auth.users (id, email) values ($1,'a@utils.io'), ($2
     && tessa.monthly_rate === 250 && tessa.start_date === '2026-01-15' && tessa.status === 'active',
     `${tessa.name} ${tessa.current_weight} ${tessa.height} ${tessa.monthly_rate}`);
   check('import: tags split on commas', Array.isArray(tessa.tags) && tessa.tags.join('|') === 'vip|premium');
-  check('import: unmapped columns land in notes; MAPPED values do NOT (Base44 bug fixed)',
+  check('import: unmapped columns land in notes; MAPPED values do NOT (legacy bug fixed)',
     /Trainer: Old Coach/.test(tessa.notes) && /Fav Color: teal/.test(tessa.notes)
     && !/tessa@utils.io/.test(tessa.notes) && !/185/.test(tessa.notes),
     JSON.stringify(tessa.notes));
@@ -201,7 +201,7 @@ await db.query(`insert into auth.users (id, email) values ($1,'a@utils.io'), ($2
   // second run same week: idempotent
   sentEmails = [];
   const r2 = await runCheckinReminders(admin, { sendEmail, appUrl: 'https://app.koach.test', now: NOW });
-  check('reminders: re-run same week sends NOTHING (per-week idempotency — new vs Base44)',
+  check('reminders: re-run same week sends NOTHING (per-week idempotency — new vs legacy)',
     r2.count === 0 && r2.skippedIdempotent === 3 && sentEmails.length === 0,
     `count=${r2.count} skipped=${r2.skippedIdempotent}`);
 }
@@ -216,7 +216,7 @@ await db.query(`insert into auth.users (id, email) values ($1,'a@utils.io'), ($2
   } catch (e) { dupErr = e.code; }
   check('push_subscriptions: full subscription stored; one row per (user, endpoint)', dupErr === '23505');
   const { rows: [stored] } = await db.query(`select subscription from public.push_subscriptions where user_id=$1`, [COACH_A]);
-  check('push_subscriptions: keys survive (Base44 threw them away)', stored.subscription.keys.p256dh === 'k');
+  check('push_subscriptions: keys survive (legacy threw them away)', stored.subscription.keys.p256dh === 'k');
 
   const cols = (await db.query(`select column_name from information_schema.columns where table_name='coach_settings' and column_name like 'google_%token%'`)).rows.map((r) => r.column_name).sort();
   check('coach_settings: Google OAuth token columns present',

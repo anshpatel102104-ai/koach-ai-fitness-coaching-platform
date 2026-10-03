@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,7 @@ const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Pre-Workout', 'Pos
 export default function CheckInNutritionTab({ clientId, checkInDate, nutritionPlan }) {
   const { data: allLogs = [], isLoading } = useQuery({
     queryKey: ['food-logs-checkin', clientId, checkInDate],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: clientId, logged_date: checkInDate }),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: clientId, logged_date: checkInDate }),
     enabled: !!clientId && !!checkInDate,
   });
 

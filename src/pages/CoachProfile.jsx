@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -292,7 +292,7 @@ export default function CoachProfile() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['coach-profile', user?.email],
-    queryFn: () => base44.entities.CoachProfile.filter({ coach_id: user.id }, '-created_date', 1),
+    queryFn: () => db.entities.CoachProfile.filter({ coach_id: user.id }, '-created_date', 1),
     enabled: !!user?.id,
   });
 
@@ -323,9 +323,9 @@ export default function CoachProfile() {
     setSaving(true);
     try {
       if (profileId) {
-        await base44.entities.CoachProfile.update(profileId, payload);
+        await db.entities.CoachProfile.update(profileId, payload);
       } else {
-        const created = await base44.entities.CoachProfile.create({ ...payload, coach_id: user?.id });
+        const created = await db.entities.CoachProfile.create({ ...payload, coach_id: user?.id });
         setProfileId(created.id);
       }
       setSavedAt(new Date());
@@ -355,7 +355,7 @@ export default function CoachProfile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     set('avatar_url', file_url);
   };
 

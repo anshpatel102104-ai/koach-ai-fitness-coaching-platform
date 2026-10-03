@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -269,14 +269,14 @@ export default function ClientWorkoutView() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['cwv-client', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => db.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: program } = useQuery({
     queryKey: ['program', programId],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: programId }).then(r => r[0]),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: programId }).then(r => r[0]),
     enabled: !!programId,
   });
 
@@ -284,7 +284,7 @@ export default function ClientWorkoutView() {
   const exercises = workout?.exercises || [];
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.WorkoutSession.create(data),
+    mutationFn: (data) => db.entities.WorkoutSession.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workout_sessions'] });
       toast.success('Session logged! 🔥');

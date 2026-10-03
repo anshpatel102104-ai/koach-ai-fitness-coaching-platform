@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, scope: 'shared' });
+    const { file_url } = await db.uploadFile({ file, scope: 'shared' });
     setForm(f => ({ ...f, video_url: file_url }));
     setUploading(false);
   };
@@ -42,7 +42,7 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, scope: 'shared' });
+    const { file_url } = await db.uploadFile({ file, scope: 'shared' });
     setForm(f => ({ ...f, thumbnail_url: file_url }));
     setUploading(false);
   };
@@ -75,9 +75,9 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
     e.preventDefault();
     setSaving(true);
     if (exercise?.id) {
-      await base44.entities.ExerciseLibrary.update(exercise.id, form);
+      await db.entities.ExerciseLibrary.update(exercise.id, form);
     } else {
-      await base44.entities.ExerciseLibrary.create(form);
+      await db.entities.ExerciseLibrary.create(form);
     }
     setSaving(false);
     onSuccess();

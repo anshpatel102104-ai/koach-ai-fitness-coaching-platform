@@ -33,8 +33,7 @@ jobs:
         run: npm run build
 
       # Lint and typecheck are reported but non-blocking for now: the repo
-      # carries a known backlog (ESLint problems + pre-existing tsc errors from
-      # the Base44 migration). Flip continue-on-error to false once that backlog
+      # carries a known backlog (ESLint problems + pre-existing tsc errors). Flip continue-on-error to false once that backlog
       # is cleared so these become enforced gates.
       - name: Lint
         run: npm run lint

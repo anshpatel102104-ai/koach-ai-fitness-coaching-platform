@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Bell } from 'lucide-react';
 import { BADGE_CONFIG, TIER_STYLES } from '@/lib/badges';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,7 +13,7 @@ export default function AchievementBell() {
   const { data: recentBadges = [] } = useQuery({
     queryKey: ['recent-badges'],
     queryFn: async () => {
-      const all = await base44.entities.ClientBadge.list('-earned_date', 20);
+      const all = await db.entities.ClientBadge.list('-earned_date', 20);
       const cutoff = Date.now() - 24 * 60 * 60 * 1000;
       return all.filter(b => new Date(b.earned_date).getTime() > cutoff || new Date(b.created_date).getTime() > cutoff);
     },

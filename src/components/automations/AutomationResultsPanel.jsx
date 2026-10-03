@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Zap, Send, Flag, Flame, Check, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ACTION_META, CONDITION_META } from '@/lib/automationEngine';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 /* Execute the rule action for one client */
@@ -11,7 +11,7 @@ async function executeAction(rule, client, allCheckIns) {
     case 'send_message':
     case 'send_template':
       if (!rule.action_message) return;
-      await base44.entities.Message.create({
+      await db.entities.Message.create({
         client_id: client.id,
         client_name: client.name,
         sender: 'coach',
@@ -19,14 +19,14 @@ async function executeAction(rule, client, allCheckIns) {
         tag: 'general',
         is_read: false,
       });
-      await base44.entities.AutomationRule.update(rule.id, {
+      await db.entities.AutomationRule.update(rule.id, {
         trigger_count: (rule.trigger_count || 0) + 1,
         last_triggered: new Date().toISOString().split('T')[0],
       });
       return `Message sent to ${client.name}`;
 
     case 'notify_coach':
-      await base44.entities.Notification.create({
+      await db.entities.Notification.create({
         recipient_id: client.user_id,
         type: 'general',
         title: `Automation: ${rule.name}`,
@@ -34,7 +34,7 @@ async function executeAction(rule, client, allCheckIns) {
         related_client_id: client.id,
         is_read: false,
       });
-      await base44.entities.AutomationRule.update(rule.id, {
+      await db.entities.AutomationRule.update(rule.id, {
         trigger_count: (rule.trigger_count || 0) + 1,
         last_triggered: new Date().toISOString().split('T')[0],
       });
@@ -42,19 +42,19 @@ async function executeAction(rule, client, allCheckIns) {
 
     case 'adjust_calories': {
       if (!client.assigned_nutrition_id) throw new Error('No nutrition plan assigned');
-      const plans = await base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
+      const plans = await db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
       const plan = plans[0];
       if (!plan) throw new Error('Nutrition plan not found');
       const delta = rule.action_calorie_delta || -100;
       const newCals = Math.max(1000, (plan.calories || 2000) + delta);
       await Promise.all([
-        base44.entities.NutritionPlan.update(plan.id, { calories: newCals }),
-        base44.entities.Message.create({
+        db.entities.NutritionPlan.update(plan.id, { calories: newCals }),
+        db.entities.Message.create({
           client_id: client.id, client_name: client.name, sender: 'coach',
           content: `Your calorie target has been updated to ${newCals} kcal (${delta > 0 ? '+' : ''}${delta} adjustment).`,
           tag: 'nutrition', is_read: false,
         }),
-        base44.entities.AutomationRule.update(rule.id, {
+        db.entities.AutomationRule.update(rule.id, {
           trigger_count: (rule.trigger_count || 0) + 1,
           last_triggered: new Date().toISOString().split('T')[0],
         }),
@@ -64,8 +64,8 @@ async function executeAction(rule, client, allCheckIns) {
 
     case 'flag_client':
       await Promise.all([
-        base44.entities.Client.update(client.id, { lifecycle_status: 'at_risk' }),
-        base44.entities.AutomationRule.update(rule.id, {
+        db.entities.Client.update(client.id, { lifecycle_status: 'at_risk' }),
+        db.entities.AutomationRule.update(rule.id, {
           trigger_count: (rule.trigger_count || 0) + 1,
           last_triggered: new Date().toISOString().split('T')[0],
         }),
@@ -74,7 +74,7 @@ async function executeAction(rule, client, allCheckIns) {
 
     case 'suggest_adjustment':
       await Promise.all([
-        base44.entities.Notification.create({
+        db.entities.Notification.create({
           recipient_id: client.user_id,
           type: 'general',
           title: `Plan adjustment needed: ${client.name}`,
@@ -82,7 +82,7 @@ async function executeAction(rule, client, allCheckIns) {
           related_client_id: client.id,
           is_read: false,
         }),
-        base44.entities.AutomationRule.update(rule.id, {
+        db.entities.AutomationRule.update(rule.id, {
           trigger_count: (rule.trigger_count || 0) + 1,
           last_triggered: new Date().toISOString().split('T')[0],
         }),

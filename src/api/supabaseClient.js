@@ -1,22 +1,21 @@
 /**
- * supabaseClient — drop-in facade over @supabase/supabase-js that mirrors the
- * base44Client surface, so cutover is an import swap, not a rewrite:
+ * supabaseClient — entity-style facade over @supabase/supabase-js:
  *
- *   import { supabase as base44 } from '@/api/supabaseClient';
- *   base44.entities.Client.list('-created_date')      // -> from('clients')...
- *   base44.entities.Client.filter({ id }, '-date', 50)
- *   base44.entities.Client.create(data) / .update(id, data) / .delete(id) / .get(id)
- *   base44.auth.me() / .updateMe(data) / .logout() / .redirectToLogin()
- *   base44.functions.invoke(name, payload)            // -> Edge Function (Step 5)
+ *   import { db } from '@/api/supabaseClient';
+ *   db.entities.Client.list('-created_date')          // -> from('clients')...
+ *   db.entities.Client.filter({ id }, '-date', 50)
+ *   db.entities.Client.create(data) / .update(id, data) / .delete(id) / .get(id)
+ *   db.auth.me() / .updateMe(data) / .logout() / .redirectToLogin()
+ *   db.functions.invoke(name, payload)                // -> Edge Function
  *
  * COACH vs PORTAL context (see SCHEMA_MIGRATION.md):
- *   - `supabase`        : coach/admin app pages. Entities map to base tables.
- *   - `supabasePortal`  : client-portal pages ONLY (src/pages/portal/*).
+ *   - `db` (`supabase`)        : coach/admin app pages. Entities map to base tables.
+ *   - `portalDb` (`supabasePortal`) : client-portal pages ONLY (src/pages/portal/*).
  *     Identical shape, but CheckIn routes through check_ins_portal_view
  *     (CRUD) and Session/CoachingSession through coaching_sessions_portal_view
  *     (read-only) — the base tables are not portal-readable since Step 1.5.
  *
- * Field-name compatibility with Base44 rows:
+ * Legacy field-name compatibility:
  *   - outgoing sort/filter/payload keys `created_date`/`updated_date`/
  *     `created_by_id` are translated to created_at/updated_at/created_by;
  *   - returned rows get read-only `created_date`/`updated_date` aliases so
@@ -24,7 +23,7 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
-// Base44 entity name -> Postgres table (SCHEMA_MIGRATION.md is authoritative)
+// Entity name -> Postgres table (SCHEMA_MIGRATION.md is authoritative)
 const ENTITY_TABLES = {
   AIConversation: 'ai_conversations',
   AffiliateApplication: 'affiliate_applications',
@@ -120,7 +119,7 @@ const renameKeys = (obj) => {
   return out;
 };
 
-// Add Base44-style timestamp aliases to a returned row (non-destructive).
+// Add legacy created_date/updated_date timestamp aliases to a returned row (non-destructive).
 const aliasRow = (row) => {
   if (!row || typeof row !== 'object') return row;
   if (row.created_at !== undefined && row.created_date === undefined) row.created_date = row.created_at;
@@ -132,7 +131,7 @@ const aliasRow = (row) => {
 const aliasRows = (rows) => (Array.isArray(rows) ? rows.map(aliasRow) : rows);
 
 // Lazily create the underlying client so importing this module never throws
-// when the Supabase env isn't configured (pages still on base44 must build).
+// when the Supabase env isn't configured (the app must still build without it).
 let _client = null;
 export function getSupabase() {
   if (_client) return _client;
@@ -248,8 +247,8 @@ function makeEntity(name, { table, readOnly = false }) {
       return { id };
     },
     /**
-     * Base44-compatible realtime subscription, backed by Supabase Realtime.
-     * Emits `{ type: 'create'|'update'|'delete', id, data }` (the shape Base44's
+     * Realtime subscription, backed by Supabase Realtime.
+     * Emits `{ type: 'create'|'update'|'delete', id, data }` (the legacy
      * subscribe() callers expect), mapping INSERT/UPDATE/DELETE accordingly.
      * Returns an unsubscribe function. Requires the table to be in the
      * `supabase_realtime` publication (see migration 20260716000200) and RLS to
@@ -299,12 +298,10 @@ function buildEntities(overrides = {}) {
 
 const auth = {
   /**
-   * base44.auth.me() equivalent: Supabase session user merged with the
-   * public.profiles row. Shape notes vs Base44 (documented in
-   * SCHEMA_MIGRATION.md): id/email/full_name/role/subscription fields all
+   * Supabase session user merged with the public.profiles row. Shape
+   * notes (documented in SCHEMA_MIGRATION.md): id/email/full_name/role/subscription fields all
    * present; `created_date` aliases the profile's created_at. Requires a
-   * Supabase Auth session (Step 3) — rejects when signed out, matching
-   * base44.auth.me()'s rejection when unauthenticated.
+   * Supabase Auth session (Step 3) — rejects when signed out.
    */
   async me() {
     const sb = getSupabase();
@@ -324,7 +321,7 @@ const auth = {
       full_name: profile?.full_name ?? user.user_metadata?.full_name ?? '',
     });
   },
-  /** base44.auth.updateMe(data) -> update own profiles row (privileged
+  /** auth.updateMe(data) -> update own profiles row (privileged
    *  columns like role/subscription are blocked by a DB trigger). */
   async updateMe(payload) {
     const sb = getSupabase();
@@ -407,11 +404,9 @@ const auth = {
 
 const functions = {
   /**
-   * base44.functions.invoke(name, payload) -> Supabase Edge Function.
+   * functions.invoke(name, payload) -> Supabase Edge Function.
    * Returns { data } so existing `res.data.x` call sites keep working.
-   * NOTE: the 42 Base44 functions are re-platformed in Step 5; until a
-   * function is deployed, invoking it rejects (same as base44 on a missing
-   * function) — do not swallow that here.
+   * Invoking an undeployed function rejects — do not swallow that here.
    */
   async invoke(name, payload) {
     const { data, error } = await getSupabase().functions.invoke(name, { body: payload });
@@ -420,10 +415,8 @@ const functions = {
   },
 };
 
-// Supabase-native replacement for Base44's `integrations.Core.UploadFile`.
-// Deliberately NOT named `integrations.Core.*` — the Base44 integrations surface
-// is fully retired from the frontend (LLM/email calls go to ported Edge
-// Functions; file upload goes here). Call sites use `base44.uploadFile({ file })`.
+// Supabase Storage file upload.
+// LLM/email calls go to Edge Functions; file upload goes here. Call sites use `db.uploadFile({ file })`.
 // Two buckets (migrations 20260823000100 + 20261002000200):
 //   uploads  PRIVATE — client photos, progress pics, documents, message/community
 //            media. The DB stores a `storage://uploads/<uid>/<file>` reference and
@@ -441,7 +434,7 @@ export const BRANDING_BUCKET = 'branding';
 export const STORAGE_REF_PREFIX = `storage://${UPLOADS_BUCKET}/`;
 
 /**
- * base44.uploadFile({ file, bucket? }) -> { file_url }.
+ * db.uploadFile({ file, bucket? }) -> { file_url }.
  *   bucket 'uploads' (default): returns a `storage://uploads/...` reference.
  *   bucket 'branding':          returns the object's public URL.
  * `scope` (uploads only) widens who may read the file beyond uploader+coach:
@@ -491,3 +484,7 @@ export const supabasePortal = {
   functions,
   uploadFile,
 };
+
+// Short aliases used by call sites.
+export const db = supabase;
+export const portalDb = supabasePortal;

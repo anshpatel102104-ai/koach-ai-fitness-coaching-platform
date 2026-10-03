@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInWeeks, parseISO, format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingDown, TrendingUp, Minus, Image, Star, Scale, BarChart3 } from 'lucide-react';
@@ -46,17 +46,17 @@ export default function Progress() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: allCheckIns = [] } = useQuery({
     queryKey: ['checkins'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 1000),
+    queryFn: () => db.entities.CheckIn.list('-date', 1000),
   });
 
   const { data: allSessions = [] } = useQuery({
     queryKey: ['workout-sessions'],
-    queryFn: () => base44.entities.WorkoutSession.list('-completed_at', 500),
+    queryFn: () => db.entities.WorkoutSession.list('-completed_at', 500),
   });
 
   const activeClients = useMemo(

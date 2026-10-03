@@ -13,7 +13,7 @@ import {
   Lock, UserPlus, Trophy, ShoppingBag, Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { hasFeature } from '@/lib/subscription';
 import { useTeamRole } from '@/lib/useTeamRole';
@@ -91,7 +91,7 @@ const ALL_BOTTOM_ITEMS = [
 function useUnreadCount() {
   const { data: messages = [] } = useQuery({
     queryKey: ['messages'],
-    queryFn: () => base44.entities.Message.list('-created_date', 200),
+    queryFn: () => db.entities.Message.list('-created_date', 200),
     staleTime: 30000,
   });
   return messages.filter(m => m.sender === 'client' && !m.is_read).length;

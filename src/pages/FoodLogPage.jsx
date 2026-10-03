@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import {
@@ -96,7 +96,7 @@ function MealGroup({ mealName, logs, clientId, date, onDelete }) {
   const qc = useQueryClient();
 
   const createLog = useMutation({
-    mutationFn: (data) => base44.entities.FoodLog.create(data),
+    mutationFn: (data) => db.entities.FoodLog.create(data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['food-logs'] }),
   });
 
@@ -192,15 +192,15 @@ function CoachNotes({ clientId, date, existingNote }) {
   const saveNotes = useMutation({
     mutationFn: async () => {
       // Store as a sentinel FoodLog entry with just coach_daily_notes
-      const existing = await base44.entities.FoodLog.filter({
+      const existing = await db.entities.FoodLog.filter({
         client_id: clientId,
         logged_date: date,
         meal_name: '__coach_notes__',
       });
       if (existing.length > 0) {
-        return base44.entities.FoodLog.update(existing[0].id, { coach_daily_notes: notes });
+        return db.entities.FoodLog.update(existing[0].id, { coach_daily_notes: notes });
       }
-      return base44.entities.FoodLog.create({
+      return db.entities.FoodLog.create({
         client_id: clientId,
         logged_date: date,
         meal_name: '__coach_notes__',
@@ -257,18 +257,18 @@ export default function FoodLogPage() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-foodlog'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   const { data: allLogs = [], isLoading: logsLoading } = useQuery({
     queryKey: ['food-logs', clientId, date],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: clientId, logged_date: date }),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: clientId, logged_date: date }),
     enabled: !!clientId,
   });
 
   const { data: plans = [] } = useQuery({
     queryKey: ['nutrition-plans-foodlog', clientId],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
     enabled: !!clientId,
     select: (all) => all.filter(p => !p.is_template),
   });
@@ -289,7 +289,7 @@ export default function FoodLogPage() {
   }, [foodLogs]);
 
   const deleteLog = useMutation({
-    mutationFn: (id) => base44.entities.FoodLog.delete(id),
+    mutationFn: (id) => db.entities.FoodLog.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['food-logs'] }),
   });
 

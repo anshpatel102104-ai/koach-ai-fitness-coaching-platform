@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion } from 'framer-motion';
 import { format, parseISO, differenceInDays, addDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -171,14 +171,14 @@ export default function PortalCheckIn({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-ci', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: checkIns = [], refetch } = useQuery({
     queryKey: ['portal-checkins-ci', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 30),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 30),
     enabled: !!myClient?.id,
   });
 

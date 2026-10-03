@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   Trophy, Plus, Target, Flame, Dumbbell, Footprints, TrendingDown, Users, Calendar, Zap,
   ChevronRight, Star, Clock
@@ -445,21 +445,21 @@ export default function ChallengesHub({ isCoach, user }) {
 
   const { data: challenges = [] } = useQuery({
     queryKey: ['challenges-hub'],
-    queryFn: () => base44.entities.Challenge.list('-created_date'),
+    queryFn: () => db.entities.Challenge.list('-created_date'),
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: groups = [] } = useQuery({
     queryKey: ['community-groups'],
-    queryFn: () => base44.entities.CommunityGroup.list('-created_date'),
+    queryFn: () => db.entities.CommunityGroup.list('-created_date'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (d) => base44.entities.Challenge.create(d),
+    mutationFn: (d) => db.entities.Challenge.create(d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['challenges-hub'] });
       setShowCreate(false);
@@ -469,12 +469,12 @@ export default function ChallengesHub({ isCoach, user }) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Challenge.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Challenge.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['challenges-hub'] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Challenge.delete(id),
+    mutationFn: (id) => db.entities.Challenge.delete(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['challenges-hub'] }),
   });
 

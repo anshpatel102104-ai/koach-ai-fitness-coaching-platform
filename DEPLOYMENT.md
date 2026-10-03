@@ -103,12 +103,8 @@ never be `VITE_`-prefixed.
 
 | Variable | Where | Required | Description |
 | --- | --- | --- | --- |
-| `VITE_AUTH_PROVIDER` | Frontend (build) | Yes | Auth provider switch: `base44` (legacy hosted-redirect login) or `supabase` (in-app Supabase Auth). App-wide. |
-| `VITE_SUPABASE_URL` | Frontend (build) | When `VITE_AUTH_PROVIDER=supabase` | Supabase project URL for the data facade. |
-| `VITE_SUPABASE_ANON_KEY` | Frontend (build) | When `VITE_AUTH_PROVIDER=supabase` | Supabase anon key. **Anon key only — never the service role in frontend env.** |
-| `VITE_BASE44_APP_ID` | Frontend (build) | When `VITE_AUTH_PROVIDER=base44` | Legacy Base44 app id. |
-| `VITE_BASE44_FUNCTIONS_VERSION` | Frontend (build) | Legacy | Base44 functions version pin. |
-| `VITE_BASE44_APP_BASE_URL` | Frontend (build) | When `VITE_AUTH_PROVIDER=base44` | Legacy Base44 backend base URL. |
+| `VITE_SUPABASE_URL` | Frontend (build) | Yes | Supabase project URL for the data facade. |
+| `VITE_SUPABASE_ANON_KEY` | Frontend (build) | Yes | Supabase anon key. **Anon key only — never the service role in frontend env.** |
 | `SUPABASE_URL` | Edge Function (server) | Server | Auto-injected for deployed Supabase functions. |
 | `SUPABASE_ANON_KEY` | Edge Function (server) | Server | Auto-injected for deployed Supabase functions. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Edge Function (server) | Server | Auto-injected; server-side only, never in the browser bundle. |

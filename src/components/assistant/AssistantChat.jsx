@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,8 +17,8 @@ export default function AssistantChat({ initialPrompt, onPromptConsumed }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // The ported claudeAssistant is a request/response Edge Function (the Base44
-  // realtime agents conversation is not part of the Supabase backend), so the
+  // The ported claudeAssistant is a request/response Edge Function (there is no
+  // realtime agent conversation), so the
   // transcript lives in React state and each turn invokes the function with the
   // prior history.
   const sendMessage = async (text) => {
@@ -28,7 +28,7 @@ export default function AssistantChat({ initialPrompt, onPromptConsumed }) {
     const history = messages;
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     try {
-      const res = await base44.functions.invoke('claudeAssistant', {
+      const res = await db.functions.invoke('claudeAssistant', {
         userMessage: text,
         conversationHistory: history,
       });

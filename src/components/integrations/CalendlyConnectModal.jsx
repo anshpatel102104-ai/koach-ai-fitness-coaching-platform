@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, ExternalLink, Calendar, Loader2, Copy, Check } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function CalendlyConnectModal({ open, onClose }) {
 
   const { data: coachSettingsList = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
   const settings = coachSettingsList[0];
   const isConnected = !!settings?.calendly_connected;
@@ -44,8 +44,8 @@ export default function CalendlyConnectModal({ open, onClose }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['coach-settings'] }),
   });
 
@@ -165,7 +165,7 @@ export default function CalendlyConnectModal({ open, onClose }) {
                     className="text-[var(--kc-006bff)] underline font-medium">calendly.com/integrations/api_webhooks</a></li>
                   <li>Click <strong>Personal Access Tokens</strong> → <strong>Create New Token</strong></li>
                   <li>Copy the token</li>
-                  <li>In Base44 Secrets, add <code className="bg-card border border-border px-1 rounded font-mono text-[10px]">VITE_CALENDLY_TOKEN</code></li>
+                  <li>In your environment secrets, add <code className="bg-card border border-border px-1 rounded font-mono text-[10px]">VITE_CALENDLY_TOKEN</code></li>
                 </ol>
                 <a href="https://calendly.com/integrations/api_webhooks" target="_blank"
                   className="flex items-center gap-1 text-xs text-[var(--kc-006bff)] font-semibold mt-2.5 hover:underline">

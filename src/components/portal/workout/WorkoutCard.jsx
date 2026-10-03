@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { Play, ChevronDown, ChevronUp, Check, Info } from 'lucide-react';
 import ExerciseInfoSheet from './ExerciseInfoSheet';
 
@@ -81,7 +81,7 @@ export default function WorkoutCard({ workout, isToday, dayDate, isDone, onStart
 
   const { data: libraryExercises = [] } = useQuery({
     queryKey: ['exercise-library'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('name', 200),
+    queryFn: () => portalDb.entities.ExerciseLibrary.list('name', 200),
     staleTime: 5 * 60 * 1000,
   });
 

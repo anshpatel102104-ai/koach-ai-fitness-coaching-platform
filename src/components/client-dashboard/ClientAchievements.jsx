@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { BADGE_CONFIG } from '@/lib/badges';
 import { format } from 'date-fns';
 import { Trophy, ChevronRight } from 'lucide-react';
@@ -11,7 +11,7 @@ export default function ClientAchievements({ clientId }) {
 
   const { data: badges = [] } = useQuery({
     queryKey: ['client-badges', clientId],
-    queryFn: () => base44.entities.ClientBadge.filter({ client_id: clientId }, '-created_date', 10),
+    queryFn: () => db.entities.ClientBadge.filter({ client_id: clientId }, '-created_date', 10),
     enabled: !!clientId,
   });
 

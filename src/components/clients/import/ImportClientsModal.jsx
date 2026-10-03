@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Loader2 } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import ImportStep1Upload from './ImportStep1Upload';
 import ImportStep2Mapping from './ImportStep2Mapping';
@@ -35,14 +35,14 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
     setStep(1);
     setAiLoading(true);
     try {
-      const coach = await base44.auth.me(); // coach_id is uuid (profiles.id), not the literal 'me'
-      const job = await base44.entities.ClientImportJob.create({
+      const coach = await db.auth.me(); // coach_id is uuid (profiles.id), not the literal 'me'
+      const job = await db.entities.ClientImportJob.create({
         coach_id: coach.id, status: 'pending', file_name: fileName,
         headers, sample_rows: rows.slice(0, 5), all_rows: rows, total_rows: rows.length,
       });
       setJobId(job.id);
 
-      const res = await base44.functions.invoke('mapImportColumns', {
+      const res = await db.functions.invoke('mapImportColumns', {
         headers, sample_rows: rows.slice(0, 5),
       });
 
@@ -50,7 +50,7 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
       setConfidence(res.data.confidence || {});
       setKoachFields(res.data.koach_fields || []);
 
-      await base44.entities.ClientImportJob.update(job.id, {
+      await db.entities.ClientImportJob.update(job.id, {
         status: 'mapped',
         column_mapping: res.data.mapping || {},
         mapping_confidence: res.data.confidence || {},
@@ -72,7 +72,7 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
 
   const handleMappingConfirm = async () => {
     if (jobId) {
-      await base44.entities.ClientImportJob.update(jobId, {
+      await db.entities.ClientImportJob.update(jobId, {
         column_mapping: mapping, mapping_confidence: confidence,
       });
     }
@@ -82,8 +82,8 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
   const handleConfirmImport = async () => {
     setCommitting(true);
     try {
-      if (jobId) await base44.entities.ClientImportJob.update(jobId, { status: 'confirmed' });
-      const res = await base44.functions.invoke('commitClientImport', { job_id: jobId });
+      if (jobId) await db.entities.ClientImportJob.update(jobId, { status: 'confirmed' });
+      const res = await db.functions.invoke('commitClientImport', { job_id: jobId });
       if (res.data?.error) throw new Error(res.data.error);
       setResult(res.data);
       setStep(3);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, MessageSquare, Send, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -19,7 +19,7 @@ export default function BulkMessagePanel({ clients, onClose, onSent }) {
       await Promise.all(
         clients.map(client => {
           const personalised = message.replace(/\[First Name\]/gi, client.name?.split(' ')[0] || client.name);
-          return base44.entities.Message.create({
+          return db.entities.Message.create({
             client_id: client.id,
             client_name: client.name,
             sender: 'coach',

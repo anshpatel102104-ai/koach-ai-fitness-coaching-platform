@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardList, Loader2 } from 'lucide-react';
@@ -16,7 +16,7 @@ export default function SubmitCheckIn() {
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients-submit'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const activeClients = clients.filter(c => c.status === 'active' || c.lifecycle_status === 'active');
@@ -25,7 +25,7 @@ export default function SubmitCheckIn() {
 
   const { data: recentCheckIns = [] } = useQuery({
     queryKey: ['last-checkin', resolvedClientId],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: resolvedClientId }, '-date', 1),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: resolvedClientId }, '-date', 1),
     enabled: !!resolvedClientId,
   });
 

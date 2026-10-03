@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Flag, Clock, ChevronDown } from 'lucide-react';
 
@@ -19,7 +19,7 @@ export default function CheckInStatusBadge({ checkIn, queryKey = 'checkins-revie
   const Icon = cfg.icon;
 
   const mutation = useMutation({
-    mutationFn: (newStatus) => base44.entities.CheckIn.update(checkIn.id, {
+    mutationFn: (newStatus) => db.entities.CheckIn.update(checkIn.id, {
       review_status: newStatus,
       coach_responded: newStatus === 'reviewed',
     }),

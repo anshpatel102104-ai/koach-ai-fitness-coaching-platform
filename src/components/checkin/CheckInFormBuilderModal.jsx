@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -169,8 +169,8 @@ export default function CheckInFormBuilderModal({ open, onOpenChange, editingFor
 
   const saveMutation = useMutation({
     mutationFn: (data) => editingForm
-      ? base44.entities.CheckInForm.update(editingForm.id, data)
-      : base44.entities.CheckInForm.create(data),
+      ? db.entities.CheckInForm.update(editingForm.id, data)
+      : db.entities.CheckInForm.create(data),
     onSuccess: () => {
       toast.success(editingForm ? 'Form updated' : 'Form created');
       onSaved();

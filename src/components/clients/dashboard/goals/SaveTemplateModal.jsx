@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, LayoutTemplate } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 /**
@@ -32,7 +32,7 @@ export default function SaveTemplateModal({ form, onSaved, onClose }) {
       payload.carbs_target    = form.carbs_target    !== '' ? Number(form.carbs_target)    : null;
       payload.fat_target      = form.fat_target      !== '' ? Number(form.fat_target)      : null;
     }
-    await base44.entities.GoalTemplate.create(payload);
+    await db.entities.GoalTemplate.create(payload);
     toast.success('Template saved!');
     setSaving(false);
     onSaved();

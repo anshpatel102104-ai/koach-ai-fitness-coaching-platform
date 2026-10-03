@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// Step 2 cutover: Clients/CRM surface runs on Supabase via the base44-shaped
-// facade — call sites unchanged. Other pages remain on base44Client for now.
-import { supabase as base44 } from '@/api/supabaseClient';
+// Step 2 cutover: Clients/CRM surface runs on Supabase via the entity-shaped
+// facade — call sites unchanged.
+import { db } from '@/api/supabaseClient';
 import { Plus, Search, X, AlertTriangle, ArrowRight, Lock, SlidersHorizontal, AlignJustify, LayoutList, Upload, Trash2 } from 'lucide-react';
 import ImportClientsModal from '../components/clients/import/ImportClientsModal';
 import ErrorState from '@/components/shared/ErrorState';
@@ -62,13 +62,13 @@ export default function Clients() {
   };
 
   useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
+    db.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
   // Once clients load, set smart default if no saved preference
   const { data: clients = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date'),
+    queryFn: () => db.entities.Client.list('-created_date'),
   });
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function Clients() {
 
   const { data: allCheckIns = [] } = useQuery({
     queryKey: ['checkins-clients'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
   });
 
   // Pre-compute per-client check-in map
@@ -96,14 +96,14 @@ export default function Clients() {
 
   const createMutation = useMutation({
     mutationFn: async ({ data, sendInvite }) => {
-      const res = await base44.functions.invoke('validateSubscription', { action: 'validate_create_client' });
+      const res = await db.functions.invoke('validateSubscription', { action: 'validate_create_client' });
       if (!res.data.allowed) { setUpgradeOpen(true); throw new Error(res.data.error); }
       const teamId = await getMyTeamId(currentUser?.id);
-      const client = await base44.entities.Client.create({ ...data, ...(teamId ? { team_id: teamId } : {}) });
+      const client = await db.entities.Client.create({ ...data, ...(teamId ? { team_id: teamId } : {}) });
       if (sendInvite && data.email) {
         // clientId is required by the function (it stores the invite token hash
         // on THIS client row under the caller's RLS). Without it the invite 400s.
-        await base44.functions.invoke('sendClientInvite', {
+        await db.functions.invoke('sendClientInvite', {
           clientId: client.id, clientName: data.name, clientEmail: data.email,
         });
       }
@@ -122,7 +122,7 @@ export default function Clients() {
       }
       // Auto send welcome email if Resend connected
       if (result?.email && isResendEnabled()) {
-        const settingsList = await base44.entities.CoachSettings.list();
+        const settingsList = await db.entities.CoachSettings.list();
         const rsSettings = settingsList[0];
         if (rsSettings?.resend_connected) {
           const tpl = templates.welcome(result, currentUser);
@@ -134,7 +134,7 @@ export default function Clients() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Client.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Client.update(id, data),
     onSuccess: (result, { data }) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Client updated');
@@ -153,8 +153,8 @@ export default function Clients() {
       // Delete all related records in parallel before removing the client
       const deleteRelated = async (entityName, field) => {
         try {
-          const records = await base44.entities[entityName].filter({ [field]: id });
-          await Promise.all(records.map(r => base44.entities[entityName].delete(r.id)));
+          const records = await db.entities[entityName].filter({ [field]: id });
+          await Promise.all(records.map(r => db.entities[entityName].delete(r.id)));
         } catch (e) {
           // Non-blocking: log and continue
           console.warn(`Failed to delete ${entityName} for client ${id}:`, e);
@@ -177,7 +177,7 @@ export default function Clients() {
         deleteRelated('CommunityPost', 'author_id'),
       ]);
 
-      await base44.entities.Client.delete(id);
+      await db.entities.Client.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });

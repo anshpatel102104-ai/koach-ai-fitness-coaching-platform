@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Salad } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
       note ? `Notes: ${note}` : '',
     ].filter(Boolean).join('\n');
 
-    await base44.entities.CheckIn.create({
+    await db.entities.CheckIn.create({
       client_id: clientId || 'self',
       date: new Date().toISOString().slice(0, 10),
       compliance_nutrition: rating * 10,

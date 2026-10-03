@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Dumbbell, Search, SlidersHorizontal,
   LayoutGrid, List, X, Sparkles, PenLine,
@@ -146,30 +146,30 @@ export default function Programs() {
 
   const { data: programs = [], isLoading } = useQuery({
     queryKey: ['programs'],
-    queryFn: () => base44.entities.WorkoutProgram.list('-created_date'),
+    queryFn: () => db.entities.WorkoutProgram.list('-created_date'),
   });
   const { data: allClients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
   const { data: allCheckIns = [] } = useQuery({
     queryKey: ['checkins-prog'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
   });
 
   // Programs are unlimited on all tiers — no cap enforced
   const atLimit = false;
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.WorkoutProgram.create(data),
+    mutationFn: (data) => db.entities.WorkoutProgram.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['programs'] }),
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.WorkoutProgram.delete(id),
+    mutationFn: (id) => db.entities.WorkoutProgram.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['programs'] }); toast.success('Program deleted'); },
   });
   const archiveMutation = useMutation({
-    mutationFn: (id) => base44.entities.WorkoutProgram.update(id, { is_archived: true }),
+    mutationFn: (id) => db.entities.WorkoutProgram.update(id, { is_archived: true }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['programs'] }); toast.success('Program archived'); },
   });
 
@@ -547,7 +547,7 @@ export default function Programs() {
         allClients={allClients}
         onAssign={async ({ selectedClients }) => {
           for (const clientId of selectedClients) {
-            await base44.entities.Client.update(clientId, { assigned_program_id: assigningProgram.id });
+            await db.entities.Client.update(clientId, { assigned_program_id: assigningProgram.id });
           }
           queryClient.invalidateQueries({ queryKey: ['clients'] });
           const names = selectedClients.map(id => allClients.find(c => c.id === id)?.name || 'Client').join(', ');

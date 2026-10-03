@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { MessageSquare, Trophy, Target, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -15,8 +15,8 @@ export default function CommunityToggle({ settings, settingsId }) {
 
   const updateMutation = useMutation({
     mutationFn: (data) => settingsId
-      ? base44.entities.CommunitySettings.update(settingsId, data)
-      : base44.entities.CommunitySettings.create(data),
+      ? db.entities.CommunitySettings.update(settingsId, data)
+      : db.entities.CommunitySettings.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-settings'] }),
   });
 

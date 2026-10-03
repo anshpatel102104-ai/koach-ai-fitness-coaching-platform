@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
@@ -158,7 +158,7 @@ function LogWeightModal({ weighInId, date, coachNote, onClose, onSaved }) {
   const save = async () => {
     if (!weight || parseFloat(weight) <= 0) return;
     setSaving(true);
-    await base44.entities.WeighIn.update(weighInId, { weight: parseFloat(weight) });
+    await portalDb.entities.WeighIn.update(weighInId, { weight: parseFloat(weight) });
     toast.success('Weight logged!');
     onSaved();
     onClose();
@@ -290,7 +290,7 @@ export default function PortalCalendar({ user }) {
   // Fetch client
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-cal-client', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -298,27 +298,27 @@ export default function PortalCalendar({ user }) {
   // Fetch data in parallel
   const { data: checkIns = [] } = useQuery({
     queryKey: ['portal-cal-checkins', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
     enabled: !!myClient?.id,
   });
   const { data: goals = [] } = useQuery({
     queryKey: ['portal-cal-goals', myClient?.id],
-    queryFn: () => base44.entities.Goal.filter({ client_id: myClient.id }, '-created_date', 50),
+    queryFn: () => portalDb.entities.Goal.filter({ client_id: myClient.id }, '-created_date', 50),
     enabled: !!myClient?.id,
   });
   const { data: sessions = [] } = useQuery({
     queryKey: ['portal-cal-sessions', myClient?.id],
-    queryFn: () => base44.entities.Session.filter({ client_id: myClient.id }, '-date', 50),
+    queryFn: () => portalDb.entities.Session.filter({ client_id: myClient.id }, '-date', 50),
     enabled: !!myClient?.id,
   });
   const { data: weighIns = [] } = useQuery({
     queryKey: ['portal-cal-weighins', myClient?.id],
-    queryFn: () => base44.entities.WeighIn.filter({ client_id: myClient.id }, '-date', 50),
+    queryFn: () => portalDb.entities.WeighIn.filter({ client_id: myClient.id }, '-date', 50),
     enabled: !!myClient?.id,
   });
   const { data: workoutSessions = [] } = useQuery({
     queryKey: ['portal-cal-workoutsessions', myClient?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: myClient.id }, '-scheduled_date', 200),
+    queryFn: () => portalDb.entities.WorkoutSession.filter({ client_id: myClient.id }, '-scheduled_date', 200),
     enabled: !!myClient?.id,
   });
 

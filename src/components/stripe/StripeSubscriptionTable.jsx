@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { XCircle, CheckCircle2, Clock, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,7 @@ export default function StripeSubscriptionTable({ subscriptions, clients, onRefr
   const handleCancel = async (sub) => {
     if (!confirm(`Cancel subscription ${sub.id}? This cannot be undone.`)) return;
     setCanceling(sub.id);
-    await base44.functions.invoke('stripeCancelSubscription', { subscription_id: sub.id });
+    await db.functions.invoke('stripeCancelSubscription', { subscription_id: sub.id });
     toast.success('Subscription canceled');
     onRefresh();
     setCanceling(null);

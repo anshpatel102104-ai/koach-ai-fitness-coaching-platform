@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion } from 'framer-motion';
 import { Copy, Share2, MessageSquare, Mail, Instagram, Twitter, Award, Gift } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ export default function PortalReferral({ user }) {
   // Get client
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-ref', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user?.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user?.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -21,7 +21,7 @@ export default function PortalReferral({ user }) {
   // Get referral config
   const { data: configs = [] } = useQuery({
     queryKey: ['referral-config', myClient?.assigned_coach_id],
-    queryFn: () => base44.entities.ReferralConfiguration.filter({ coach_id: myClient?.assigned_coach_id }, '-created_date', 1),
+    queryFn: () => portalDb.entities.ReferralConfiguration.filter({ coach_id: myClient?.assigned_coach_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_coach_id,
   });
   const config = configs[0];
@@ -29,14 +29,14 @@ export default function PortalReferral({ user }) {
   // Get referrals made
   const { data: myReferrals = [] } = useQuery({
     queryKey: ['my-referrals', myClient?.id],
-    queryFn: () => base44.entities.ClientReferral.filter({ referrer_client_id: myClient?.id }, '-date_referred', 50),
+    queryFn: () => portalDb.entities.ClientReferral.filter({ referrer_client_id: myClient?.id }, '-date_referred', 50),
     enabled: !!myClient?.id,
   });
 
   // Get rewards earned
   const { data: myRewards = [] } = useQuery({
     queryKey: ['my-rewards', myClient?.id],
-    queryFn: () => base44.entities.ClientReferralReward.filter({ client_id: myClient?.id }, '-date_earned', 50),
+    queryFn: () => portalDb.entities.ClientReferralReward.filter({ client_id: myClient?.id }, '-date_earned', 50),
     enabled: !!myClient?.id,
   });
 

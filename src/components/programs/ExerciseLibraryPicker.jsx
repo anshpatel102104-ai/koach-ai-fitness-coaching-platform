@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -34,12 +34,12 @@ export default function ExerciseLibraryPicker({ open, onClose, onSelect }) {
 
   const { data: exercises = [] } = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('-created_date', 300),
+    queryFn: () => db.entities.ExerciseLibrary.list('-created_date', 300),
     enabled: open,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ExerciseLibrary.create(data),
+    mutationFn: (data) => db.entities.ExerciseLibrary.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exercises'] });
       setNewEx(defaultNewEx);

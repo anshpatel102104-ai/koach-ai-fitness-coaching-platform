@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, Moon, Zap, Heart, Smile, Dumbbell,
@@ -50,12 +50,12 @@ function AIAnalysis({ checkIn, clientName }) {
   const generate = async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('aiCheckInInsights', {
+      const res = await db.functions.invoke('aiCheckInInsights', {
         action: 'reviewCheckIn', checkIn, clientName,
       });
       const result = res.data;
       setAnalysis(result);
-      await base44.entities.CheckIn.update(checkIn.id, { ai_summary: result });
+      await db.entities.CheckIn.update(checkIn.id, { ai_summary: result });
     } catch (e) {
       toast.error('AI analysis failed');
     }
@@ -119,7 +119,7 @@ export default function CheckInEnhancedDrawer({ checkIn, client, allCheckIns, cu
   }, [checkIn?.id]);
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkIn.id, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
       toast.success('Check-in updated');

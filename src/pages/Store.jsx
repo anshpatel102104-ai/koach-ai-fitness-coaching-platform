@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { ShoppingBag, DollarSign, BarChart2, Star, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import StoreProductCard from '@/components/store/StoreProductCard';
@@ -49,16 +49,16 @@ export default function Store() {
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ['listings'],
-    queryFn: () => base44.entities.PlanListing.list('-created_date'),
+    queryFn: () => db.entities.PlanListing.list('-created_date'),
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PlanListing.create(data),
+    mutationFn: (data) => db.entities.PlanListing.create(data),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['listings'] });
       setShowForm(false);
@@ -67,12 +67,12 @@ export default function Store() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PlanListing.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.PlanListing.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['listings'] }); setShowForm(false); setEditing(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PlanListing.delete(id),
+    mutationFn: (id) => db.entities.PlanListing.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['listings'] }),
   });
 

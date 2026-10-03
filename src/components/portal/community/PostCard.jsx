@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, MoreHorizontal, Flag, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -56,7 +56,7 @@ export default function PostCard({ post, user, myClient, queryClient }) {
 
   const { data: comments = [] } = useQuery({
     queryKey: ['post-comments', post.id],
-    queryFn: () => base44.entities.PostComment.filter({ post_id: post.id }, 'created_date', 100),
+    queryFn: () => portalDb.entities.PostComment.filter({ post_id: post.id }, 'created_date', 100),
     enabled: showComments,
   });
 
@@ -69,13 +69,13 @@ export default function PostCard({ post, user, myClient, queryClient }) {
       } else {
         reactions[key] = [...arr, userId];
       }
-      return base44.entities.CommunityPost.update(post.id, { reactions });
+      return portalDb.entities.CommunityPost.update(post.id, { reactions });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-posts'] }),
   });
 
   const addComment = useMutation({
-    mutationFn: (content) => base44.entities.PostComment.create({
+    mutationFn: (content) => portalDb.entities.PostComment.create({
       post_id: post.id,
       author_id: userId,
       author_name: user?.full_name || myClient?.name || 'Member',
@@ -89,7 +89,7 @@ export default function PostCard({ post, user, myClient, queryClient }) {
   });
 
   const hidePost = useMutation({
-    mutationFn: () => base44.entities.CommunityPost.update(post.id, { is_hidden: true }),
+    mutationFn: () => portalDb.entities.CommunityPost.update(post.id, { is_hidden: true }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-posts'] }),
   });
 

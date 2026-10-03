@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, Plus } from 'lucide-react';
 import StripeRevenueSummary from '@/components/stripe/StripeRevenueSummary';
@@ -15,7 +15,7 @@ export default function RevenueDashboard() {
   const { data: dashData, isLoading, refetch } = useQuery({
     queryKey: ['stripe-dashboard'],
     queryFn: async () => {
-      const res = await base44.functions.invoke('stripeGetDashboard', {});
+      const res = await db.functions.invoke('stripeGetDashboard', {});
       return res.data;
     },
     refetchInterval: 60000,
@@ -23,7 +23,7 @@ export default function RevenueDashboard() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   return (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { getEventTypes } from '@/lib/calendly';
 import { Copy, Check, ExternalLink, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ export default function CalendlyBookingPages() {
 
   const { data: settingsList = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
   const settings = settingsList[0];
   const isConnected = !!settings?.calendly_connected && !!settings?.calendly_user_uri;

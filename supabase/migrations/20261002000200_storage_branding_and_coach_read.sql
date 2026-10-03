@@ -4,9 +4,11 @@
 --                      images. Served via getPublicUrl() — anonymous viewers
 --                      (public store, referral/package landing pages, emails)
 --                      must be able to load them. Writes are owner-scoped to a
---                      `<auth.uid()>/...` key; there is deliberately NO select
---                      policy, so the bucket can be fetched by URL but not
---                      listed/enumerated through the Storage API.
+--                      `<auth.uid()>/...` key. Public URLs need no policy; the
+--                      only SELECT policy is owner-only (the Storage API must
+--                      be able to see a user's own row to replace/delete it),
+--                      so anonymous callers cannot list/enumerate the bucket
+--                      and nobody can list another user's folder.
 --
 --   uploads  (PRIVATE) client photos, progress pics, documents, message
 --                      attachments, exercise/community media. Read only through
@@ -101,6 +103,11 @@ begin
     create policy branding_insert_own on storage.objects
       for insert to authenticated
       with check (bucket_id = 'branding' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+    drop policy if exists branding_read_own on storage.objects;
+    create policy branding_read_own on storage.objects
+      for select to authenticated
+      using (bucket_id = 'branding' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
     drop policy if exists branding_update_own on storage.objects;
     create policy branding_update_own on storage.objects

@@ -11,14 +11,29 @@
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 // Default to the latest generally available Sonnet; callers may pin another.
-const DEFAULT_MODEL = 'claude-sonnet-5';
+const DEFAULT_MODEL = 'claude-sonnet-5-5';
 
 export function anthropicConfigured() {
   return Boolean(Deno.env.get('ANTHROPIC_API_KEY'));
 }
 
+/**
+ * Normalise a model id read from the environment. A pasted secret routinely
+ * carries stray whitespace, wrapping quotes, zero-width characters, a unicode
+ * hyphen or trailing punctuation ("claude-sonnet-5-5." was live and made every
+ * call 404). A model id never starts or ends with punctuation, so strip it.
+ */
+export function normalizeModelId(raw) {
+  return String(raw ?? '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .trim()
+    .replace(/^["'`]+|["'`]+$/g, '')
+    .replace(/[^A-Za-z0-9]+$/, '');
+}
+
 export function anthropicModel() {
-  return Deno.env.get('ANTHROPIC_MODEL') || DEFAULT_MODEL;
+  return normalizeModelId(Deno.env.get('ANTHROPIC_MODEL')) || DEFAULT_MODEL;
 }
 
 /**

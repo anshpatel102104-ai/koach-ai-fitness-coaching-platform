@@ -24,3 +24,14 @@ bad('storage://uploads/not-a-uuid/x.png');                              // folde
 bad(`storage://uploads/${U}`);                                          // no object name
 bad(''); bad(null); bad({ a: 1 });
 console.log('verify-upload-ref: all checks passed');
+
+// normalizeModelId (anthropic.js) — the live ANTHROPIC_MODEL secret had a trailing '.'
+globalThis.Deno = globalThis.Deno ?? { env: { get: () => undefined } };
+const { normalizeModelId } = await import('../supabase/functions/_shared/anthropic.js');
+assert.equal(normalizeModelId('claude-sonnet-5-5'), 'claude-sonnet-5-5');
+assert.equal(normalizeModelId('claude-sonnet-5-5.'), 'claude-sonnet-5-5');
+assert.equal(normalizeModelId('  "claude-sonnet-5-5"\n'), 'claude-sonnet-5-5');
+assert.equal(normalizeModelId('claude‑sonnet‑5‑5'), 'claude-sonnet-5-5');
+assert.equal(normalizeModelId('claude-sonnet-5-5​'), 'claude-sonnet-5-5');
+assert.equal(normalizeModelId(undefined), '');
+console.log('verify-upload-ref: model-id normalisation passed');

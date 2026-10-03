@@ -18,7 +18,7 @@
 export const TIER_AI_LIMITS = { starter: 15, pro: 50, elite: 150, enterprise: -1 };
 
 /**
- * Check + increment the caller's monthly AI counter.
+ * Check + increment the caller's monthly AI counter (atomically, via RPC).
  * Returns { allowed: true } or { allowed: false, status: 402, body } with the
  * Base44-shaped upgrade message.
  */
@@ -28,10 +28,18 @@ export async function meterAiGeneration(svc, profile, now = new Date()) {
   if (aiLimit === -1) return { allowed: true, used: null, limit: -1 };
 
   const currentMonth = now.toISOString().slice(0, 7); // YYYY-MM
-  const storedMonth = profile.ai_generation_month || '';
-  const count = storedMonth === currentMonth ? (profile.ai_generation_count || 0) : 0;
 
-  if (count >= aiLimit) {
+  // Check + increment in ONE atomic statement (public.meter_ai_generation,
+  // migration 20261002000300). The previous read-then-write let parallel
+  // requests all see the same count and exceed the quota.
+  const { data, error } = await svc.rpc('meter_ai_generation', {
+    p_profile: profile.id, p_limit: aiLimit, p_month: currentMonth,
+  });
+  if (error) throw new Error(`meterAiGeneration: ${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  const count = row?.used ?? 0;
+
+  if (!row?.allowed) {
     const upgradeHint = {
       starter: 'upgrade to Pro for 50 AI generations/month',
       pro: 'upgrade to Elite for 150 AI generations/month',
@@ -48,12 +56,7 @@ export async function meterAiGeneration(svc, profile, now = new Date()) {
       },
     };
   }
-
-  const { error } = await svc.from('profiles')
-    .update({ ai_generation_count: count + 1, ai_generation_month: currentMonth })
-    .eq('id', profile.id);
-  if (error) throw new Error(`meterAiGeneration: ${error.message}`);
-  return { allowed: true, used: count + 1, limit: aiLimit };
+  return { allowed: true, used: count, limit: aiLimit };
 }
 
 /**

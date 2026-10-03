@@ -74,8 +74,11 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
 
   // One request with a hard timeout (a hung connection otherwise holds the edge
   // function until the platform kills it). Retry ONCE on a network error or a
-  // transient 429/5xx.
-  const TIMEOUT_MS = 60_000;
+  // transient 429/5xx (not on timeout).
+  // Non-streaming generation time scales with output size: an 8192-token meal
+  // plan/program needs well over the old flat 60s (it 504'd live). Scale with
+  // maxTokens, capped under the edge function's ~150s request limit.
+  const TIMEOUT_MS = Math.min(140_000, Math.max(60_000, maxTokens * 17));
   const doFetch = async () => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -100,7 +103,9 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
     try {
       response = await doFetch();
     } catch (e) {
-      if (attempt === 0) continue; // network error / timeout → retry once
+      // Retry once on a network error, but NOT after a timeout: a second full
+      // wait would exceed the edge function's request limit.
+      if (attempt === 0 && e?.name !== 'AbortError') continue;
       const reason = e?.name === 'AbortError' ? 'timed out' : `unreachable: ${e.message}`;
       return { ok: false, error: `Claude API ${reason}`, status: 504 };
     }

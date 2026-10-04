@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Plus, X } from 'lucide-react';
@@ -34,7 +34,7 @@ export default function ProgressMeasurementsTab({ client, checkIns }) {
   const queryClient = useQueryClient();
 
   const logMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.create(data),
+    mutationFn: (data) => db.entities.CheckIn.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['checkins'] }); setShowModal(false); toast.success('Measurements saved!'); },
   });
 

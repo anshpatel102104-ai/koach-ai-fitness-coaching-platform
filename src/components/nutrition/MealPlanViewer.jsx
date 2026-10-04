@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Loader2, ArrowLeftRight } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 function gramsToOz(g) {
   return g ? `${(g * 0.03527).toFixed(1)}oz` : null;
@@ -23,7 +23,7 @@ function FoodSwapButton({ food, mealName }) {
     if (swaps.length > 0 && !loading) { setOpen(o => !o); return; }
     setOpen(true);
     setLoading(true);
-    const res = await base44.functions.invoke('aiNutritionInsights', {
+    const res = await db.functions.invoke('aiNutritionInsights', {
       action: 'foodSwaps', food, mealName,
     });
     const result = res.data;

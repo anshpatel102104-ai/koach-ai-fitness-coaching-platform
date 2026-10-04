@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Bell } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export default function PushPermissionPrompt({ onDismiss }) {
   const [step, setStep] = useState('initial'); // initial | denied | processing
@@ -25,7 +25,7 @@ export default function PushPermissionPrompt({ onDismiss }) {
             applicationServerKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
           });
           // Send subscription to backend
-          await base44.functions.invoke('savePushSubscription', {
+          await db.functions.invoke('savePushSubscription', {
             subscription: JSON.stringify(subscription),
           });
           localStorage.removeItem('push_denial_count');

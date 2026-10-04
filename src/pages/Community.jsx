@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { isCoachRole } from '@/lib/useRoleGuard';
 import GroupListView from '../components/community/GroupListView';
@@ -26,12 +26,12 @@ export default function Community() {
 
   const { data: groups = [] } = useQuery({
     queryKey: ['community-groups'],
-    queryFn: () => base44.entities.CommunityGroup.list('-created_date'),
+    queryFn: () => db.entities.CommunityGroup.list('-created_date'),
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const liveGroup = selectedGroup ? groups.find(g => g.id === selectedGroup.id) || selectedGroup : null;

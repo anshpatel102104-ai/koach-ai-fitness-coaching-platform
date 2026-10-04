@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import CalendlyBookingWidget from './CalendlyBookingWidget';
 import { format } from 'date-fns';
 import { Video, Copy, FileText, Check } from 'lucide-react';
@@ -51,7 +51,7 @@ function SessionRow({ session }) {
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Session.update(session.id, data),
+    mutationFn: (data) => db.entities.Session.update(session.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sessions-modal'] });
       toast.success('Notes saved');
@@ -151,7 +151,7 @@ function SessionRow({ session }) {
 export default function SessionsTab({ client }) {
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['sessions-modal', client?.id],
-    queryFn: () => base44.entities.Session.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Session.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => new Date(b.date + 'T' + (b.time || '00:00')) - new Date(a.date + 'T' + (a.time || '00:00'))),
   });

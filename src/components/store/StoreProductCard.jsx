@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Dumbbell, Salad, Users, Package, Layers, EyeOff, Star, Edit, Eye, ShoppingCart, Loader2 } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { SignedImg } from '@/components/shared/SignedImage';
 
@@ -32,7 +32,7 @@ export default function StoreProductCard({ listing, onEdit, onView }) {
 
   const handleBuyNow = async () => {
     setBuyingOut(true);
-    const res = await base44.functions.invoke('storeCheckout', {
+    const res = await db.functions.invoke('storeCheckout', {
       listing_id: listing.id,
       success_url: `${window.location.origin}/store?purchase=success`,
       cancel_url: `${window.location.origin}/store`,

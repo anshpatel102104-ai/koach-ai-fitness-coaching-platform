@@ -76,15 +76,21 @@ Timing:
 ### From a Backend Function
 
 ```javascript
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+const db = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
 
 Deno.serve(async (req) => {
   const { clientId, title, body } = await req.json();
   
   // 1. Get push subscriptions for this client
-  const subscriptions = await base44.asServiceRole.entities.PushSubscription.filter({
-    client_id: clientId
-  });
+  const { data: subscriptions } = await db
+    .from('push_subscriptions')
+    .select('*')
+    .eq('client_id', clientId);
 
   // 2. Send to each subscription
   const privateKey = Deno.env.get('VAPID_PRIVATE_KEY');
@@ -341,7 +347,7 @@ If you change VAPID keys, existing subscriptions become invalid. Plan key rotati
 Store notification events in database:
 
 ```javascript
-await base44.asServiceRole.entities.NotificationLog.create({
+await db.from('notification_logs').insert({
   client_id: user.id,
   type: 'notification_sent',
   notification_type: 'message',

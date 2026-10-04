@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { readSearchCache, writeSearchCache } from '@/lib/nutritionUtils';
 
 export function useFoodSearch() {
@@ -46,7 +46,7 @@ export function useFoodSearch() {
     setIsLoading(true);
     setHasError(false);
     try {
-      const res = await base44.functions.invoke('searchFoods', {
+      const res = await db.functions.invoke('searchFoods', {
         query: q,
         pageSize: PAGE_SIZE,
         dataType: 'Survey (FNDDS),SR Legacy,Foundation,Branded',

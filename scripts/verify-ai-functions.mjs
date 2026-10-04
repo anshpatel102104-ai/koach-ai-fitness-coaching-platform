@@ -6,7 +6,7 @@
  * Runs REAL modules (not reimplementations):
  *   - _shared/aiMetering.js       — monthly limit gate + counter writes
  *   - _shared/assistantTools.js   — claudeAssistant's tool executor with the
- *                                   multi-tenant ownership scoping (the Base44
+ *                                   multi-tenant ownership scoping (the legacy
  *                                   original had NONE — every tool ran
  *                                   asServiceRole cross-tenant)
  *   - _shared/importMapping.js    — deterministic CSV mapper + AI-merge policy
@@ -142,7 +142,7 @@ const { rows: [ci] } = await db.query(
 
   prof = (await db.query('select * from public.profiles where id=$1', [COACH_A])).rows[0];
   const m2 = await meterAiGeneration(svc, prof, NOW);
-  check('metering: 15/15 starter blocked with Base44-shaped 402',
+  check('metering: 15/15 starter blocked with legacy-shaped 402',
     m2.allowed === false && m2.status === 402 && m2.body.error === 'monthly_ai_limit_reached'
     && m2.body.used === 15 && m2.body.limit === 15 && /upgrade to Pro/.test(m2.body.message));
 
@@ -155,7 +155,7 @@ const { rows: [ci] } = await db.query(
   check('metering: enterprise is unmetered', m4.allowed === true && m4.limit === -1 && TIER_AI_LIMITS.enterprise === -1);
 }
 
-// ── 2. assistant tools: ownership scoping (the Base44 hole, closed) ────────
+// ── 2. assistant tools: ownership scoping (the legacy hole, closed) ────────
 {
   const own = await executeAssistantTool(svc, COACH_A, 'get_client_data', { client_id: clientX.id });
   check('assistant get_client_data: owner reads client + check-ins', own.client?.id === clientX.id && Array.isArray(own.recent_checkins));

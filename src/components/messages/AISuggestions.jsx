@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sparkles, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -11,7 +11,7 @@ export default function AISuggestions({ clientName, recentMessages, onSelect, on
   const generate = async () => {
     setLoading(true);
     const context = recentMessages.slice(-6).map(m => `${m.sender === 'coach' ? 'Coach' : clientName}: ${m.content}`).join('\n');
-    const res = await base44.functions.invoke('aiMessageAssistant', {
+    const res = await db.functions.invoke('aiMessageAssistant', {
       action: 'replySuggestions',
       clientName,
       context,

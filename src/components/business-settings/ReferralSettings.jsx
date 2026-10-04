@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Save } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ export default function ReferralSettings({ coachId }) {
 
   const { data: configs = [] } = useQuery({
     queryKey: ['referral-config', coachId],
-    queryFn: () => base44.entities.ReferralConfiguration.filter({ coach_id: coachId }, '-created_date', 1),
+    queryFn: () => db.entities.ReferralConfiguration.filter({ coach_id: coachId }, '-created_date', 1),
     enabled: !!coachId,
     onSuccess: (data) => {
       if (data.length > 0) {
@@ -34,9 +34,9 @@ export default function ReferralSettings({ coachId }) {
   const mutation = useMutation({
     mutationFn: (data) => {
       if (settings.id) {
-        return base44.entities.ReferralConfiguration.update(settings.id, data);
+        return db.entities.ReferralConfiguration.update(settings.id, data);
       } else {
-        return base44.entities.ReferralConfiguration.create(data);
+        return db.entities.ReferralConfiguration.create(data);
       }
     },
     onSuccess: () => {

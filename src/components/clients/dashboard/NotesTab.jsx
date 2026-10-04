@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -10,7 +10,7 @@ export default function NotesTab({ client }) {
 
   const { data: notes = [], refetch } = useQuery({
     queryKey: ['notes-tab', client?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: client.id }),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => d.filter(ci => ci.coach_notes).sort((a, b) => new Date(b.date) - new Date(a.date)),
   });
@@ -18,7 +18,7 @@ export default function NotesTab({ client }) {
   const save = async () => {
     if (!newNote.trim()) return;
     setSaving(true);
-    await base44.entities.CheckIn.create({
+    await db.entities.CheckIn.create({
       client_id: client.id,
       client_name: client.name,
       date: new Date().toISOString().split('T')[0],

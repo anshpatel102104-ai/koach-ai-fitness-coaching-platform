@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,7 @@ export default function ExercisePickerModal({ open, onOpenChange, onSelect }) {
 
   const { data: exercises = [] } = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('-created_date', 200),
+    queryFn: () => db.entities.ExerciseLibrary.list('-created_date', 200),
     enabled: open,
   });
 

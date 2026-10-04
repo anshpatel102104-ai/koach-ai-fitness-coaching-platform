@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Send, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +29,7 @@ export default function ProfileMessagesTab({ client, messages }) {
   const queryClient = useQueryClient();
 
   const sendMutation = useMutation({
-    mutationFn: () => base44.entities.Message.create({
+    mutationFn: () => db.entities.Message.create({
       client_id: client.id,
       client_name: client.name,
       sender: 'coach',

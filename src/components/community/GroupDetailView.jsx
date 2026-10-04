@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { ArrowLeft, Settings2, Users, MessageSquare, Trophy, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CommunityFeed from './CommunityFeed';
@@ -162,7 +162,7 @@ function GroupFeatureToggle({ group }) {
   ];
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CommunityGroup.update(group.id, data),
+    mutationFn: (data) => db.entities.CommunityGroup.update(group.id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-groups'] }),
   });
 

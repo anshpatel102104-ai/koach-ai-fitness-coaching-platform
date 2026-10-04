@@ -3,7 +3,7 @@ import { X, Target, Flame, BarChart3, Clock, UserPlus, Pencil } from 'lucide-rea
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 import ProgramOverviewTab from './tabs/ProgramOverviewTab';
 import ProgramWeeklyScheduleTab from './tabs/ProgramWeeklyScheduleTab';
@@ -58,7 +58,7 @@ export default function ProgramDetailModal({
     let active = true;
     if (!program?.id) return;
     setSessionsLoaded(false);
-    base44.entities.WorkoutSession.filter({ program_id: program.id })
+    db.entities.WorkoutSession.filter({ program_id: program.id })
       .then(rows => { if (active) { setSessions(rows || []); setSessionsLoaded(true); } })
       .catch(() => { if (active) { setSessions([]); setSessionsLoaded(true); } });
     return () => { active = false; };

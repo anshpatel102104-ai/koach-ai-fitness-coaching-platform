@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { X, Send, Mail, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -19,11 +19,11 @@ export default function SendInvoiceModal({ invoice, coachUser, onClose, onSent }
     setSending(true);
     try {
       // Update invoice status to "sent"
-      await base44.entities.Invoice.update(invoice.id, { status: 'sent' });
+      await db.entities.Invoice.update(invoice.id, { status: 'sent' });
 
       // Send email if applicable
       if ((sendVia === 'email' || sendVia === 'both') && invoice.client_email) {
-        await base44.functions.invoke('sendEmailNotification', {
+        await db.functions.invoke('sendEmailNotification', {
           to: invoice.client_email,
           subject: `Invoice ${invoice.invoice_number} — ${invoice.description || 'Coaching Services'} — $${Number(invoice.amount).toFixed(2)}`,
           html: `${message}\n\n---\nInvoice #: ${invoice.invoice_number}\nAmount Due: $${Number(invoice.amount).toFixed(2)}\nDue Date: ${invoice.due_date || '—'}\n\nView & pay your invoice by logging into your coaching portal.`.replace(/\n/g, '<br>'),
@@ -32,7 +32,7 @@ export default function SendInvoiceModal({ invoice, coachUser, onClose, onSent }
 
       // Send in-app message if applicable
       if ((sendVia === 'message' || sendVia === 'both') && invoice.client_id) {
-        await base44.entities.Message.create({
+        await db.entities.Message.create({
           client_id: invoice.client_id,
           client_name: invoice.client_name,
           sender: 'coach',

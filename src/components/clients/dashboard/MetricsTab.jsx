@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { differenceInWeeks, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import MetricsCard from './MetricsCard';
@@ -95,14 +95,14 @@ export default function MetricsTab({ client, onClientUpdated }) {
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-metrics', client?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: client.id }),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => new Date(b.date) - new Date(a.date)),
   });
 
   const { data: sessions = [] } = useQuery({
     queryKey: ['sessions-metrics', client?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: client.id }),
+    queryFn: () => db.entities.WorkoutSession.filter({ client_id: client.id }),
     enabled: !!client?.id,
   });
 

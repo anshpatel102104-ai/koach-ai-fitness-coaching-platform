@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { CheckCircle2, Utensils, BookOpen, Pill, Plus, Search, ChevronDown, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -62,21 +62,21 @@ export default function FoodLibrary() {
 
   const { data: savedFoods = [] } = useQuery({
     queryKey: ['food-items'],
-    queryFn: () => base44.entities.FoodItem.list('-created_date', 300),
+    queryFn: () => db.entities.FoodItem.list('-created_date', 300),
   });
 
   const customFoods = savedFoods.filter(f => f.source === 'custom');
 
   const saveMutation = useMutation({
-    mutationFn: (food) => base44.entities.FoodItem.create(food),
+    mutationFn: (food) => db.entities.FoodItem.create(food),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-items'] }); toast.success('Food saved to library!'); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.FoodItem.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.FoodItem.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['food-items'] }),
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.FoodItem.delete(id),
+    mutationFn: (id) => db.entities.FoodItem.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-items'] }); toast.success('Removed'); },
   });
 

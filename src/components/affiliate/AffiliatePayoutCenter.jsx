@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Download } from 'lucide-react';
 
 export default function AffiliatePayoutCenter({ profile }) {
@@ -8,7 +8,7 @@ export default function AffiliatePayoutCenter({ profile }) {
 
   const { data: payouts = [] } = useQuery({
     queryKey: ['affiliate-payouts', profile.coach_id],
-    queryFn: () => base44.entities.AffiliatePayout.filter({ affiliate_id: profile.coach_id }, '-payout_month'),
+    queryFn: () => db.entities.AffiliatePayout.filter({ affiliate_id: profile.coach_id }, '-payout_month'),
   });
 
   const selectedPayout = payouts.find(p => p.payout_month === selectedMonth);

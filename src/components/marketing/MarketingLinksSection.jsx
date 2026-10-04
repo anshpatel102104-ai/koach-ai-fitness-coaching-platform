@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Copy, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,7 +23,7 @@ export default function MarketingLinksSection({ coachId }) {
 
   const { data: links = [] } = useQuery({
     queryKey: ['marketing-links', coachId],
-    queryFn: () => base44.entities.MarketingLink.filter({ coach_id: coachId }, '-created_at'),
+    queryFn: () => db.entities.MarketingLink.filter({ coach_id: coachId }, '-created_at'),
     enabled: !!coachId,
   });
 
@@ -31,7 +31,7 @@ export default function MarketingLinksSection({ coachId }) {
     mutationFn: (data) => {
       const slug = data.link_name.toLowerCase().replace(/\s+/g, '-');
       const fullUrl = `koachai.com/coach/${coachId}/${slug}?utm_source=${data.utm_source || 'direct'}&utm_campaign=${data.utm_campaign || 'default'}`;
-      return base44.entities.MarketingLink.create({
+      return db.entities.MarketingLink.create({
         ...data,
         coach_id: coachId,
         destination_url: `https://koachai.com/coach/${coachId}`,
@@ -47,7 +47,7 @@ export default function MarketingLinksSection({ coachId }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.MarketingLink.delete(id),
+    mutationFn: (id) => db.entities.MarketingLink.delete(id),
     onSuccess: () => {
       toast.success('Link deleted');
       queryClient.invalidateQueries({ queryKey: ['marketing-links', coachId] });

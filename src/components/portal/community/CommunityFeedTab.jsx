@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Image as ImageIcon, EyeOff, Megaphone
@@ -23,7 +23,7 @@ function PostComposer({ user, myClient, onPost, onClose, groupId }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, scope: 'community' });
+    const { file_url } = await portalDb.uploadFile({ file, scope: 'community' });
     setMediaUrl(file_url);
     setUploading(false);
   };
@@ -126,12 +126,12 @@ export default function CommunityFeedTab({ user, myClient, posts, allClients, qu
   const { data: challenges = [] } = useQuery({
     queryKey: ['challenges-active', groupId],
     queryFn: () => groupId
-      ? base44.entities.Challenge.filter({ is_active: true, group_id: groupId }, '-created_date', 5)
-      : base44.entities.Challenge.filter({ is_active: true }, '-created_date', 5),
+      ? portalDb.entities.Challenge.filter({ is_active: true, group_id: groupId }, '-created_date', 5)
+      : portalDb.entities.Challenge.filter({ is_active: true }, '-created_date', 5),
   });
 
   const createPost = useMutation({
-    mutationFn: (data) => base44.entities.CommunityPost.create(data),
+    mutationFn: (data) => portalDb.entities.CommunityPost.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-posts'] }),
   });
 

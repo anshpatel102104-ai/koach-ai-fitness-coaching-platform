@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Edit2, Copy, Trash2, ClipboardList, Calendar, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -80,11 +80,11 @@ export default function FormBuilderTab({ clients }) {
 
   const { data: forms = [], isLoading } = useQuery({
     queryKey: ['checkin-forms'],
-    queryFn: () => base44.entities.CheckInForm.list('-created_date'),
+    queryFn: () => db.entities.CheckInForm.list('-created_date'),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CheckInForm.delete(id),
+    mutationFn: (id) => db.entities.CheckInForm.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkin-forms'] });
       toast.success('Form deleted');
@@ -92,7 +92,7 @@ export default function FormBuilderTab({ clients }) {
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (form) => base44.entities.CheckInForm.create({
+    mutationFn: (form) => db.entities.CheckInForm.create({
       ...form,
       id: undefined,
       name: `${form.name} (Copy)`,

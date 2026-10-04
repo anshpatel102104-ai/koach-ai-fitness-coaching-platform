@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, TrendingUp, DollarSign, Target, Users, LayoutGrid, List, BarChart2, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import FunnelView from '../components/sales/FunnelView';
@@ -42,7 +42,7 @@ export default function Sales() {
 
   // Real-time updates
   useEffect(() => {
-    const unsub = base44.entities.Lead.subscribe(() => {
+    const unsub = db.entities.Lead.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     });
     return unsub;
@@ -50,26 +50,26 @@ export default function Sales() {
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => base44.entities.Lead.list('-created_date'),
+    queryFn: () => db.entities.Lead.list('-created_date'),
   });
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   const { data: programs = [] } = useQuery({
     queryKey: ['programs'],
-    queryFn: () => base44.entities.WorkoutProgram.list(),
+    queryFn: () => db.entities.WorkoutProgram.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (d) => base44.entities.Lead.create(d),
+    mutationFn: (d) => db.entities.Lead.create(d),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Lead.update(id, data),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       // Keep viewing drawer in sync
@@ -80,7 +80,7 @@ export default function Sales() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Lead.delete(id),
+    mutationFn: (id) => db.entities.Lead.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads'] }),
   });
 

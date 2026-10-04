@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { applyBrandColor } from '@/lib/brand';
 
 /**
@@ -12,7 +12,7 @@ export function useBrandColor(enabled = true) {
   const { data } = useQuery({
     queryKey: ['white-label-settings'],
     queryFn: async () => {
-      const rows = await base44.entities.WhiteLabelSettings.list();
+      const rows = await db.entities.WhiteLabelSettings.list();
       return rows?.[0] || null;
     },
     enabled,

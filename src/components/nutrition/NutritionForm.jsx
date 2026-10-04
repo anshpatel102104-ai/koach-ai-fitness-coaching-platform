@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Plus, ChevronUp, ChevronDown, Loader2, Users, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -87,7 +87,7 @@ function ClientPicker({ selected, onChange }) {
   const [search, setSearch] = useState('');
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-picker'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
   });
 
   const filtered = clients.filter(c => c.name?.toLowerCase().includes(search.toLowerCase()));
@@ -370,7 +370,7 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
       if (cleanClientIds.length > 0 && savedPlan?.id) {
         await Promise.all(
           cleanClientIds.map(clientId =>
-            base44.entities.Client.update(clientId, { assigned_nutrition_id: savedPlan.id })
+            db.entities.Client.update(clientId, { assigned_nutrition_id: savedPlan.id })
           )
         );
       }

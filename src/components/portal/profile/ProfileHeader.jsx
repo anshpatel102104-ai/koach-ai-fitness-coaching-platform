@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { SignedImg } from '@/components/shared/SignedImage';
 
@@ -50,9 +50,9 @@ export default function ProfileHeader({ user, client, program, checkIns }) {
   const handlePhotoChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.uploadFile({ file });
+    const { file_url } = await portalDb.uploadFile({ file });
     if (client?.id) {
-      await base44.entities.Client.update(client.id, { avatar_url: file_url });
+      await portalDb.entities.Client.update(client.id, { avatar_url: file_url });
     }
   };
 

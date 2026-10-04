@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { BarChart2, TrendingUp, Users, DollarSign, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { parseISO, startOfMonth } from 'date-fns';
@@ -8,7 +8,7 @@ import { parseISO, startOfMonth } from 'date-fns';
 export default function BIDashboardCard() {
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-bi-dash'],
-    queryFn: () => base44.entities.Client.list('-created_date', 100),
+    queryFn: () => db.entities.Client.list('-created_date', 100),
   });
 
   const activeClients = useMemo(() => clients.filter(c => c.lifecycle_status === 'active' || c.status === 'active'), [clients]);

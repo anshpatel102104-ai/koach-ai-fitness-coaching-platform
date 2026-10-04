@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,7 @@ export default function GoogleCalendarSettings({ open, onClose }) {
 
   const { data: settings = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
     enabled: open,
   });
 
@@ -46,8 +46,8 @@ export default function GoogleCalendarSettings({ open, onClose }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       current?.id
-        ? base44.entities.CoachSettings.update(current.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(current.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Calendar settings saved!');

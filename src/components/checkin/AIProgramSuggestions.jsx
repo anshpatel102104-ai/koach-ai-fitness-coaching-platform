@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Check, ChevronDown, ChevronUp, Flame, Footprints, Dumbbell, Utensils, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
 const CATEGORY_META = {
@@ -56,7 +56,7 @@ export default function AIProgramSuggestions({ checkIn, client, allClientCIs = [
     setLoading(true);
     setError(null);
     setSuggestions([]);
-    const res = await base44.functions.invoke('aiCheckInInsights', {
+    const res = await db.functions.invoke('aiCheckInInsights', {
       action: 'programSuggestions', client, checkIn, recentCheckIns: allClientCIs, nutritionPlan,
     });
     setSuggestions(res.data?.suggestions || []);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function MarketingAnalytics({ coachId }) {
@@ -8,13 +8,13 @@ export default function MarketingAnalytics({ coachId }) {
 
   const { data: links = [] } = useQuery({
     queryKey: ['marketing-links', coachId],
-    queryFn: () => base44.entities.MarketingLink.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.MarketingLink.filter({ coach_id: coachId }),
     enabled: !!coachId,
   });
 
   const { data: campaigns = [] } = useQuery({
     queryKey: ['marketing-campaigns', coachId],
-    queryFn: () => base44.entities.MarketingCampaign.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.MarketingCampaign.filter({ coach_id: coachId }),
     enabled: !!coachId,
   });
 

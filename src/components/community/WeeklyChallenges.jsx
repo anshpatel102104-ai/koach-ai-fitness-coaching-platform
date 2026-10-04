@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Target, Calendar, Users, Dumbbell, Footprints, Flame, TrendingDown, Trophy } from 'lucide-react';
 import { format, differenceInDays, isAfter, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -109,22 +109,22 @@ export default function WeeklyChallenges({ isCoach, compact, groupId }) {
   const { data: challenges = [] } = useQuery({
     queryKey: ['challenges', groupId],
     queryFn: () => groupId
-      ? base44.entities.Challenge.filter({ group_id: groupId }, '-created_date')
-      : base44.entities.Challenge.list('-created_date'),
+      ? db.entities.Challenge.filter({ group_id: groupId }, '-created_date')
+      : db.entities.Challenge.list('-created_date'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (d) => base44.entities.Challenge.create(d),
+    mutationFn: (d) => db.entities.Challenge.create(d),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['challenges', groupId] }); setShowForm(false); setForm(BLANK_FORM); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Challenge.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Challenge.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['challenges', groupId] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Challenge.delete(id),
+    mutationFn: (id) => db.entities.Challenge.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['challenges', groupId] }),
   });
 

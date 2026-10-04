@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Trash2, Edit2, ChevronDown, ChevronUp, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,19 +165,19 @@ export default function MealTemplatesSection() {
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['meal-templates'],
-    queryFn: () => base44.entities.MealTemplate.list('-created_date', 100),
+    queryFn: () => db.entities.MealTemplate.list('-created_date', 100),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.MealTemplate.create(data),
+    mutationFn: (data) => db.entities.MealTemplate.create(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['meal-templates'] }); toast.success('Template saved!'); },
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MealTemplate.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.MealTemplate.update(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['meal-templates'] }); toast.success('Template updated!'); },
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.MealTemplate.delete(id),
+    mutationFn: (id) => db.entities.MealTemplate.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['meal-templates'] }); toast.success('Template deleted'); },
   });
 

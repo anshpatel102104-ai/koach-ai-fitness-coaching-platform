@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   Zap, Plus, Check, Pencil, Trash2, ToggleLeft, ToggleRight, Play, Clock, History, LayoutTemplate, List,
   Bell, MessageSquare, Trophy, Flag, TrendingDown, Scale,
@@ -71,30 +71,30 @@ function useAutomationEngine(rules, clients, checkIns, plans, badges, queryClien
 
     switch (action.type) {
       case 'send_message':
-        if (msg) await base44.entities.Message.create({ client_id: client.id, content: msg, sender: 'coach' });
+        if (msg) await db.entities.Message.create({ client_id: client.id, content: msg, sender: 'coach' });
         break;
       case 'notify_coach':
-        await base44.entities.Notification.create({ recipient_id: 'coach', title: `Automation: ${client.name}`, body: msg || `Rule triggered for ${client.name}`, type: 'general', related_client_id: client.id });
+        await db.entities.Notification.create({ recipient_id: 'coach', title: `Automation: ${client.name}`, body: msg || `Rule triggered for ${client.name}`, type: 'general', related_client_id: client.id });
         break;
       case 'award_badge': {
         if (!action.value) break;
         const alreadyHas = badges.some(b => b.client_id === client.id && b.badge_key === action.value);
-        if (!alreadyHas) await base44.entities.ClientBadge.create({ client_id: client.id, client_name: client.name, badge_key: action.value, earned_date: new Date().toISOString().split('T')[0], notes: 'Auto-awarded by automation' });
+        if (!alreadyHas) await db.entities.ClientBadge.create({ client_id: client.id, client_name: client.name, badge_key: action.value, earned_date: new Date().toISOString().split('T')[0], notes: 'Auto-awarded by automation' });
         break;
       }
       case 'update_status':
-        if (action.value) await base44.entities.Client.update(client.id, { lifecycle_status: action.value });
+        if (action.value) await db.entities.Client.update(client.id, { lifecycle_status: action.value });
         break;
       case 'adjust_calories': {
         const plan = plans.find(p => p.id === client.assigned_nutrition_id);
         if (plan) {
           const delta = Number(action.value) || 0;
-          await base44.entities.NutritionPlan.update(plan.id, { calories: (plan.calories || 2000) + delta });
+          await db.entities.NutritionPlan.update(plan.id, { calories: (plan.calories || 2000) + delta });
         }
         break;
       }
       case 'flag_at_risk':
-        await base44.entities.Client.update(client.id, { lifecycle_status: 'at_risk' });
+        await db.entities.Client.update(client.id, { lifecycle_status: 'at_risk' });
         break;
     }
   }, [badges, plans]);
@@ -158,8 +158,8 @@ function useAutomationEngine(rules, clients, checkIns, plans, badges, queryClien
           for (const action of actions) {
             await executeAction(action, client, lastCI, cis);
           }
-          await base44.entities.AutomationRule.update(rule.id, { last_triggered: new Date().toISOString(), trigger_count: (rule.trigger_count || 0) + 1 });
-          await base44.entities.AutomationLog.create({ rule_id: rule.id, rule_name: rule.name, client_id: client.id, client_name: client.name, triggered_at: new Date().toISOString(), actions_taken: actions.map(a => a.type).join(', ') });
+          await db.entities.AutomationRule.update(rule.id, { last_triggered: new Date().toISOString(), trigger_count: (rule.trigger_count || 0) + 1 });
+          await db.entities.AutomationLog.create({ rule_id: rule.id, rule_name: rule.name, client_id: client.id, client_name: client.name, triggered_at: new Date().toISOString(), actions_taken: actions.map(a => a.type).join(', ') });
           totalFired++;
           toast.success(`⚡ ${rule.name} triggered for ${client.name}`);
         }
@@ -267,12 +267,12 @@ export default function Automations() {
   const [running, setRunning] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: rules = [] } = useQuery({ queryKey: ['automation-rules'], queryFn: () => base44.entities.AutomationRule.list('-created_date') });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => base44.entities.Client.list() });
-  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins'], queryFn: () => base44.entities.CheckIn.list('-date', 300) });
-  const { data: plans = [] } = useQuery({ queryKey: ['nutrition-plans'], queryFn: () => base44.entities.NutritionPlan.list() });
-  const { data: badges = [] } = useQuery({ queryKey: ['badges'], queryFn: () => base44.entities.ClientBadge.list('-earned_date', 300) });
-  const { data: logs = [] } = useQuery({ queryKey: ['automation-logs'], queryFn: () => base44.entities.AutomationLog.list('-triggered_at', 50) });
+  const { data: rules = [] } = useQuery({ queryKey: ['automation-rules'], queryFn: () => db.entities.AutomationRule.list('-created_date') });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => db.entities.Client.list() });
+  const { data: checkIns = [] } = useQuery({ queryKey: ['checkins'], queryFn: () => db.entities.CheckIn.list('-date', 300) });
+  const { data: plans = [] } = useQuery({ queryKey: ['nutrition-plans'], queryFn: () => db.entities.NutritionPlan.list() });
+  const { data: badges = [] } = useQuery({ queryKey: ['badges'], queryFn: () => db.entities.ClientBadge.list('-earned_date', 300) });
+  const { data: logs = [] } = useQuery({ queryKey: ['automation-logs'], queryFn: () => db.entities.AutomationLog.list('-triggered_at', 50) });
 
   const { runAutomations } = useAutomationEngine(rules, clients, checkIns, plans, badges, queryClient);
 
@@ -286,9 +286,9 @@ export default function Automations() {
   // tenant-scoped. The manual "Run Now" button remains for explicit coach use;
   // migrate it to invoke the server function as a follow-up.
 
-  const createMutation = useMutation({ mutationFn: d => base44.entities.AutomationRule.create(d), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.AutomationRule.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
-  const deleteMutation = useMutation({ mutationFn: id => base44.entities.AutomationRule.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
+  const createMutation = useMutation({ mutationFn: d => db.entities.AutomationRule.create(d), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => db.entities.AutomationRule.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
+  const deleteMutation = useMutation({ mutationFn: id => db.entities.AutomationRule.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['automation-rules'] }) });
 
   const handleSave = async (form) => {
     if (editingRule?.id && !editingRule._isTemplate) {

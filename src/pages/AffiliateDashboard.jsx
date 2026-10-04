@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { TrendingUp, Users, Clock, Zap, Target } from 'lucide-react';
 import AffiliateEarningsOverview from '@/components/affiliate/AffiliateEarningsOverview';
@@ -29,7 +29,7 @@ export default function AffiliateDashboard() {
 
   const { data: affiliateProfile } = useQuery({
     queryKey: ['affiliate-profile', user?.email],
-    queryFn: () => base44.entities.AffiliateProfile.filter({ coach_email: user?.email }, '-created_date', 1),
+    queryFn: () => db.entities.AffiliateProfile.filter({ coach_email: user?.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
 

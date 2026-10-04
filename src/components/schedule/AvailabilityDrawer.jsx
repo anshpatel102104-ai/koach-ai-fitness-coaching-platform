@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -35,17 +35,17 @@ export default function AvailabilityDrawer({ onClose, coachId }) {
   // Fetch current availability
   const { data: availData = [] } = useQuery({
     queryKey: ['coachAvailability', coachId],
-    queryFn: () => base44.entities.CoachAvailability.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.CoachAvailability.filter({ coach_id: coachId }),
   });
 
   const { data: bufferData } = useQuery({
     queryKey: ['bufferTime', coachId],
-    queryFn: () => base44.entities.BufferTime.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.BufferTime.filter({ coach_id: coachId }),
   });
 
   const { data: reminderData } = useQuery({
     queryKey: ['reminders', coachId],
-    queryFn: () => base44.entities.ReminderSettings.filter({ coach_id: coachId }),
+    queryFn: () => db.entities.ReminderSettings.filter({ coach_id: coachId }),
   });
 
   useEffect(() => {
@@ -68,9 +68,9 @@ export default function AvailabilityDrawer({ onClose, coachId }) {
       const existing = availData.find(a => a.day_of_week === day);
       const data = { coach_id: coachId, day_of_week: day, time_blocks: availability[day] || [], timezone };
       if (existing) {
-        await base44.entities.CoachAvailability.update(existing.id, data);
+        await db.entities.CoachAvailability.update(existing.id, data);
       } else {
-        await base44.entities.CoachAvailability.create(data);
+        await db.entities.CoachAvailability.create(data);
       }
     }
     queryClient.invalidateQueries({ queryKey: ['coachAvailability'] });
@@ -80,9 +80,9 @@ export default function AvailabilityDrawer({ onClose, coachId }) {
     const existing = bufferData?.[0];
     const data = { coach_id: coachId, minutes: bufferMinutes };
     if (existing) {
-      await base44.entities.BufferTime.update(existing.id, data);
+      await db.entities.BufferTime.update(existing.id, data);
     } else {
-      await base44.entities.BufferTime.create(data);
+      await db.entities.BufferTime.create(data);
     }
     queryClient.invalidateQueries({ queryKey: ['bufferTime'] });
   };
@@ -91,9 +91,9 @@ export default function AvailabilityDrawer({ onClose, coachId }) {
     const existing = reminderData?.[0];
     const data = { coach_id: coachId, ...reminders };
     if (existing) {
-      await base44.entities.ReminderSettings.update(existing.id, data);
+      await db.entities.ReminderSettings.update(existing.id, data);
     } else {
-      await base44.entities.ReminderSettings.create(data);
+      await db.entities.ReminderSettings.create(data);
     }
     queryClient.invalidateQueries({ queryKey: ['reminders'] });
   };

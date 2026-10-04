@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, Check } from 'lucide-react';
 import { TIERS, TIER_ORDER } from '@/lib/subscription';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 
@@ -47,7 +47,7 @@ export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0
 
   const handleDowngrade = async () => {
     setLoading(true);
-    const res = await base44.functions.invoke('stripeCheckout', {
+    const res = await db.functions.invoke('stripeCheckout', {
       action: 'checkout',
       tier: toTierKey,
       success_url: `${window.location.origin}/subscription?success=1`,
@@ -68,7 +68,7 @@ export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0
 
   const handleUndo = async () => {
     setLoading(true);
-    await base44.functions.invoke('stripeCheckout', { action: 'reactivate' });
+    await db.functions.invoke('stripeCheckout', { action: 'reactivate' });
     setLoading(false);
     const updated = await me();
     if (onUserUpdate) onUserUpdate(updated);

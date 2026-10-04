@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Sparkles, X, Check, Edit3, RotateCw, ChevronDown, Zap } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
 const TONES = [
@@ -40,7 +40,7 @@ export default function AIReplyAssistant({
     setVisible(true);
     setSuggestion(null);
     try {
-      const res = await base44.functions.invoke('aiMessageAssistant', {
+      const res = await db.functions.invoke('aiMessageAssistant', {
         action: 'generateReply',
         clientId: client?.id,
         client,

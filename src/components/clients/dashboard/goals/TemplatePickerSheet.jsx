@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, Search, LayoutTemplate, Sparkles } from 'lucide-react';
 
 const TYPE_META = {
@@ -149,7 +149,7 @@ export default function TemplatePickerSheet({ onSelect, onClose }) {
 
   const { data: savedTemplates = [], isLoading } = useQuery({
     queryKey: ['goal-templates'],
-    queryFn: () => base44.entities.GoalTemplate.list(),
+    queryFn: () => db.entities.GoalTemplate.list(),
   });
 
   const q = search.toLowerCase();

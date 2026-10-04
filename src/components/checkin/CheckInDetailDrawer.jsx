@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Moon, Zap, Heart, Smile, Dumbbell, Salad, Scale, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ export default function CheckInDetailDrawer({ checkIn, client, allCheckIns, curr
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkIn.id, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
       toast.success('Check-in updated');

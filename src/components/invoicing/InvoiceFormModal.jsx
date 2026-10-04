@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { X } from 'lucide-react';
@@ -21,7 +21,7 @@ export default function InvoiceFormModal({ invoice, onClose, onSave, existingInv
   const isEdit = !!invoice?.id;
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-invoice'],
-    queryFn: () => base44.entities.Client.list('-created_date', 200),
+    queryFn: () => db.entities.Client.list('-created_date', 200),
   });
 
   const [form, setForm] = useState({

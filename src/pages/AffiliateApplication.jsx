@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock, XCircle } from 'lucide-react';
@@ -51,12 +51,12 @@ export default function AffiliateApplication() {
 
   const { data: existingApp } = useQuery({
     queryKey: ['affiliate-app', user?.email],
-    queryFn: () => base44.entities.AffiliateApplication.filter({ coach_email: user?.email }, '-created_date', 1),
+    queryFn: () => db.entities.AffiliateApplication.filter({ coach_email: user?.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
 
   const appMutation = useMutation({
-    mutationFn: (data) => base44.entities.AffiliateApplication.create({
+    mutationFn: (data) => db.entities.AffiliateApplication.create({
       ...data,
       coach_id: user.id,
       coach_email: user.email,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Input } from '@/components/ui/input';
 import { Search, Plus, Play, Dumbbell, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ export default function BuilderExercisePicker({ onAdd }) {
 
   const { data: exercises = [] } = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => base44.entities.ExerciseLibrary.list('-created_date', 200),
+    queryFn: () => db.entities.ExerciseLibrary.list('-created_date', 200),
   });
 
   const filtered = exercises.filter(ex => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { CheckCircle2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import FoodSearchResults from './FoodSearchResults';
@@ -25,7 +25,7 @@ export default function FoodPickerModal({ open, onOpenChange, onSelect }) {
 
   const { data: savedFoods = [] } = useQuery({
     queryKey: ['food-items'],
-    queryFn: () => base44.entities.FoodItem.list('-created_date', 200),
+    queryFn: () => db.entities.FoodItem.list('-created_date', 200),
     enabled: open,
   });
 

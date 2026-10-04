@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -35,7 +35,7 @@ export default function CustomFoodForm({ onAdd, onSave, onCancel }) {
     setSaving(true);
     const food = toFood();
     try {
-      await base44.entities.FoodItem.create({ ...food, serving_size: food.serving_size, source: 'custom' });
+      await db.entities.FoodItem.create({ ...food, serving_size: food.serving_size, source: 'custom' });
       toast.success(`"${food.name}" saved to My Foods`);
       if (onSave) onSave(food);
     } catch {

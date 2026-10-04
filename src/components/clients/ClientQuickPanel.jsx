@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-// Step 2 cutover: Clients/CRM surface runs on Supabase via the base44-shaped
-// facade — call sites unchanged. Other pages remain on base44Client for now.
-import { supabase as base44 } from '@/api/supabaseClient';
+// Step 2 cutover: Clients/CRM surface runs on Supabase via the entity-shaped
+// facade — call sites unchanged.
+import { db } from '@/api/supabaseClient';
 import {
   X, Edit, ExternalLink, Dumbbell, Salad, ClipboardCheck, MessageSquare,
   Phone, Target, Calendar, TrendingUp, Users, Plus, Send, CheckCircle2,
@@ -86,28 +86,28 @@ export default function ClientQuickPanel({ client, checkIns = [], onClose, onEdi
 
   const { data: program } = useQuery({
     queryKey: ['program', client?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: client.assigned_program_id }),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: client.assigned_program_id }),
     enabled: !!client?.assigned_program_id,
     select: d => d[0],
   });
 
   const { data: nutritionPlan } = useQuery({
     queryKey: ['nutrition-plan', client?.assigned_nutrition_id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }),
+    queryFn: () => db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }),
     enabled: !!client?.assigned_nutrition_id,
     select: d => d[0],
   });
 
   const { data: messages = [], refetch: refetchMessages } = useQuery({
     queryKey: ['messages-panel', client?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Message.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => new Date(a.created_date) - new Date(b.created_date)),
   });
 
   const { data: sessions = [] } = useQuery({
     queryKey: ['sessions-panel', client?.id],
-    queryFn: () => base44.entities.Session.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Session.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => d.filter(s => s.status === 'scheduled').sort((a, b) => new Date(a.date) - new Date(b.date)),
   });
@@ -121,7 +121,7 @@ export default function ClientQuickPanel({ client, checkIns = [], onClose, onEdi
   const sendMessage = async () => {
     if (!msgText.trim()) return;
     setSendingMsg(true);
-    await base44.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content: msgText.trim() });
+    await db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content: msgText.trim() });
     setMsgText('');
     await refetchMessages();
     setSendingMsg(false);

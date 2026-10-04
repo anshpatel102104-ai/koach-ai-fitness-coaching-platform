@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CheckCircle2, Info, Clock } from 'lucide-react';
@@ -215,11 +215,11 @@ export default function CoachIntegrations() {
 
   const { data: coachSettings = [] } = useQuery({
     queryKey: ['coach-settings'],
-    queryFn: () => base44.entities.CoachSettings.list(),
+    queryFn: () => db.entities.CoachSettings.list(),
   });
   const { data: zapierLogs = [] } = useQuery({
     queryKey: ['zapier-logs'],
-    queryFn: () => base44.entities.ZapierLog.list('-sent_at', 10),
+    queryFn: () => db.entities.ZapierLog.list('-sent_at', 10),
   });
 
   const zapierSettings = coachSettings[0];

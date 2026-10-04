@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Flame, Plus, Loader2, CheckCircle2 } from 'lucide-react';
@@ -109,20 +109,20 @@ export default function ClientFoodLogWidget({ client, nutritionPlanId }) {
 
   const { data: nutritionPlan } = useQuery({
     queryKey: ['nutrition-plan', nutritionPlanId],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: nutritionPlanId }).then(r => r[0]),
+    queryFn: () => db.entities.NutritionPlan.filter({ id: nutritionPlanId }).then(r => r[0]),
     enabled: !!nutritionPlanId,
   });
 
   const { data: allLogs = [], isLoading: logsLoading } = useQuery({
     queryKey: ['food-logs-widget', client?.id, TODAY],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: client.id, logged_date: TODAY }),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: client.id, logged_date: TODAY }),
     enabled: !!client?.id,
   });
 
   // Streak: count consecutive days with at least one log entry
   const { data: recentLogs = [] } = useQuery({
     queryKey: ['food-logs-streak', client?.id],
-    queryFn: () => base44.entities.FoodLog.filter({ client_id: client.id }, '-logged_date', 100),
+    queryFn: () => db.entities.FoodLog.filter({ client_id: client.id }, '-logged_date', 100),
     enabled: !!client?.id,
   });
 
@@ -144,7 +144,7 @@ export default function ClientFoodLogWidget({ client, nutritionPlanId }) {
   }, [recentLogs]);
 
   const addLogMutation = useMutation({
-    mutationFn: (entry) => base44.entities.FoodLog.create(entry),
+    mutationFn: (entry) => db.entities.FoodLog.create(entry),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['food-logs-widget', client?.id, TODAY] });
       queryClient.invalidateQueries({ queryKey: ['food-logs-streak', client?.id] });

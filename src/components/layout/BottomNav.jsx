@@ -6,12 +6,12 @@ import {
 import { cn } from '@/lib/utils';
 import MoreSheet from './MoreSheet';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 function useUnreadMessages() {
   const { data: messages = [] } = useQuery({
     queryKey: ['messages'],
-    queryFn: () => base44.entities.Message.list('-created_date', 200),
+    queryFn: () => db.entities.Message.list('-created_date', 200),
     staleTime: 30000,
   });
   return messages.filter(m => m.sender === 'client' && !m.is_read).length;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Users } from 'lucide-react';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -14,7 +14,7 @@ export default function ReferralLanding() {
   const { data: referral } = useQuery({
     queryKey: ['referral-info', refCode],
     queryFn: async () => {
-      const refs = await base44.entities.ClientReferral.filter({ referral_code: refCode }, '-date_referred', 1);
+      const refs = await db.entities.ClientReferral.filter({ referral_code: refCode }, '-date_referred', 1);
       return refs[0];
     },
     enabled: !!refCode,
@@ -23,7 +23,7 @@ export default function ReferralLanding() {
   // Get referrer client
   const { data: referrerClient } = useQuery({
     queryKey: ['referrer-client', referral?.referrer_client_id],
-    queryFn: () => base44.entities.Client.get(referral?.referrer_client_id),
+    queryFn: () => db.entities.Client.get(referral?.referrer_client_id),
     enabled: !!referral?.referrer_client_id,
   });
 
@@ -31,7 +31,7 @@ export default function ReferralLanding() {
   const { data: coach } = useQuery({
     queryKey: ['coach-profile', referral?.coach_id],
     queryFn: async () => {
-      const profiles = await base44.entities.CoachProfile.filter({ coach_id: referral?.coach_id }, '-created_date', 1);
+      const profiles = await db.entities.CoachProfile.filter({ coach_id: referral?.coach_id }, '-created_date', 1);
       return profiles[0];
     },
     enabled: !!referral?.coach_id,
@@ -41,7 +41,7 @@ export default function ReferralLanding() {
   const { data: config } = useQuery({
     queryKey: ['referral-config-landing', referral?.coach_id],
     queryFn: async () => {
-      const configs = await base44.entities.ReferralConfiguration.filter({ coach_id: referral?.coach_id }, '-created_date', 1);
+      const configs = await db.entities.ReferralConfiguration.filter({ coach_id: referral?.coach_id }, '-created_date', 1);
       return configs[0];
     },
     enabled: !!referral?.coach_id,
@@ -51,7 +51,7 @@ export default function ReferralLanding() {
   const { data: packages = [] } = useQuery({
     queryKey: ['packages-landing', referral?.coach_id],
     queryFn: async () => {
-      return base44.entities.CoachingPackage.filter({ visibility: 'public' }, '-created_date', 5);
+      return db.entities.CoachingPackage.filter({ visibility: 'public' }, '-created_date', 5);
     },
     enabled: !!referral?.coach_id,
   });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, Edit, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LifecycleBadge from '../LifecycleBadge';
@@ -137,41 +137,41 @@ export default function ClientDashboardModal({ client, checkIns = [], onClose, o
   useEffect(() => { setLocalClient(client); }, [client?.id]);
 
   const handleClientUpdated = async () => {
-    const fresh = await base44.entities.Client.filter({ id: client.id });
+    const fresh = await db.entities.Client.filter({ id: client.id });
     if (fresh?.[0]) setLocalClient(fresh[0]);
     queryClient.invalidateQueries({ queryKey: ['clients'] });
   };
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages-modal', localClient?.id],
-    queryFn: () => base44.entities.Message.filter({ client_id: localClient.id }),
+    queryFn: () => db.entities.Message.filter({ client_id: localClient.id }),
     enabled: !!localClient?.id,
     select: d => [...d].sort((a, b) => new Date(b.created_date) - new Date(a.created_date)),
   });
 
   const { data: program } = useQuery({
     queryKey: ['program-modal', localClient?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: localClient.assigned_program_id }),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: localClient.assigned_program_id }),
     enabled: !!localClient?.assigned_program_id,
     select: d => d[0],
   });
 
   const { data: nutritionPlan } = useQuery({
     queryKey: ['nutrition-modal', localClient?.assigned_nutrition_id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: localClient.assigned_nutrition_id }),
+    queryFn: () => db.entities.NutritionPlan.filter({ id: localClient.assigned_nutrition_id }),
     enabled: !!localClient?.assigned_nutrition_id,
     select: d => d[0],
   });
 
   const { data: workoutSessions = [] } = useQuery({
     queryKey: ['workout-sessions-modal', localClient?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: localClient.id }),
+    queryFn: () => db.entities.WorkoutSession.filter({ client_id: localClient.id }),
     enabled: !!localClient?.id,
   });
 
   const { data: earnedBadges = [] } = useQuery({
     queryKey: ['badges-modal', localClient?.id],
-    queryFn: () => base44.entities.ClientBadge.filter({ client_id: localClient.id }),
+    queryFn: () => db.entities.ClientBadge.filter({ client_id: localClient.id }),
     enabled: !!localClient?.id,
     select: d => [...d].sort((a, b) => new Date(b.earned_date) - new Date(a.earned_date)),
   });

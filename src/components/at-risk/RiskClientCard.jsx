@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import {
@@ -54,12 +54,12 @@ export default function RiskClientCard({ entry, lastMessages, selected, onToggle
   const recommendedAction = RECOMMENDED_ACTIONS[topFlag?.key] || '💬 Check in with client';
 
   const messageMutation = useMutation({
-    mutationFn: (content) => base44.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
+    mutationFn: (content) => db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages'] }); toast.success('Message sent!'); },
   });
 
   const updateClientMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.update(client.id, data),
+    mutationFn: (data) => db.entities.Client.update(client.id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); },
   });
 
@@ -67,7 +67,7 @@ export default function RiskClientCard({ entry, lastMessages, selected, onToggle
     setLoadingAI(true);
     try {
       const factStr = flags.map(f => f.label + (f.detail ? ': ' + f.detail : '')).join('; ');
-      const res = await base44.functions.invoke('aiBusinessInsights', {
+      const res = await db.functions.invoke('aiBusinessInsights', {
         action: 'interventionPlan',
         clientName: client.name,
         riskFactors: factStr,

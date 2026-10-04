@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { X, Plus, Upload, Loader2 } from 'lucide-react';
 import ProductImageUpload from './ProductImageUpload';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const TYPE_CATEGORY_MAP = {
@@ -110,7 +110,7 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
     const file = e.target.files[0];
     if (!file) return;
     setFileUploading(true);
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     set('download_file_url', file_url);
     setFileUploading(false);
   };
@@ -136,10 +136,10 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
         const created = await onCreate(data);
         // Attempt to create Stripe product in background
         if (data.price > 0) {
-          base44.functions.invoke('storeCreateProduct', { listing: { ...data, id: created?.id } })
+          db.functions.invoke('storeCreateProduct', { listing: { ...data, id: created?.id } })
             .then(res => {
               if (res?.data?.stripe_price_id && created?.id) {
-                base44.entities.PlanListing.update(created.id, {
+                db.entities.PlanListing.update(created.id, {
                   stripe_product_id: res.data.stripe_product_id,
                   stripe_price_id: res.data.stripe_price_id,
                 });

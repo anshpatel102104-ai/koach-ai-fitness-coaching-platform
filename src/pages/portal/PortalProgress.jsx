@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO, differenceInWeeks } from 'date-fns';
 import { Scale, Plus, X
@@ -204,7 +204,7 @@ function LogModal({ client, onClose, onSaved }) {
     const payload = { client_id: client.id, client_name: client.name, date: format(new Date(), 'yyyy-MM-dd'), review_status: 'pending' };
     if (weight) payload.weight = Number(weight);
     if (Object.keys(measurements).length) payload.measurements = measurements;
-    await base44.entities.CheckIn.create(payload);
+    await portalDb.entities.CheckIn.create(payload);
     queryClient.invalidateQueries({ queryKey: ['portal-checkins-prog'] });
     onSaved();
   };
@@ -269,26 +269,26 @@ export default function PortalProgress({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-prog', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['portal-checkins-prog', myClient?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
+    queryFn: () => portalDb.entities.CheckIn.filter({ client_id: myClient.id }, '-date', 100),
     enabled: !!myClient?.id,
   });
 
   const { data: sessions = [] } = useQuery({
     queryKey: ['portal-sessions-prog', myClient?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 200),
+    queryFn: () => portalDb.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 200),
     enabled: !!myClient?.id,
   });
 
   const { data: programs = [] } = useQuery({
     queryKey: ['portal-program-prog', myClient?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
+    queryFn: () => portalDb.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_program_id,
   });
   const myProgram = programs[0];

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import { ImagePlus, ArrowLeftRight, X, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CheckIn.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.CheckIn.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['checkins'] }); toast.success('Photo added!'); setShowUpload(false); },
   });
 
@@ -41,7 +41,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.uploadFile({ file, scope: client?.id ? { clientId: client.id } : undefined });
+      const { file_url } = await db.uploadFile({ file, scope: client?.id ? { clientId: client.id } : undefined });
       // Add to most recent check-in or create new
       const sorted = [...checkIns].sort((a, b) => new Date(b.date) - new Date(a.date));
       const recent = sorted[0];
@@ -49,7 +49,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
         const existing = recent.photo_urls || [];
         await updateMutation.mutateAsync({ id: recent.id, data: { photo_urls: [...existing, file_url] } });
       } else {
-        await base44.entities.CheckIn.create({ client_id: client.id, client_name: client.name, date: format(new Date(), 'yyyy-MM-dd'), photo_urls: [file_url] });
+        await db.entities.CheckIn.create({ client_id: client.id, client_name: client.name, date: format(new Date(), 'yyyy-MM-dd'), photo_urls: [file_url] });
         queryClient.invalidateQueries({ queryKey: ['checkins'] });
         toast.success('Photo added!');
         setShowUpload(false);

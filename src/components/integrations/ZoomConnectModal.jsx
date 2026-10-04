@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCircle2, ExternalLink, Video, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export default function ZoomConnectModal({ open, onClose, settings }) {
   const queryClient = useQueryClient();
@@ -22,8 +22,8 @@ export default function ZoomConnectModal({ open, onClose, settings }) {
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
-        ? base44.entities.CoachSettings.update(settings.id, data)
-        : base44.entities.CoachSettings.create(data),
+        ? db.entities.CoachSettings.update(settings.id, data)
+        : db.entities.CoachSettings.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       toast.success('Zoom settings saved!');

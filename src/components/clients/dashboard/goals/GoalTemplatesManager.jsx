@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, Pencil, Trash2, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,9 +57,9 @@ function TemplateEditForm({ template, onSaved, onCancel }) {
       payload.fat_target      = form.fat_target      !== '' ? Number(form.fat_target)      : null;
     }
     if (template?.id) {
-      await base44.entities.GoalTemplate.update(template.id, payload);
+      await db.entities.GoalTemplate.update(template.id, payload);
     } else {
-      await base44.entities.GoalTemplate.create({ ...payload, coach_id: 'me' });
+      await db.entities.GoalTemplate.create({ ...payload, coach_id: 'me' });
     }
     toast.success(template?.id ? 'Template updated' : 'Template created');
     setSaving(false);
@@ -112,14 +112,14 @@ export default function GoalTemplatesManager({ onClose }) {
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ['goal-templates'],
-    queryFn: () => base44.entities.GoalTemplate.list('-created_date'),
+    queryFn: () => db.entities.GoalTemplate.list('-created_date'),
   });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['goal-templates'] });
 
   const handleDelete = async (t) => {
     if (!confirm(`Delete template "${t.name}"?`)) return;
-    await base44.entities.GoalTemplate.delete(t.id);
+    await db.entities.GoalTemplate.delete(t.id);
     toast.success('Template deleted');
     refresh();
   };

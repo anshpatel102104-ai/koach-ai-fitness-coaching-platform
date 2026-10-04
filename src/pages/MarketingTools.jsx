@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Link as LinkIcon, Mail, MessageSquare, TrendingUp, Zap } from 'lucide-react';
 import MarketingLinksSection from '@/components/marketing/MarketingLinksSection';
@@ -22,9 +22,9 @@ export default function MarketingTools() {
   const { data: marketingStats } = useQuery({
     queryKey: ['marketing-stats', user?.id],
     queryFn: async () => {
-      const links = await base44.entities.MarketingLink.filter({ coach_id: user.id });
-      const testimonials = await base44.entities.Testimonial.filter({ coach_id: user.id });
-      const campaigns = await base44.entities.MarketingCampaign.filter({ coach_id: user.id });
+      const links = await db.entities.MarketingLink.filter({ coach_id: user.id });
+      const testimonials = await db.entities.Testimonial.filter({ coach_id: user.id });
+      const campaigns = await db.entities.MarketingCampaign.filter({ coach_id: user.id });
       
       const monthStart = new Date();
       monthStart.setDate(1);

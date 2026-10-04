@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ export default function CreateSubscriptionDialog({ open, onOpenChange, clients, 
     }
 
     setLoading(true);
-    const res = await base44.functions.invoke('stripeCreateSubscription', {
+    const res = await db.functions.invoke('stripeCreateSubscription', {
       client_id: form.client_id,
       price_amount: Number(form.amount),
       interval: form.interval,

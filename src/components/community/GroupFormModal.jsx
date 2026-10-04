@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,13 +37,13 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => isEdit
-      ? base44.entities.CommunityGroup.update(group.id, data)
-      : base44.entities.CommunityGroup.create(data),
+      ? db.entities.CommunityGroup.update(group.id, data)
+      : db.entities.CommunityGroup.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-groups'] });
       onOpenChange(false);
@@ -63,7 +63,7 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, scope: 'shared' });
+    const { file_url } = await db.uploadFile({ file, scope: 'shared' });
     setCoverUrl(file_url);
     setUploading(false);
   };

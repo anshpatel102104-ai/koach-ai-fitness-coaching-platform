@@ -4,7 +4,7 @@ import {
   Sparkles, Check, Loader2, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 /* ── Tiny inline confirmation pill ── */
@@ -43,13 +43,13 @@ function CaloriesPanel({ checkIn, client, onDone }) {
     onDone(optimisticLabel);
     toast.success(`Calories ${delta > 0 ? 'increased' : 'decreased'} by ${Math.abs(delta)} kcal ✓`);
 
-    const plans = await base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
+    const plans = await db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
     const plan = plans[0];
     if (plan) {
       const newCals = Math.max(1000, (plan.calories || 2000) + delta);
       Promise.all([
-        base44.entities.NutritionPlan.update(plan.id, { calories: newCals }),
-        base44.entities.Message.create({
+        db.entities.NutritionPlan.update(plan.id, { calories: newCals }),
+        db.entities.Message.create({
           client_id: checkIn.client_id,
           client_name: checkIn.client_name,
           sender: 'coach',
@@ -102,10 +102,10 @@ function CardioPanel({ checkIn, client, onDone }) {
 
     const existing = checkIn.coach_notes || '';
     Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, {
+      db.entities.CheckIn.update(checkIn.id, {
         coach_notes: existing ? existing + '\n[Cardio] ' + msg : '[Cardio] ' + msg,
       }),
-      base44.entities.Message.create({
+      db.entities.Message.create({
         client_id: checkIn.client_id,
         client_name: checkIn.client_name,
         sender: 'coach',
@@ -156,7 +156,7 @@ export default function CheckInQuickActions({
   const handleApplyAI = async () => {
     if (aiDone || aiSaving) return;
     setAiSaving(true);
-    const result = (await base44.functions.invoke('aiMessageAssistant', {
+    const result = (await db.functions.invoke('aiMessageAssistant', {
       action: 'generateCheckInResponse', client, checkIn, recentCheckIns: allClientCIs,
     })).data?.message || '';
 
@@ -167,11 +167,11 @@ export default function CheckInQuickActions({
 
     const existing = checkIn.coach_notes ? checkIn.coach_notes + '\n\n' : '';
     Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, {
+      db.entities.CheckIn.update(checkIn.id, {
         coach_notes: existing + result,
         coach_responded: true,
       }),
-      base44.entities.Message.create({
+      db.entities.Message.create({
         client_id: checkIn.client_id,
         client_name: checkIn.client_name,
         sender: 'coach',

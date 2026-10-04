@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { ArrowLeft, CheckCheck, Settings, ChevronRight } from 'lucide-react';
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from 'date-fns';
 
@@ -237,14 +237,14 @@ export default function PortalNotifications({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-notif', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: notifications = [], refetch } = useQuery({
     queryKey: ['portal-notifications', user?.id],
-    queryFn: () => base44.entities.Notification.filter(
+    queryFn: () => portalDb.entities.Notification.filter(
       { recipient_id: user.id, is_dismissed: false },
       '-created_date',
       60
@@ -258,7 +258,7 @@ export default function PortalNotifications({ user }) {
     if (!user?.id || notifications.length === 0) return;
     const unread = notifications.filter(n => !n.is_read);
     if (unread.length === 0) return;
-    Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true }))).then(() => {
+    Promise.all(unread.map(n => portalDb.entities.Notification.update(n.id, { is_read: true }))).then(() => {
       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
     });
   }, [notifications.length, user?.id]);
@@ -266,7 +266,7 @@ export default function PortalNotifications({ user }) {
   // Real-time
   useEffect(() => {
     if (!user?.id) return;
-    const unsub = base44.entities.Notification.subscribe((event) => {
+    const unsub = portalDb.entities.Notification.subscribe((event) => {
       if (event.data?.recipient_id !== user.id) return;
       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
     });
@@ -275,13 +275,13 @@ export default function PortalNotifications({ user }) {
 
   const markAllRead = async () => {
     const unread = notifications.filter(n => !n.is_read);
-    await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { is_read: true })));
+    await Promise.all(unread.map(n => portalDb.entities.Notification.update(n.id, { is_read: true })));
     queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
   };
 
   const handleTap = async (n) => {
     if (!n.is_read) {
-      await base44.entities.Notification.update(n.id, { is_read: true });
+      await portalDb.entities.Notification.update(n.id, { is_read: true });
       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
     }
     setSelected(n);
@@ -369,7 +369,7 @@ export default function PortalNotifications({ user }) {
                   <NotifRow key={n.id} n={n}
                     onTap={handleTap}
                     onDismiss={async (id) => {
-                      await base44.entities.Notification.update(id, { is_dismissed: true });
+                      await portalDb.entities.Notification.update(id, { is_dismissed: true });
                       queryClient.invalidateQueries({ queryKey: ['portal-notifications'] });
                     }}
                   />

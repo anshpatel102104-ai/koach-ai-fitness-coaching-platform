@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Step4Assign from './Step4Assign';
 import MacroSplitControl from './MacroSplitControl';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1068,7 +1068,7 @@ function Step3Generating({ onDone, macroPayload }) {
     // Call the API
     if (!apiCalledRef.current) {
       apiCalledRef.current = true;
-      base44.functions.invoke('generateSmartMeals', macroPayload)
+      db.functions.invoke('generateSmartMeals', macroPayload)
         .then(res => {
           clearInterval(interval);
           const body = res.data;

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Bell, Sparkles, Loader2, X } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 const FOLLOW_UP_THRESHOLD_DAYS = 5;
 
@@ -27,7 +27,7 @@ export default function FollowUpReminders({ clients, allMessages, checkIns, onSe
   const generateFollowUp = async (reminder) => {
     setGenerating(reminder.client.id);
     try {
-      const res = await base44.functions.invoke('aiMessageAssistant', {
+      const res = await db.functions.invoke('aiMessageAssistant', {
         action: 'followUpSuggestions',
         client: reminder.client,
         checkIn: reminder.lastCI,

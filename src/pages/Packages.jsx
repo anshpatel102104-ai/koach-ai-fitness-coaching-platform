@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Package, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +32,7 @@ export default function Packages() {
 
   const { data: packages = [], isLoading } = useQuery({
     queryKey: ['coaching-packages'],
-    queryFn: () => base44.entities.CoachingPackage.list('-created_date', 100),
+    queryFn: () => db.entities.CoachingPackage.list('-created_date', 100),
   });
 
   const active = packages.filter(p => !p.is_archived);
@@ -43,10 +43,10 @@ export default function Packages() {
 
   const handleSave = async (data) => {
     if (editingPkg?.id) {
-      await base44.entities.CoachingPackage.update(editingPkg.id, data);
+      await db.entities.CoachingPackage.update(editingPkg.id, data);
       toast.success('Package updated');
     } else {
-      await base44.entities.CoachingPackage.create(data);
+      await db.entities.CoachingPackage.create(data);
       toast.success('Package created! 🎉');
     }
     refresh();
@@ -55,32 +55,32 @@ export default function Packages() {
   };
 
   const handleToggleActive = async (pkg) => {
-    await base44.entities.CoachingPackage.update(pkg.id, { is_active: !pkg.is_active });
+    await db.entities.CoachingPackage.update(pkg.id, { is_active: !pkg.is_active });
     refresh();
   };
 
   const handleArchive = async (pkg) => {
-    await base44.entities.CoachingPackage.update(pkg.id, { is_archived: true, is_active: false });
+    await db.entities.CoachingPackage.update(pkg.id, { is_archived: true, is_active: false });
     toast.success('Package archived');
     refresh();
   };
 
   const handleUnarchive = async (pkg) => {
-    await base44.entities.CoachingPackage.update(pkg.id, { is_archived: false });
+    await db.entities.CoachingPackage.update(pkg.id, { is_archived: false });
     toast.success('Package restored');
     refresh();
   };
 
   const handleDelete = async (pkg) => {
     if (!confirm(`Delete "${pkg.name}"? This cannot be undone.`)) return;
-    await base44.entities.CoachingPackage.delete(pkg.id);
+    await db.entities.CoachingPackage.delete(pkg.id);
     toast.success('Package deleted');
     refresh();
   };
 
   const handleDuplicate = async (pkg) => {
     const { id, created_date, updated_date, created_by, enrolled_count, total_revenue, ...rest } = pkg;
-    await base44.entities.CoachingPackage.create({
+    await db.entities.CoachingPackage.create({
       ...rest,
       name: `${rest.name} (Copy)`,
       is_active: false,

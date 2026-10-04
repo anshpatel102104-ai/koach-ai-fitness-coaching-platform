@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Search, Dumbbell, X, ChevronDown, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -29,7 +29,7 @@ export default function ExercisePickerModal({ open, onClose, onPickExercise, onA
 
   const { data: exercises = [], isLoading } = useQuery({
     queryKey: ['exercise-library'],
-    queryFn: () => base44.entities.ExerciseLibrary.list(),
+    queryFn: () => db.entities.ExerciseLibrary.list(),
     staleTime: 5 * 60 * 1000,
     enabled: open,
   });

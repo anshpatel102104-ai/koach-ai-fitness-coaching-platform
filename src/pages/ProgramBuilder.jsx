@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -305,10 +305,10 @@ function AssignClientModal({ open, onClose, programId, programTitle }) {
   const [done, setDone] = useState(false);
   const queryClient = useQueryClient();
   const { data: clients = [] } = useQuery({
-    queryKey: ['clients'], queryFn: () => base44.entities.Client.list(), enabled: open,
+    queryKey: ['clients'], queryFn: () => db.entities.Client.list(), enabled: open,
   });
   const assignMutation = useMutation({
-    mutationFn: () => base44.entities.Client.update(selected, { assigned_program_id: programId }),
+    mutationFn: () => db.entities.Client.update(selected, { assigned_program_id: programId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); setDone(true); toast.success('Program assigned!'); },
   });
   const handleClose = () => { setSelected(null); setDone(false); onClose(); };
@@ -805,8 +805,8 @@ export default function ProgramBuilder() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => existingProgram || savedId
-      ? base44.entities.WorkoutProgram.update(existingProgram?.id || savedId, data)
-      : base44.entities.WorkoutProgram.create(data),
+      ? db.entities.WorkoutProgram.update(existingProgram?.id || savedId, data)
+      : db.entities.WorkoutProgram.create(data),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['programs'] });
       if (result?.id) setSavedId(result.id);
@@ -1046,7 +1046,7 @@ export default function ProgramBuilder() {
   // Exercise library — for thumbnails, drag-to-add, and click-to-add
   const { data: exLibrary = [] } = useQuery({
     queryKey: ['exercise-library-map'],
-    queryFn: () => base44.entities.ExerciseLibrary.list(),
+    queryFn: () => db.entities.ExerciseLibrary.list(),
     staleTime: 5 * 60 * 1000,
   });
   const exLibMap = useMemo(() => {

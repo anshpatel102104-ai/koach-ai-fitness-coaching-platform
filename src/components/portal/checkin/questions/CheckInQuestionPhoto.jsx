@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Camera, X } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 const ANGLES = [
@@ -17,7 +17,7 @@ export default function CheckInQuestionPhoto({ value, onChange }) {
   const handleFile = async (key, file) => {
     if (!file) return;
     try {
-      const { file_url } = await base44.uploadFile({ file });
+      const { file_url } = await portalDb.uploadFile({ file });
       onChange({ ...photos, [key]: file_url });
     } catch (e) {
       console.error(e);

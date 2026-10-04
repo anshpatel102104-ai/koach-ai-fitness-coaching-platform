@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Check, Sparkles, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TIERS, TIER_ORDER } from '@/lib/subscription';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import SuccessScreen from './SuccessScreen';
@@ -73,7 +73,7 @@ export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: i
 
   const handleConfirm = async () => {
     setLoading(true);
-    const res = await base44.functions.invoke('stripeCheckout', {
+    const res = await db.functions.invoke('stripeCheckout', {
       action: 'checkout',
       tier: toTierKey,
       billing_cycle: billing,

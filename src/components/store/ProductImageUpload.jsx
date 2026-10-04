@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { X, ImageIcon } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
 
@@ -12,7 +12,7 @@ export default function ProductImageUpload({ value, onChange, className, label =
   const handleFile = async (file) => {
     if (!file || !file.type.match(/^image\/(jpeg|png|webp)$/)) return;
     setUploading(true);
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     onChange(file_url);
     setUploading(false);
   };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { getUserTier, getLimit } from '@/lib/subscription';
 import { cn } from '@/lib/utils';
 import { Users, Dumbbell, Utensils, TrendingUp } from 'lucide-react';
@@ -60,19 +60,19 @@ export default function UsageSummaryCard({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-count'],
-    queryFn: () => base44.entities.Client.list(),
+    queryFn: () => db.entities.Client.list(),
     refetchInterval: 30000,
   });
 
   const { data: programs = [] } = useQuery({
     queryKey: ['programs-count'],
-    queryFn: () => base44.entities.WorkoutProgram.list(),
+    queryFn: () => db.entities.WorkoutProgram.list(),
     refetchInterval: 30000,
   });
 
   const { data: nutrition = [] } = useQuery({
     queryKey: ['nutrition-count'],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
     refetchInterval: 30000,
   });
 

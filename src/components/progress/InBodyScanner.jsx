@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, CheckCircle2, ArrowLeftRight, ScanLine, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -216,14 +216,14 @@ export default function InBodyScanner({ preselectedClient, onScanSaved }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('name'),
+    queryFn: () => db.entities.Client.list('name'),
   });
 
   const { data: scanHistory = [] } = useQuery({
     queryKey: ['inbody-scans', preselectedClient?.id],
     queryFn: () => preselectedClient
-      ? base44.entities.InBodyScan.filter({ client_id: preselectedClient.id }, '-scan_date', 50)
-      : base44.entities.InBodyScan.list('-scan_date', 50),
+      ? db.entities.InBodyScan.filter({ client_id: preselectedClient.id }, '-scan_date', 50)
+      : db.entities.InBodyScan.list('-scan_date', 50),
     enabled: true,
   });
 
@@ -288,7 +288,7 @@ Return null for any field not found in the scan.`,
         ];
       } else {
         // PDF — upload first then describe via text
-        const { file_url } = await base44.uploadFile({ file });
+        const { file_url } = await db.uploadFile({ file });
         messageContent = [
           {
             type: 'text',
@@ -321,8 +321,8 @@ Please extract all metrics and return ONLY this JSON with no markdown:
       // ANTHROPIC_API_KEY never reaches the browser.
       let extracted;
       if (isImage) {
-        const { file_url: uploadedUrl } = await base44.uploadFile({ file });
-        const res = await base44.functions.invoke('aiInBodyScan', { fileUrl: uploadedUrl });
+        const { file_url: uploadedUrl } = await db.uploadFile({ file });
+        const res = await db.functions.invoke('aiInBodyScan', { fileUrl: uploadedUrl });
         extracted = res.data;
       } else {
         // PDF fallback
@@ -360,7 +360,7 @@ Please extract all metrics and return ONLY this JSON with no markdown:
     try {
       const client = activeClients.find(c => c.id === clientId);
       const scanDate = results.scan_date || format(new Date(), 'yyyy-MM-dd');
-      await base44.entities.InBodyScan.create({
+      await db.entities.InBodyScan.create({
         client_id: clientId,
         client_name: client?.name || '',
         scan_date: scanDate,
@@ -390,7 +390,7 @@ Please extract all metrics and return ONLY this JSON with no markdown:
       });
       // Also create a CheckIn to populate progress charts
       if (results.weight_lbs || results.body_fat_percent) {
-        await base44.entities.CheckIn.create({
+        await db.entities.CheckIn.create({
           client_id: clientId,
           client_name: client?.name || '',
           date: scanDate,

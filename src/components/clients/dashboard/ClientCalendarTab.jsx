@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   format, startOfWeek, endOfWeek,
@@ -267,7 +267,7 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
 
   const { data: program, isLoading } = useQuery({
     queryKey: ['cal-program', client?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: client.assigned_program_id }, '-created_date', 1).then(r => r[0]),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: client.assigned_program_id }, '-created_date', 1).then(r => r[0]),
     enabled: !!client?.assigned_program_id,
   });
 
@@ -286,7 +286,7 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
 
     // Batch creates with delay to avoid rate limits
     for (const d of datesToCreate) {
-      const session = await base44.entities.WorkoutSession.create({
+      const session = await db.entities.WorkoutSession.create({
         client_id: client.id,
         program_id: client.assigned_program_id,
         program_name: program?.title,
@@ -298,7 +298,7 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
         team_id: client.team_id,
       });
       // Sync to Google Calendar
-      await base44.functions.invoke('googleCalendarProxy', {
+      await db.functions.invoke('googleCalendarProxy', {
         action: 'createEvent',
         event: {
           summary: `${client.name} - ${workout?.day_name || `Day ${workout?.day_number || parseInt(selectedWorkoutIdx) + 1}`}`,
@@ -403,10 +403,10 @@ function SessionContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
     const baseDate = parseISO(dateStr);
     const datesToCreate = repeat ? generateRepeatDates(baseDate, repeat) : [dateStr];
     for (const d of datesToCreate) {
-      await base44.entities.Session.create({ client_id: client.id, client_name: client.name,
+      await db.entities.Session.create({ client_id: client.id, client_name: client.name,
         title, date: d, time, session_type: type, status: 'scheduled', team_id: client.team_id });
       // Sync to Google Calendar
-      await base44.functions.invoke('googleCalendarProxy', {
+      await db.functions.invoke('googleCalendarProxy', {
         action: 'createEvent',
         event: {
           summary: `${client.name} - ${title}`,
@@ -483,7 +483,7 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
     if (!name.trim()) return;
     setSaving(true);
     // Create one Habit record (habits are recurring by nature)
-    const habit = await base44.entities.Habit.create({
+    const habit = await db.entities.Habit.create({
       client_id: client.id,
       name: name.trim(),
       emoji: emoji || undefined,
@@ -496,7 +496,7 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
     const baseDate = parseISO(dateStr);
     const datesToCreate = repeat ? generateRepeatDates(baseDate, repeat) : [dateStr];
     for (const d of datesToCreate) {
-      await base44.entities.HabitCompletion.create({
+      await db.entities.HabitCompletion.create({
         habit_id: habit.id,
         client_id: client.id,
         date: d,
@@ -624,7 +624,7 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
         payload.target_value = targetValue !== '' ? Number(targetValue) : undefined;
         payload.unit = unit || undefined;
       }
-      await base44.entities.Goal.create(payload);
+      await db.entities.Goal.create(payload);
       await new Promise(r => setTimeout(r, 50));
     }
     qc.invalidateQueries({ queryKey: ['cal-goals', client.id] });
@@ -726,7 +726,7 @@ function CheckInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
 
   const { data: checkInForms = [] } = useQuery({
     queryKey: ['checkin-forms'],
-    queryFn: () => base44.entities.CheckInForm.filter({ is_active: true }, '-created_date', 50),
+    queryFn: () => db.entities.CheckInForm.filter({ is_active: true }, '-created_date', 50),
   });
 
   const save = async () => {
@@ -734,7 +734,7 @@ function CheckInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
     const baseDate = parseISO(dateStr);
     const datesToCreate = repeat ? generateRepeatDates(baseDate, repeat) : [dateStr];
     for (const d of datesToCreate) {
-      await base44.entities.CheckIn.create({
+      await db.entities.CheckIn.create({
         client_id: client.id,
         client_name: client.name,
         date: d,
@@ -815,7 +815,7 @@ function WeighInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
     const datesToCreate = repeat ? generateRepeatDates(baseDate, repeat) : [dateStr];
     for (const d of datesToCreate) {
       // weight=0 signals a "scheduled / pending" weigh-in that the client will fill in themselves
-      await base44.entities.WeighIn.create({
+      await db.entities.WeighIn.create({
         client_id: client.id,
         weight: 0,
         date: d,
@@ -997,37 +997,37 @@ export default function ClientCalendarTab({ client }) {
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['cal-checkins', client?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: client.id }, '-date', 150),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: client.id }, '-date', 150),
     enabled: !!client?.id,
   });
   const { data: goals = [] } = useQuery({
     queryKey: ['cal-goals', client?.id],
-    queryFn: () => base44.entities.Goal.filter({ client_id: client.id }, '-created_date', 50),
+    queryFn: () => db.entities.Goal.filter({ client_id: client.id }, '-created_date', 50),
     enabled: !!client?.id,
   });
   const { data: sessions = [] } = useQuery({
     queryKey: ['cal-sessions', client?.id],
-    queryFn: () => base44.entities.Session.filter({ client_id: client.id }, '-date', 50),
+    queryFn: () => db.entities.Session.filter({ client_id: client.id }, '-date', 50),
     enabled: !!client?.id,
   });
   const { data: weighIns = [] } = useQuery({
     queryKey: ['cal-weighins', client?.id],
-    queryFn: () => base44.entities.WeighIn.filter({ client_id: client.id }, '-date', 150),
+    queryFn: () => db.entities.WeighIn.filter({ client_id: client.id }, '-date', 150),
     enabled: !!client?.id,
   });
   const { data: workoutSessions = [] } = useQuery({
     queryKey: ['cal-workoutsessions', client?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: client.id }, '-scheduled_date', 150),
+    queryFn: () => db.entities.WorkoutSession.filter({ client_id: client.id }, '-scheduled_date', 150),
     enabled: !!client?.id,
   });
   const { data: habits = [] } = useQuery({
     queryKey: ['habits', client?.id],
-    queryFn: () => base44.entities.Habit.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Habit.filter({ client_id: client.id }),
     enabled: !!client?.id,
   });
   const { data: habitCompletions = [] } = useQuery({
     queryKey: ['habit-completions', client?.id],
-    queryFn: () => base44.entities.HabitCompletion.filter({ client_id: client.id }),
+    queryFn: () => db.entities.HabitCompletion.filter({ client_id: client.id }),
     enabled: !!client?.id,
   });
 

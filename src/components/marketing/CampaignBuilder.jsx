@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,14 +26,14 @@ export default function CampaignBuilder({ coachId }) {
 
   const { data: campaigns = [] } = useQuery({
     queryKey: ['marketing-campaigns', coachId],
-    queryFn: () => base44.entities.MarketingCampaign.filter({ coach_id: coachId }, '-created_at'),
+    queryFn: () => db.entities.MarketingCampaign.filter({ coach_id: coachId }, '-created_at'),
     enabled: !!coachId,
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => {
       const slug = data.campaign_slug || data.campaign_name.toLowerCase().replace(/\s+/g, '-');
-      return base44.entities.MarketingCampaign.create({
+      return db.entities.MarketingCampaign.create({
         ...data,
         coach_id: coachId,
         campaign_slug: slug,
@@ -58,7 +58,7 @@ export default function CampaignBuilder({ coachId }) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.MarketingCampaign.delete(id),
+    mutationFn: (id) => db.entities.MarketingCampaign.delete(id),
     onSuccess: () => {
       toast.success('Campaign deleted');
       queryClient.invalidateQueries({ queryKey: ['marketing-campaigns', coachId] });

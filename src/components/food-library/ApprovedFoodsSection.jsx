@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { CheckCircle2, EyeOff, Eye, ChevronDown, Edit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,7 +23,7 @@ function FoodRow({ food }) {
   const [editing, setEditing] = useState(false);
 
   const update = useMutation({
-    mutationFn: (data) => base44.entities.FoodItem.update(food.id, data),
+    mutationFn: (data) => db.entities.FoodItem.update(food.id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['food-items'] }),
   });
 

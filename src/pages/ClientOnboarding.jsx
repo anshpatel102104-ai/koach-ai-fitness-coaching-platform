@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import KoachLogo from '@/components/brand/KoachLogo.jsx';
 
 /* ─── URL params ─── */
@@ -1357,7 +1357,7 @@ export default function ClientOnboarding() {
 
       let res;
       try {
-        res = await base44.functions.invoke('submitOnboardingIntake', {
+        res = await db.functions.invoke('submitOnboardingIntake', {
           name: [data.first_name, data.last_name].filter(Boolean).join(' '),
           email: data.email,
           coachId: COACH_ID,

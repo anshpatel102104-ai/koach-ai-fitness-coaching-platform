@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Send, Sparkles, Copy, Check, Mic, BookmarkPlus, User, Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
@@ -138,12 +138,12 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-chat'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
     staleTime: 60_000,
   });
   const { data: plans = [] } = useQuery({
     queryKey: ['nutrition-plans'],
-    queryFn: () => base44.entities.NutritionPlan.list(),
+    queryFn: () => db.entities.NutritionPlan.list(),
     staleTime: 60_000,
   });
 
@@ -197,7 +197,7 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
     const conversationHistory = messages.slice(-6).map(m => ({ role: m.role, content: m.content || '' }));
 
     try {
-      const res = await base44.functions.invoke('claudeAssistant', {
+      const res = await db.functions.invoke('claudeAssistant', {
         userMessage: trimmed,
         conversationHistory,
         clientContext,
@@ -227,7 +227,7 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
 
       // Save conversation
       const title = trimmed.slice(0, 60) + (trimmed.length > 60 ? '...' : '');
-      base44.entities.AIConversation.create({
+      db.entities.AIConversation.create({
         client_id: selectedClient?.id || '',
         client_name: selectedClient?.name || 'General',
         title,
@@ -244,8 +244,8 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
   const handleSaveNote = async (content) => {
     if (!selectedClient) { toast.error('Select a client first'); return; }
     const note = '[AI Note - ' + format(new Date(), 'MMM d, yyyy') + ']\n' + content.slice(0, 500);
-    const existing = await base44.entities.Client.filter({ id: selectedClient.id }, '-created_date', 1).then(r => r[0]);
-    await base44.entities.Client.update(selectedClient.id, { notes: (existing?.notes ? existing.notes + '\n\n' : '') + note });
+    const existing = await db.entities.Client.filter({ id: selectedClient.id }, '-created_date', 1).then(r => r[0]);
+    await db.entities.Client.update(selectedClient.id, { notes: (existing?.notes ? existing.notes + '\n\n' : '') + note });
     queryClient.invalidateQueries({ queryKey: ['clients'] });
     toast.success('Saved to client notes');
   };

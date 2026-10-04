@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { MessageSquare, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,7 +13,7 @@ export default function BulkActionBar({ selectedIds, clients, allEntries, onClea
     mutationFn: (msg) => Promise.all(
       selectedIds.map(id => {
         const c = clients.find(c => c.id === id);
-        return base44.entities.Message.create({ client_id: id, client_name: c?.name, sender: 'coach', content: msg });
+        return db.entities.Message.create({ client_id: id, client_name: c?.name, sender: 'coach', content: msg });
       })
     ),
     onSuccess: () => {

@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { format, parseISO, subWeeks, subMonths, subYears } from 'date-fns';
 import { Plus, Scale, Trash2 } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const BLUE = 'var(--tc-primary)';
@@ -40,7 +40,7 @@ export default function BodyWeightChart({ client, onCurrentWeightUpdated }) {
 
   const { data: entries = [] } = useQuery({
     queryKey: ['weigh-ins', client?.id],
-    queryFn: () => base44.entities.WeighIn.filter({ client_id: client.id }, 'date', 200),
+    queryFn: () => db.entities.WeighIn.filter({ client_id: client.id }, 'date', 200),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => new Date(a.date) - new Date(b.date)),
   });
@@ -70,7 +70,7 @@ export default function BodyWeightChart({ client, onCurrentWeightUpdated }) {
     if (isNaN(w) || w <= 0) { toast.error('Enter a valid weight'); return; }
     setSaving(true);
     try {
-      await base44.entities.WeighIn.create({
+      await db.entities.WeighIn.create({
         client_id: client.id,
         weight: w,
         date: draft.date,
@@ -79,7 +79,7 @@ export default function BodyWeightChart({ client, onCurrentWeightUpdated }) {
       // Update client's current_weight to this entry if it's the most recent
       const shouldUpdate = !latestEntry || new Date(draft.date) >= new Date(latestEntry.date);
       if (shouldUpdate) {
-        await base44.entities.Client.update(client.id, { current_weight: w });
+        await db.entities.Client.update(client.id, { current_weight: w });
         onCurrentWeightUpdated?.();
       }
       qc.invalidateQueries({ queryKey: ['weigh-ins', client.id] });
@@ -95,12 +95,12 @@ export default function BodyWeightChart({ client, onCurrentWeightUpdated }) {
   const handleDelete = async (entry) => {
     setDeletingId(entry.id);
     try {
-      await base44.entities.WeighIn.delete(entry.id);
+      await db.entities.WeighIn.delete(entry.id);
       // If we deleted the latest, recalculate current_weight from remaining entries
       if (latestEntry?.id === entry.id) {
         const remaining = entries.filter(e => e.id !== entry.id);
         const newLatest = remaining[remaining.length - 1];
-        await base44.entities.Client.update(client.id, {
+        await db.entities.Client.update(client.id, {
           current_weight: newLatest?.weight ?? null,
         });
         onCurrentWeightUpdated?.();

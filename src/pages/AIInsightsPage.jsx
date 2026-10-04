@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, RefreshCw, History, Settings } from 'lucide-react';
 import { generateInsights, dismissInsight, markNotRelevant, getNotRelevantTypes } from '@/lib/insightEngine';
@@ -20,15 +20,15 @@ export default function AIInsightsPage() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: () => base44.entities.Client.list('-created_date'),
+    queryFn: () => db.entities.Client.list('-created_date'),
   });
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins'],
-    queryFn: () => base44.entities.CheckIn.list('-date', 200),
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
   });
   const { data: messages = [] } = useQuery({
     queryKey: ['messages-insights'],
-    queryFn: () => base44.entities.Message.list('-created_date', 200),
+    queryFn: () => db.entities.Message.list('-created_date', 200),
   });
 
   const notRelevant = getNotRelevantTypes();

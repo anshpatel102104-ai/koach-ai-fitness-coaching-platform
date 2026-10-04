@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Pencil, Check, X } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { differenceInYears, parseISO } from 'date-fns';
 
@@ -56,7 +56,7 @@ export default function MetricsCard({ client, onUpdated }) {
     };
     // Remove nulls to avoid overwriting with null if field is intentionally kept empty
     Object.keys(patch).forEach(k => { if (patch[k] === null) delete patch[k]; });
-    await base44.entities.Client.update(client.id, patch);
+    await db.entities.Client.update(client.id, patch);
     toast.success('Metrics saved');
     setSaving(false);
     setEditing(false);

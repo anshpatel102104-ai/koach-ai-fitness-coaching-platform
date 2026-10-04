@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UtensilsCrossed } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { addRecentFood } from '@/lib/nutritionUtils';
 import { useFoodSearch } from '@/components/nutrition/usda/useFoodSearch';
@@ -106,7 +106,7 @@ export default function FoodSearchSheet({ isOpen, onClose, onSelectFood, mealNam
 
   const handleSave = async (food) => {
     try {
-      await base44.entities.FoodItem.create({
+      await portalDb.entities.FoodItem.create({
         name: food.name, brand: food.brand || '',
         calories: food.calories, protein: food.protein, carbs: food.carbs, fats: food.fats,
         fiber: food.fiber || 0, sodium: food.sodium || 0,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, X, CheckCircle2, AlertTriangle, Flag,
@@ -50,7 +50,7 @@ function AIAnalysisBlock({ checkIn, client }) {
     setLoading(true);
     try {
       const clientName = client?.name || checkIn.client_name || 'the client';
-      const res = await base44.functions.invoke('aiCheckInInsights', {
+      const res = await db.functions.invoke('aiCheckInInsights', {
         action: 'reviewCheckIn', client, checkIn, clientName,
       });
       setSummary(res.data);
@@ -126,7 +126,7 @@ export default function CheckInReviewDrawer({ checkIn, client, allCheckIns, curr
   }, [checkIn?.id]);
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkIn.id, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
     },

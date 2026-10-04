@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { SignedImg } from '@/components/shared/SignedImage';
@@ -76,7 +76,7 @@ export default function ExerciseCard({ exercise, onView, onEdit, onDelete, compa
         const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
         if (match) thumbnailUrl = `https://img.youtube.com/vi/${match[1]}/maxresdefault.jpg`;
       }
-      return base44.entities.ExerciseLibrary.update(exercise.id, {
+      return db.entities.ExerciseLibrary.update(exercise.id, {
         video_url: url,
         thumbnail_url: thumbnailUrl,
       });

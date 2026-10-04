@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +28,7 @@ export default function LeadPipelinePanel({ client, onUpdate }) {
 
   const save = async () => {
     setSaving(true);
-    await base44.entities.Client.update(client.id, {
+    await db.entities.Client.update(client.id, {
       lifecycle_notes: notes,
       follow_up_date: followUp,
       pipeline_stage: stage,

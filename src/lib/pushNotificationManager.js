@@ -1,4 +1,4 @@
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 const PERMISSION_KEY = 'koach_notification_permission';
 const DENIED_TIME_KEY = 'koach_notification_denied_at';
@@ -92,7 +92,7 @@ export const pushNotificationManager = {
       });
 
       // Send subscription to backend
-      await base44.functions.invoke('storePushSubscription', {
+      await db.functions.invoke('storePushSubscription', {
         subscription: JSON.stringify(subscription),
       });
 
@@ -105,7 +105,7 @@ export const pushNotificationManager = {
 
   // Get public VAPID key from backend
   async getPublicKey() {
-    const response = await base44.functions.invoke('getPushPublicKey', {});
+    const response = await db.functions.invoke('getPushPublicKey', {});
     return this.urlBase64ToUint8Array(response.data.publicKey);
   },
 

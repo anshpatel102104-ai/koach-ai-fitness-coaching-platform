@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Dumbbell, Calendar, ChevronRight, Layers, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ export default function ProfileProgramsTab({ client }) {
   const navigate = useNavigate();
   const { data: programs = [], isLoading } = useQuery({
     queryKey: ['workout-programs'],
-    queryFn: () => base44.entities.WorkoutProgram.list(),
+    queryFn: () => db.entities.WorkoutProgram.list(),
   });
 
   const assigned = programs.find(p => p.id === client.assigned_program_id);

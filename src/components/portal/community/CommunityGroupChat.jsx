@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { Send, Users } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -52,12 +52,12 @@ export default function CommunityGroupChat({ user, myClient, allClients }) {
 
   const { data: messages = [] } = useQuery({
     queryKey: ['group-chat-messages'],
-    queryFn: () => base44.entities.CommunityPost.filter({ challenge_id: CHAT_CHANNEL }, 'created_date', 100),
+    queryFn: () => portalDb.entities.CommunityPost.filter({ challenge_id: CHAT_CHANNEL }, 'created_date', 100),
     refetchInterval: 10000,
   });
 
   useEffect(() => {
-    const unsub = base44.entities.CommunityPost.subscribe(() => {
+    const unsub = portalDb.entities.CommunityPost.subscribe(() => {
       queryClient.invalidateQueries({ queryKey: ['group-chat-messages'] });
     });
     return unsub;
@@ -68,7 +68,7 @@ export default function CommunityGroupChat({ user, myClient, allClients }) {
   }, [messages]);
 
   const sendMsg = useMutation({
-    mutationFn: (content) => base44.entities.CommunityPost.create({
+    mutationFn: (content) => portalDb.entities.CommunityPost.create({
       author_id: userId,
       author_name: user?.full_name || myClient?.name || 'Member',
       content,

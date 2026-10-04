@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CreditCard, CheckCircle2, AlertCircle, Lock, ChevronRight } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -221,8 +221,8 @@ export default function PaymentFlowModal({ invoice, client, user, onClose, onCom
     // Simulate payment processing (in production, use Stripe)
     await new Promise(r => setTimeout(r, 2000));
     try {
-      await base44.entities.Invoice.update(invoice.id, { status: 'paid', paid_date: new Date().toISOString().split('T')[0] });
-      await base44.entities.Payment.create({
+      await portalDb.entities.Invoice.update(invoice.id, { status: 'paid', paid_date: new Date().toISOString().split('T')[0] });
+      await portalDb.entities.Payment.create({
         client_id: client.id,
         client_name: client.name,
         amount: invoice.amount,

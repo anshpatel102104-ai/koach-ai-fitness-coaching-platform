@@ -2,18 +2,18 @@
  * Shared utility to execute a recommendation action against the database.
  * Returns a human-readable success message.
  */
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export async function applyRecommendation(rec, checkIn, client) {
   if (rec.action === 'adjust_calories') {
     if (!client?.assigned_nutrition_id) throw new Error('No nutrition plan assigned to this client');
-    const plans = await base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
+    const plans = await db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
     const plan = plans[0];
     if (!plan) throw new Error('Nutrition plan not found');
     const newCals = Math.max(1000, (plan.calories || 2000) + rec.actionData.delta);
     await Promise.all([
-      base44.entities.NutritionPlan.update(plan.id, { calories: newCals }),
-      base44.entities.Message.create({
+      db.entities.NutritionPlan.update(plan.id, { calories: newCals }),
+      db.entities.Message.create({
         client_id: checkIn.client_id,
         client_name: checkIn.client_name,
         sender: 'coach',
@@ -30,11 +30,11 @@ export async function applyRecommendation(rec, checkIn, client) {
       ? 'Cardio increased — add 1 extra session or +20 min this week.'
       : 'Cardio reduced — drop 1 session or −15 min this week.';
     await Promise.all([
-      base44.entities.CheckIn.update(checkIn.id, {
+      db.entities.CheckIn.update(checkIn.id, {
         coach_notes: (checkIn.coach_notes ? checkIn.coach_notes + '\n' : '') + '[Cardio] ' + msg,
         coach_responded: true,
       }),
-      base44.entities.Message.create({
+      db.entities.Message.create({
         client_id: checkIn.client_id,
         client_name: checkIn.client_name,
         sender: 'coach',
@@ -47,7 +47,7 @@ export async function applyRecommendation(rec, checkIn, client) {
   }
 
   if (rec.action === 'message') {
-    await base44.entities.Message.create({
+    await db.entities.Message.create({
       client_id: checkIn.client_id,
       client_name: checkIn.client_name,
       sender: 'coach',
@@ -59,7 +59,7 @@ export async function applyRecommendation(rec, checkIn, client) {
   }
 
   if (rec.action === 'maintain') {
-    await base44.entities.CheckIn.update(checkIn.id, { coach_responded: true });
+    await db.entities.CheckIn.update(checkIn.id, { coach_responded: true });
     return 'Marked as reviewed ✓';
   }
 

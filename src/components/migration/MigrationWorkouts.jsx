@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dumbbell, CheckCircle2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const STARTER_TEMPLATES = [
@@ -96,7 +96,7 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
     const toImport = [...selected].map(i => STARTER_TEMPLATES[i]);
     let count = 0;
     for (const t of toImport) {
-      try { await base44.entities.WorkoutProgram.create({ ...t, is_template: true }); count++; } catch {}
+      try { await db.entities.WorkoutProgram.create({ ...t, is_template: true }); count++; } catch {}
     }
     setImporting(false);
     setDone(true);

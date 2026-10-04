@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { X, ClipboardList } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function QuickCheckInPanel({ client, onClose }) {
   const today = new Date().toISOString().split('T')[0];
 
   const saveMutation = useMutation({
-    mutationFn: () => base44.entities.CheckIn.create({
+    mutationFn: () => db.entities.CheckIn.create({
       client_id: client.id,
       client_name: client.name,
       date: today,

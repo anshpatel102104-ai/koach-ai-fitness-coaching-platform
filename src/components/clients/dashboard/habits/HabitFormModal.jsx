@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const DAYS = [
@@ -60,10 +60,10 @@ export default function HabitFormModal({ clientId, habit, onSaved, onClose }) {
       is_active: form.is_active,
     };
     if (isEdit) {
-      await base44.entities.Habit.update(habit.id, payload);
+      await db.entities.Habit.update(habit.id, payload);
       toast.success('Habit updated');
     } else {
-      await base44.entities.Habit.create(payload);
+      await db.entities.Habit.create(payload);
       toast.success('Habit added');
     }
     setSaving(false);

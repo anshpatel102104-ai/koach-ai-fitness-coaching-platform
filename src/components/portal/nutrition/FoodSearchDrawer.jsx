@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, X } from 'lucide-react';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 
 const UNITS = ['g', 'oz', 'cup', 'tbsp', 'tsp', 'piece', 'serving', 'ml'];
 
@@ -83,7 +83,7 @@ export default function FoodSearchDrawer({ open, mealName, recentFoods, onAdd, o
     if (q.length < 2) { setResults([]); return; }
     setLoading(true);
     searchTimeout.current = setTimeout(async () => {
-      const res = await base44.functions.invoke('searchFoods', { query: q, limit: 15 });
+      const res = await portalDb.functions.invoke('searchFoods', { query: q, limit: 15 });
       setResults(res?.data?.items || res?.data || []);
       setLoading(false);
     }, 400);

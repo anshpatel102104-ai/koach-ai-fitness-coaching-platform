@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sparkles, Loader2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -12,7 +12,7 @@ export default function ClientAlerts({ clients, checkIns }) {
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('aiBusinessInsights', {
+      const res = await db.functions.invoke('aiBusinessInsights', {
         action: 'clientAlerts', clients, checkIns,
       });
       setAlerts(res.data?.alerts || []);

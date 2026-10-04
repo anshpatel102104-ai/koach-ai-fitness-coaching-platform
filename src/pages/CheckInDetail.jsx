@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -131,30 +131,30 @@ export default function CheckInDetail() {
 
   const { data: checkIn, isLoading: ciLoading } = useQuery({
     queryKey: ['checkin', checkInId],
-    queryFn: () => base44.entities.CheckIn.filter({ id: checkInId }).then(r => r[0]),
+    queryFn: () => db.entities.CheckIn.filter({ id: checkInId }).then(r => r[0]),
     enabled: !!checkInId,
   });
 
   const { data: client } = useQuery({
     queryKey: ['client', clientId],
-    queryFn: () => base44.entities.Client.filter({ id: clientId }).then(r => r[0]),
+    queryFn: () => db.entities.Client.filter({ id: clientId }).then(r => r[0]),
     enabled: !!clientId,
   });
 
   const { data: allClientCIs = [] } = useQuery({
     queryKey: ['client-checkins', clientId],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: clientId }, '-date', 20),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: clientId }, '-date', 20),
     enabled: !!clientId,
   });
 
   const { data: nutritionPlan } = useQuery({
     queryKey: ['nutrition-plan', client?.assigned_nutrition_id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }).then(r => r[0]),
+    queryFn: () => db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id }).then(r => r[0]),
     enabled: !!client?.assigned_nutrition_id,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkInId, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkInId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkins-review'] });
       queryClient.invalidateQueries({ queryKey: ['checkin', checkInId] });
@@ -184,7 +184,7 @@ export default function CheckInDetail() {
     if (!nutritionPlan || calAdjDone) return;
     setCalAdjSaving(true);
     const delta = -150;
-    await base44.entities.NutritionPlan.update(nutritionPlan.id, {
+    await db.entities.NutritionPlan.update(nutritionPlan.id, {
       calories: (nutritionPlan.calories || 2000) + delta,
     });
     queryClient.invalidateQueries({ queryKey: ['nutrition-plan', client?.assigned_nutrition_id] });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -63,7 +63,7 @@ export default function WhiteLabel() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['wl-settings', user?.email],
-    queryFn: () => base44.entities.WhiteLabelSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    queryFn: () => db.entities.WhiteLabelSettings.filter({ coach_id: user.id }, '-created_date', 1),
     enabled: !!user?.id,
   });
 
@@ -78,9 +78,9 @@ export default function WhiteLabel() {
   const persist = useCallback(async (data, opts = {}) => {
     const payload = { ...data, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
     if (settingsId) {
-      await base44.entities.WhiteLabelSettings.update(settingsId, payload);
+      await db.entities.WhiteLabelSettings.update(settingsId, payload);
     } else {
-      const created = await base44.entities.WhiteLabelSettings.create(payload);
+      const created = await db.entities.WhiteLabelSettings.create(payload);
       setSettingsId(created.id);
     }
     if (!opts.silent) {

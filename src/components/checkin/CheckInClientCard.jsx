@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -78,7 +78,7 @@ export default function CheckInClientCard({ checkIn, client, allClientCIs = [], 
   const prevCI = allClientCIs[1];
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CheckIn.update(checkIn.id, data),
+    mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
     onMutate: async (data) => {
       // Optimistic update — invalidate after
       await queryClient.cancelQueries({ queryKey: ['checkins-review'] });
@@ -100,7 +100,7 @@ export default function CheckInClientCard({ checkIn, client, allClientCIs = [], 
     // Run auto-award check for this client after review
     if (client) {
       try {
-        const existingBadges = await base44.entities.ClientBadge.filter({ client_id: client.id });
+        const existingBadges = await db.entities.ClientBadge.filter({ client_id: client.id });
         const newKeys = await runAutoAwardForClient(client, allClientCIs, existingBadges);
         newKeys.forEach(key => showAchievementToast(toast, key, client.name));
       } catch (_) { /* silent */ }

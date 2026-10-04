@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X, BookmarkPlus } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import SaveTemplateModal from './SaveTemplateModal';
@@ -50,7 +50,7 @@ export default function GoalFormModal({ clientId, goal, prefilledTemplate, onSav
 
   const { data: templates = [] } = useQuery({
     queryKey: ['goal-templates'],
-    queryFn: () => base44.entities.GoalTemplate.list('-created_date', 50),
+    queryFn: () => db.entities.GoalTemplate.list('-created_date', 50),
   });
 
   useEffect(() => {
@@ -150,10 +150,10 @@ export default function GoalFormModal({ clientId, goal, prefilledTemplate, onSav
     }
 
     if (isEdit) {
-      await base44.entities.Goal.update(goal.id, payload);
+      await db.entities.Goal.update(goal.id, payload);
       toast.success('Goal updated');
     } else {
-      await base44.entities.Goal.create(payload);
+      await db.entities.Goal.create(payload);
       toast.success('Goal created');
     }
     setSaving(false);

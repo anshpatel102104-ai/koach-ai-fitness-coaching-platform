@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { AnimatePresence } from 'framer-motion';
 import { ChevronLeft, CreditCard, FileText, Receipt, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -28,26 +28,26 @@ export default function PortalBilling({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-billing', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: invoices = [], refetch: refetchInvoices } = useQuery({
     queryKey: ['portal-invoices', myClient?.id],
-    queryFn: () => base44.entities.Invoice.filter({ client_id: myClient.id }, '-issue_date', 100),
+    queryFn: () => portalDb.entities.Invoice.filter({ client_id: myClient.id }, '-issue_date', 100),
     enabled: !!myClient?.id,
   });
 
   const { data: payments = [], refetch: refetchPayments } = useQuery({
     queryKey: ['portal-payments', myClient?.id],
-    queryFn: () => base44.entities.Payment.filter({ client_id: myClient.id }, '-created_date', 100),
+    queryFn: () => portalDb.entities.Payment.filter({ client_id: myClient.id }, '-created_date', 100),
     enabled: !!myClient?.id,
   });
 
   const { data: packages = [] } = useQuery({
     queryKey: ['portal-packages'],
-    queryFn: () => base44.entities.CoachingPackage.list('-created_date', 50),
+    queryFn: () => portalDb.entities.CoachingPackage.list('-created_date', 50),
   });
 
   const unpaidInvoices = invoices.filter(i => ['draft', 'sent', 'viewed', 'overdue'].includes(i.status));

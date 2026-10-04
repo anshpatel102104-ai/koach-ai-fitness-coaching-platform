@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,17 +21,17 @@ export default function DefaultAssignmentSettings() {
 
   const { data: programs = [] } = useQuery({
     queryKey: ['programs'],
-    queryFn: () => base44.entities.WorkoutProgram.list('title', 100),
+    queryFn: () => db.entities.WorkoutProgram.list('title', 100),
   });
 
   const { data: nutritionPlans = [] } = useQuery({
     queryKey: ['nutrition-plans'],
-    queryFn: () => base44.entities.NutritionPlan.list('title', 100),
+    queryFn: () => db.entities.NutritionPlan.list('title', 100),
   });
 
   const { data: defaults = [], isLoading } = useQuery({
     queryKey: ['coach-defaults'],
-    queryFn: () => base44.entities.CoachDefaults.list(),
+    queryFn: () => db.entities.CoachDefaults.list(),
   });
 
   useEffect(() => {
@@ -59,9 +59,9 @@ export default function DefaultAssignmentSettings() {
         checkin_frequency: form.checkin_frequency,
       };
       if (defaults.length > 0) {
-        return base44.entities.CoachDefaults.update(defaults[0].id, payload);
+        return db.entities.CoachDefaults.update(defaults[0].id, payload);
       } else {
-        return base44.entities.CoachDefaults.create(payload);
+        return db.entities.CoachDefaults.create(payload);
       }
     },
     onSuccess: () => {

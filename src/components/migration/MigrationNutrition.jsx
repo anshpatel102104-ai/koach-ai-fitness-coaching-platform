@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Salad, CheckCircle2, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 const STARTER_PLANS = [
@@ -58,7 +58,7 @@ export default function MigrationNutrition({ onComplete, onSkip }) {
     setImporting(true);
     let count = 0;
     for (const i of selected) {
-      try { await base44.entities.NutritionPlan.create({ ...STARTER_PLANS[i], is_template: true }); count++; } catch {}
+      try { await db.entities.NutritionPlan.create({ ...STARTER_PLANS[i], is_template: true }); count++; } catch {}
     }
     setImporting(false);
     setDone(true);

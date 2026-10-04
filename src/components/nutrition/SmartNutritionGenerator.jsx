@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -261,7 +261,7 @@ export default function SmartNutritionGenerator({ initialMeals, targets, onMeals
     }
     setGenerating(true);
     try {
-      const response = await base44.functions.invoke('generateSmartMeals', {
+      const response = await db.functions.invoke('generateSmartMeals', {
         calories: params.calories,
         protein_g: params.protein_g,
         carbs_g: params.carbs_g,
@@ -293,7 +293,7 @@ export default function SmartNutritionGenerator({ initialMeals, targets, onMeals
   const regenerateMeal = async (mIdx) => {
     const meal = meals[mIdx];
     try {
-      const response = await base44.functions.invoke('generateSmartMeals', {
+      const response = await db.functions.invoke('generateSmartMeals', {
         mode: 'regenerate',
         meal: { ...meal, total_meals: meals.length },
         calories: params.calories,

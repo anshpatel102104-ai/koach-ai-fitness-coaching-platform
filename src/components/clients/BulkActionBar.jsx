@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, ClipboardCheck, Flame, X, Loader2, Dumbbell, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -12,12 +12,12 @@ function CalorieAdjust({ selectedClients, onDone }) {
     let updated = 0;
     for (const client of selectedClients) {
       if (!client.assigned_nutrition_id) continue;
-      const plans = await base44.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
+      const plans = await db.entities.NutritionPlan.filter({ id: client.assigned_nutrition_id });
       const plan = plans[0];
       if (plan) {
         const newCals = Math.max(1000, (plan.calories || 2000) + delta);
-        await base44.entities.NutritionPlan.update(plan.id, { calories: newCals });
-        await base44.entities.Message.create({
+        await db.entities.NutritionPlan.update(plan.id, { calories: newCals });
+        await db.entities.Message.create({
           client_id: client.id, client_name: client.name, sender: 'coach',
           content: `Your daily calorie target has been updated to ${newCals} kcal (${delta > 0 ? '+' : ''}${delta} adjustment).`,
           tag: 'nutrition', is_read: false,
@@ -51,12 +51,12 @@ function AssignProgram({ selectedClients, onDone }) {
   const [programId, setProgramId] = useState('');
   const { data: programs = [] } = useQuery({
     queryKey: ['programs-bulk'],
-    queryFn: () => base44.entities.WorkoutProgram.list('-created_date', 50),
+    queryFn: () => db.entities.WorkoutProgram.list('-created_date', 50),
   });
   const assign = async () => {
     if (!programId) return;
     setSaving(true);
-    await Promise.all(selectedClients.map(c => base44.entities.Client.update(c.id, { assigned_program_id: programId })));
+    await Promise.all(selectedClients.map(c => db.entities.Client.update(c.id, { assigned_program_id: programId })));
     setSaving(false);
     toast.success(`Program assigned to ${selectedClients.length} client${selectedClients.length !== 1 ? 's' : ''}`);
     onDone();
@@ -95,7 +95,7 @@ function AddTag({ selectedClients, onDone }) {
     await Promise.all(selectedClients.map(c => {
       const existing = c.tags || [];
       if (existing.includes(t)) return Promise.resolve();
-      return base44.entities.Client.update(c.id, { tags: [...existing, t] });
+      return db.entities.Client.update(c.id, { tags: [...existing, t] });
     }));
     setSaving(false);
     setTagVal('');
@@ -144,7 +144,7 @@ export default function BulkActionBar({ selectedIds, clients, allCheckIns, onCle
     if (!message.trim()) return;
     setSending(true);
     await Promise.all(selectedClients.map(c =>
-      base44.entities.Message.create({
+      db.entities.Message.create({
         client_id: c.id, client_name: c.name, sender: 'coach',
         content: message.trim(), tag: 'general', is_read: false,
       })
@@ -164,7 +164,7 @@ export default function BulkActionBar({ selectedIds, clients, allCheckIns, onCle
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
       return ci ? [ci] : [];
     });
-    await Promise.all(checkInsToUpdate.map(ci => base44.entities.CheckIn.update(ci.id, { coach_responded: true })));
+    await Promise.all(checkInsToUpdate.map(ci => db.entities.CheckIn.update(ci.id, { coach_responded: true })));
     setMarking(false);
     toast.success(`Marked ${checkInsToUpdate.length} check-in${checkInsToUpdate.length !== 1 ? 's' : ''} as reviewed`);
     onClear();

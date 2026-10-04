@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Check, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import KoachLogo from '@/components/brand/KoachLogo.jsx';
@@ -40,7 +40,7 @@ export default function PackageLanding() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    base44.entities.CoachingPackage.filter({ slug })
+    db.entities.CoachingPackage.filter({ slug })
       .then(res => {
         if (!res?.length) { setNotFound(true); setLoading(false); return; }
         setPkg(res[0]);

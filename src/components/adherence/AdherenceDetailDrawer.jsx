@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO, differenceInDays, subWeeks, getDay } from 'date-fns';
 import { X, Settings, Calendar, Sparkles } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -51,7 +51,7 @@ export default function AdherenceDetailDrawer({ client, checkIns, open, onClose 
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Client.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Client.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); toast.success('Client flagged as At-Risk'); },
   });
 
@@ -85,7 +85,7 @@ export default function AdherenceDetailDrawer({ client, checkIns, open, onClose 
       message = `Hey ${client.name}! Your weekly check-in is due — only takes 2 minutes! 📋`;
 
     try {
-      await base44.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content: message });
+      await db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content: message });
       toast.success('Nudge sent!');
     } catch { toast.error('Failed to send nudge'); }
     setSendingNudge(false);

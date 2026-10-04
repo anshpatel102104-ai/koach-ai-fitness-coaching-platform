@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Eye, CheckCircle2, Trash2, Copy, Bell } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import InvoiceStatusBadge from './InvoiceStatusBadge';
 
@@ -21,7 +21,7 @@ export default function InvoiceRow({ invoice, onView, onMarkPaid, onDuplicate, o
 
   const handleReminder = async (e) => {
     e.stopPropagation();
-    await base44.functions.invoke('sendInvoiceReminder', { invoice_id: invoice.id });
+    await db.functions.invoke('sendInvoiceReminder', { invoice_id: invoice.id });
     toast.success(`Reminder sent to ${invoice.client_name}`);
   };
 

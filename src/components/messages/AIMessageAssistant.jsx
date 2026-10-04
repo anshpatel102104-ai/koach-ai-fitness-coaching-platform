@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   Sparkles, Loader2, RefreshCw, Check, Edit3, X, ChevronDown
 } from 'lucide-react';
@@ -34,7 +34,7 @@ export default function AIMessageAssistant({ client, allMessages = [], checkIns 
     setLoading(true);
     setSuggestion(null);
     const useTone = overrideTone ?? tone;
-    const res = await base44.functions.invoke('aiMessageAssistant', {
+    const res = await db.functions.invoke('aiMessageAssistant', {
       action: 'generateReply',
       client,
       tone: useTone,

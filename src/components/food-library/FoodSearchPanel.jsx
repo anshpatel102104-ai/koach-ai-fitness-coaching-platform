@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Search, Loader2, Plus, Check, ShieldCheck, UtensilsCrossed } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -104,7 +104,7 @@ export default function FoodSearchPanel({ onSave, isSaved }) {
     if (!q || q.trim().length < 2) { setResults([]); setSearched(false); return; }
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('searchFoods', { query: q.trim(), pageSize: 25 });
+      const res = await db.functions.invoke('searchFoods', { query: q.trim(), pageSize: 25 });
       setResults(res.data?.foods || []);
       setSearched(true);
     } catch {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { motion } from 'framer-motion';
 import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,19 +33,19 @@ export default function ReferralProgram({ user }) {
 
   const { data: program } = useQuery({
     queryKey: ['referral-program', user?.email],
-    queryFn: () => base44.entities.ReferralProgram.filter({ coach_email: user?.email }, '', 1).then(r => r[0]),
+    queryFn: () => db.entities.ReferralProgram.filter({ coach_email: user?.email }, '', 1).then(r => r[0]),
     enabled: !!user?.email,
   });
 
   const { data: referrals = [] } = useQuery({
     queryKey: ['referrals', user?.email],
-    queryFn: () => base44.entities.Referral.filter({ referrer_email: user?.email }, '-date_referred', 100),
+    queryFn: () => db.entities.Referral.filter({ referrer_email: user?.email }, '-date_referred', 100),
     enabled: !!user?.email,
   });
 
   const { data: payouts = [] } = useQuery({
     queryKey: ['referral-payouts', user?.email],
-    queryFn: () => base44.entities.ReferralPayout.filter({ coach_email: user?.email }, '-requested_date', 50),
+    queryFn: () => db.entities.ReferralPayout.filter({ coach_email: user?.email }, '-requested_date', 50),
     enabled: !!user?.email,
   });
 

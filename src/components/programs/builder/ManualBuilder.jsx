@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import ManualDayBuilder from './ManualDayBuilder';
 
@@ -39,7 +39,7 @@ export default function ManualBuilder({ onBack, onProgramCreated }) {
 
     try {
       setSaving(true);
-      const program = await base44.entities.WorkoutProgram.create(form);
+      const program = await db.entities.WorkoutProgram.create(form);
       toast.success('Program created successfully!');
       onProgramCreated(program);
     } catch (error) {

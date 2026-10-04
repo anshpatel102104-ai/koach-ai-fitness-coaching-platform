@@ -92,8 +92,8 @@ export function WLUploadButton({ label, hint, url, onChange, accept = 'image/*' 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { supabase: base44 } = await import('@/api/supabaseClient');
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { db } = await import('@/api/supabaseClient');
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     onChange(file_url);
   };
   return (

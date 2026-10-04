@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { format, parseISO, isPast } from 'date-fns';
 import { Plus, Package, Search, Download, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -49,7 +49,7 @@ export default function Invoicing() {
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => base44.entities.Invoice.list('-created_date', 500),
+    queryFn: () => db.entities.Invoice.list('-created_date', 500),
   });
 
   // Auto-mark overdue
@@ -57,7 +57,7 @@ export default function Invoicing() {
     if (['sent', 'viewed'].includes(inv.status) && inv.due_date) {
       try {
         if (isPast(parseISO(inv.due_date))) {
-          await base44.entities.Invoice.update(inv.id, { status: 'overdue' });
+          await db.entities.Invoice.update(inv.id, { status: 'overdue' });
           qc.invalidateQueries({ queryKey: ['invoices'] });
         }
       } catch (_) {}
@@ -105,10 +105,10 @@ export default function Invoicing() {
 
   const handleSave = async (formData) => {
     if (editingInvoice?.id) {
-      await base44.entities.Invoice.update(editingInvoice.id, formData);
+      await db.entities.Invoice.update(editingInvoice.id, formData);
       toast.success('Invoice updated');
     } else {
-      await base44.entities.Invoice.create(formData);
+      await db.entities.Invoice.create(formData);
       toast.success('Invoice created');
     }
     qc.invalidateQueries({ queryKey: ['invoices'] });
@@ -117,14 +117,14 @@ export default function Invoicing() {
   };
 
   const handleMarkPaid = async (inv) => {
-    await base44.entities.Invoice.update(inv.id, { status: 'paid', paid_date: format(new Date(), 'yyyy-MM-dd') });
+    await db.entities.Invoice.update(inv.id, { status: 'paid', paid_date: format(new Date(), 'yyyy-MM-dd') });
     qc.invalidateQueries({ queryKey: ['invoices'] });
     toast.success(`${inv.invoice_number} marked as paid`);
   };
 
   const handleDelete = async (inv) => {
     if (!confirm(`Delete ${inv.invoice_number}?`)) return;
-    await base44.entities.Invoice.delete(inv.id);
+    await db.entities.Invoice.delete(inv.id);
     qc.invalidateQueries({ queryKey: ['invoices'] });
     toast.success('Invoice deleted');
   };
@@ -133,7 +133,7 @@ export default function Invoicing() {
     toast.success(`Reminder sent to ${inv.client_name}`);
     // Update status to 'sent' if still draft
     if (inv.status === 'draft') {
-      await base44.entities.Invoice.update(inv.id, { status: 'sent' });
+      await db.entities.Invoice.update(inv.id, { status: 'sent' });
       qc.invalidateQueries({ queryKey: ['invoices'] });
     }
   };
@@ -142,7 +142,7 @@ export default function Invoicing() {
     const { id, created_date, updated_date, created_by, ...rest } = inv;
     const nums = invoices.map(i => parseInt((i.invoice_number || '').replace('INV-', '') || '0')).filter(Boolean);
     const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
-    await base44.entities.Invoice.create({
+    await db.entities.Invoice.create({
       ...rest,
       invoice_number: `INV-${String(next).padStart(4, '0')}`,
       status: 'draft',

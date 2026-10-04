@@ -58,7 +58,7 @@ export default function StripeConnectModal({ open, onClose }) {
             <ol className="text-xs text-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
               <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" className="text-[var(--kc-635bff)] underline font-medium">dashboard.stripe.com/apikeys</a></li>
               <li>Copy your <strong>Secret key</strong> (sk_live_... or sk_test_...)</li>
-              <li>In Base44 → Settings → Secrets, add <strong>STRIPE_SECRET_KEY</strong></li>
+              <li>In Supabase → Edge Functions → Secrets, add <strong>STRIPE_SECRET_KEY</strong></li>
               <li>Click "Test Connection" below to verify</li>
             </ol>
             <a

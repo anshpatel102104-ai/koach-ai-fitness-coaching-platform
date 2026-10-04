@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Trash2, CheckSquare, Square, Loader2, ShieldCheck, Info } from 'lucide-react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 
 /**
@@ -57,7 +57,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
     let failed = 0;
     for (const id of selected) {
       try {
-        await base44.entities.Client.delete(id);
+        await db.entities.Client.delete(id);
         deleted++;
       } catch {
         failed++;

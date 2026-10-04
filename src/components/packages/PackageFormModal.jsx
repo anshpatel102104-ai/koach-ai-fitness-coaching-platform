@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { X, Plus, Trash2 } from 'lucide-react';
 
 const PRESET_IMAGES = [
@@ -84,11 +84,11 @@ export default function PackageFormModal({ pkg, onClose, onSave }) {
 
   const { data: programs = [] } = useQuery({
     queryKey: ['programs-pkg'],
-    queryFn: () => base44.entities.WorkoutProgram.list('-created_date', 100),
+    queryFn: () => db.entities.WorkoutProgram.list('-created_date', 100),
   });
   const { data: nutritionPlans = [] } = useQuery({
     queryKey: ['nutrition-pkg'],
-    queryFn: () => base44.entities.NutritionPlan.list('-created_date', 100),
+    queryFn: () => db.entities.NutritionPlan.list('-created_date', 100),
   });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));

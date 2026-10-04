@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,7 @@ function ClientPicker({ value, onChange }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-picker'],
-    queryFn: () => base44.entities.Client.list('-created_date', 200),
+    queryFn: () => db.entities.Client.list('-created_date', 200),
   });
 
   const filtered = clients.filter(c =>
@@ -262,12 +262,12 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-picker'],
-    queryFn: () => base44.entities.Client.list('-created_date', 200),
+    queryFn: () => db.entities.Client.list('-created_date', 200),
   });
 
   const { data: plans = [] } = useQuery({
     queryKey: ['nutrition'],
-    queryFn: () => base44.entities.NutritionPlan.list('-created_date'),
+    queryFn: () => db.entities.NutritionPlan.list('-created_date'),
   });
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
@@ -334,29 +334,29 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
     try {
       // 1. Deactivate any existing active plan for this client
-      const existingPlans = await base44.entities.NutritionPlan.filter({
+      const existingPlans = await db.entities.NutritionPlan.filter({
         client_id: selectedClientId,
         status: 'active',
       });
       await Promise.all(
-        existingPlans.map(p => base44.entities.NutritionPlan.update(p.id, { status: 'inactive' }))
+        existingPlans.map(p => db.entities.NutritionPlan.update(p.id, { status: 'inactive' }))
       );
 
       // 2. Create the new active plan with client_id + status
-      const plan = await base44.entities.NutritionPlan.create(buildPlanData({
+      const plan = await db.entities.NutritionPlan.create(buildPlanData({
         client_id: selectedClientId,
         status: 'active',
         start_date: startDate,
       }));
 
       // 3. Update client's assigned_nutrition_id
-      await base44.entities.Client.update(selectedClientId, {
+      await db.entities.Client.update(selectedClientId, {
         assigned_nutrition_id: plan.id,
       });
 
       // 4. Send personal note as a message if provided
       if (personalNote.trim()) {
-        await base44.entities.Message.create({
+        await db.entities.Message.create({
           client_id: selectedClientId,
           sender: 'coach',
           content: personalNote.trim(),
@@ -366,7 +366,7 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
       // 5. Create in-app notification for the client (only if they have a portal account)
       if (selectedClient?.portal_user_id) {
-        await base44.entities.Notification.create({
+        await db.entities.Notification.create({
           recipient_id: selectedClient.portal_user_id,
           category: 'ai',
           type: 'meal_plan_assigned',
@@ -399,7 +399,7 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
   const handleSaveTemplate = async (templateName, category) => {
     try {
-      await base44.entities.NutritionPlan.create(buildPlanData({
+      await db.entities.NutritionPlan.create(buildPlanData({
         title: templateName || planName,
         is_template: true,
         status: 'template',
@@ -415,7 +415,7 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
   const handleSaveDraft = async () => {
     try {
-      await base44.entities.NutritionPlan.create(buildPlanData({
+      await db.entities.NutritionPlan.create(buildPlanData({
         status: 'draft',
         is_draft: true,
       }));

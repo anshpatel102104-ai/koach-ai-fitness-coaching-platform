@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
 import { Zap, X, AlertTriangle, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export default function TrialBanner({ user }) {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ export default function TrialBanner({ user }) {
   // Past-due banner — not dismissable
   if (isPastDue) {
     const handleFixPayment = async () => {
-      const res = await base44.functions.invoke('stripeCheckout', {
+      const res = await db.functions.invoke('stripeCheckout', {
         action: 'portal',
         cancel_url: window.location.href,
       });

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69e2a436330b5bde8cea6d84/5fcf73373_ChatGPTImageMay12202609_18_33PM.png';
+const LOGO_URL = '/favicon-512.png';
 
 export default function KoachLogo({ size = 32, rounded = 'rounded-xl', glow = false, bg = true }) {
   return (

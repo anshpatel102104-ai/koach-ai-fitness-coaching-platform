@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import DashboardHeader from '@/components/client-dashboard/DashboardHeader';
@@ -33,7 +33,7 @@ export default function ClientDashboard() {
 
   const { data: existingLog } = useQuery({
     queryKey: ['daily-log', today],
-    queryFn: () => base44.entities.DailyLog.filter({ date: today }, '-created_date', 1),
+    queryFn: () => db.entities.DailyLog.filter({ date: today }, '-created_date', 1),
     enabled: !!user,
   });
 
@@ -47,8 +47,8 @@ export default function ClientDashboard() {
 
   const saveMutation = useMutation({
     mutationFn: (data) => logId
-      ? base44.entities.DailyLog.update(logId, data)
-      : base44.entities.DailyLog.create({ ...data, client_id: user?.id || 'me', date: today }),
+      ? db.entities.DailyLog.update(logId, data)
+      : db.entities.DailyLog.create({ ...data, client_id: user?.id || 'me', date: today }),
     onSuccess: (res) => {
       if (!logId && res?.id) setLogId(res.id);
       queryClient.invalidateQueries({ queryKey: ['daily-log'] });
@@ -63,7 +63,7 @@ export default function ClientDashboard() {
 
   const { data: recentLogs = [] } = useQuery({
     queryKey: ['daily-logs-streak', user?.id],
-    queryFn: () => base44.entities.DailyLog.filter({ client_id: user?.id || 'me' }, '-date', 60),
+    queryFn: () => db.entities.DailyLog.filter({ client_id: user?.id || 'me' }, '-date', 60),
     enabled: !!user,
   });
 
@@ -79,28 +79,28 @@ export default function ClientDashboard() {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['my-client-profile'],
-    queryFn: () => base44.entities.Client.filter({ email: user?.email }, '-created_date', 1),
+    queryFn: () => db.entities.Client.filter({ email: user?.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
 
   const { data: programs = [] } = useQuery({
     queryKey: ['my-program', myClient?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_program_id,
   });
   const myProgram = programs[0];
 
   const { data: nutritionPlans = [] } = useQuery({
     queryKey: ['my-nutrition', myClient?.assigned_nutrition_id],
-    queryFn: () => base44.entities.NutritionPlan.filter({ id: myClient.assigned_nutrition_id }, '-created_date', 1),
+    queryFn: () => db.entities.NutritionPlan.filter({ id: myClient.assigned_nutrition_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_nutrition_id,
   });
   const myNutrition = nutritionPlans[0];
 
   const { data: checkIns = [] } = useQuery({
     queryKey: ['my-checkins'],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: myClient?.id }, '-date', 5),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: myClient?.id }, '-date', 5),
     enabled: !!myClient?.id,
   });
   const lastCheckIn = checkIns[0];

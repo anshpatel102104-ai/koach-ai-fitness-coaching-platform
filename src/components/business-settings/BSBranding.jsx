@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Palette, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { BSSection, BSRow, BSInput, BSTextarea, BSDivider } from './BSSection';
 import { SignedImg } from '@/components/shared/SignedImage';
 
@@ -18,7 +18,7 @@ export default function BSBranding({ s, set }) {
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { file_url } = await base44.uploadFile({ file, bucket: 'branding' });
+    const { file_url } = await db.uploadFile({ file, bucket: 'branding' });
     set('logo_url', file_url);
   };
 

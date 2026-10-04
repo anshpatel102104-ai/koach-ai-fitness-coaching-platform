@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -25,16 +25,16 @@ export default function PaymentTracker({ clients }) {
 
   const { data: payments = [] } = useQuery({
     queryKey: ['payments'],
-    queryFn: () => base44.entities.Payment.list('-created_date', 50),
+    queryFn: () => db.entities.Payment.list('-created_date', 50),
   });
 
   const createMutation = useMutation({
-    mutationFn: (d) => base44.entities.Payment.create(d),
+    mutationFn: (d) => db.entities.Payment.create(d),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payments'] }); setShowForm(false); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Payment.update(id, data),
+    mutationFn: ({ id, data }) => db.entities.Payment.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payments'] }),
   });
 

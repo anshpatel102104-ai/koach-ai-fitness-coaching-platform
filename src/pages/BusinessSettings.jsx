@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Download, Upload } from 'lucide-react';
@@ -46,18 +46,18 @@ export default function BusinessSettings() {
 
   const { data: existing = [] } = useQuery({
     queryKey: ['business-settings', user?.email],
-    queryFn: () => base44.entities.BusinessSettings.filter({ coach_id: user.id }, '-created_date', 1),
+    queryFn: () => db.entities.BusinessSettings.filter({ coach_id: user.id }, '-created_date', 1),
     enabled: !!user?.id,
   });
 
   const { data: forms = [] } = useQuery({
-    queryKey: ['checkin-forms'], queryFn: () => base44.entities.CheckInForm.list('-created_date', 50),
+    queryKey: ['checkin-forms'], queryFn: () => db.entities.CheckInForm.list('-created_date', 50),
   });
   const { data: programs = [] } = useQuery({
-    queryKey: ['programs-list'], queryFn: () => base44.entities.WorkoutProgram.list('-created_date', 50),
+    queryKey: ['programs-list'], queryFn: () => db.entities.WorkoutProgram.list('-created_date', 50),
   });
   const { data: mealPlans = [] } = useQuery({
-    queryKey: ['meal-plans-list'], queryFn: () => base44.entities.NutritionPlan.list('-created_date', 50),
+    queryKey: ['meal-plans-list'], queryFn: () => db.entities.NutritionPlan.list('-created_date', 50),
   });
 
   useEffect(() => {
@@ -78,9 +78,9 @@ export default function BusinessSettings() {
     try {
       const payload = { ...s, coach_id: user?.id }; // coach_id is uuid (profiles.id), not email
       if (settingsId) {
-        await base44.entities.BusinessSettings.update(settingsId, payload);
+        await db.entities.BusinessSettings.update(settingsId, payload);
       } else {
-        const created = await base44.entities.BusinessSettings.create(payload);
+        const created = await db.entities.BusinessSettings.create(payload);
         setSettingsId(created.id);
       }
       setSavedAt(new Date());

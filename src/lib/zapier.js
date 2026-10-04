@@ -1,7 +1,7 @@
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 
 export const sendZapierEvent = async (eventType, data) => {
-  const settings = await base44.entities.CoachSettings.list();
+  const settings = await db.entities.CoachSettings.list();
   const webhookUrl = settings[0]?.zapier_webhook_url;
   const enabledEvents = settings[0]?.zapier_events || [];
 
@@ -23,7 +23,7 @@ export const sendZapierEvent = async (eventType, data) => {
     });
     // Update last triggered
     if (settings[0]?.id) {
-      await base44.entities.CoachSettings.update(settings[0].id, {
+      await db.entities.CoachSettings.update(settings[0].id, {
         zapier_last_triggered: new Date().toISOString(),
       });
     }
@@ -34,7 +34,7 @@ export const sendZapierEvent = async (eventType, data) => {
 
   // Log the event
   try {
-    await base44.entities.ZapierLog.create({
+    await db.entities.ZapierLog.create({
       event_type: eventType,
       client_id: data?.client_id || '',
       client_name: data?.client_name || '',

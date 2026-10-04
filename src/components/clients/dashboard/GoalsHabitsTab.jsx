@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, LayoutTemplate, Target, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import GoalCard from './goals/GoalCard';
@@ -25,7 +25,7 @@ export default function GoalsHabitsTab({ client }) {
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', client.id],
-    queryFn: () => base44.entities.Goal.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Goal.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => {
       if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
@@ -49,14 +49,14 @@ export default function GoalsHabitsTab({ client }) {
 
   const handleDelete = async (goal) => {
     if (!confirm(`Delete goal "${goal.name}"?`)) return;
-    await base44.entities.Goal.delete(goal.id);
+    await db.entities.Goal.delete(goal.id);
     toast.success('Goal deleted');
     refresh();
   };
 
   const handleToggleComplete = async (goal) => {
     const newStatus = goal.status === 'completed' ? 'active' : 'completed';
-    await base44.entities.Goal.update(goal.id, { status: newStatus });
+    await db.entities.Goal.update(goal.id, { status: newStatus });
     toast.success(newStatus === 'completed' ? 'Goal marked complete! 🎉' : 'Goal reactivated');
     refresh();
   };

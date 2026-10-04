@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Search, Download, ChevronDown, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentStatCards from '@/components/payments/PaymentStatCards';
@@ -27,12 +27,12 @@ export default function PaymentTracking() {
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['payments-tracking'],
-    queryFn: () => base44.entities.Payment.list('-created_date', 500),
+    queryFn: () => db.entities.Payment.list('-created_date', 500),
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices'],
-    queryFn: () => base44.entities.Invoice.list('-created_date', 500),
+    queryFn: () => db.entities.Invoice.list('-created_date', 500),
   });
 
   // Build enriched payment objects from both payments and paid invoices

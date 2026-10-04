@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Plus, Target, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import GoalFormModal from './goals/GoalFormModal';
@@ -106,7 +106,7 @@ export default function GoalsSummarySection({ client }) {
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['goals', client.id],
-    queryFn: () => base44.entities.Goal.filter({ client_id: client.id }),
+    queryFn: () => db.entities.Goal.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => [...d].sort((a, b) => {
       if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
@@ -122,14 +122,14 @@ export default function GoalsSummarySection({ client }) {
 
   const handleDelete = async (g) => {
     if (!confirm(`Delete goal "${g.name}"?`)) return;
-    await base44.entities.Goal.delete(g.id);
+    await db.entities.Goal.delete(g.id);
     toast.success('Goal deleted');
     refresh();
   };
 
   const handleToggle = async (g) => {
     const next = g.status === 'completed' ? 'active' : 'completed';
-    await base44.entities.Goal.update(g.id, { status: next });
+    await db.entities.Goal.update(g.id, { status: next });
     toast.success(next === 'completed' ? 'Goal completed!' : 'Goal reactivated');
     refresh();
   };

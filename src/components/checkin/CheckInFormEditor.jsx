@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import {
   ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronUp, BookOpen, Calendar, Search
 } from 'lucide-react';
@@ -150,8 +150,8 @@ export default function CheckInFormEditor({ form, clients, onClose }) {
 
   const saveMutation = useMutation({
     mutationFn: (data) => form?.id
-      ? base44.entities.CheckInForm.update(form.id, data)
-      : base44.entities.CheckInForm.create(data),
+      ? db.entities.CheckInForm.update(form.id, data)
+      : db.entities.CheckInForm.create(data),
     onSuccess: () => {
       toast.success(form?.id ? 'Form updated!' : 'Form created!');
       onClose();

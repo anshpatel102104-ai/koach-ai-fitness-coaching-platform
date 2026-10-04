@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Search, Star, Loader2, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -71,7 +71,7 @@ export default function FoodSearchResults({ onSave, isSaved, onSelect, selectMod
     setLoading(true);
     setError('');
     try {
-      const res = await base44.functions.invoke('searchFoods', { query: q.trim(), pageSize: 25 });
+      const res = await db.functions.invoke('searchFoods', { query: q.trim(), pageSize: 25 });
       setResults(res.data?.foods || []);
       setSearched(true);
     } catch (e) {

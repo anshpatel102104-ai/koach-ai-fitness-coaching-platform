@@ -6,7 +6,7 @@ import { BADGE_CONFIG, TIER_STYLES } from '@/lib/badges';
 import { cn } from '@/lib/utils';
 import { Plus, Bell, Dumbbell, Salad, Sparkles, Lock } from 'lucide-react';
 import GoalsSummarySection from './GoalsSummarySection';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { hasFeature } from '@/lib/subscription';
@@ -143,7 +143,7 @@ export default function SummaryTab({ client, checkIns, messages, program, nutrit
   const saveTag = async () => {
     if (!newTag.trim()) return;
     const existing = client.tags || [];
-    await base44.entities.Client.update(client.id, { tags: [...existing, newTag.trim()] });
+    await db.entities.Client.update(client.id, { tags: [...existing, newTag.trim()] });
     toast.success('Tag added');
     setNewTag('');
     setAddingTag(false);
@@ -418,7 +418,7 @@ function NotesColumn({ client }) {
 
   const { data: notes = [], refetch } = useQuery({
     queryKey: ['notes-col', client?.id],
-    queryFn: () => base44.entities.CheckIn.filter({ client_id: client.id }),
+    queryFn: () => db.entities.CheckIn.filter({ client_id: client.id }),
     enabled: !!client?.id,
     select: d => d.filter(ci => ci.coach_notes).sort((a, b) => new Date(b.date) - new Date(a.date)),
   });
@@ -426,7 +426,7 @@ function NotesColumn({ client }) {
   const save = async () => {
     if (!newNote.trim()) return;
     setSaving(true);
-    await base44.entities.CheckIn.create({
+    await db.entities.CheckIn.create({
       client_id: client.id,
       client_name: client.name,
       date: new Date().toISOString().split('T')[0],

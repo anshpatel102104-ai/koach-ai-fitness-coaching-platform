@@ -1,4 +1,4 @@
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { calculateStreak, checkInScore } from '@/lib/adherence';
 import { format } from 'date-fns';
 
@@ -41,7 +41,7 @@ export async function runAutoAwardForClient(client, checkIns, existingBadges) {
 
   for (const { key, check } of AUTO_AWARD_CHECKS) {
     if (!awarded.has(key) && check(checkIns)) {
-      await base44.entities.ClientBadge.create({
+      await db.entities.ClientBadge.create({
         client_id:   client.id,
         client_name: client.name,
         badge_key:   key,

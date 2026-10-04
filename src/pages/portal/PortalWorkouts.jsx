@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startOfWeek, addDays, subDays, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -44,7 +44,7 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
   // Client
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-profile', user?.email],
-    queryFn: () => base44.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -52,7 +52,7 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
   // Program
   const { data: programs = [] } = useQuery({
     queryKey: ['portal-program', myClient?.assigned_program_id],
-    queryFn: () => base44.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
+    queryFn: () => portalDb.entities.WorkoutProgram.filter({ id: myClient.assigned_program_id }, '-created_date', 1),
     enabled: !!myClient?.assigned_program_id,
   });
   const myProgram = programs[0];
@@ -60,12 +60,12 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
   // Workout sessions
   const { data: sessions = [] } = useQuery({
     queryKey: ['portal-sessions', myClient?.id],
-    queryFn: () => base44.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 50),
+    queryFn: () => portalDb.entities.WorkoutSession.filter({ client_id: myClient.id }, '-completed_at', 50),
     enabled: !!myClient?.id,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.WorkoutSession.create(data),
+    mutationFn: (data) => portalDb.entities.WorkoutSession.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal-sessions'] }),
   });
 

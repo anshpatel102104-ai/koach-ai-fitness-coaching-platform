@@ -1,13 +1,13 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabasePortal as base44 } from '@/api/supabaseClient';
+import { portalDb } from '@/api/supabaseClient';
 import { Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function AIInsightsCard({ client }) {
   const { data: analyses = [], isLoading } = useQuery({
     queryKey: ['progress-analysis-portal', client?.id],
-    queryFn: () => base44.entities.ProgressAnalysis.filter({ client_id: client.id }, '-generated_at', 1),
+    queryFn: () => portalDb.entities.ProgressAnalysis.filter({ client_id: client.id }, '-generated_at', 1),
     enabled: !!client?.id,
   });
 

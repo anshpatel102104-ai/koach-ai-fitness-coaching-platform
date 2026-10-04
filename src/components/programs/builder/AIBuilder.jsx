@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ArrowLeft, RefreshCw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import AIProfileStep from './steps/AIProfileStep';
 import AIPreferencesStep from './steps/AIPreferencesStep';
@@ -36,7 +36,7 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
     try {
       setLoading(true);
       setGenerateError(null);
-      const result = await base44.functions.invoke('generateAIProgram', {
+      const result = await db.functions.invoke('generateAIProgram', {
         profile,
         preferences: prefs,
       });
@@ -82,7 +82,7 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
     try {
       setLoading(true);
       const dataToSave = editedProgram || generatedProgram;
-      const newProgram = await base44.entities.WorkoutProgram.create({
+      const newProgram = await db.entities.WorkoutProgram.create({
         ...dataToSave,
         is_template: false,
         is_ai_generated: true,

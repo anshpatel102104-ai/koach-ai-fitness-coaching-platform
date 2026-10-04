@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [
     if (!checkIn || allClientCIs.length < 1) return;
     setLoading(true);
     setSummary(null);
-    const res = await base44.functions.invoke('aiProgressInsights', {
+    const res = await db.functions.invoke('aiProgressInsights', {
       action: 'checkInSummary', client, checkIn, prevCheckIn, recentCheckIns: sorted,
     });
     setSummary(res.data);

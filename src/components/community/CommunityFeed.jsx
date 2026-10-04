@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase as base44 } from '@/api/supabaseClient';
+import { db } from '@/api/supabaseClient';
 import { Heart, MessageCircle, Send, Trophy, Star, Lightbulb, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ function PostCard({ post, currentUserId, groupId }) {
 
   const { data: comments = [] } = useQuery({
     queryKey: ['comments', post.id],
-    queryFn: () => base44.entities.PostComment.filter({ post_id: post.id }, 'created_date'),
+    queryFn: () => db.entities.PostComment.filter({ post_id: post.id }, 'created_date'),
     enabled: showComments,
   });
 
@@ -48,13 +48,13 @@ function PostCard({ post, currentUserId, groupId }) {
       const likes = post.likes || [];
       const hasLiked = likes.includes(currentUserId);
       const updated = hasLiked ? likes.filter(id => id !== currentUserId) : [...likes, currentUserId];
-      return base44.entities.CommunityPost.update(post.id, { likes: updated });
+      return db.entities.CommunityPost.update(post.id, { likes: updated });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-posts', groupId] }),
   });
 
   const commentMutation = useMutation({
-    mutationFn: () => base44.entities.PostComment.create({ post_id: post.id, author_id: currentUserId, author_name: 'You', content: comment, coach_id: post.coach_id }),
+    mutationFn: () => db.entities.PostComment.create({ post_id: post.id, author_id: currentUserId, author_name: 'You', content: comment, coach_id: post.coach_id }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['comments', post.id] }); setComment(''); },
   });
 
@@ -138,12 +138,12 @@ export default function CommunityFeed({ currentUser, groupId }) {
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['community-posts', groupId],
     queryFn: () => groupId
-      ? base44.entities.CommunityPost.filter({ group_id: groupId }, '-created_date', 50)
-      : base44.entities.CommunityPost.list('-created_date', 50),
+      ? db.entities.CommunityPost.filter({ group_id: groupId }, '-created_date', 50)
+      : db.entities.CommunityPost.list('-created_date', 50),
   });
 
   const createPost = useMutation({
-    mutationFn: () => base44.entities.CommunityPost.create({
+    mutationFn: () => db.entities.CommunityPost.create({
       author_id: currentUser?.id || 'anonymous',
       author_name: currentUser?.full_name || 'Anonymous',
       content: newPost,

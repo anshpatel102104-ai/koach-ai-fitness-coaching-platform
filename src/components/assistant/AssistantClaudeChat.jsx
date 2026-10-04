@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Send, Sparkles, Copy, Check, Mic, BookmarkPlus, User, Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Send, Sparkles, Copy, Check, Mic, BookmarkPlus, User, Zap, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -11,6 +11,9 @@ import { format } from 'date-fns';
 const TOOL_ICONS = {
   create_nutrition_plan: '🥗',
   update_nutrition_plan: '📊',
+  update_program: '🏋️',
+  get_program: '🔍',
+  list_checkins: '📋',
   create_program: '💪',
   update_client: '👤',
   flag_client_at_risk: '⚠️',
@@ -40,7 +43,53 @@ function ActionCard({ action }) {
   );
 }
 
-function MessageBubble({ message, onFollowUp, onSaveNote, isLast }) {
+
+/* A write the assistant proposed. Nothing is saved until the coach confirms. */
+function ProposalCard({ proposal, onResolve }) {
+  const icon = TOOL_ICONS[proposal.tool] || '⚙️';
+  const busy = proposal.status === 'saving';
+  const done = proposal.status === 'confirmed';
+  const dismissed = proposal.status === 'dismissed';
+  return (
+    <div className={cn('w-full rounded-xl border p-3 text-sm space-y-2',
+      done ? 'border-success bg-success/10' : dismissed ? 'border-border bg-secondary opacity-60' : 'border-primary/40 bg-primary/5')}>
+      <div className="flex items-center gap-2">
+        <span className="text-lg">{icon}</span>
+        <p className="font-semibold text-foreground flex-1 min-w-0">{proposal.summary}</p>
+        {done && <CheckCircle className="w-4 h-4 text-success shrink-0" />}
+        {proposal.status === 'failed' && <AlertCircle className="w-4 h-4 text-destructive shrink-0" />}
+      </div>
+      {proposal.changes?.length > 0 && (
+        <ul className="space-y-1 text-xs">
+          {proposal.changes.map((c, i) => (
+            <li key={i} className="flex flex-wrap gap-x-2 text-muted-foreground">
+              <span className="font-medium text-foreground">{String(c.field).replace(/_/g, ' ')}:</span>
+              {c.before !== '' && c.before != null && <span className="line-through">{String(c.before)}</span>}
+              <span className="text-foreground">{String(c.after)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {proposal.error && <p className="text-xs text-destructive">{proposal.error}</p>}
+      {(proposal.status === 'pending' || proposal.status === 'failed' || busy) && (
+        <div className="flex gap-2 pt-1">
+          <button onClick={() => onResolve(proposal, 'confirm')} disabled={busy}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-60">
+            {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Confirm &amp; save
+          </button>
+          <button onClick={() => onResolve(proposal, 'dismiss')} disabled={busy}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:bg-secondary disabled:opacity-60">
+            <X className="w-3 h-3" /> Dismiss
+          </button>
+        </div>
+      )}
+      {done && <p className="text-xs text-success font-medium">Saved</p>}
+      {dismissed && <p className="text-xs text-muted-foreground">Dismissed — nothing was changed</p>}
+    </div>
+  );
+}
+
+function MessageBubble({ message, onFollowUp, onSaveNote, onResolveProposal, isLast }) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
 
@@ -62,6 +111,13 @@ function MessageBubble({ message, onFollowUp, onSaveNote, isLast }) {
         {message.actions?.length > 0 && (
           <div className="w-full space-y-1.5">
             {message.actions.map((a, i) => <ActionCard key={i} action={a} />)}
+          </div>
+        )}
+
+        {/* Proposed writes — need coach confirmation */}
+        {message.proposals?.length > 0 && (
+          <div className="w-full space-y-1.5">
+            {message.proposals.map((p) => <ProposalCard key={p.id} proposal={p} onResolve={onResolveProposal} />)}
           </div>
         )}
 
@@ -210,12 +266,13 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
         role: 'assistant',
         content: data.response || '',
         actions: data.actions || [],
+        proposals: (data.proposals || []).map(p => ({ ...p, status: 'pending' })),
         timestamp: format(new Date(), 'h:mm a'),
       };
       setMessages(prev => [...prev, aiMsg]);
 
       // Invalidate relevant queries so UI reflects changes
-      if (data.actions?.length > 0) {
+      if (data.actions?.length > 0) { // reads only; writes are saved after confirmation
         queryClient.invalidateQueries({ queryKey: ['clients'] });
         queryClient.invalidateQueries({ queryKey: ['nutrition-plans'] });
         queryClient.invalidateQueries({ queryKey: ['programs'] });
@@ -240,6 +297,27 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
       setIsLoading(false);
     }
   }, [input, messages, isLoading, selectedClient, adherenceScore, streak, lastCheckIn, plan, queryClient]);
+
+  const patchProposal = (id, patch) => setMessages(prev => prev.map(m =>
+    m.proposals?.some(p => p.id === id)
+      ? { ...m, proposals: m.proposals.map(p => (p.id === id ? { ...p, ...patch } : p)) }
+      : m));
+
+  const handleResolveProposal = async (proposal, decision) => {
+    if (decision === 'dismiss') { patchProposal(proposal.id, { status: 'dismissed' }); return; }
+    patchProposal(proposal.id, { status: 'saving', error: null });
+    try {
+      const res = await db.functions.invoke('claudeAssistant', { confirm: { tool: proposal.tool, input: proposal.input } });
+      if (res.data?.error) throw new Error(res.data.error);
+      if (res.data?.result?.error) throw new Error(res.data.result.error);
+      patchProposal(proposal.id, { status: 'confirmed' });
+      toast.success(res.data?.result?.message || 'Saved');
+      ['clients', 'nutrition-plans', 'programs', 'messages', 'checkins-review', 'checkins-chat', 'badges']
+        .forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
+    } catch (err) {
+      patchProposal(proposal.id, { status: 'failed', error: err.message });
+    }
+  };
 
   const handleSaveNote = async (content) => {
     if (!selectedClient) { toast.error('Select a client first'); return; }
@@ -276,7 +354,7 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
         <Zap className="w-3.5 h-3.5 text-primary" />
         <span className="text-xs font-semibold text-primary">Agentic Mode</span>
-        <span className="text-xs text-muted-foreground">— can take real actions in your app</span>
+        <span className="text-xs text-muted-foreground">— proposes changes; nothing saves until you confirm</span>
       </div>
 
       {/* Messages */}
@@ -314,6 +392,7 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
                 isLast={i === messages.length - 1 && msg.role === 'assistant'}
                 onFollowUp={sendMessage}
                 onSaveNote={msg.role === 'assistant' ? handleSaveNote : null}
+                onResolveProposal={handleResolveProposal}
               />
             ))}
             {isLoading && <TypingIndicator />}

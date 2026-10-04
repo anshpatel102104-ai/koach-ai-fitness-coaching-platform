@@ -26,50 +26,6 @@ default-deny, and the admin-self-promotion guard.
 
 ## Step 2 — Data-access layer swap (facade + data migration)
 
-### 2a. One-time data migration: `scripts/migrate-base44-to-supabase.mjs`
-
-Run manually (`npm run migrate:base44 -- <flags>`), never as part of a build.
-Source is the Base44 API (`BASE44_APP_ID` + `BASE44_API_KEY`, paginated
-`list()`) or `--fixture <file.json>`; sink is a real project
-(`SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`) or `POSTGRES_URL` for local
-rehearsals. Properties:
-
-- **Idempotent**: every row id is a deterministic UUIDv5 of the Base44 id
-  and all writes are `upsert ... on conflict (id)` — re-runs converge.
-- **Users**: Base44 `User` rows become `auth.users` (created by email via
-  the admin API, or looked up if they exist) + a `profiles` upsert; all
-  user references (ids **or** emails — Base44 mixed both on
-  BlockedTime/BufferTime/CoachAvailability/CoachDefaults/ReminderSettings/
-  OnboardingResponse/Notification.recipient_id) resolve through that map.
-- **Invite tokens**: plaintext `invite_token` from the old system is
-  sha256-hashed into `invite_token_hash` in-flight; plaintext is never
-  written. This script is the only place plaintext tokens are ever read.
-- **Nothing dropped silently**: unmappable rows and dropped unknown columns
-  land in `<out-dir>/skipped.jsonl` with reasons; per-entity read/written/
-  skipped counts print at the end. `clients.assigned_program_id`/
-  `assigned_nutrition_id` are back-filled in a second pass (FK targets load
-  after clients).
-- **Rehearsed against the REAL Base44 dataset** (exported via the Base44 MCP
-  connection into gitignored `migration-logs/base44-export.json` — contains
-  PII, never commit it): 1,029 rows across 27 non-empty entities;
-  **976 written, 53 skipped-with-reason**, and a second run produced
-  identical results (idempotent). The 53 skips are all explained:
-  - 32 notifications addressed to emails with no user account (22 demo
-    seeds, 8 to the client's email — clients get auth accounts in Step 3,
-    after which a re-run maps them), and 5 notifications + 8 invoices +
-    6 sessions referencing Base44 *sample/demo* clients (`sample-1..6`,
-    `1..6`) that no longer exist in the source;
-  - 1 nutrition plan with garbage AI macros (88,587,498,848,549 kcal —
-    numeric overflow, correctly rejected);
-  - 1 onboarding response whose `coach_id` holds the *client's* email and
-    has no creator to fall back to.
-  Real-data quirks the rehearsal surfaced and the script now handles:
-  `coach_id: "me"` literals (falls back to the row creator — opt-in per
-  entity, never for notification recipients), `created_by_id:
-  "service_..."` rows (created_by left null; flagged below), explicit JSON
-  nulls (stripped so Postgres defaults apply), and undeclared real columns
-  (migration `20260709000800`).
-
 ### 2b. Facade: `src/api/supabaseClient.js`
 
 Same shape as `base44Client`, so cutover is an import swap:

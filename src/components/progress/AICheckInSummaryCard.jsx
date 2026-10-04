@@ -13,7 +13,9 @@ const SENTIMENT_CONFIG = {
 };
 
 export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [], autoGenerate = true }) {
-  const [summary, setSummary] = useState(null);
+  // checkin.analyze (onEntityEvent) stores the summary on the check-in when it is
+  // created — read that first and only call the model when it is missing.
+  const [summary, setSummary] = useState(checkIn?.ai_checkin_summary || null);
   const [loading, setLoading] = useState(false);
 
   const sorted = [...allClientCIs].filter(ci => ci.date).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -31,10 +33,15 @@ export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [
   };
 
   useEffect(() => {
+    if (checkIn?.ai_checkin_summary) {
+      setSummary(checkIn.ai_checkin_summary);
+      return;
+    }
+    setSummary(null);
     if (autoGenerate && checkIn && allClientCIs.length >= 1) {
       generate();
     }
-  }, [checkIn?.id]);
+  }, [checkIn?.id, checkIn?.ai_checkin_summary]);
 
   const cfg = SENTIMENT_CONFIG[summary?.sentiment] || SENTIMENT_CONFIG.okay;
 

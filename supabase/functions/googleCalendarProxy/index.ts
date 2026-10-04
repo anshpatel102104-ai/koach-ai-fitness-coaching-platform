@@ -7,8 +7,8 @@
 // google_refresh_token / google_token_expires_at, added in migration 13);
 // this proxy refreshes expired access tokens via GOOGLE_CLIENT_ID /
 // GOOGLE_CLIENT_SECRET and returns 400 `google_not_connected` until the
-// consent flow has populated the row (the OAuth redirect flow is a frontend
-// follow-up, documented in AUTOMATION_MIGRATION.md).
+// consent flow has populated the row (googleCalendarConnect starts that flow,
+// googleCalendarCallback stores the tokens).
 //
 // The four Calendar API actions are verbatim.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';

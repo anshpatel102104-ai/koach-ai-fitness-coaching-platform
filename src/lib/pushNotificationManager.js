@@ -66,19 +66,6 @@ export const pushNotificationManager = {
     localStorage.setItem(SHOW_HOME_SCREEN_KEY, 'true');
   },
 
-  // Register service worker
-  async registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) return null;
-    
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      return registration;
-    } catch (err) {
-      console.error('Service worker registration failed:', err);
-      return null;
-    }
-  },
-
   // Subscribe to push notifications
   async subscribeToPush(swRegistration) {
     try {

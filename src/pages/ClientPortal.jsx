@@ -151,11 +151,6 @@ export default function ClientPortal() {
     }
   }, []);
 
-  // Register service worker
-  useEffect(() => {
-    pushNotificationManager.registerServiceWorker();
-  }, []);
-
   const handleEnableNotifications = async () => {
     try {
       const swReg = await navigator.serviceWorker.ready;

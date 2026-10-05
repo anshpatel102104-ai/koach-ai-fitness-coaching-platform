@@ -6,12 +6,20 @@
 //
 // Two deliberate changes vs Base44:
 //   - InvokeLLM → the shared Anthropic client (_shared/anthropic.js).
+//   - WRITES REQUIRE COACH CONFIRMATION: write tools never execute inside the
+//     model loop. They return a validated proposal ({proposals}) that the UI
+//     shows with Confirm/Dismiss; the confirm request ({confirm:{tool,input}})
+//     is what actually writes — re-checked for ownership at that moment.
+//     Reads (get_client_data, list_clients, get_program, list_checkins) run
+//     immediately.
 //   - SECURITY: Base44 ran every tool asServiceRole with no ownership checks
 //     (any coach could act on any tenant's clients). Every tool now resolves
 //     targets through the caller's ownership — see _shared/assistantTools.js.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { invokeClaude } from '../_shared/anthropic.js';
-import { executeAssistantTool } from '../_shared/assistantTools.js';
+import {
+  executeAssistantTool, previewAssistantWrite, READ_TOOLS, WRITE_TOOLS,
+} from '../_shared/assistantTools.js';
 
 const TOOLS_PROMPT = `You are an expert AI fitness coach assistant with REAL ACTION capabilities inside the KOACH AI coaching platform.
 
@@ -20,34 +28,45 @@ After an action result comes back, continue naturally and take additional action
 
 AVAILABLE TOOLS:
 
+READ tools run immediately. WRITE tools (marked [WRITE]) are NOT executed: they are sent to the coach as a proposal and only saved after the coach clicks Confirm. After proposing, tell the coach what you proposed and that it awaits their confirmation — never say a write is done.
+
 1. get_client_data - Get full client info, check-ins, nutrition plan
    <action>{"tool":"get_client_data","client_id":"CLIENT_ID"}</action>
 
 2. list_clients - List all clients
    <action>{"tool":"list_clients","filter":"all"}</action>
 
-3. create_nutrition_plan - Create a nutrition plan and assign to client
+3. [WRITE] create_nutrition_plan - Create a nutrition plan and assign to client
    <action>{"tool":"create_nutrition_plan","client_id":"ID","title":"Title","calories":2200,"protein_g":180,"carbs_g":220,"fats_g":70,"tracking_mode":"macros","description":"optional"}</action>
 
-4. update_nutrition_plan - Update existing nutrition plan
+4. [WRITE] update_nutrition_plan - Update calories/macros of an existing nutrition plan
    <action>{"tool":"update_nutrition_plan","plan_id":"ID","calories":2000,"protein_g":160,"carbs_g":200,"fats_g":65}</action>
 
-5. create_program - Create a workout program for a client
+5. [WRITE] create_program - Create a workout program for a client
    <action>{"tool":"create_program","title":"Title","client_id":"ID","duration_weeks":8,"days_per_week":4,"difficulty":"intermediate","description":"optional"}</action>
 
-6. update_client - Update client profile
+5b. get_program - Read a workout program (workouts, exercises, sets, reps)
+   <action>{"tool":"get_program","program_id":"ID"}</action>
+
+5c. list_checkins - Read a client's recent check-ins (limit up to 30)
+   <action>{"tool":"list_checkins","client_id":"ID","limit":10}</action>
+
+5d. [WRITE] update_program - Change sets/reps on exercises of an existing program (call get_program first to see exact workout and exercise names)
+   <action>{"tool":"update_program","program_id":"ID","changes":[{"workout":"Day 1","exercise":"Barbell Squat","sets":4,"reps":"6-8"}]}</action>
+
+6. [WRITE] update_client - Update client profile
    <action>{"tool":"update_client","client_id":"ID","goal":"weight_loss","lifecycle_status":"active","notes":"optional"}</action>
 
-7. flag_client_at_risk - Flag a client as at-risk
+7. [WRITE] flag_client_at_risk - Flag a client as at-risk
    <action>{"tool":"flag_client_at_risk","client_id":"ID","reason":"reason text","urgency":"medium"}</action>
 
-8. send_message - Send a message to a client
+8. [WRITE] send_message - Send a message to a client
    <action>{"tool":"send_message","client_id":"ID","message":"Your message here"}</action>
 
-9. create_checkin_response - Respond to a client check-in
+9. [WRITE] create_checkin_response - Respond to a client check-in
    <action>{"tool":"create_checkin_response","checkin_id":"ID","response":"Your coaching response","review_status":"reviewed"}</action>
 
-10. award_badge - Award an achievement badge
+10. [WRITE] award_badge - Award an achievement badge
     <action>{"tool":"award_badge","client_id":"ID","badge_key":"streak_7","notes":"optional"}</action>
 
 IMPORTANT RULES:
@@ -55,7 +74,8 @@ IMPORTANT RULES:
 - Use list_clients or get_client_data first if you need IDs or more context
 - You can chain multiple actions in sequence
 - After taking actions, give a clear summary of what you did
-- Be proactive: fully handle requests without asking for unnecessary confirmation
+- Only ever act on the clients/plans/programs the tools return — IDs you were not given are rejected
+- Calories must be 800-8000 and macros sensible; the server rejects anything else
 - For nutrition plans, calculate sensible macros based on goals if not specified`;
 
 Deno.serve(async (req) => {
@@ -68,6 +88,16 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { userMessage, conversationHistory = [], clientContext = null } = body;
+
+    // ── confirm path: the coach approved a proposed write in the UI ──────────
+    if (body.confirm) {
+      const { tool, input } = body.confirm;
+      if (!WRITE_TOOLS.has(tool)) return jsonResponse({ error: 'Not a confirmable write tool' }, 400);
+      // executeAssistantTool re-checks ownership of every target — a tampered
+      // confirm payload can still only touch the caller's own records.
+      const result = await executeAssistantTool(svc, userId, tool, input ?? {});
+      return jsonResponse({ tool, input, result });
+    }
 
     if (!userMessage) return jsonResponse({ error: 'userMessage required' }, 400);
 
@@ -99,6 +129,7 @@ Deno.serve(async (req) => {
 
     // Agentic loop (verbatim shape: ≤6 iterations, <action> tag protocol)
     const actionLog: unknown[] = [];
+    const proposals: unknown[] = [];
     let currentInput = userMessage;
     let fullContext = historyStr ? 'CONVERSATION HISTORY:\n' + historyStr + '\n\n' : '';
     let iterations = 0;
@@ -123,14 +154,33 @@ Deno.serve(async (req) => {
       }
 
       if (actionsFound.length === 0) {
-        return jsonResponse({ response: responseText.trim(), actions: actionLog });
+        return jsonResponse({ response: responseText.trim(), actions: actionLog, proposals });
       }
 
       const results = [];
       for (const action of actionsFound) {
-        const result = await executeAssistantTool(svc, userId, action.tool as string, action);
-        results.push({ tool: action.tool, input: action, result });
-        actionLog.push({ tool: action.tool, input: action, result });
+        const tool = action.tool as string;
+        if (WRITE_TOOLS.has(tool)) {
+          // Validate + ownership-check now, but DO NOT write: queue for confirmation.
+          const preview = await previewAssistantWrite(svc, userId, tool, action);
+          if (preview.error) {
+            results.push({ tool, input: action, result: { error: preview.error } });
+            actionLog.push({ tool, input: action, result: { error: preview.error } });
+          } else {
+            const { tool: _t, ...input } = action;
+            proposals.push({ id: crypto.randomUUID(), tool, input, summary: preview.summary, changes: preview.changes ?? [] });
+            results.push({ tool, input: action, result: {
+              status: 'proposed_awaiting_coach_confirmation', summary: preview.summary,
+              note: 'NOT saved yet — the coach must confirm in the UI.',
+            } });
+          }
+        } else if (READ_TOOLS.has(tool)) {
+          const result = await executeAssistantTool(svc, userId, tool, action);
+          results.push({ tool, input: action, result });
+          actionLog.push({ tool, input: action, result });
+        } else {
+          results.push({ tool, input: action, result: { error: 'Unknown tool: ' + tool } });
+        }
       }
 
       const resultsStr = results.map((r) =>
@@ -148,6 +198,7 @@ Deno.serve(async (req) => {
     return jsonResponse({
       response: 'I completed the requested actions. Please check the action log for details.',
       actions: actionLog,
+      proposals,
     });
   } catch (error) {
     return jsonResponse({ error: (error as Error).message }, 500);

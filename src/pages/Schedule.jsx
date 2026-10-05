@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import {
@@ -163,17 +163,43 @@ export default function Schedule() {
   });
 
   // ── Google Calendar connect / disconnect ─────────────────────────────────
-  const handleConnectGoogle = () => {
-    settingsMutation.mutate({ google_calendar_connected: true });
-    queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
-    toast.success('Google Calendar connected!');
+  const handleConnectGoogle = async () => {
+    try {
+      const res = await db.functions.invoke('googleCalendarConnect', {
+        action: 'start', returnTo: window.location.origin,
+      });
+      if (!res.data?.url) throw new Error(res.data?.error || 'No consent URL returned');
+      window.location.href = res.data.url; // Google consent → googleCalendarCallback → back here
+    } catch (e) {
+      toast.error('Could not start Google sign-in: ' + e.message);
+    }
   };
 
-  const handleDisconnectGoogle = () => {
-    settingsMutation.mutate({ google_calendar_connected: false });
-    queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
-    toast.success('Google Calendar disconnected');
+  const handleDisconnectGoogle = async () => {
+    try {
+      await db.functions.invoke('googleCalendarConnect', { action: 'disconnect' });
+      queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
+      toast.success('Google Calendar disconnected');
+    } catch (e) {
+      toast.error('Could not disconnect: ' + e.message);
+    }
   };
+
+  // Result of the OAuth round-trip (?google=connected|error&reason=…)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('google');
+    if (!result) return;
+    if (result === 'connected') {
+      toast.success('Google Calendar connected!');
+      queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
+    } else {
+      toast.error('Google Calendar connection failed' + (params.get('reason') ? ` (${params.get('reason')})` : ''));
+    }
+    window.history.replaceState({}, '', window.location.pathname);
+  }, [queryClient]);
 
   // ── Save session ─────────────────────────────────────────────────────────
   const handleSave = async (form) => {

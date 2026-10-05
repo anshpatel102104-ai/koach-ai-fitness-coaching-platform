@@ -51,7 +51,7 @@ export default function GoogleCalendarBanner({ connected, onConnect, onDisconnec
         {!connected && (
           <Button size="sm" onClick={onConnect}
             className="text-xs bg-sidebar hover:bg-sidebar text-white h-8">
-            Connect
+            Connect Google Calendar
           </Button>
         )}
       </div>

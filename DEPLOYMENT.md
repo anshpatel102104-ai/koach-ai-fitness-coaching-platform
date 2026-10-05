@@ -113,3 +113,17 @@ never be `VITE_`-prefixed.
 
 Set server-side secrets with `supabase secrets set` — they are not part of the
 Cloudflare deploy.
+
+## Google Calendar OAuth (Schedule → "Connect Google Calendar")
+
+Edge functions `googleCalendarConnect` (builds the consent URL / disconnects) and
+`googleCalendarCallback` (public, `verify_jwt = false`; identifies the coach only
+by an HMAC-signed, 10-minute `state`) store tokens in `coach_settings.google_*`.
+
+1. Supabase → Edge Functions → Secrets: set `GOOGLE_CLIENT_ID` and
+   `GOOGLE_CLIENT_SECRET` (and `APP_URL` if it isn't `https://app.koachai.net`).
+2. Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web
+   client → **Authorized redirect URIs**, add exactly:
+   `https://phjmcihgodvhbiaksvyl.supabase.co/functions/v1/googleCalendarCallback`
+3. Enable the **Google Calendar API** for the project, and add the
+   `https://www.googleapis.com/auth/calendar.events` scope to the OAuth consent screen.

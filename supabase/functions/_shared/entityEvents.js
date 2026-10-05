@@ -27,6 +27,7 @@
  * `sendEmail`, so the rehearsal exercises the REAL code against real Postgres.
  */
 import { sendMessage, notifyCoach } from './automationActions.js';
+import { analyzeCheckIn } from './progressAnalysis.js';
 import {
   buildCheckInEmail, buildReviewedEmail, buildWelcomeEmail,
   buildNewClientCoachEmail, buildClientConfirmEmail, buildCoachNotifyEmail,
@@ -51,7 +52,8 @@ function ownerOf(client) {
 }
 
 // ── checkin.created ──────────────────────────────────────────────────────────
-async function onCheckInCreated(admin, checkIn, { sendEmail, appUrl }) {
+async function onCheckInCreated(admin, checkIn, deps) {
+  const { sendEmail, appUrl } = deps;
   if (!checkIn) return { ok: true, skipped: 'no data' };
 
   const client = await getClient(admin, checkIn.client_id);
@@ -86,7 +88,21 @@ async function onCheckInCreated(admin, checkIn, { sendEmail, appUrl }) {
     });
     emails++;
   }
-  return { ok: true, notified: 1, emails };
+  // checkin.analyze — auto progress analysis (best-effort; see runCheckInAnalysis).
+  const analysis = await runCheckInAnalysis(admin, checkIn, deps);
+  return { ok: true, notified: 1, emails, analysis };
+}
+
+// ── checkin.analyze ──────────────────────────────────────────────────────────
+// Port of base44 analyzeProgress: writes the AI check-in summary the coach's
+// AICheckInSummaryCard reads (check_ins.ai_checkin_summary). Metered against
+// the OWNING COACH's AI quota; silently skipped when over quota / AI is
+// unavailable. Never throws — the notification work above is the durable part.
+async function runCheckInAnalysis(admin, checkIn, deps) {
+  if (!deps.analysis) return { skipped: 'analysis not configured' };
+  const client = await getClient(admin, checkIn?.client_id);
+  const coach = await getProfile(admin, ownerOf(client));
+  return analyzeCheckIn(admin, { checkIn, client, coach }, deps.analysis);
 }
 
 // ── checkin.responded (coach_responded false → true) ─────────────────────────
@@ -290,6 +306,7 @@ export async function handleEntityEvent(admin, event, deps) {
   const { event_type, record, old_record } = event;
   switch (event_type) {
     case 'checkin.created': return onCheckInCreated(admin, record, deps);
+    case 'checkin.analyze': return runCheckInAnalysis(admin, record, deps);
     case 'checkin.responded': return onCheckInResponded(admin, record, old_record, deps);
     case 'client.created': return onClientCreated(admin, record, deps);
     case 'intake.submitted': return onIntakeSubmitted(admin, record, deps);

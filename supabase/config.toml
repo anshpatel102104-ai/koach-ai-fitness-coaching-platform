@@ -48,3 +48,9 @@ verify_jwt = false
 # key, which is not a JWT); both are authenticated in-function.
 [functions.weeklyDigest]
 verify_jwt = false
+
+# Google's OAuth redirect target — a bare browser GET with no Supabase JWT.
+# The caller is identified only by the HMAC-signed, expiring `state` issued by
+# googleCalendarConnect (verified in-function).
+[functions.googleCalendarCallback]
+verify_jwt = false

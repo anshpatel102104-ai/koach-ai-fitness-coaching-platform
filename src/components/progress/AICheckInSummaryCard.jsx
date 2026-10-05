@@ -12,8 +12,13 @@ const SENTIMENT_CONFIG = {
   concerning: { border: 'border-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive', label: '🔴 Needs attention' },
 };
 
+const FRESH_WINDOW_MS = 60_000;
+const POLL_MS = 4_000;
+
 export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [], autoGenerate = true }) {
-  const [summary, setSummary] = useState(null);
+  // checkin.analyze (onEntityEvent) stores the summary on the check-in when it is
+  // created — read that first and only call the model when it is missing.
+  const [summary, setSummary] = useState(checkIn?.ai_checkin_summary || null);
   const [loading, setLoading] = useState(false);
 
   const sorted = [...allClientCIs].filter(ci => ci.date).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -30,11 +35,52 @@ export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [
     setLoading(false);
   };
 
+  // A check-in under a minute old may still be being analysed by checkin.analyze
+  // (onEntityEvent). Don't spend a second AI call on it: show "Analyzing…" and poll
+  // until the stored summary appears, falling back to on-demand generation only
+  // once the window has passed (e.g. the coach was over quota and it was skipped).
+  const [pending, setPending] = useState(false);
+
   useEffect(() => {
-    if (autoGenerate && checkIn && allClientCIs.length >= 1) {
-      generate();
+    if (checkIn?.ai_checkin_summary) {
+      setSummary(checkIn.ai_checkin_summary);
+      setPending(false);
+      return;
     }
-  }, [checkIn?.id]);
+    setSummary(null);
+    if (!checkIn) return;
+
+    const created = new Date(checkIn.created_at || checkIn.created_date).getTime();
+    const isFresh = Number.isFinite(created) && Date.now() - created < FRESH_WINDOW_MS;
+    if (!isFresh) {
+      setPending(false);
+      if (autoGenerate && allClientCIs.length >= 1) generate();
+      return;
+    }
+
+    setPending(true);
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const [row] = await db.entities.CheckIn.filter({ id: checkIn.id }, '-created_date', 1);
+        if (cancelled) return;
+        if (row?.ai_checkin_summary) {
+          setSummary(row.ai_checkin_summary);
+          setPending(false);
+          return;
+        }
+      } catch { /* keep polling */ }
+      if (cancelled) return;
+      if (Date.now() - created >= FRESH_WINDOW_MS) {
+        setPending(false);
+        if (autoGenerate && allClientCIs.length >= 1) generate();
+        return;
+      }
+      timer = setTimeout(tick, POLL_MS);
+    };
+    let timer = setTimeout(tick, POLL_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [checkIn?.id, checkIn?.ai_checkin_summary]);
 
   const cfg = SENTIMENT_CONFIG[summary?.sentiment] || SENTIMENT_CONFIG.okay;
 
@@ -56,6 +102,13 @@ export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [
           </button>
         </div>
       </div>
+
+      {pending && !summary && !loading && (
+        <div className="flex items-center gap-2 py-2">
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          <span className="text-xs text-muted-foreground">Analyzing…</span>
+        </div>
+      )}
 
       {loading && (
         <div className="flex items-center gap-2 py-2">
@@ -99,7 +152,7 @@ export default function AICheckInSummaryCard({ client, checkIn, allClientCIs = [
         </div>
       )}
 
-      {!loading && !summary && (
+      {!loading && !summary && !pending && (
         <button onClick={generate} className="w-full text-xs text-primary font-semibold py-2 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 transition-colors">
           ✨ Generate AI Summary
         </button>

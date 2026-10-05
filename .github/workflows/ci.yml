@@ -31,6 +31,17 @@ jobs:
       # Build is the hard gate — it must stay green.
       - name: Build
         run: npm run build
+        env:
+          # Placeholder values so the app boots in the smoke test (no real backend is contacted).
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key
+
+      # Serves the built app and fails on any runtime page error / blank page.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke test
+        run: node scripts/smoke.mjs
 
       # Lint and typecheck are reported but non-blocking for now: the repo
       # carries a known backlog (ESLint problems + pre-existing tsc errors). Flip continue-on-error to false once that backlog

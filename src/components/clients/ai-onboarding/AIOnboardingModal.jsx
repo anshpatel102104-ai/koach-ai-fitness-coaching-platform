@@ -5,6 +5,7 @@ import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import AIOnboardingQuestionnaire from './AIOnboardingQuestionnaire';
 import AIOnboardingReview from './AIOnboardingReview';
+import AiUsageMeter from '@/components/subscription/AiUsageMeter';
 
 // Steps: questionnaire → generating → review
 const STEPS = { questionnaire: 'questionnaire', generating: 'generating', review: 'review' };
@@ -76,7 +77,7 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
     try {
       // Run both in parallel
       const [progRes, mealRes] = await Promise.all([
-        db.functions.invoke('generateAIProgram', { profile, preferences }),
+        db.functions.invoke('generateAIProgram', { profile, preferences, purpose: 'onboarding' }),
         db.functions.invoke('generateMealPlan', mealParams),
       ]);
 
@@ -149,6 +150,7 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
               <p className="text-[11px]" style={{ color: 'var(--tc-muted-foreground)' }}>
                 {client.name} · Generating starting program &amp; meal plan
               </p>
+              <AiUsageMeter className="mt-0.5" />
             </div>
           </div>
           <div className="flex items-center gap-3">

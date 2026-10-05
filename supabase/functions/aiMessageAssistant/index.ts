@@ -5,7 +5,8 @@
 // followUpSuggestions). No DB reads or writes — all context arrives in the
 // request body, exactly as in Base44 — so the only change is
 // InvokeLLM → the shared Anthropic client. Unmetered, as in Base44.
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 
 Deno.serve(async (req) => {
@@ -13,6 +14,9 @@ Deno.serve(async (req) => {
   try {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
+    // Draft replies are not counted as generations; plan-gated (see aiPolicy.js).
+    const blocked = await guardAiUse(serviceClient(), caller, 'aiMessageAssistant');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     const body = await req.json();
     const { action, client, tone, conversationMessages, checkIn, recentCheckIns, selectedClientIds, clients, broadcastContext } = body;

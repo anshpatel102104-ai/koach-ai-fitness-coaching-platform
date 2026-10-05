@@ -103,10 +103,10 @@ Generate JSON:
  * `checkin.analyze` — run from onEntityEvent on checkin.created.
  *
  * Deps are injected so the logic is testable without Deno/network:
- *   meter(profile)  → { allowed }   (meterAiGeneration bound to the service client)
+ *   meter(profile)  → { allowed }   (plan/billing gate, NOT a counted generation — aiFeatureAllowed)
  *   invoke(args)    → { ok, parsed }  (invokeClaude)
  *   tool, system    → the CHECKIN_SUMMARY tool + TOOL_SYSTEM
- * Skips silently (no AI call, no error) when the coach is over quota. Never
+ * Skips silently (no AI call, no error) when the coach's plan doesn't include it. Never
  * throws: analysis is best-effort and must not fail/un-claim the event.
  */
 export async function analyzeCheckIn(admin, { checkIn, client, coach }, { meter, invoke, tool, system }) {
@@ -127,9 +127,9 @@ export async function analyzeCheckIn(admin, { checkIn, client, coach }, { meter,
     const idx = sorted.findIndex((c) => c.id === current.id);
     const prevCheckIn = idx > 0 ? sorted[idx - 1] : (idx === -1 && sorted.length ? sorted[sorted.length - 1] : null);
 
-    // Quota gate LAST before the model call: an over-quota coach costs nothing.
+    // Plan gate LAST before the model call: an ineligible coach costs nothing.
     const gate = await meter(coach);
-    if (!gate.allowed) return { skipped: 'over quota' };
+    if (!gate.allowed) return { skipped: 'not in plan' };
 
     const result = await invoke({
       tool, system,

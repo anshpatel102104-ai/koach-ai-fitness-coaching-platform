@@ -8,7 +8,7 @@
 //   - clientAlerts     (components/dashboard/ClientAlerts)
 // Context arrives in the request body. Uses the shared Anthropic client.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
-import { meterInsightCall } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, INTERVENTION_PLAN, BUSINESS_INSIGHTS, CLIENT_ALERTS } from '../_shared/aiTools.js';
 
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     if (!['interventionPlan', 'businessInsights', 'clientAlerts'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
     // Every action below makes one Claude call: charge it to the AI quota
     // (coach, or the owning coach for a portal client) — same 402 as the generators.
-    const blocked = await meterInsightCall(serviceClient(), caller);
+    const blocked = await guardAiUse(serviceClient(), caller, 'aiBusinessInsights');
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: interventionPlan ── at-risk client intervention plan

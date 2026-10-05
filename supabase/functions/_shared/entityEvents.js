@@ -95,9 +95,8 @@ async function onCheckInCreated(admin, checkIn, deps) {
 
 // ── checkin.analyze ──────────────────────────────────────────────────────────
 // Port of base44 analyzeProgress: writes the AI check-in summary the coach's
-// AICheckInSummaryCard reads (check_ins.ai_checkin_summary). Metered against
-// the OWNING COACH's AI quota; silently skipped when over quota / AI is
-// unavailable. Never throws — the notification work above is the durable part.
+// AICheckInSummaryCard reads (check_ins.ai_checkin_summary). Gated by the
+// plan (NOT a counted generation); silently skipped when the plan lacks it / AI is unavailable. Never throws — the notification work above is the durable part.
 async function runCheckInAnalysis(admin, checkIn, deps) {
   if (!deps.analysis) return { skipped: 'analysis not configured' };
   const client = await getClient(admin, checkIn?.client_id);

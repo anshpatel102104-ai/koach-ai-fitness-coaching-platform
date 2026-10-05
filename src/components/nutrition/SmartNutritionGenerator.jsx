@@ -7,6 +7,7 @@ import { Loader2, Sparkles, RefreshCw, Trash2, ChevronDown, ChevronUp, Tag } fro
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import WorkoutMealPanel from './WorkoutMealPanel';
+import AiUsageMeter from '@/components/subscription/AiUsageMeter';
 
 // ── Tag config ─────────────────────────────────────────
 const MEAL_TAGS = [
@@ -383,6 +384,7 @@ export default function SmartNutritionGenerator({ initialMeals, targets, onMeals
           {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {generating ? 'Generating…' : hasGenerated ? 'Regenerate All' : 'Generate Meal Plan'}
         </Button>
+        <AiUsageMeter />
       </div>
 
       {hasGenerated && (

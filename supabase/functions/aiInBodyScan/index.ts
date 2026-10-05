@@ -7,7 +7,7 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, INBODY_SCAN } from '../_shared/aiTools.js';
-import { meterInsightCall } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { parseUploadRef, UPLOADS_BUCKET } from '../_shared/uploadRef.js';
 
 const EXTRACT_PROMPT = `Extract all metrics from this InBody scan image and return ONLY a JSON object with no markdown fences:
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const { data: signed, error: signErr } = await svc.storage.from(UPLOADS_BUCKET).createSignedUrl(ref.path, 120);
     if (signErr || !signed?.signedUrl) return jsonResponse({ error: 'File not found' }, 404);
 
-    const blocked = await meterInsightCall(svc, caller);
+    const blocked = await guardAiUse(svc, caller, 'aiInBodyScan');
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     const result = await invokeClaude({ tool: INBODY_SCAN, system: TOOL_SYSTEM, imageUrls: [signed.signedUrl], prompt: EXTRACT_PROMPT });

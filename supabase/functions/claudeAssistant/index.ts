@@ -16,6 +16,7 @@
 //     (any coach could act on any tenant's clients). Every tool now resolves
 //     targets through the caller's ownership — see _shared/assistantTools.js.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import {
   executeAssistantTool, previewAssistantWrite, READ_TOOLS, WRITE_TOOLS,
@@ -84,6 +85,9 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
     const svc = serviceClient();
+    // Full AI assistant: not counted, Elite+ (see aiPolicy.js).
+    const blocked = await guardAiUse(svc, caller, 'claudeAssistant');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
     const userId = caller.auth.id;
 
     const body = await req.json();

@@ -11,7 +11,7 @@
 // The deterministic allergen check runs on the assembled plan before it is
 // returned. No DB writes beyond the meter.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
-import { meterAiGeneration } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectFoodNames, findAllergenViolations, parseTermList } from '../_shared/aiSafety.js';
 import { validateMealPlan } from '../_shared/aiShape.js';
@@ -73,10 +73,12 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-    const meter = await meterAiGeneration(serviceClient(), caller.profile);
-    if (!meter.allowed) return jsonResponse(meter.body, meter.status);
-
     const body = await req.json();
+
+    // 1 AI generation (regenerating counts again); purpose:'onboarding' needs Pro+.
+    const blocked = await guardAiUse(serviceClient(), caller, 'generateMealPlan', { purpose: body.purpose });
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
+
     const {
       age, sex, weightKg, goal, diet, allergies, dislikedFoods, lovedFoods,
       calories, protein, carbs, fats,

@@ -9,7 +9,7 @@
 //     caller (Base44 updated any client-supplied id asServiceRole).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { ownsClient } from '../_shared/edgeClients.js';
-import { meterAiGeneration } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, SMART_MEALS_BATCH, SMART_MEAL_SINGLE } from '../_shared/aiTools.js';
 import { collectFoodNames, findAllergenViolations } from '../_shared/aiSafety.js';
@@ -58,8 +58,9 @@ Deno.serve(async (req) => {
 
     const avoid = avoidLine(allergies, disliked_foods, diet);
 
-    const meter = await meterAiGeneration(svc, caller.profile);
-    if (!meter.allowed) return jsonResponse(meter.body, meter.status);
+    // 1 AI generation per call, including single-meal regeneration.
+    const blocked = await guardAiUse(svc, caller, 'generateSmartMeals');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── Single-meal regeneration ────────────────────────────────────────────
     if (mode === 'regenerate' && meal) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 import { X, Check, Sparkles, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TIERS, TIER_ORDER } from '@/lib/subscription';
@@ -7,16 +8,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import SuccessScreen from './SuccessScreen';
 
-const PLAN_PRICES = {
-  starter:    { monthly: 29,  annual: 23,  annualSave: 72 },
-  pro:        { monthly: 79,  annual: 63,  annualSave: 192 },
-  elite:      { monthly: 149, annual: 119, annualSave: 360 },
-  enterprise: { monthly: 299, annual: 239, annualSave: 720 },
-};
 
 const TIER_FEATURES = {
   starter: ['Workout program builder', 'Basic nutrition plans', 'Scheduling & calendar', 'In-app messaging', 'Client mobile app access', 'Basic progress tracking', 'Email support'],
-  pro:     ['Progress analytics & graphs', 'Check-in review system', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'AI reply suggestions', 'Custom branding (logo)', 'Priority email support'],
+  pro:     ['AI onboarding', 'Progress analytics & graphs', 'Check-in review system', 'AI check-in summaries & AI-drafted replies', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'Custom branding (logo)', 'Priority email support'],
   elite:   ['Full AI assistant', 'Auto progression rules', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations', 'Chat support'],
   enterprise: ['API access', 'Custom integrations', 'Dedicated account manager', 'Team accounts (multiple coaches)', 'Custom contract & invoicing', 'Priority phone support', 'Custom onboarding & training'],
 };
@@ -32,8 +27,6 @@ export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: i
   const { me } = useAuth();
   const [billing, setBilling] = useState(initialBilling || 'monthly');
   const [loading, setLoading] = useState(false);
-  const [coupon, setCoupon] = useState('');
-  const [couponApplied, setCouponApplied] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
 
@@ -48,21 +41,13 @@ export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: i
 
   // Features gained (in toTier not in fromTier, only the unique new ones)
   const fromIdx = TIER_ORDER.indexOf(fromTierKey);
-  const newFeatures = TIER_ORDER
-    .slice(fromIdx + 1, TIER_ORDER.indexOf(toTierKey) + 1)
-    .flatMap(k => TIER_FEATURES[k]);
+  const newFeatures = [
+    clientLimitLabel(toTierKey),
+    aiLimitLabel(toTierKey),
+    ...TIER_ORDER.slice(fromIdx + 1, TIER_ORDER.indexOf(toTierKey) + 1).flatMap(k => TIER_FEATURES[k]),
+  ];
 
-  const handleApplyCoupon = () => {
-    if (coupon.toLowerCase() === 'welcome30') {
-      setCouponApplied({ code: coupon, pct: 30, label: '30% off applied' });
-      toast.success('Coupon applied!');
-    } else {
-      toast.error('Invalid coupon code');
-    }
-  };
-
-  const discountedPrice = couponApplied ? Math.round(toPrice * (1 - couponApplied.pct / 100)) : toPrice;
-  const totalToday = discountedPrice;
+  const billedAmount = billing === 'annual' ? `$${toPrices.yearly.toLocaleString('en-US')}/yr` : `$${toPrices.monthly}/mo`;
 
   const nextBillingDate = () => {
     const d = new Date();
@@ -87,7 +72,7 @@ export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: i
     } else if (res.data?.upgraded) {
       const updated = await me();
       if (onUserUpdate) onUserUpdate(updated);
-      setSuccessData({ tier: toTierKey, price: discountedPrice, billing, nextDate: nextBillingDate(), email: user?.email });
+      setSuccessData({ tier: toTierKey, price: toPrice, billing, nextDate: nextBillingDate(), email: user?.email });
       setShowSuccess(true);
     } else {
       toast.error(res.data?.error || 'Something went wrong. Please try again.');
@@ -180,45 +165,18 @@ export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: i
             </div>
           </div>
 
-          {/* Coupon */}
-          <div>
-            <p className="text-sm font-semibold text-sidebar-foreground mb-2">Promo code</p>
-            <div className="flex gap-2">
-              <input
-                value={coupon}
-                onChange={e => setCoupon(e.target.value)}
-                placeholder="Enter code"
-                className="flex-1 bg-[var(--kc-w-5)] border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-              />
-              <button
-                onClick={handleApplyCoupon}
-                className="px-4 py-2 rounded-xl border border-white/10 text-sm text-sidebar-foreground hover:bg-[var(--kc-w-5)] transition-colors"
-              >
-                Apply
-              </button>
-            </div>
-            {couponApplied && (
-              <p className="text-success text-xs mt-1.5">✓ {couponApplied.label}</p>
-            )}
-          </div>
-
           {/* Order summary */}
           <div className="rounded-xl border border-white/10 bg-card/[0.03] p-4 space-y-2.5">
             <p className="text-sm font-semibold text-white mb-3">Order Summary</p>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{toTier.name} plan ({billing})</span>
-              <span className="text-white">${toPrice}/mo</span>
+              <span className="text-white">{billedAmount}</span>
             </div>
-            {couponApplied && (
-              <div className="flex justify-between text-sm">
-                <span className="text-success">Coupon ({couponApplied.code})</span>
-                <span className="text-success">-{couponApplied.pct}%</span>
-              </div>
-            )}
             <div className="border-t border-white/10 pt-2.5 flex justify-between">
-              <span className="font-bold text-white">Due today</span>
-              <span className="font-bold text-white">${totalToday}/mo</span>
+              <span className="font-bold text-white">Billed</span>
+              <span className="font-bold text-white">{billedAmount}</span>
             </div>
+            <p className="text-xs text-muted-foreground">Upgrades are prorated. Have a promo code? Enter it at checkout.</p>
             <p className="text-xs text-muted-foreground">Next billing: {nextBillingDate()}</p>
           </div>
 

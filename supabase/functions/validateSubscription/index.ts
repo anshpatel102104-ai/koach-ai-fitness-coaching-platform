@@ -10,10 +10,12 @@
 //     trigger) — so the gate can't be self-served around.
 //   - counts use the CALLER-scoped client (RLS applies), matching Base44's
 //     user-scoped entities.Client.list() semantics.
-import { getCaller, callerClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 // Tier tables + gate expressions live in _shared so the local rehearsal
 // exercises the SAME logic (scripts/verify-entity-events.mjs).
 import { tierLimits, tierFeatures, createBlocked } from '../_shared/subscriptionTiers.js';
+import { billingAccess, effectiveTier } from '../_shared/billingAccess.js';
+import { resolveTeamRole } from '../_shared/teamRole.js';
 
 // RLS-scoped row count, mirroring Base44's user-scoped entities.X.list().length
 async function countRows(caller, table) {
@@ -32,7 +34,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { action, entity, count } = body;
 
-    const userTier = who.profile.subscription_tier || 'starter';
+    const userTier = effectiveTier(who.profile);
     const limits = tierLimits(userTier);
     const features = tierFeatures(userTier);
 
@@ -65,6 +67,19 @@ Deno.serve(async (req) => {
     }
 
     const caller = callerClient(req);
+
+    // Billing gate for every create-validation: no subscription / trial / grace
+    // => nothing new can be created. Team coaches ride on their owner's billing.
+    if (String(action).startsWith('validate_create_')
+        && !billingAccess(who.profile).hasAccess
+        && (await resolveTeamRole(serviceClient(), who.auth.id)) !== 'coach') {
+      return jsonResponse({
+        allowed: false,
+        error: 'Your subscription is not active. Subscribe on the billing page to continue.',
+        billing_required: true,
+        tier: userTier,
+      });
+    }
 
     // Validate before creating a client
     if (action === 'validate_create_client') {

@@ -6,7 +6,8 @@
 // match) are extracted VERBATIM to _shared/importMapping.js; the best-effort
 // AI enhancement pass uses the shared Anthropic client with the same
 // fast/cheap model class Base44 pinned (haiku).
-import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { KOACH_FIELDS, deterministicMap, mergeResults } from '../_shared/importMapping.js';
 import { invokeClaude, anthropicConfigured, normalizeModelId } from '../_shared/anthropic.js';
 
@@ -58,6 +59,8 @@ Deno.serve(async (req) => {
   try {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
+    const blocked = await guardAiUse(serviceClient(), caller, 'mapImportColumns');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     const { headers, sample_rows } = await req.json();
 

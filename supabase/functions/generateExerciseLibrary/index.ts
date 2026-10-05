@@ -5,6 +5,7 @@
 // created_by = caller; Base44 used the user context). Unmetered, as in
 // Base44. Direct Anthropic call → shared client.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, EXERCISE_LIBRARY } from '../_shared/aiTools.js';
 
@@ -62,6 +63,8 @@ Deno.serve(async (req) => {
     }
 
     const svc = serviceClient();
+    const blocked = await guardAiUse(svc, caller, 'generateExerciseLibrary');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
     const created = [];
     for (let i = 0; i < exercises.length; i++) {
       const ex = exercises[i];

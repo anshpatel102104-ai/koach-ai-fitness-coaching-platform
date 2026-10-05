@@ -8,7 +8,7 @@
 // All context arrives in the request body; no DB reads/writes. Uses the shared
 // Anthropic client (the same one verify:ai exercises).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
-import { meterInsightCall } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, REVIEW_CHECKIN, PROGRAM_SUGGESTIONS } from '../_shared/aiTools.js';
 
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     if (!['reviewCheckIn', 'programSuggestions'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
     // Every action below makes one Claude call: charge it to the AI quota
     // (coach, or the owning coach for a portal client) — same 402 as the generators.
-    const blocked = await meterInsightCall(serviceClient(), caller);
+    const blocked = await guardAiUse(serviceClient(), caller, 'aiCheckInInsights');
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // ── ACTION: reviewCheckIn ── coach-facing summary + suggested reply + flags

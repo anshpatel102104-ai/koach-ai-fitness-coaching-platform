@@ -36,6 +36,10 @@ jobs:
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-anon-key
 
+      # Pure checks for the billing access rules / Stripe plan mapping (no network or DB).
+      - name: Billing rules check
+        run: npm run verify:billing
+
       # Serves the built app and fails on any runtime page error / blank page.
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium

@@ -34,6 +34,7 @@ import Business from './pages/Business';
 import ProgramBuilder from './pages/ProgramBuilder';
 import WhiteLabel from './pages/WhiteLabel';
 import PageGuard from './components/subscription/PageGuard';
+import BillingGate from './components/subscription/BillingGate';
 import SubmitCheckIn from './pages/SubmitCheckIn';
 import CheckInDetail from './pages/CheckInDetail';
 import AtRiskClients from './pages/AtRiskClients.jsx';
@@ -74,56 +75,21 @@ import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 
-// Gates the dashboard: logged out → /login, no subscription → /subscription, subscribed → dashboard
+// Dashboard entry: logged out → /login. Billing access is enforced for the whole
+// coach shell by <BillingGate> (no access → billing page with a subscribe button).
 const AuthGuardedDashboard = () => {
-  const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings, user, checkUserAuth } = useAuth();
-  const [checkoutPolling, setCheckoutPolling] = React.useState(false);
+  const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings } = useAuth();
 
-  // When returning from Stripe checkout, the webhook may not have fired yet.
-  // Poll auth up to 8 times (8s) until billing_status is set.
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.get('checkout')) return;
-    if (!isAuthenticated) return;
-    const hasSubscription = user?.stripe_subscription_id || ['active', 'trialing'].includes(user?.billing_status);
-    if (hasSubscription) return;
-
-    setCheckoutPolling(true);
-    let attempts = 0;
-    const interval = setInterval(async () => {
-      attempts++;
-      await checkUserAuth();
-      if (attempts >= 8) {
-        clearInterval(interval);
-        setCheckoutPolling(false);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, user?.stripe_subscription_id]);
-
-  if (isLoadingAuth || isLoadingPublicSettings || checkoutPolling) {
+  if (isLoadingAuth || isLoadingPublicSettings) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          {checkoutPolling && <p className="text-sm text-muted-foreground">Activating your account…</p>}
-        </div>
+        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  // Determine subscription state from multiple possible fields
-  const hasActiveSubscription =
-    ['active', 'trialing', 'past_due'].includes(user?.billing_status) ||
-    (user?.stripe_subscription_id && user?.billing_status !== 'canceled');
-
-  // Authenticated with subscription → dashboard
-  if (hasActiveSubscription) return <Dashboard />;
-
-  // Authenticated without a subscription → subscription page
-  return <Navigate to="/subscription" replace />;
+  return <Dashboard />;
 };
 
 const AuthenticatedApp = () => {
@@ -161,7 +127,7 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* ── CLIENT PORTAL (role=client) ── */}
       <Route path="/portal/*" element={<><ClientPortal /><InstallPrompt /></>} />
-      <Route element={<AppLayout />}>
+      <Route element={<BillingGate><AppLayout /></BillingGate>}>
         <Route path="/" element={<AuthGuardedDashboard />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/programs" element={<Programs />} />
@@ -210,7 +176,7 @@ const AuthenticatedApp = () => {
         <Route path="/at-risk" element={<AtRiskClients />} />
         <Route path="/client-profile" element={<ClientProfile />} />
       </Route>
-      <Route element={<FocusLayout />}>
+      <Route element={<BillingGate><FocusLayout /></BillingGate>}>
         <Route path="/fast-review" element={<FastReview />} />
       </Route>
       <Route path="/start" element={<PremiumOnboarding />} />

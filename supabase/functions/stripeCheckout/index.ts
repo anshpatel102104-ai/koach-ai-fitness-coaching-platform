@@ -10,21 +10,12 @@ import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingDeniedFor } from '../_shared/teamRole.js';
 import { subscriptionPeriodEnd, renewalDateFromSubscription } from '../_shared/stripePeriod.js';
+import { PLANS, resolvePrice, planFromPrice, appUrl, BILLING_PATH } from '../_shared/stripePlans.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
-    const TIER_PRICES = {
-      starter: Deno.env.get('STRIPE_PRICE_STARTER'),
-      pro: Deno.env.get('STRIPE_PRICE_PRO'),
-      elite: Deno.env.get('STRIPE_PRICE_ELITE'),
-      enterprise: Deno.env.get('STRIPE_PRICE_ENTERPRISE'),
-      starter_annual: Deno.env.get('STRIPE_PRICE_STARTER_ANNUAL') || Deno.env.get('STRIPE_PRICE_STARTER'),
-      pro_annual: Deno.env.get('STRIPE_PRICE_PRO_ANNUAL') || Deno.env.get('STRIPE_PRICE_PRO'),
-      elite_annual: Deno.env.get('STRIPE_PRICE_ELITE_ANNUAL') || Deno.env.get('STRIPE_PRICE_ELITE'),
-      enterprise_annual: Deno.env.get('STRIPE_PRICE_ENTERPRISE_ANNUAL') || Deno.env.get('STRIPE_PRICE_ENTERPRISE'),
-    };
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { httpClient: Stripe.createFetchHttpClient() });
 
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
@@ -43,10 +34,23 @@ Deno.serve(async (req) => {
 
     const { action, tier, billing_cycle, success_url, cancel_url } = await req.json();
 
-    // ── Create or retrieve Stripe customer ──────────────────────────────────
+    // ── Reuse the stored Stripe customer; create one only if none is usable ──
+    // (a stored id can be stale after a Stripe account/mode switch → verify it).
     let customerId = user.stripe_customer_id;
+    if (customerId) {
+      try {
+        const c = await stripe.customers.retrieve(customerId);
+        if (c.deleted) customerId = null;
+      } catch (e) {
+        if (e?.code === 'resource_missing') customerId = null; else throw e;
+      }
+    }
     if (!customerId) {
-      const existing = await stripe.customers.search({ query: `email:'${user.email}'`, limit: 1 });
+      const esc = (v) => String(v).replace(/['\\]/g, '');
+      let existing = await stripe.customers.search({ query: `metadata['user_id']:'${esc(user.id)}'`, limit: 1 });
+      if (!existing.data.length && user.email) {
+        existing = await stripe.customers.search({ query: `email:'${esc(user.email)}'`, limit: 1 });
+      }
       if (existing.data.length > 0) {
         customerId = existing.data[0].id;
       } else {
@@ -63,7 +67,7 @@ Deno.serve(async (req) => {
     if (action === 'portal') {
       const session = await stripe.billingPortal.sessions.create({
         customer: customerId,
-        return_url: cancel_url || `${req.headers.get('origin')}/subscription`,
+        return_url: appUrl(cancel_url, BILLING_PATH),
       });
       return jsonResponse({ url: session.url });
     }
@@ -89,20 +93,20 @@ Deno.serve(async (req) => {
     }
 
     // ── Checkout / Upgrade ──────────────────────────────────────────────────
-    const isAnnual = billing_cycle === 'annual';
-    const priceKey = isAnnual ? `${tier}_annual` : tier;
-    const priceId = TIER_PRICES[priceKey];
-    if (!priceId) {
-      return jsonResponse({ error: `No Stripe Price ID configured for "${priceKey}". Set STRIPE_PRICE_${(isAnnual ? `${tier}_annual` : tier).toUpperCase()} in secrets.` }, 400);
-    }
-    if (priceId.startsWith('prod_')) {
-      return jsonResponse({ error: `STRIPE_PRICE_${priceKey.toUpperCase()} is set to a Product ID (prod_...) — it must be a Price ID (price_...).` }, 400);
-    }
+    if (!PLANS.includes(tier)) return jsonResponse({ error: `Unknown plan "${tier}".` }, 400);
+    const interval = billing_cycle === 'annual' || billing_cycle === 'yearly' ? 'annual' : 'monthly';
+    const price = await resolvePrice(stripe, tier, interval); // by lookup_key
+    const priceId = price.id;
 
-    // Inline upgrade/downgrade if an active subscription exists (the caller's own).
+    // Inline plan change if the caller already has a live subscription (their own).
     if (user.stripe_subscription_id) {
-      const sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
-      if (sub && sub.status !== 'canceled') {
+      let sub = null;
+      try {
+        sub = await stripe.subscriptions.retrieve(user.stripe_subscription_id);
+      } catch (e) {
+        if (e?.code !== 'resource_missing') throw e; // stale id → fall through to a fresh checkout
+      }
+      if (sub && sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
         const updated = await stripe.subscriptions.update(user.stripe_subscription_id, {
           items: [{ id: sub.items.data[0].id, price: priceId }],
           proration_behavior: 'always_invoice',
@@ -111,7 +115,7 @@ Deno.serve(async (req) => {
         const upgradeRenewal = renewalDateFromSubscription(updated);
         await updateSelf({
           subscription_tier: tier,
-          billing_cycle: billing_cycle || 'monthly',
+          billing_cycle: planFromPrice(price).interval || interval,
           stripe_price_id: priceId,
           billing_status: updated.status,
           ...(upgradeRenewal ? { subscription_renewal_date: upgradeRenewal } : {}),
@@ -124,9 +128,10 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
+      client_reference_id: user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: success_url || `${req.headers.get('origin')}/subscription?success=1`,
-      cancel_url: cancel_url || `${req.headers.get('origin')}/subscription`,
+      success_url: appUrl(success_url, `${BILLING_PATH}?success=1`),
+      cancel_url: appUrl(cancel_url, BILLING_PATH),
       subscription_data: {
         metadata: { user_id: user.id, tier },
         trial_period_days: user.had_trial ? undefined : 30,

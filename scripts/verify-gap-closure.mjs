@@ -3,7 +3,7 @@
  * Rehearsal for the four Base44 gap closures — pure logic, in-memory fakes,
  * NO network and NO AI calls:
  *   1. checkin.analyze  (_shared/progressAnalysis.js): stores to
- *      check_ins.ai_checkin_summary, meters against the coach, skips silently
+ *      check_ins.ai_checkin_summary, gated by plan (not counted), skips silently
  *      over quota, is idempotent, never throws.
  *   3. Google OAuth state (_shared/googleOAuth.js): sign/verify, expiry, forgery,
  *      redirect-origin allow-list, consent URL (scope + offline), redirect URI.
@@ -93,15 +93,15 @@ function fakeDb(tables) {
   check('analyze: stores summary on the check-in', r.analysed && t.check_ins[2].ai_checkin_summary?.summary === 'ok');
   check('analyze: stamps ai_checkin_summary_at', !!t.check_ins[2].ai_checkin_summary_at);
   check('analyze: prompt carries history + base44 trend signals', /TREND SIGNALS/.test(lastPrompt) && /PREVIOUS CHECK-IN: weight 199/.test(lastPrompt));
-  check('analyze: exactly one meter + one AI call', metered === 1 && aiCalls === 1);
+  check('analyze: exactly one plan-gate check + one AI call', metered === 1 && aiCalls === 1);
 
   r = await analyzeCheckIn(d, { checkIn: t.check_ins[2], client: t.clients[0], coach }, deps(true));
   check('analyze: idempotent (already analysed → no meter, no AI)', r.skipped === 'already analysed' && metered === 1 && aiCalls === 1);
 
   t = mk(); d = fakeDb(t); metered = 0; aiCalls = 0;
   r = await analyzeCheckIn(d, { checkIn: t.check_ins[2], client: t.clients[0], coach }, deps(false));
-  check('analyze: over quota → skipped silently, NO AI call, nothing stored',
-    r.skipped === 'over quota' && aiCalls === 0 && !t.check_ins[2].ai_checkin_summary && d.writes.length === 0);
+  check('analyze: plan does not include it → skipped silently, NO AI call, nothing stored',
+    r.skipped === 'not in plan' && aiCalls === 0 && !t.check_ins[2].ai_checkin_summary && d.writes.length === 0);
 
   t = mk(); d = fakeDb(t);
   r = await analyzeCheckIn(d, { checkIn: t.check_ins[2], client: t.clients[0], coach },

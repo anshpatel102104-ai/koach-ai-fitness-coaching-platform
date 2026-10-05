@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import AiUsageMeter from '@/components/subscription/AiUsageMeter';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const GOALS = [
@@ -1074,7 +1075,7 @@ function Step3Generating({ onDone, macroPayload }) {
           const body = res.data;
           if (body?.error === 'monthly_ai_limit_reached') {
             setProgress(0);
-            setError(body.message || "You've hit your monthly AI limit — upgrade to Pro for unlimited AI generations.");
+            setError(body.message || "You've reached your monthly AI generation limit — upgrade your plan for more.");
             return;
           }
           if (body?.error) {
@@ -1831,6 +1832,8 @@ export default function AIGeneratorModal({ open, onOpenChange, onApply }) {
               </div>
             ) : (
               /* Steps 0 & 1 — Back + Next/Generate */
+              <div className="flex flex-col gap-2">
+              <AiUsageMeter />
               <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3">
                 <Button
                   variant="outline"
@@ -1859,6 +1862,7 @@ export default function AIGeneratorModal({ open, onOpenChange, onApply }) {
                     Next <ChevronRight className="w-4 h-4" />
                   </Button>
                 )}
+              </div>
               </div>
             )}
           </div>

@@ -12,6 +12,8 @@ const ROUTES = [
   { path: '/login' },
   { path: '/signup' },
   { path: '/signup?plan=pro&interval=monthly', endsOn: '/signup' },
+  { path: '/signup?plan=elite&interval=yearly&email=test@example.com', endsOn: '/signup', expectText: 'Elite · Yearly' },
+  { path: '/login?email=test@example.com', endsOn: '/login' },
   { path: '/forgot-password' },
   { path: '/reset-password' },
   { path: '/', endsOn: '/login' },
@@ -41,7 +43,7 @@ try {
   browser = await chromium.launch(
     existsSync(LOCAL_CHROMIUM) ? { executablePath: LOCAL_CHROMIUM } : {},
   )
-  for (const { path: route, endsOn } of ROUTES) {
+  for (const { path: route, endsOn, expectText } of ROUTES) {
     const page = await browser.newPage()
     const errors = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -56,6 +58,9 @@ try {
     } else if (errors.length) {
       failed = true
       console.error(`FAIL ${route}: page error(s): ${errors.join(' | ')}`)
+    } else if (expectText && !(await page.evaluate(() => document.body.innerText)).includes(expectText)) {
+      failed = true
+      console.error(`FAIL ${route}: expected page text "${expectText}"`)
     } else if (!bodyLen && !rootKids) {
       failed = true
       console.error(`FAIL ${route}: empty body`)

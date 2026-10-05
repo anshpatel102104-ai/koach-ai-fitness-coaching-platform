@@ -5,10 +5,14 @@
  * SAME tables and gate expressions.
  */
 
+// -1 = unlimited. Mirrors src/lib/subscription.js (TIERS[*].limits) and
+// app.tier_client_cap() in supabase/migrations/20261006000100_stripe_production_billing.sql;
+// scripts/verify-billing-access.mjs fails if any of the three disagree.
+// max_ai_generations_per_month counts ONLY the generations defined in aiPolicy.js.
 export const TIER_LIMITS = {
   starter:    { max_clients: 10, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: 15 },
-  pro:        { max_clients: 25, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: 50 },
-  elite:      { max_clients: 75, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: 150 },
+  pro:        { max_clients: 75, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: 100 },
+  elite:      { max_clients: -1, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: 300 },
   enterprise: { max_clients: -1, max_programs: -1, max_nutrition_plans: -1, max_ai_generations_per_month: -1 },
 };
 
@@ -21,20 +25,25 @@ const ELITE_FEATURES = [
   'adherence_scoring', 'checkin_automation', 'basic_notifications',
   'ai_calorie_suggestions', 'ai_workout_progression', 'ai_checkin_responses',
   'auto_progression_rules', 'trigger_notifications', 'revenue_dashboard',
+  'ai_program_builder', 'ai_meal_plan_builder', 'ai_onboarding', 'ai_assistant_full',
+  'ai_checkin_summary',
 ];
 
 export const TIER_FEATURES = {
   starter: [
     'clients', 'programs', 'nutrition', 'schedule', 'messages',
+    'ai_program_builder', 'ai_meal_plan_builder',
   ],
   pro: [
     'clients', 'programs', 'nutrition', 'schedule', 'messages',
+    'ai_program_builder', 'ai_meal_plan_builder', 'ai_onboarding',
+    'ai_checkin_summary', 'ai_suggestions',
     'progress', 'adherence', 'checkin_review', 'client_dashboard',
     'analytics', 'voice_video_messages', 'program_templates',
     'analytics_graphs', 'adherence_scoring', 'checkin_automation', 'basic_notifications',
   ],
   elite: ELITE_FEATURES,
-  enterprise: [...ELITE_FEATURES, 'api_access'],
+  enterprise: [...ELITE_FEATURES, 'api_access', 'ai_team_access'],
 };
 
 export function tierLimits(tier) {

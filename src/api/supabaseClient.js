@@ -22,6 +22,7 @@
  *     existing page code keeps working during the incremental cutover.
  */
 import { createClient } from '@supabase/supabase-js';
+import { COUNTED_AI_FUNCTIONS } from '../lib/aiPolicy.js';
 
 // Entity name -> Postgres table (SCHEMA_MIGRATION.md is authoritative)
 const ENTITY_TABLES = {
@@ -319,6 +320,8 @@ const auth = {
       id: user.id,
       email: profile?.email ?? user.email,
       full_name: profile?.full_name ?? user.user_metadata?.full_name ?? '',
+      signup_plan: user.user_metadata?.signup_plan,
+      signup_interval: user.user_metadata?.signup_interval,
     });
   },
   /** auth.updateMe(data) -> update own profiles row (privileged
@@ -370,14 +373,16 @@ const auth = {
    * handle_new_user() trigger copies into the new profiles row. If the project
    * requires email confirmation, `session` is null until the user confirms.
    */
-  async signup({ email, password, full_name }) {
+  async signup({ email, password, full_name, plan, interval }) {
     const sb = getSupabase();
     const emailRedirectTo =
       typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined;
     const { data, error } = await sb.auth.signUp({
       email,
       password,
-      options: { data: { full_name: full_name ?? '' }, emailRedirectTo },
+      // signup_plan / signup_interval live in auth user metadata (not a billing column);
+      // they survive email confirmation on any device.
+      options: { data: { full_name: full_name ?? '', ...(plan ? { signup_plan: plan, signup_interval: interval } : {}) }, emailRedirectTo },
     });
     throwIf(error);
     return { needsConfirmation: !data.session, user: data.user };
@@ -406,6 +411,8 @@ const auth = {
   },
 };
 
+const PLAN_BLOCK_ERRORS = new Set(['monthly_ai_limit_reached', 'feature_not_in_plan', 'billing_required']);
+
 const functions = {
   /**
    * functions.invoke(name, payload) -> Supabase Edge Function.
@@ -414,7 +421,18 @@ const functions = {
    */
   async invoke(name, payload) {
     const { data, error } = await getSupabase().functions.invoke(name, { body: payload });
+    if (error) {
+      // Plan/limit refusals from the server carry a JSON body. Surface them
+      // (dialog + readable error) instead of a generic "non-2xx" failure.
+      const body = await error.context?.clone?.().json?.().catch(() => null);
+      if (body && PLAN_BLOCK_ERRORS.has(body.error)) {
+        window.dispatchEvent(new CustomEvent('koach:plan-block', { detail: body }));
+        if (body.error === 'monthly_ai_limit_reached') return { data: body }; // callers show body.message
+        throw Object.assign(new Error(body.message || body.error), { planBlock: body });
+      }
+    }
     throwIf(error);
+    if (COUNTED_AI_FUNCTIONS.includes(name)) window.dispatchEvent(new CustomEvent('koach:ai-usage-changed'));
     return { data };
   },
 };

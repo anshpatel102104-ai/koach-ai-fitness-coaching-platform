@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
+import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 
 const ICON_MAP = {
   TrendingUp, Trophy, ShoppingBag, ClipboardList, DollarSign, Globe,
@@ -16,13 +17,11 @@ const ICON_MAP = {
 
 // Key selling points shown per tier in the comparison table
 const TIER_SELLING_POINTS = {
-  starter: ['Up to 10 clients', 'Workout programs', 'Nutrition plans', 'Scheduling', 'Text messaging'],
-  pro:     ['Up to 25 clients', 'Progress analytics', 'Check-in reviews', 'Adherence scoring', 'Analytics graphs', 'Voice & video messages', 'Client mobile dashboard'],
-  elite:   ['Up to 75 clients', 'Full AI assistant', 'AI calorie & progression', 'Auto progression rules', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module'],
-  enterprise: ['Unlimited clients', 'Multi-coach team accounts', 'Advanced analytics (LTV, churn)', 'Stripe & Sheets integrations', 'API access', 'Priority support'],
+  starter: [clientLimitLabel('starter'), aiLimitLabel('starter'), 'Workout programs', 'Nutrition plans', 'Scheduling', 'Text messaging'],
+  pro:     [clientLimitLabel('pro'), aiLimitLabel('pro'), 'AI onboarding', 'Progress analytics', 'Check-in reviews', 'AI check-in summaries & replies', 'Adherence scoring', 'Analytics graphs', 'Voice & video messages', 'Client mobile dashboard'],
+  elite:   [clientLimitLabel('elite'), aiLimitLabel('elite'), 'Full AI assistant', 'AI calorie & progression', 'Auto progression rules', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module'],
+  enterprise: [clientLimitLabel('enterprise'), aiLimitLabel('enterprise'), 'Team AI access', 'Multi-coach team accounts', 'Advanced analytics (LTV, churn)', 'Stripe & Sheets integrations', 'API access', 'Priority support'],
 };
-
-const YEARLY_DISCOUNT = 0.20; // 20% off yearly
 
 export default function UpgradeModal({ open, onClose, featureKey, user, onUserUpdate }) {
   const { me } = useAuth();
@@ -36,9 +35,8 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
   const FeatureIcon = ICON_MAP[featureInfo.icon] || Zap;
 
   const getPrice = (tier) => {
-    const base = tier.price;
-    if (billing === 'yearly') return Math.round(base * (1 - YEARLY_DISCOUNT));
-    return base;
+    const p = PLAN_PRICES[tier.key];
+    return billing === 'yearly' ? p.annual : p.monthly;
   };
 
   const handleSelectTier = async (tierKey) => {
@@ -169,7 +167,7 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
                       <span className="text-xs text-foreground mb-0.5">/mo</span>
                     </div>
                     {billing === 'yearly' && (
-                      <p className="text-[10px] text-accent mt-0.5">Save ${Math.round((tier.price - price) * 12)}/yr</p>
+                      <p className="text-[10px] text-accent mt-0.5">Save ${PLAN_PRICES[tier.key].annualSave}/yr</p>
                     )}
                   </div>
 

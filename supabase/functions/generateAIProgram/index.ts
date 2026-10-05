@@ -7,7 +7,7 @@
 // library-enrichment pass is verbatim.
 import { validateProgram } from '../_shared/aiShape.js';
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
-import { meterAiGeneration } from '../_shared/aiMetering.js';
+import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectExerciseNames, findInjuryViolations, injuryAvoidTerms, parseTermList } from '../_shared/aiSafety.js';
 
@@ -83,10 +83,11 @@ Deno.serve(async (req) => {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
 
-    const meter = await meterAiGeneration(serviceClient(), caller.profile);
-    if (!meter.allowed) return jsonResponse(meter.body, meter.status);
+    const { profile, preferences, purpose } = await req.json();
 
-    const { profile, preferences } = await req.json();
+    // 1 AI generation (regenerating counts again); purpose:'onboarding' needs Pro+.
+    const blocked = await guardAiUse(serviceClient(), caller, 'generateAIProgram', { purpose });
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
 
     // Fetch the coach's exercise library (RLS-scoped) to ground the AI
     const { data: exerciseLibrary } = await callerClient(req)

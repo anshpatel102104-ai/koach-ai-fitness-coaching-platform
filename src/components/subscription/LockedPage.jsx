@@ -1,4 +1,5 @@
 import React from 'react';
+import { PLAN_PRICES } from '@/lib/planPricing';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TIERS, FEATURE_INFO } from '@/lib/subscription';
@@ -59,7 +60,7 @@ export default function LockedPage({ featureKey, onUpgrade }) {
         Upgrade to {minTier.name} <ArrowRight className="w-4 h-4" />
       </Button>
 
-      <p className="text-xs text-muted-foreground/50 mt-4">Starting at ${minTier.price}/month</p>
+      <p className="text-xs text-muted-foreground/50 mt-4">Starting at ${PLAN_PRICES[minTier.key].monthly}/month</p>
     </div>
   );
 }

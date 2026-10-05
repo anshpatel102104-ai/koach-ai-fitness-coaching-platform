@@ -8,6 +8,7 @@ import AIProfileStep from './steps/AIProfileStep';
 import AIPreferencesStep from './steps/AIPreferencesStep';
 import AIGeneratingStep from './steps/AIGeneratingStep';
 import AIReviewStep from './steps/AIReviewStep';
+import AiUsageMeter from '@/components/subscription/AiUsageMeter';
 
 const STEPS = ['profile', 'preferences', 'generating', 'review'];
 
@@ -46,7 +47,7 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
 
       // Clean monthly limit message for Starter tier
       if (program?.error === 'monthly_ai_limit_reached') {
-        throw new Error(program.message || "You've hit your monthly AI limit — upgrade to Pro for unlimited AI generations.");
+        throw new Error(program.message || "You've reached your monthly AI generation limit — upgrade your plan for more.");
       }
 
       if (!program || program.error) {
@@ -118,6 +119,7 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
             </p>
           </div>
         </div>
+        <AiUsageMeter />
         {/* Progress bar */}
         <div className="flex gap-1.5 h-1">
           {STEPS.map((s) => (

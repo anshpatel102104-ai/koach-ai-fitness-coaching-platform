@@ -15,6 +15,8 @@
     "verify:automation": "node scripts/verify-automation.mjs",
     "verify:risk-parity": "node --loader ./scripts/.ext-resolver.mjs scripts/verify-risk-parity.mjs",
     "verify:stripe": "node scripts/verify-stripe-idempotency.mjs",
+    "verify:billing": "node scripts/verify-billing-access.mjs",
+    "verify:stripe-sync": "node scripts/verify-stripe-sync.mjs",
     "verify:digest": "node scripts/verify-digest.mjs",
     "verify:events": "node scripts/verify-entity-events.mjs",
     "verify:rbac": "node scripts/verify-rbac.mjs",

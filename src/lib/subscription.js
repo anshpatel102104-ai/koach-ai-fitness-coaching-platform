@@ -1,13 +1,15 @@
 /**
  * FitForge Subscription Tier System
- * Single source of truth for all tier definitions, limits, and feature flags.
+ * Single source of truth for tier definitions, limits and feature flags.
+ * Prices live in planPricing.js (the only price table). Limits here must match
+ * supabase/functions/_shared/subscriptionTiers.js and app.tier_client_cap() in SQL
+ * (enforced by scripts/verify-billing-access.mjs).
  */
 
 export const TIERS = {
   starter: {
     key: 'starter',
     name: 'Starter',
-    price: 29,
     color: 'text-slate-400',
     borderColor: 'border-slate-400/30',
     bgColor: 'bg-slate-400/10',
@@ -17,7 +19,7 @@ export const TIERS = {
       max_clients: 10,
       max_programs: -1,         // unlimited
       max_nutrition_plans: -1,  // unlimited
-      max_ai_generations_per_month: 15,  // combined program + meal plan
+      max_ai_generations_per_month: 15,  // counted: program + meal plan + smart-meals generations (see aiPolicy)
     },
     features: {
       // Pages
@@ -37,6 +39,7 @@ export const TIERS = {
       client_dashboard: false,
       // Granular feature flags
       ai_suggestions: false,
+      ai_checkin_summary: false,       // AI check-in summary — Pro+ (not counted)
       analytics: false,
       custom_branding: false,
       api_access: false,
@@ -48,8 +51,8 @@ export const TIERS = {
       checkin_automation: false,
       basic_notifications: false,
       // AI ladder
-      ai_program_builder: true,          // metered — 5/mo combined
-      ai_meal_plan_builder: true,        // metered — 5/mo combined
+      ai_program_builder: true,          // metered: counts against the monthly AI generations
+      ai_meal_plan_builder: true,        // metered: counts against the monthly AI generations
       ai_onboarding: false,              // Pro+ only
       ai_assistant_full: false,
       ai_team_access: false,
@@ -58,7 +61,6 @@ export const TIERS = {
   pro: {
     key: 'pro',
     name: 'Pro',
-    price: 79,
     color: 'text-primary',
     borderColor: 'border-primary/30',
     bgColor: 'bg-primary/10',
@@ -66,10 +68,10 @@ export const TIERS = {
     badge: 'bg-primary/15 text-primary border-primary/20',
     popular: true,
     limits: {
-      max_clients: 25,
+      max_clients: 75,
       max_programs: -1,         // unlimited
       max_nutrition_plans: -1,  // unlimited
-      max_ai_generations_per_month: 50,
+      max_ai_generations_per_month: 100,
     },
     features: {
       // Pages
@@ -80,7 +82,7 @@ export const TIERS = {
       messages: true,
       progress: true,
       store: false,
-      assistant: true,
+      assistant: false,
       adherence: true,
       checkin_review: true,
       sales: false,
@@ -88,7 +90,8 @@ export const TIERS = {
       challenges: true,
       client_dashboard: true,
       // Granular
-      ai_suggestions: false,
+      ai_suggestions: true,        // AI-drafted replies — Pro+
+      ai_checkin_summary: true,       // AI check-in summary — Pro+ (not counted)
       analytics: true,
       custom_branding: false,
       api_access: false,
@@ -100,9 +103,9 @@ export const TIERS = {
       checkin_automation: true,
       basic_notifications: true,
       // AI ladder
-      ai_program_builder: true,          // unlimited
-      ai_meal_plan_builder: true,        // unlimited
-      ai_onboarding: true,               // AI Onboarding — Pro+
+      ai_program_builder: true,          // metered (100/mo)
+      ai_meal_plan_builder: true,        // metered (100/mo)
+      ai_onboarding: true,               // AI Onboarding — Pro+ (metered)
       ai_assistant_full: false,          // full AI assistant locked to Elite+
       ai_team_access: false,
     },
@@ -110,17 +113,16 @@ export const TIERS = {
   elite: {
     key: 'elite',
     name: 'Elite',
-    price: 149,
     color: 'text-accent',
     borderColor: 'border-accent/30',
     bgColor: 'bg-accent/10',
     gradient: 'from-accent to-emerald-400',
     badge: 'bg-accent/15 text-accent border-accent/20',
     limits: {
-      max_clients: 75,      // 75 clients
+      max_clients: -1,      // unlimited
       max_programs: -1,
       max_nutrition_plans: -1,
-      max_ai_generations_per_month: 150,
+      max_ai_generations_per_month: 300,
     },
     features: {
       // Pages
@@ -140,6 +142,7 @@ export const TIERS = {
       client_dashboard: true,
       // Granular — all Pro features
       ai_suggestions: true,
+      ai_checkin_summary: true,       // AI check-in summary — Pro+ (not counted)
       analytics: true,
       custom_branding: true,
       api_access: false,
@@ -151,9 +154,9 @@ export const TIERS = {
       checkin_automation: true,
       basic_notifications: true,
       // AI ladder
-      ai_program_builder: true,
-      ai_meal_plan_builder: true,
-      ai_onboarding: true,               // AI Onboarding — Pro+
+      ai_program_builder: true,          // metered (300/mo)
+      ai_meal_plan_builder: true,        // metered (300/mo)
+      ai_onboarding: true,               // AI Onboarding — Pro+ (metered)
       ai_assistant_full: true,           // Full AI Assistant — auto progression, check-in analysis, coaching automation
       ai_team_access: false,
       // Elite-exclusive
@@ -168,7 +171,6 @@ export const TIERS = {
   enterprise: {
     key: 'enterprise',
     name: 'Enterprise',
-    price: 299,
     color: 'text-chart-4',
     borderColor: 'border-chart-4/30',
     bgColor: 'bg-chart-4/10',
@@ -196,6 +198,7 @@ export const TIERS = {
       challenges: true,
       client_dashboard: true,
       ai_suggestions: true,
+      ai_checkin_summary: true,       // AI check-in summary — Pro+ (not counted)
       analytics: true,
       custom_branding: true,
       api_access: true,
@@ -207,9 +210,9 @@ export const TIERS = {
       checkin_automation: true,
       basic_notifications: true,
       // AI ladder
-      ai_program_builder: true,
-      ai_meal_plan_builder: true,
-      ai_onboarding: true,               // AI Onboarding — Pro+
+      ai_program_builder: true,          // unlimited
+      ai_meal_plan_builder: true,        // unlimited
+      ai_onboarding: true,               // AI Onboarding — Pro+ (unlimited)
       ai_assistant_full: true,
       ai_team_access: true,              // Team-wide AI access for multiple coaches
       // Enterprise-exclusive
@@ -345,9 +348,15 @@ export const FEATURE_INFO = {
   },
   ai_suggestions: {
     name: 'AI Message Suggestions',
-    description: 'Get AI-powered reply suggestions when messaging clients.',
+    description: 'Get AI-drafted replies when messaging clients and responding to check-ins.',
     icon: 'Sparkles',
-    minTier: 'elite',
+    minTier: 'pro',
+  },
+  ai_checkin_summary: {
+    name: 'AI Check-in Summary',
+    description: 'An AI summary of each client check-in with a suggested reply.',
+    icon: 'Sparkles',
+    minTier: 'pro',
   },
   ai_calorie_suggestions: {
     name: 'AI Calorie Adjustments',
@@ -414,10 +423,10 @@ export const FEATURE_INFO = {
 
 /**
  * Get the tier config for a user. Defaults to 'starter'.
- * Admin users (app builders/owners) always get Enterprise-level access.
+ * Admin and comped (owner/staff) users always get Enterprise-level access.
  */
 export function getUserTier(user) {
-  if (user?.role === 'admin') return TIERS.enterprise;
+  if (user?.role === 'admin' || user?.is_comped) return TIERS.enterprise;
   const tierKey = user?.subscription_tier || 'starter';
   return TIERS[tierKey] || TIERS.starter;
 }

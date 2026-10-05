@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { PLAN_PRICES } from '@/lib/planPricing';
 
 const TIERS = [
   { tier: 'Bronze', min: 0, max: 10, rate: 20 },
@@ -9,14 +10,14 @@ const TIERS = [
 ];
 
 const PLANS = [
-  { name: 'Starter', price: 99 },
-  { name: 'Pro', price: 149 },
-  { name: 'Elite', price: 199 },
-  { name: 'Enterprise', price: 299 },
+  { name: 'Starter', price: PLAN_PRICES.starter.monthly },
+  { name: 'Pro', price: PLAN_PRICES.pro.monthly },
+  { name: 'Elite', price: PLAN_PRICES.elite.monthly },
+  { name: 'Enterprise', price: PLAN_PRICES.enterprise.monthly },
 ];
 
 export default function AffiliateCommissionStructure({ profile }) {
-  const [selectedPlan, setSelectedPlan] = useState(149);
+  const [selectedPlan, setSelectedPlan] = useState(PLAN_PRICES.pro.monthly);
   const [referralCount, setReferralCount] = useState(profile.active_referrals || 5);
 
   const monthlyEarnings = referralCount * selectedPlan * (profile.commission_rate / 100);
@@ -56,7 +57,7 @@ export default function AffiliateCommissionStructure({ profile }) {
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-bold text-foreground mb-2">
-              Plan: {selectedPlan === 99 ? 'Starter' : selectedPlan === 149 ? 'Pro' : selectedPlan === 199 ? 'Elite' : 'Enterprise'}
+              Plan: {PLANS.find(p => p.price === selectedPlan)?.name}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {PLANS.map(p => (

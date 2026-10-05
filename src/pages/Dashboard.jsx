@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import TodayView from '@/components/dashboard/TodayView';
-import TrialBanner from '@/components/dashboard/TrialBanner';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
 
@@ -58,7 +57,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <TrialBanner user={dashUser} />
       {clientsError ? (
         <ErrorState
           title="Couldn't load your dashboard"

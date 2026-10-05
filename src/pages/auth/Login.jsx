@@ -1,24 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db, supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { safeNext, takePendingPlan, startCheckout, WEBSITE_PRICING_URL } from '@/lib/authRedirect';
+import { safeNext, parseEmail, planFromUser, takePendingPlan, startCheckout, WEBSITE_PRICING_URL } from '@/lib/authRedirect';
 import AuthShell, { AuthField, AuthSubmit, AuthError, AuthNotice, authLinkClass } from './AuthShell.jsx';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoadingAuth } = useAuth();
+  const { isAuthenticated, isLoadingAuth, user } = useAuth();
   const params = new URLSearchParams(window.location.search);
   const next = safeNext(params.get('next')) || safeNext(params.get('from_url')) || '/';
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => parseEmail(window.location.search));
+  const resumed = useRef(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Already signed in → skip the form.
   useEffect(() => {
-    if (!submitting && !isLoadingAuth && isAuthenticated) navigate(next, { replace: true });
-  }, [isAuthenticated, isLoadingAuth]);
+    if (submitting || isLoadingAuth || !isAuthenticated || resumed.current) return;
+    resumed.current = true;
+    // Arrived signed in (e.g. via the email-confirmation link): if they picked a
+    // plan at signup and never started checkout, continue to Stripe for it.
+    const subscribedAlready = ['active', 'trialing', 'past_due'].includes(user?.billing_status);
+    const pending = takePendingPlan() || planFromUser(user);
+    if (pending && !subscribedAlready) {
+      startCheckout(db, pending.plan, pending.interval).catch(() => navigate('/subscription', { replace: true }));
+      return;
+    }
+    navigate(next, { replace: true });
+  }, [isAuthenticated, isLoadingAuth, user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,8 +38,9 @@ export default function Login() {
     try {
       const me = await supabase.auth.login({ email, password });
       // Signed up with a plan but had to confirm their email first → resume checkout.
-      const pending = takePendingPlan();
-      const subscribed = ['active', 'trialing', 'past_due'].includes(me?.billing_status) || !!me?.stripe_subscription_id;
+      const pending = takePendingPlan() || planFromUser(me);
+      resumed.current = true;
+      const subscribed = ['active', 'trialing', 'past_due'].includes(me?.billing_status);
       if (pending && !subscribed) {
         try { await startCheckout(db, pending.plan, pending.interval); return; } catch { /* fall through to /subscription */ }
       }

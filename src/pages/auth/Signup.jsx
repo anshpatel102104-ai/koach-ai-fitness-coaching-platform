@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { db, supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { parsePlan, savePendingPlan, startCheckout, WEBSITE_PRICING_URL } from '@/lib/authRedirect';
+import { parsePlan, parseEmail, savePendingPlan, startCheckout, WEBSITE_PRICING_URL } from '@/lib/authRedirect';
 import AuthShell, { AuthField, AuthSubmit, AuthError, AuthNotice, authLinkClass } from './AuthShell.jsx';
 
 const LABEL = { starter: 'Starter', pro: 'Pro', elite: 'Elite', enterprise: 'Enterprise' };
@@ -12,7 +12,7 @@ export default function Signup() {
   const { isAuthenticated, isLoadingAuth } = useAuth();
   const { plan, interval, explicit } = parsePlan(window.location.search);
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => parseEmail(window.location.search));
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -29,7 +29,7 @@ export default function Signup() {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setSubmitting(true);
     try {
-      const { needsConfirmation } = await supabase.auth.signup({ email, password, full_name: fullName });
+      const { needsConfirmation } = await supabase.auth.signup({ email, password, full_name: fullName, plan, interval });
       if (needsConfirmation) {
         savePendingPlan(plan, interval);
         setNotice('Check your email to confirm your account, then sign in to start your trial.');
@@ -55,7 +55,7 @@ export default function Signup() {
         <AuthField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
         <AuthField label="Password" type="password" value={password} onChange={setPassword} placeholder="At least 6 characters" autoComplete="new-password" />
         <p className="text-xs text-white/50">
-          {LABEL[plan]} · {interval === 'annual' ? 'Annual' : 'Monthly'}
+          {LABEL[plan]} · {interval === 'annual' ? 'Yearly' : 'Monthly'} · 30-day free trial
           {!explicit && (
             <>
               {' · '}
@@ -72,7 +72,7 @@ export default function Signup() {
         )}
       </form>
       <div className="text-center text-xs text-white/40">
-        Already have an account? <Link to="/login" className={authLinkClass + ' text-white'}>Sign in</Link>
+        Already have an account? <Link to={email ? `/login?email=${encodeURIComponent(email)}` : '/login'} className={authLinkClass + ' text-white'}>Sign in</Link>
       </div>
     </AuthShell>
   );

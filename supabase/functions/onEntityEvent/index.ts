@@ -17,7 +17,7 @@
 import { serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { handleEntityEvent } from '../_shared/entityEvents.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
-import { meterAiGeneration } from '../_shared/aiMetering.js';
+import { aiFeatureAllowed } from '../_shared/aiMetering.js';
 import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, CHECKIN_SUMMARY } from '../_shared/aiTools.js';
 
@@ -63,9 +63,9 @@ Deno.serve(async (req) => {
           return r;
         },
         appUrl: Deno.env.get('APP_URL') || 'https://app.koachai.net',
-        // checkin.analyze: metered against the owning coach's AI quota.
+        // checkin.analyze: NOT a counted generation; only runs for plans that include it (aiPolicy.js).
         analysis: anthropicConfigured() ? {
-          meter: (coach: Record<string, unknown>) => meterAiGeneration(svc, coach),
+          meter: (coach: Record<string, unknown>) => aiFeatureAllowed(svc, coach, 'checkin.analyze'),
           invoke: invokeClaude, tool: CHECKIN_SUMMARY, system: TOOL_SYSTEM,
         } : null,
       });

@@ -1,40 +1,31 @@
 import React, { useState } from 'react';
+import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TIERS, TIER_ORDER, getUserTier } from '@/lib/subscription';
 import UpgradeCompareModal from './UpgradeCompareModal';
 import DowngradeModal from './DowngradeModal';
+import { db } from '@/api/supabaseClient';
+import { startCheckout } from '@/lib/authRedirect';
+import { toast } from 'sonner';
 
-const PLAN_PRICES = {
-  starter:    { monthly: 29,  annual: 23,  annualSave: 72 },
-  pro:        { monthly: 79,  annual: 63,  annualSave: 192 },
-  elite:      { monthly: 149, annual: 119, annualSave: 360 },
-  enterprise: { monthly: 299, annual: 239, annualSave: 720 },
-};
-
-const CLIENT_LIMIT = {
-  starter: 'Up to 10 clients',
-  pro: 'Up to 25 clients',
-  elite: 'Up to 75 clients',
-  enterprise: 'Unlimited clients',
-};
 
 const TIER_FEATURES = {
   starter: {
     inherited: [],
-    unique: ['✨ 15 AI generations/month (programs + meal plans)', 'Unlimited workout programs', 'Unlimited nutrition plans', 'Scheduling & calendar', 'In-app messaging', 'Client mobile app access', 'Basic progress tracking', 'Email support'],
+    unique: [`✨ ${aiLimitLabel('starter')} — program & meal plan builders`, 'Unlimited workout programs', 'Unlimited nutrition plans', 'Scheduling & calendar', 'In-app messaging', 'Client mobile app access', 'Basic progress tracking', 'Email support'],
   },
   pro: {
     inherited: ['Everything in Starter'],
-    unique: ['✨ 50 AI generations/month — program & meal plan builder', '✨ AI Onboarding — auto-generate a starting program & meal plan for any client', 'Progress analytics & graphs', 'Check-in review system', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'AI reply suggestions', 'Custom branding (logo)', 'Priority email support'],
+    unique: [`✨ ${aiLimitLabel('pro')} — program & meal plan builders`, '✨ AI Onboarding — auto-generate a starting program & meal plan for any client', 'Progress analytics & graphs', 'Check-in review system', 'AI check-in summaries & AI-drafted replies', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'Custom branding (logo)', 'Priority email support'],
   },
   elite: {
     inherited: ['Everything in Pro'],
-    unique: ['✨ 150 AI generations/month — program & meal plan builder', '🤖 Full AI Assistant — auto progression, check-in analysis & coaching automation', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations', 'Chat support'],
+    unique: [`✨ ${aiLimitLabel('elite')} — program & meal plan builders`, '🤖 Full AI Assistant — auto progression, check-in analysis, AI check-in responses & calorie suggestions', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations', 'Chat support'],
   },
   enterprise: {
     inherited: ['Everything in Elite'],
-    unique: ['🤖 Full AI Assistant, AI program & meal-plan builder (unlimited)', '🤖 AI Onboarding — auto-generate plans for every new client', '✨ AI reply suggestions & follow-up tools', 'White-label branding & custom domain', '🏢 Team accounts for multi-coach businesses (coming soon)', '👥 Team-wide AI access for all your coaches (coming soon)', 'Early access to all new features', 'Priority email & chat support'],
+    unique: [`✨ ${aiLimitLabel('enterprise')}`, '🤖 Everything in Elite, including the Full AI Assistant', '🤖 Team-wide AI access for all your coaches', '🔌 API access', 'White-label branding & custom domain', '🏢 Team accounts for multi-coach businesses (coming soon)', 'Early access to all new features', 'Priority email & chat support'],
   },
 };
 
@@ -45,13 +36,14 @@ const CARD_CONFIG = {
   enterprise: { accentColor: 'var(--tc-warning)', checkColor: 'text-warning', btnClass: 'border-warning/50 text-warning hover:bg-warning/10 bg-transparent', badge: { label: 'ENTERPRISE', cls: 'bg-warning/10 text-warning border border-warning/30' } },
 };
 
-function PlanCard({ tierKey, billing, isCurrent, isUpgrade, onSelect }) {
+function PlanCard({ tierKey, billing, isCurrent, isUpgrade, noPlan, busy, onSelect }) {
   const tier = TIERS[tierKey];
   const config = CARD_CONFIG[tierKey];
   const features = TIER_FEATURES[tierKey];
   const prices = PLAN_PRICES[tierKey];
   const price = billing === 'annual' ? prices.annual : prices.monthly;
   const isElite = tierKey === 'elite';
+  const label = busy ? 'Opening checkout…' : noPlan ? `Subscribe to ${tier.name} →` : isUpgrade ? `Upgrade to ${tier.name} →` : `Switch to ${tier.name}`;
 
   return (
     <div className={cn(
@@ -84,7 +76,7 @@ function PlanCard({ tierKey, billing, isCurrent, isUpgrade, onSelect }) {
       <div className="p-6 pb-4">
         <p className="font-bold text-sm mb-3" style={{ color: config.accentColor }}>{tier.name}</p>
         <p className="inline-block text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[var(--kc-w-5)] text-muted-foreground border border-white/10 mb-4">
-          {CLIENT_LIMIT[tierKey]}
+          {clientLimitLabel(tierKey)}
         </p>
         <div className="flex items-end gap-2 mb-2">
           {billing === 'annual' && (
@@ -94,9 +86,12 @@ function PlanCard({ tierKey, billing, isCurrent, isUpgrade, onSelect }) {
           <span className="text-muted-foreground text-sm mb-1">/mo</span>
         </div>
         {billing === 'annual' ? (
-          <span className="inline-block text-[11px] font-semibold text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full">
-            Save ${prices.annualSave}/year
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-block text-[11px] font-semibold text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full">
+              Save ${prices.annualSave}/year
+            </span>
+            <span className="text-[11px] text-muted-foreground">${prices.yearly.toLocaleString('en-US')} billed yearly</span>
+          </div>
         ) : (
           <p className="text-[11px] text-muted-foreground">or ${prices.annual}/mo billed annually</p>
         )}
@@ -141,14 +136,14 @@ function PlanCard({ tierKey, billing, isCurrent, isUpgrade, onSelect }) {
             className="w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
             style={{ background: 'linear-gradient(to right, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 20px color-mix(in srgb, var(--tc-ai) 40%, transparent)' }}
           >
-            {isUpgrade ? `Upgrade to ${tier.name} →` : `Switch to ${tier.name}`}
+            {label}
           </button>
         ) : (
           <button
             onClick={() => onSelect(tierKey)}
             className={cn('w-full py-2.5 rounded-xl text-sm font-semibold border transition-all', config.btnClass)}
           >
-            {isUpgrade ? `Upgrade to ${tier.name} →` : `Switch to ${tier.name}`}
+            {label}
           </button>
         )}
         {tierKey === 'enterprise' && (
@@ -161,7 +156,7 @@ function PlanCard({ tierKey, billing, isCurrent, isUpgrade, onSelect }) {
   );
 }
 
-export default function PricingCards({ user, onUserUpdate, clientCount = 0 }) {
+export default function PricingCards({ user, onUserUpdate, clientCount = 0, hasPlan = true }) {
   const [billing, setBilling] = useState('monthly');
   const [upgradeModal, setUpgradeModal] = useState(null); // { from, to }
   const [downgradeModal, setDowngradeModal] = useState(null); // { from, to }
@@ -169,7 +164,21 @@ export default function PricingCards({ user, onUserUpdate, clientCount = 0 }) {
   const userTier = getUserTier(user);
   const currentTierIndex = TIER_ORDER.indexOf(userTier.key);
 
-  const handleSelect = (tierKey) => {
+  const [busyTier, setBusyTier] = useState(null);
+
+  const handleSelect = async (tierKey) => {
+    // No live subscription yet: go straight to Stripe Checkout (30-day trial,
+    // promo codes allowed). Existing subscribers get the upgrade/downgrade flows.
+    if (!hasPlan) {
+      setBusyTier(tierKey);
+      try {
+        await startCheckout(db, tierKey, billing);
+      } catch (e) {
+        setBusyTier(null);
+        toast.error(e.message || 'Could not start checkout. Please try again.');
+      }
+      return;
+    }
     if (tierKey === userTier.key) return;
     const toIdx = TIER_ORDER.indexOf(tierKey);
     if (toIdx > currentTierIndex) {
@@ -195,7 +204,7 @@ export default function PricingCards({ user, onUserUpdate, clientCount = 0 }) {
                 billing === b ? 'bg-gradient-to-r from-primary to-ai text-white shadow-lg' : 'text-muted-foreground hover:text-white'
               )}
             >
-              {b}
+              {b === 'annual' ? 'yearly' : b}
               {b === 'annual' && (
                 <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', billing === 'annual' ? 'bg-[var(--kc-w-20)] text-white' : 'bg-success/20 text-success')}>
                   -20%
@@ -211,8 +220,9 @@ export default function PricingCards({ user, onUserUpdate, clientCount = 0 }) {
       <div className="hidden md:grid md:grid-cols-4 gap-4 items-start">
         {TIER_ORDER.map(tierKey => (
           <PlanCard key={tierKey} tierKey={tierKey} billing={billing}
-            isCurrent={userTier.key === tierKey}
+            isCurrent={hasPlan && userTier.key === tierKey}
             isUpgrade={TIER_ORDER.indexOf(tierKey) > currentTierIndex}
+            noPlan={!hasPlan} busy={busyTier === tierKey}
             onSelect={handleSelect} />
         ))}
       </div>
@@ -221,8 +231,9 @@ export default function PricingCards({ user, onUserUpdate, clientCount = 0 }) {
       <div className="md:hidden flex flex-col gap-4">
         {orderedMobile.map(tierKey => (
           <PlanCard key={tierKey} tierKey={tierKey} billing={billing}
-            isCurrent={userTier.key === tierKey}
+            isCurrent={hasPlan && userTier.key === tierKey}
             isUpgrade={TIER_ORDER.indexOf(tierKey) > currentTierIndex}
+            noPlan={!hasPlan} busy={busyTier === tierKey}
             onSelect={handleSelect} />
         ))}
       </div>

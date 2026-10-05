@@ -73,7 +73,7 @@ begin
 
   insert into public.notifications (recipient_id, category, type, title, body, link, priority, created_by)
   values (new.referrer_id, 'payment', 'referral_reward',
-          'Referral reward earned 🎁',
+          'Referral reward earned',
           format('%s stayed 30 days — $%s added to your referral balance.',
                  coalesce(new.referred_coach_name, new.referred_coach_email), v_amount),
           '/referral-program', 'normal', null);

@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -69,13 +69,12 @@ import WeeklySummary from './pages/WeeklySummary';
 import Challenges from './pages/Challenges';
 import Team from './pages/Team';
 import InstallPrompt from './components/pwa/InstallPrompt';
-import { Navigate } from 'react-router-dom';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 
-// Gates the dashboard: unauthenticated → /start, authenticated without subscription → /start?resume=checkout
+// Gates the dashboard: logged out → /login, no subscription → /subscription, subscribed → dashboard
 const AuthGuardedDashboard = () => {
   const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings, user, checkUserAuth } = useAuth();
   const [checkoutPolling, setCheckoutPolling] = React.useState(false);
@@ -113,7 +112,7 @@ const AuthGuardedDashboard = () => {
     );
   }
 
-  if (!isAuthenticated) return <Navigate to="/start" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   // Determine subscription state from multiple possible fields
   const hasActiveSubscription =
@@ -123,23 +122,13 @@ const AuthGuardedDashboard = () => {
   // Authenticated with subscription → dashboard
   if (hasActiveSubscription) return <Dashboard />;
 
-  // Authenticated, account exists but no subscription yet →
-  // Only send to checkout resume if this looks like an incomplete new signup
-  // (i.e. they went through onboarding but never finished Stripe checkout).
-  // Returning coaches who somehow lost billing data are sent to subscription page, not onboarding.
-  const isNewSignupIncomplete = localStorage.getItem('koach_resume_pricing') === '1' ||
-    new URLSearchParams(window.location.search).get('resume') === 'checkout';
-
-  if (isNewSignupIncomplete) {
-    return <Navigate to="/start?resume=checkout" replace />;
-  }
-
-  // Returning user with no subscription data — send to subscription management, not onboarding
+  // Authenticated without a subscription → subscription page
   return <Navigate to="/subscription" replace />;
 };
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated } = useAuth();
+  const location = useLocation();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -160,12 +149,12 @@ const AuthenticatedApp = () => {
   // old authError-based redirect was dead and unauthenticated users could reach
   // the entire coach shell (/clients, /revenue, …). Confidentiality was held
   // only by RLS with no redirect. Now: anyone without a session on a non-public
-  // path is sent to login. Public/onboarding/portal/auth paths stay open.
-  const publicPaths = ['/start', '/join', '/client-onboarding', '/packages', '/portal', '/login', '/signup', '/forgot-password', '/reset-password', '/client-setup', '/unsubscribe'];
-  const isPublicPath = publicPaths.some(p => window.location.pathname.startsWith(p));
+  // path is sent to login. Public/onboarding/auth/invite paths stay open; /portal/* is NOT public.
+  const publicPaths = ['/start', '/join', '/client-onboarding', '/packages', '/login', '/signup', '/forgot-password', '/reset-password', '/client-setup', '/unsubscribe'];
+  const isPublicPath = publicPaths.some(p => location.pathname.startsWith(p));
   if (!isAuthenticated && !isPublicPath) {
-    navigateToLogin();
-    return null;
+    const here = location.pathname + location.search;
+    return <Navigate to={here === '/' ? '/login' : `/login?next=${encodeURIComponent(here)}`} replace />;
   }
 
   return (

@@ -30,13 +30,13 @@ export default function ResetPassword() {
   };
 
   return (
-    <AuthShell title="Set a new password" subtitle="Choose a new password for your account">
+    <AuthShell title="Set a new password">
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthField label="New password" type="password" value={password} onChange={setPassword} placeholder="At least 6 characters" autoComplete="new-password" />
         <AuthField label="Confirm password" type="password" value={confirm} onChange={setConfirm} placeholder="Re-enter your password" autoComplete="new-password" />
         <AuthError message={error} />
         <AuthSubmit disabled={submitting || !password || !confirm}>
-          {submitting ? 'Updating…' : 'Update Password →'}
+          {submitting ? 'Updating…' : 'Update password'}
         </AuthSubmit>
       </form>
     </AuthShell>

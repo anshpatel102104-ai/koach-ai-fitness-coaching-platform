@@ -6,24 +6,10 @@ import TodayView from '@/components/dashboard/TodayView';
 import TrialBanner from '@/components/dashboard/TrialBanner';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
-import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { me } = useAuth();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-
-  // Redirect new coaches to onboarding — but NOT if they just completed the premium onboarding flow
-  useEffect(() => {
-    const justFinishedOnboarding = localStorage.getItem('koach_onboarding_complete') === '1';
-    if (justFinishedOnboarding) return; // already done — stay on dashboard
-
-    me().then(user => {
-      if (user && !user.onboarding_complete) {
-        navigate('/start');
-      }
-    }).catch(() => {});
-  }, [navigate]);
 
   // Real-time subscriptions — invalidate on any change
   useEffect(() => {

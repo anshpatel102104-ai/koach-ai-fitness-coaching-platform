@@ -7,7 +7,17 @@ import { chromium } from 'playwright'
 
 const PORT = 4173
 const BASE = `http://localhost:${PORT}`
-const ROUTES = ['/login', '/signup', '/forgot-password', '/']
+// `endsOn`: the pathname the visit must settle on (logged-out redirects).
+const ROUTES = [
+  { path: '/login' },
+  { path: '/signup' },
+  { path: '/signup?plan=pro&interval=monthly', endsOn: '/signup' },
+  { path: '/forgot-password' },
+  { path: '/reset-password' },
+  { path: '/', endsOn: '/login' },
+  { path: '/portal', endsOn: '/login' },
+  { path: '/portal/workouts', endsOn: '/login' },
+]
 const LOCAL_CHROMIUM = '/opt/pw-browsers/chromium'
 
 const preview = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], {
@@ -31,7 +41,7 @@ try {
   browser = await chromium.launch(
     existsSync(LOCAL_CHROMIUM) ? { executablePath: LOCAL_CHROMIUM } : {},
   )
-  for (const route of ROUTES) {
+  for (const { path: route, endsOn } of ROUTES) {
     const page = await browser.newPage()
     const errors = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -39,14 +49,18 @@ try {
     await page.waitForTimeout(1000)
     const bodyLen = await page.evaluate(() => document.body.innerText.trim().length)
     const rootKids = await page.evaluate(() => document.getElementById('root')?.children.length ?? 0)
-    if (errors.length) {
+    const finalPath = new URL(page.url()).pathname
+    if (endsOn && finalPath !== endsOn) {
+      failed = true
+      console.error(`FAIL ${route}: ended on ${finalPath}, expected ${endsOn}`)
+    } else if (errors.length) {
       failed = true
       console.error(`FAIL ${route}: page error(s): ${errors.join(' | ')}`)
     } else if (!bodyLen && !rootKids) {
       failed = true
       console.error(`FAIL ${route}: empty body`)
     } else {
-      console.log(`PASS ${route} (root children: ${rootKids}, text length: ${bodyLen})`)
+      console.log(`PASS ${route} -> ${finalPath} (root children: ${rootKids}, text length: ${bodyLen})`)
     }
     await page.close()
   }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
-import AuthShell, { AuthField, AuthSubmit, AuthError, AuthNotice } from './AuthShell.jsx';
+import AuthShell, { AuthField, AuthSubmit, AuthError, AuthNotice, authLinkClass } from './AuthShell.jsx';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -25,19 +25,19 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthShell title="Reset your password" subtitle="We'll email you a reset link">
+    <AuthShell title="Reset password">
       <form onSubmit={handleSubmit} className="space-y-4">
         <AuthField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
         <AuthError message={error} />
         <AuthNotice message={notice} />
         {!notice && (
           <AuthSubmit disabled={submitting || !email}>
-            {submitting ? 'Sending…' : 'Send Reset Link →'}
+            {submitting ? 'Sending…' : 'Send reset link'}
           </AuthSubmit>
         )}
       </form>
-      <div className="text-center text-xs text-white/40 pt-1">
-        <Link to="/login" className="hover:text-white/70 transition-colors">Back to sign in</Link>
+      <div className="text-center text-xs">
+        <Link to="/login" className={authLinkClass}>Back to sign in</Link>
       </div>
     </AuthShell>
   );

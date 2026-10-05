@@ -343,7 +343,11 @@ const auth = {
   },
   /** Route to the in-app login page (Supabase auth, Step 3). */
   redirectToLogin() {
-    if (typeof window !== 'undefined') window.location.assign('/login');
+    if (typeof window === 'undefined') return;
+    const { pathname, search } = window.location;
+    const here = pathname + search;
+    const onAuthPage = ['/login', '/signup', '/forgot-password', '/reset-password'].includes(pathname);
+    window.location.assign(onAuthPage || here === '/' ? '/login' : `/login?next=${encodeURIComponent(here)}`);
   },
 
   // --- real Supabase Auth session (Step 3a) ---------------------------------

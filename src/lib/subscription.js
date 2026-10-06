@@ -336,7 +336,7 @@ export const FEATURE_INFO = {
   },
   ai_team_access: {
     name: 'Team-Wide AI Access',
-    description: 'Full AI access for multiple coaches in your organization, plus AI API access.',
+    description: 'Full AI access for every coach on your team.',
     icon: 'Bot',
     minTier: 'enterprise',
   },

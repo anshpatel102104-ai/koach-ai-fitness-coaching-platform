@@ -235,7 +235,8 @@ export default function Assistant() {
   });
   const { data: conversations = [], refetch: refetchConvos } = useQuery({
     queryKey: ['ai-conversations'],
-    queryFn: () => db.entities.AIConversation.list('-created_date', 10),
+    // Most recently active chats first (a continued chat is updated in place).
+    queryFn: () => db.entities.AIConversation.list('-updated_date', 10),
     staleTime: 30_000,
   });
 
@@ -262,7 +263,7 @@ export default function Assistant() {
     setChatKey(k => k + 1);
     // Pass the saved messages as initial state via pendingPrompt won't work,
     // so we pass via a special object
-    setPendingPrompt({ __loadMessages: conv.messages || [] });
+    setPendingPrompt({ __loadMessages: conv.messages || [], __conversationId: conv.id, __clientId: conv.client_id ?? null });
   };
 
   return (

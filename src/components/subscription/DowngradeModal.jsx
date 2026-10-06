@@ -6,15 +6,11 @@ import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { openBillingPortal } from '@/lib/billing';
-import { clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
+import { clientLimitLabel, aiLimitLabel, PLAN_HIGHLIGHTS } from '@/lib/planPricing';
 
 
-const TIER_FEATURES = {
-  starter: ['Workout program builder', 'Basic nutrition plans', 'Scheduling and calendar', 'In-app messaging', 'Basic progress tracking', 'Email support'],
-  pro:     ['AI onboarding', 'Progress analytics and graphs', 'Check-in review', 'AI check-in summaries and drafted replies', 'Adherence scoring', 'Voice and video messages', 'Client mobile dashboard', 'Custom branding (logo)'],
-  elite:   ['Full AI assistant', 'Auto progression rules', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations'],
-  enterprise: ['API access', 'Custom integrations', 'Dedicated account manager', 'Team accounts', 'Custom contract and invoicing'],
-};
+// One source for plan features (lib/planPricing.js).
+const TIER_FEATURES = PLAN_HIGHLIGHTS;
 
 export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0, renewalDate, user, onClose, onUserUpdate }) {
   const { me } = useAuth();

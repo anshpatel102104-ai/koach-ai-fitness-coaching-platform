@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
+import { PLAN_PRICES, PLAN_HIGHLIGHTS, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,24 +12,11 @@ import { startCheckout } from '@/lib/authRedirect';
 import { toast } from 'sonner';
 
 
-const TIER_FEATURES = {
-  starter: {
-    inherited: [],
-    unique: [`${aiLimitLabel('starter')} for program and meal plan builders`, 'Unlimited workout programs', 'Unlimited nutrition plans', 'Scheduling and calendar', 'In-app messaging', 'Client mobile app', 'Basic progress tracking', 'Email support'],
-  },
-  pro: {
-    inherited: ['Everything in Starter'],
-    unique: [`${aiLimitLabel('pro')} for program and meal plan builders`, 'AI onboarding: a starting program and meal plan for any new client', 'Progress analytics and graphs', 'Check-in review', 'AI check-in summaries and drafted replies', 'Adherence scoring', 'Voice and video messages', 'Client mobile dashboard', 'Your logo on the client app', 'Priority email support'],
-  },
-  elite: {
-    inherited: ['Everything in Pro'],
-    unique: [`${aiLimitLabel('elite')} for program and meal plan builders`, 'Full AI assistant: progression, check-in analysis, replies and calorie suggestions', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community', 'Zapier', 'Chat support'],
-  },
-  enterprise: {
-    inherited: ['Everything in Elite'],
-    unique: [aiLimitLabel('enterprise'), 'The full AI assistant for every coach on your team', 'API access', 'White-label branding and your own domain', 'Team accounts for multi-coach businesses (coming soon)', 'Early access to new features', 'Priority email and chat support'],
-  },
-};
+// One source for plan features: PLAN_HIGHLIGHTS (lib/planPricing.js).
+const TIER_FEATURES = Object.fromEntries(TIER_ORDER.map((k, i) => [k, {
+  inherited: i === 0 ? [] : [`Everything in ${TIERS[TIER_ORDER[i - 1]].name}`],
+  unique: [aiLimitLabel(k), ...PLAN_HIGHLIGHTS[k]],
+}]));
 
 function PlanCard({ tierKey, billing, isCurrent, isUpgrade, noPlan, busy, onSelect }) {
   const tier = TIERS[tierKey];

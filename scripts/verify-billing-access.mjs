@@ -9,7 +9,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { TIERS } from '../src/lib/subscription.js';
-import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '../src/lib/planPricing.js';
+import { PLAN_PRICES, PLAN_HIGHLIGHTS, clientLimitLabel, aiLimitLabel } from '../src/lib/planPricing.js';
 import { COUNTED_AI_FUNCTIONS as CLIENT_COUNTED, aiUsage, aiResetDate as clientReset } from '../src/lib/aiPolicy.js';
 import { TIER_LIMITS, TIER_FEATURES, featureAllowed } from '../supabase/functions/_shared/subscriptionTiers.js';
 import { AI_POLICY, COUNTED_AI_FUNCTIONS, aiResetDate } from '../supabase/functions/_shared/aiPolicy.js';
@@ -127,6 +127,35 @@ check('price table: $49/$89/$149/$299 monthly, $468/$852/$1,428/$2,868 yearly',
   PLAN_PRICES.starter.monthly === 49 && PLAN_PRICES.pro.monthly === 89 && PLAN_PRICES.elite.monthly === 149 && PLAN_PRICES.enterprise.monthly === 299
   && PLAN_PRICES.starter.yearly === 468 && PLAN_PRICES.pro.yearly === 852 && PLAN_PRICES.elite.yearly === 1428 && PLAN_PRICES.enterprise.yearly === 2868);
 check('limit labels are generated from limits', clientLimitLabel('pro') === 'Up to 75 clients' && clientLimitLabel('elite') === 'Unlimited clients' && aiLimitLabel('elite') === '300 AI generations/month' && aiLimitLabel('enterprise') === 'Unlimited AI generations');
+
+// Plan copy must match what the plan unlocks: a highlight naming a gated feature
+// appears exactly at the first plan whose TIERS flag allows it, and features
+// that don't exist are never advertised.
+{
+  const order = ['starter', 'pro', 'elite', 'enterprise'];
+  const firstPlanWith = (re) => order.find((t) => PLAN_HIGHLIGHTS[t].some((line) => re.test(line))) ?? null;
+  const firstPlanAllowing = (flag) => order.find((t) => TIERS[t].features[flag]) ?? null;
+  const GATED = [
+    [/white-label/i, 'custom_branding'],
+    [/check-in review/i, 'checkin_review'],
+    [/check-in summaries/i, 'ai_checkin_summary'],
+    [/ai onboarding/i, 'ai_onboarding'],
+    [/adherence/i, 'adherence_scoring'],
+    [/program templates/i, 'program_templates'],
+    [/full ai assistant/i, 'ai_assistant_full'],
+    [/revenue dashboard/i, 'revenue_dashboard'],
+    [/sales pipeline/i, 'sales'],
+    [/^store$/i, 'store'],
+    [/community/i, 'community'],
+  ];
+  for (const [re, flag] of GATED) {
+    check(`plan copy: "${re.source}" first listed on the plan that unlocks ${flag}`, firstPlanWith(re) === firstPlanAllowing(flag),
+      `listed on ${firstPlanWith(re)}, unlocked on ${firstPlanAllowing(flag)}`);
+  }
+  const all = Object.values(PLAN_HIGHLIGHTS).flat().join(' | ');
+  check('plan copy advertises no features that do not exist (API, Zapier, account manager, phone support, custom domain)',
+    !/\bAPI\b|zapier|account manager|phone support|own domain/i.test(all));
+}
 
 console.log(failures ? `\n${failures} FAILED` : '\nall passed');
 process.exit(failures ? 1 : 0);

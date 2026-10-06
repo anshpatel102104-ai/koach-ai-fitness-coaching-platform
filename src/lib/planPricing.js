@@ -36,3 +36,43 @@ export const aiLimitLabel = (tierKey) => {
   const n = TIERS[tierKey].limits.max_ai_generations_per_month;
   return n === -1 ? 'Unlimited AI generations' : `${n} AI generations/month`;
 };
+
+/**
+ * What each plan ADDS over the one below — the ONE list every plan card,
+ * upgrade, compare and downgrade screen shows. Every line must be a feature
+ * that TIERS (subscription.js) unlocks at that plan and that exists in the app.
+ * The marketing site (koach-ai: src/lib/plans.js) mirrors this; change both.
+ * (Previously four components each had their own list, advertising API access,
+ * Zapier, a dedicated account manager, phone support and custom domains.)
+ */
+export const PLAN_HIGHLIGHTS = {
+  starter: [
+    'AI program and meal plan builders',
+    'Unlimited programs and nutrition plans',
+    'Scheduling and calendar',
+    'In-app messaging',
+    'Client app for workouts and check-ins',
+    'Invoices and Stripe payments',
+  ],
+  pro: [
+    'AI onboarding: a starting program and meal plan for a new client',
+    'Check-in review',
+    'AI check-in summaries and drafted replies',
+    'Adherence scoring',
+    'Progress analytics and graphs',
+    'Program templates',
+    'Voice and video messages',
+  ],
+  elite: [
+    'Full AI assistant: progression, check-in analysis, replies and calorie suggestions',
+    'White-label branding',
+    'Auto progression rules',
+    'Sales pipeline',
+    'Revenue dashboard',
+    'Store',
+    'Community',
+  ],
+  enterprise: [
+    'Team seats for multiple coaches',
+  ],
+};

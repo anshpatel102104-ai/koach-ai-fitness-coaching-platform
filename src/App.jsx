@@ -147,11 +147,11 @@ const AuthenticatedApp = () => {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/exercises" element={<ExerciseLibrary />} />
         <Route path="/automations" element={<Automations />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/revenue" element={<RevenueDashboard />} />
+        <Route path="/analytics" element={<PageGuard feature="analytics_graphs"><Analytics /></PageGuard>} />
+        <Route path="/revenue" element={<PageGuard feature="revenue_dashboard"><RevenueDashboard /></PageGuard>} />
         <Route path="/business" element={<Business />} />
         <Route path="/program-builder" element={<ProgramBuilder />} />
-        <Route path="/white-label" element={<WhiteLabel />} />
+        <Route path="/white-label" element={<PageGuard feature="custom_branding"><WhiteLabel /></PageGuard>} />
         <Route path="/coaching-templates" element={<CoachingTemplates />} />
         <Route path="/onboarding-manager" element={<OnboardingManager />} />
         <Route path="/migration" element={<Migration />} />

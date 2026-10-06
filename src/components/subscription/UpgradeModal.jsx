@@ -8,15 +8,12 @@ import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
-import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
+import { PLAN_PRICES, PLAN_HIGHLIGHTS, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 
-// Key selling points shown per tier in the comparison table
-const TIER_SELLING_POINTS = {
-  starter: [clientLimitLabel('starter'), aiLimitLabel('starter'), 'Workout programs', 'Nutrition plans', 'Scheduling', 'Text messaging'],
-  pro:     [clientLimitLabel('pro'), aiLimitLabel('pro'), 'AI onboarding', 'Progress analytics', 'Check-in reviews', 'AI check-in summaries and replies', 'Adherence scoring', 'Analytics graphs', 'Voice and video messages', 'Client mobile dashboard'],
-  elite:   [clientLimitLabel('elite'), aiLimitLabel('elite'), 'Full AI assistant', 'AI calorie and progression', 'Auto progression rules', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community module'],
-  enterprise: [clientLimitLabel('enterprise'), aiLimitLabel('enterprise'), 'Team AI access', 'Multi-coach team accounts', 'Advanced analytics (LTV, churn)', 'Stripe and Sheets integrations', 'API access', 'Priority support'],
-};
+// Key selling points shown per tier in the comparison table (one source: PLAN_HIGHLIGHTS).
+const TIER_SELLING_POINTS = Object.fromEntries(Object.keys(PLAN_HIGHLIGHTS).map((k) => [
+  k, [clientLimitLabel(k), aiLimitLabel(k), ...PLAN_HIGHLIGHTS[k]],
+]));
 
 export default function UpgradeModal({ open, onClose, featureKey, user, onUserUpdate }) {
   const { me } = useAuth();

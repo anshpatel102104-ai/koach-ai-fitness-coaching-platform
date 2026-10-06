@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
 import { format } from 'date-fns';
+import { userMessage, withReference } from '@/lib/appErrors';
 
 const TOOL_LABELS = {
   create_nutrition_plan: 'Created a nutrition plan',
@@ -165,6 +166,10 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // One ai_conversations row per chat: created on the first reply, updated after.
+  // { id, clientId } — a different client starts a new row.
+  const conversationRef = useRef(null);
+  const saveWarnedRef = useRef(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const queryClient = useQueryClient();
@@ -193,6 +198,10 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
     if (!pendingPrompt) return;
     if (pendingPrompt.__loadMessages) {
       setMessages(pendingPrompt.__loadMessages);
+      // Continue the saved conversation instead of forking a copy of it.
+      conversationRef.current = pendingPrompt.__conversationId
+        ? { id: pendingPrompt.__conversationId, clientId: pendingPrompt.__clientId ?? null }
+        : null;
       onPromptConsumed?.();
       return;
     }
@@ -259,17 +268,30 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
         queryClient.invalidateQueries({ queryKey: ['badges'] });
       }
 
-      // Save conversation
-      const title = trimmed.slice(0, 60) + (trimmed.length > 60 ? '...' : '');
-      db.entities.AIConversation.create({
-        client_id: selectedClient?.id || '',
-        client_name: selectedClient?.name || 'General',
-        title,
-        messages: [...messages, userMsg, aiMsg].filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp })),
-      }).then(() => onSave?.()).catch(() => {});
+      // Save the conversation: one row per chat (it used to insert a new row per
+      // turn, and general chats sent '' as the client id, so they never saved).
+      const clientId = selectedClient?.id ?? null;
+      const transcript = [...messages, userMsg, aiMsg]
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp }));
+      const current = conversationRef.current;
+      const save = current && current.clientId === clientId
+        ? db.entities.AIConversation.update(current.id, { messages: transcript })
+        : db.entities.AIConversation.create({
+            client_id: clientId,
+            client_name: selectedClient?.name || 'General',
+            title: trimmed.slice(0, 60) + (trimmed.length > 60 ? '...' : ''),
+            messages: transcript,
+          }).then((row) => { conversationRef.current = { id: row.id, clientId }; return row; });
+      save.then(() => onSave?.()).catch(() => {
+        if (!saveWarnedRef.current) {
+          saveWarnedRef.current = true;
+          toast.warning("This chat couldn't be saved to your history. The conversation itself is fine.");
+        }
+      });
 
     } catch (err) {
-      toast.error('The assistant hit an error: ' + err.message);
+      toast.error(withReference(userMessage(err, "The assistant couldn't answer. Please try again."), err));
     } finally {
       setIsLoading(false);
     }

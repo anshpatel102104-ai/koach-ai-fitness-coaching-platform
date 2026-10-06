@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
+import { PLAN_PRICES, clientLimitLabel, aiLimitLabel, PLAN_HIGHLIGHTS } from '@/lib/planPricing';
 import { Check } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,8 @@ import { toast } from 'sonner';
 import SuccessScreen from './SuccessScreen';
 
 
-const TIER_FEATURES = {
-  starter: ['Workout program builder', 'Basic nutrition plans', 'Scheduling and calendar', 'In-app messaging', 'Client mobile app access', 'Basic progress tracking', 'Email support'],
-  pro:     ['AI onboarding', 'Progress analytics and graphs', 'Check-in review', 'AI check-in summaries and drafted replies', 'Adherence scoring', 'Voice and video messages', 'Client mobile dashboard', 'Custom branding (logo)', 'Priority email support'],
-  elite:   ['Full AI assistant', 'Auto progression rules', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations', 'Chat support'],
-  enterprise: ['API access', 'Custom integrations', 'Dedicated account manager', 'Team accounts (multiple coaches)', 'Custom contract and invoicing', 'Priority phone support', 'Custom onboarding and training'],
-};
+// One source for plan features (lib/planPricing.js).
+const TIER_FEATURES = PLAN_HIGHLIGHTS;
 
 
 export default function UpgradeCompareModal({ fromTierKey, toTierKey, billing: initialBilling, clientCount = 0, user, onClose, onUserUpdate }) {

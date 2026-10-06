@@ -105,6 +105,9 @@ serve('claudeAssistant', async (req, ctx) => {
     }
 
     if (!userMessage) return jsonResponse({ error: 'userMessage required' }, 400);
+    if (typeof userMessage !== 'string' || userMessage.length > 6000) {
+      return jsonResponse({ error: 'Your message is too long. Keep it under 6,000 characters.' }, 400);
+    }
 
     // Build client context section (verbatim)
     let clientSection = '';
@@ -128,8 +131,8 @@ serve('claudeAssistant', async (req, ctx) => {
 
     const systemPrompt = TOOLS_PROMPT + clientSection;
 
-    const historyStr = conversationHistory.slice(-6).map((m: { role: string; content: string }) =>
-      (m.role === 'user' ? 'Coach' : 'Assistant') + ': ' + m.content
+    const historyStr = (Array.isArray(conversationHistory) ? conversationHistory : []).slice(-6).map((m: { role: string; content: string }) =>
+      (m.role === 'user' ? 'Coach' : 'Assistant') + ': ' + String(m?.content ?? '').slice(0, 3000)
     ).join('\n\n');
 
     // Agentic loop (verbatim shape: ≤6 iterations, <action> tag protocol)
@@ -188,9 +191,12 @@ serve('claudeAssistant', async (req, ctx) => {
         }
       }
 
-      const resultsStr = results.map((r) =>
-        'Tool: ' + r.tool + '\nResult: ' + JSON.stringify(r.result)
-      ).join('\n\n');
+      // Each tool result is capped so the loop's context can't grow without
+      // bound (a whole program's workouts jsonb could be tens of thousands of chars).
+      const resultsStr = results.map((r) => {
+        const json = JSON.stringify(r.result) ?? '';
+        return 'Tool: ' + r.tool + '\nResult: ' + (json.length > 8000 ? json.slice(0, 8000) + ' …[truncated]' : json);
+      }).join('\n\n');
 
       const cleanResponse = responseText.replace(/<action>[\s\S]*?<\/action>/g, '').trim();
 

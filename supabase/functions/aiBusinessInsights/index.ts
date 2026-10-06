@@ -23,8 +23,8 @@ serve('aiBusinessInsights', async (req, ctx) => {
     const { action } = body;
     // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
     if (!['interventionPlan', 'businessInsights', 'clientAlerts'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
-    // Every action below makes one Claude call: charge it to the AI quota
-    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    // Plan + billing gate (aiPolicy.js): this feature is NOT counted against the
+    // monthly AI generations; every call is still recorded in ai_usage_events.
     const blocked = await guardAiUse(serviceClient(), caller, 'aiBusinessInsights');
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 
@@ -83,8 +83,9 @@ Return ONLY valid JSON: { "insights": [ { "category": "...", "headline": "...", 
 
     // ── ACTION: clientAlerts ── scan active clients' recent check-ins for issues
     if (action === 'clientAlerts') {
-      const clients = (body.clients || []) as Array<Record<string, unknown>>;
-      const checkIns = (body.checkIns || []) as Array<Record<string, unknown>>;
+      // Browser-supplied arrays: bound what reaches the prompt (cost + context size).
+      const clients = (Array.isArray(body.clients) ? body.clients : []).slice(0, 100) as Array<Record<string, unknown>>;
+      const checkIns = (Array.isArray(body.checkIns) ? body.checkIns : []).slice(0, 600) as Array<Record<string, unknown>>;
       const data = clients
         .filter((c) => c.status === 'active')
         .map((c) => {

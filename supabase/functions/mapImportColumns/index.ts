@@ -15,7 +15,9 @@ import { serve } from '../_shared/observe.js';
 // Sanitized like ANTHROPIC_MODEL (a pasted secret with a trailing '.' made every call 404).
 const HAIKU_MODEL = normalizeModelId(Deno.env.get('ANTHROPIC_FAST_MODEL')) || 'claude-haiku-4-5-20251001';
 
-async function aiEnhanceMapping(headers: string[], sample_rows: unknown[], deterministicResult: { mapping: Record<string, unknown> }) {
+async function aiEnhanceMapping(allHeaders: string[], sample_rows: unknown[], deterministicResult: { mapping: Record<string, unknown> }) {
+  // A CSV with hundreds of columns must not become an unbounded prompt.
+  const headers = allHeaders.slice(0, 150).map((h) => String(h).slice(0, 120));
   if (!anthropicConfigured()) return null;
 
   const fieldsDescription = KOACH_FIELDS.map((f) => `"${f.key}" (${f.label}: ${f.description})`).join(', ');

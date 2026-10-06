@@ -29,8 +29,8 @@ serve('aiCheckInInsights', async (req, ctx) => {
     if (!checkIn) return jsonResponse({ error: 'Missing checkIn' }, 400);
     // Unknown/invalid requests are rejected BEFORE metering so they cost no quota.
     if (!['reviewCheckIn', 'programSuggestions'].includes(action)) return jsonResponse({ error: 'Unknown action' }, 400);
-    // Every action below makes one Claude call: charge it to the AI quota
-    // (coach, or the owning coach for a portal client) — same 402 as the generators.
+    // Plan + billing gate (aiPolicy.js): this feature is NOT counted against the
+    // monthly AI generations; every call is still recorded in ai_usage_events.
     const blocked = await guardAiUse(serviceClient(), caller, 'aiCheckInInsights');
     if (blocked) return jsonResponse(blocked.body, blocked.status);
 

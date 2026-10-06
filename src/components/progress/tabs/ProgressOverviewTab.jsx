@@ -7,7 +7,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { toast } from 'sonner';
-import { NotebookPen, Trophy, FileText } from 'lucide-react';
+import { NotebookPen, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AIProgressInsights from '../AIProgressInsights';
 import LogWeightModal from '../LogWeightModal';
@@ -198,11 +198,6 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
         <button onClick={() => setShowNoteModal(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-background transition-colors">
           <NotebookPen className="w-3.5 h-3.5" /> Add progress note
-        </button>
-        <button
-          onClick={() => toast.success('Progress report generation coming soon')}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-background transition-colors">
-          <FileText className="w-3.5 h-3.5" /> Generate report
         </button>
         <button
           onClick={() => {

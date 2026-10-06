@@ -54,7 +54,6 @@ export default function PaymentFeedItem({ payment, onViewInvoice, onRefund }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={onViewInvoice}>View invoice</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => {}}>Receipt</DropdownMenuItem>
             {payment.status === 'paid' && <DropdownMenuItem onClick={onRefund}>Refund…</DropdownMenuItem>}
           </DropdownMenuContent>
         </DropdownMenu>

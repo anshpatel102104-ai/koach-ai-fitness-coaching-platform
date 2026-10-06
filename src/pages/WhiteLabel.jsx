@@ -4,7 +4,7 @@ import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Lock, Eye, Download, QrCode, RotateCcw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Eye, RotateCcw, Loader2 } from 'lucide-react';
 import { Page, PageHeader, Panel, PanelHeader } from '@/components/kit';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -45,6 +45,12 @@ function getPlanLevel(user) {
   if (plan.includes('elite')) return 'elite';
   if (plan.includes('pro')) return 'pro';
   return 'starter';
+}
+
+// Everything that defines the branding (not bookkeeping), so a rollback restores it fully.
+const NOT_BRANDING = new Set(['id', 'coach_id', 'created_at', 'updated_at', 'created_date', 'updated_date', 'created_by', 'created_by_id', 'publish_history', 'is_published', 'published_at', 'draft_version']);
+function brandingSnapshot(s) {
+  return Object.fromEntries(Object.entries(s).filter(([k]) => !NOT_BRANDING.has(k)));
 }
 
 export default function WhiteLabel() {
@@ -115,7 +121,7 @@ export default function WhiteLabel() {
     const now = new Date().toISOString();
     const newVersion = (s.draft_version || 1);
     const newHistory = [
-      { version: newVersion, published_at: now, snapshot: { primary_color: s.primary_color, business_name: s.business_name } },
+      { version: newVersion, published_at: now, snapshot: brandingSnapshot(s) },
       ...(s.publish_history || []),
     ].slice(0, 5);
     const updated = { ...s, is_published: true, published_at: now, draft_version: newVersion + 1, publish_history: newHistory };
@@ -125,13 +131,22 @@ export default function WhiteLabel() {
     toast.success('Published. Clients see the new branding next time they open the app.');
   };
 
+  // Restore a published version's branding as the current draft (publish to apply).
   const handleRollback = async (version) => {
-    toast.success(`Restored version ${version.version}`);
+    const snap = version?.snapshot || {};
+    if (!Object.keys(snap).length) { toast.error('This version has no saved branding to restore.'); return; }
+    const restored = { ...s, ...snap };
+    setS(restored);
+    await persist(restored, { silent: true });
+    const partial = Object.keys(snap).length <= 2; // versions published before full snapshots were kept
+    toast.success(partial
+      ? `Restored the color and name from version ${version.version}. Publish to show it to clients.`
+      : `Restored version ${version.version} as your draft. Publish to show it to clients.`);
   };
 
   const handleResetDefaults = async () => {
     if (!confirm('Reset all branding to the KOACH defaults? This cannot be undone.')) return;
-    const reset = { ...EMPTY, coach_id: user?.email };
+    const reset = { ...EMPTY, coach_id: user?.id };
     setS(reset);
     await persist(reset);
     toast.success('Branding reset to defaults');
@@ -194,16 +209,9 @@ export default function WhiteLabel() {
           <WLEmailBranding {...sharedProps} locked={isLocked} eliteLocked={isEliteLocked} />
           <WLCustomContent {...sharedProps} locked={isLocked} enterpriseLocked={isEnterpriseLocked} />
 
-          {/* Brand assets & QR */}
           <Panel>
-            <PanelHeader title="Brand kit" subtitle="Files to share your app with clients." />
+            <PanelHeader title="Start over" subtitle="Go back to the default KOACH look. Your clients see it next time they open the app." />
             <div className="flex flex-wrap gap-2 px-5 pb-5 sm:px-6">
-              <Button variant="outline" onClick={() => toast.success("We'll email your brand kit in a few minutes")}>
-                <Download /> Download brand kit
-              </Button>
-              <Button variant="outline" onClick={() => toast.success('QR code download is coming soon')}>
-                <QrCode /> QR code
-              </Button>
               <Button variant="ghost" className="text-destructive" onClick={handleResetDefaults}>
                 <RotateCcw /> Reset to KOACH defaults
               </Button>

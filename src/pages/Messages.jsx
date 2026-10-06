@@ -13,6 +13,8 @@ import ComposeBar from '../components/messages/ComposeBar.jsx';
 import BroadcastModal from '../components/messages/BroadcastModal';
 import ClientInfoSidebar from '../components/messages/ClientInfoSidebar';
 import { EmptyState } from '@/components/kit';
+import { toast } from 'sonner';
+import { userMessage } from '@/lib/appErrors';
 
 
 export default function Messages() {
@@ -58,10 +60,7 @@ export default function Messages() {
   const createMutation = useMutation({
     mutationFn: (data) => db.entities.Message.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['messages'] }),
-    onError: (err) => {
-      console.error('Message send error:', err);
-      alert('Failed to send message: ' + (err?.message || 'Unknown error'));
-    },
+    onError: (err) => toast.error(userMessage(err, "Your message wasn't sent. Please try again.")),
   });
 
   const updateMutation = useMutation({
@@ -79,7 +78,11 @@ export default function Messages() {
   useEffect(() => {
     if (!selectedClientId) return;
     const unread = allMessages.filter(m => m.client_id === selectedClientId && m.sender === 'client' && !m.is_read);
-    unread.forEach(m => updateMutation.mutate({ id: m.id, data: { is_read: true } }));
+    if (!unread.length) return;
+    // One request for the whole thread (was one request per message).
+    db.entities.Message.updateMany(unread.map(m => m.id), { is_read: true })
+      .then(() => queryClient.invalidateQueries({ queryKey: ['messages'] }))
+      .catch(() => { /* read receipts are best effort */ });
   }, [selectedClientId]); // eslint-disable-line
 
   const scrollToBottom = useCallback(() => {
@@ -274,21 +277,26 @@ export default function Messages() {
           clients={clients}
           checkIns={checkIns}
           onClose={() => setShowBroadcast(false)}
-          onSend={(clientIds, message, tag) => {
-            clientIds.forEach(cid => {
-              const cl = clients.find(c => c.id === cid);
-              createMutation.mutate({
+          onSend={async (clientIds, message, tag) => {
+            // One insert for every recipient (was one request — and one possible
+            // alert() — per client).
+            try {
+              await db.entities.Message.createMany(clientIds.map(cid => ({
                 client_id: cid,
-                client_name: cl?.name || '',
+                client_name: clients.find(c => c.id === cid)?.name || '',
                 sender: 'coach',
                 content: message,
                 is_read: true,
                 tag: tag || 'general',
                 is_broadcast: true,
                 media_type: 'text',
-              });
-            });
-            setShowBroadcast(false);
+              })));
+              queryClient.invalidateQueries({ queryKey: ['messages'] });
+              toast.success(`Sent to ${clientIds.length} client${clientIds.length === 1 ? '' : 's'}`);
+              setShowBroadcast(false);
+            } catch (err) {
+              toast.error(userMessage(err, "The broadcast wasn't sent. Nobody received it. Please try again."));
+            }
           }}
         />
       )}

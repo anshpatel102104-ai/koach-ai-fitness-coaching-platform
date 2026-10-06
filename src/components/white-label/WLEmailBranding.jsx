@@ -5,6 +5,11 @@ import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SignedImg } from '@/components/shared/SignedImage';
+import { db } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
+import { userMessage } from '@/lib/appErrors';
+
+const escapeHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const HEADER_HEIGHTS = [
   { value: 'compact', label: 'Compact' },
@@ -16,11 +21,26 @@ const SOCIAL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'facebook', 'x'];
 export default function WLEmailBranding({ s, set, locked, eliteLocked }) {
   const [sending, setSending] = useState(false);
 
+  // A real email to the coach's own address (sendEmailNotification allows
+  // sending to yourself), using the branding fields as they are now.
+  const { user } = useAuth();
   const sendTestEmail = async () => {
+    if (!user?.email) return;
     setSending(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSending(false);
-    toast.success('Test email sent to your business address');
+    try {
+      const name = escapeHtml(s.business_name || s.app_name || 'Your coaching business');
+      const footer = s.email_footer_text ? `<p style="color:#6b7280;font-size:13px">${escapeHtml(s.email_footer_text)}</p>` : '';
+      await db.functions.invoke('sendEmailNotification', {
+        to: user.email,
+        subject: `Test email from ${s.business_name || 'your coaching app'}`,
+        html: `<div style="font-family:sans-serif"><h2 style="color:${/^#[0-9a-f]{3,8}$/i.test(s.primary_color || '') ? s.primary_color : '#111'}">${name}</h2><p>This is how emails to your clients are branded.</p>${footer}</div>`,
+      });
+      toast.success(`Test email sent to ${user.email}`);
+    } catch (err) {
+      toast.error(userMessage(err, "Couldn't send the test email. Please try again."));
+    } finally {
+      setSending(false);
+    }
   };
 
   const socialLinks = s.email_footer_social_links || {};

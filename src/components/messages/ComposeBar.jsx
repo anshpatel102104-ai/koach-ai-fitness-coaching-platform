@@ -12,6 +12,7 @@ import { differenceInDays } from 'date-fns';
 import AIReplyAssistant from './AIReplyAssistant';
 import { SignedAudio } from '@/components/shared/SignedImage';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -342,7 +343,7 @@ export default function ComposeBar({ client, allMessages, checkIns = [], onSend,
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (_err) {
-      alert('Microphone access denied. Please allow mic access and try again.');
+      toast.error('KOACH needs microphone access to record. Allow it in your browser settings and try again.');
       return;
     }
 

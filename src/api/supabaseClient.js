@@ -264,6 +264,22 @@ function makeEntity(name, { table, readOnly = false }) {
       }
       return aliasRow(data[0]);
     },
+    /** Insert several rows in ONE request (all-or-nothing). Returns the created rows. */
+    async createMany(payloads) {
+      assertWritable('createMany');
+      if (!payloads?.length) return [];
+      const { data, error } = await getSupabase().from(table).insert(payloads.map(renameKeys)).select();
+      throwIf(error);
+      return aliasRows(data ?? []);
+    },
+    /** Apply the same change to several rows in ONE request. Returns the ids updated. */
+    async updateMany(ids, payload) {
+      assertWritable('updateMany');
+      if (!ids?.length) return [];
+      const { data, error } = await getSupabase().from(table).update(renameKeys(payload)).in('id', ids).select('id');
+      throwIf(error);
+      return (data ?? []).map((r) => r.id);
+    },
     async delete(id) {
       assertWritable('delete');
       // Like update(): a DELETE that RLS filtered to zero rows returns no error,

@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, ExternalLink, Loader2 } from 'lucide-react';
 import { SettingsPanel } from '@/components/settings/SettingsLayout';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
+import { userMessage } from '@/lib/appErrors';
 
 // ── Logo helper (third-party brand colours stay as-is) ─────────
 function Logo({ text, bg, textColor = 'text-white' }) {
@@ -114,81 +116,65 @@ function ZapierModal({ open, onClose, settings }) {
 
 // ── Resend Modal ──────────────────────────────────────────────
 function ResendModal({ open, onClose, settings }) {
+  // Client email is a platform service: KOACH sends it from its own verified
+  // sender (server env FROM_EMAIL/FROM_NAME via sendEmailNotification). There
+  // is no key for a coach to add and no per-coach sender. (This dialog used to
+  // ask coaches to put an API key in a VITE_ variable — which would ship it to
+  // every browser — and its "Test connection" reported success without testing.)
   const queryClient = useQueryClient();
-  const [fromEmail, setFromEmail] = useState(settings?.resend_from_email || '');
-  const [fromName, setFromName] = useState(settings?.resend_from_name || 'Coach Myles | KOACH AI');
-  const [testing] = useState(false); // test is now instant (server-managed); no async state
-  const [tested, setTested] = useState(false);
+  const { user } = useAuth();
+  const [sending, setSending] = useState(false);
+  const enabled = !!settings?.resend_connected;
 
   const saveMutation = useMutation({
     mutationFn: (data) =>
       settings?.id
         ? db.entities.CoachSettings.update(settings.id, data)
         : db.entities.CoachSettings.create(data),
-    onSuccess: () => {
+    onSuccess: (_row, data) => {
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
-      toast.success('Resend connected');
+      toast.success(data.resend_connected ? 'Welcome emails turned on' : 'Welcome emails turned off');
       onClose();
     },
   });
 
-  const handleTest = async () => {
-    // SECURITY (S3): never read/send the Resend key from the browser. The key
-    // lives in the server env (RESEND_API_KEY) and email is sent via the
-    // sendEmailNotification edge function. Connection status is managed
-    // server-side; there is nothing to test client-side.
-    setTested(true);
-    toast.success('Email is configured server-side (RESEND_API_KEY).');
+  const sendTest = async () => {
+    if (!user?.email) return;
+    setSending(true);
+    try {
+      await db.functions.invoke('sendEmailNotification', {
+        to: user.email,
+        subject: 'KOACH test email',
+        html: '<p>This is a test from KOACH. If you can read it, emails to you are being delivered.</p>',
+      });
+      toast.success(`Test email sent to ${user.email}. It can take a minute to arrive.`);
+    } catch (err) {
+      toast.error(userMessage(err, "The test email couldn't be sent. Please contact support."));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">R</div>
-            Connect Resend
-          </DialogTitle>
+          <DialogTitle>Client emails</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-1">
-          <SetupSteps link={
-            <a href="https://resend.com/api-keys" target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-foreground font-semibold mt-3 underline underline-offset-4">
-              Open API keys <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          }>
-            <li>Get your free API key at <a href="https://resend.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 font-medium">resend.com</a></li>
-            <li>Add <code className="bg-card px-1 rounded font-mono text-xs">VITE_RESEND_API_KEY</code> to your app secrets</li>
-            <li>Optionally add <code className="bg-card px-1 rounded font-mono text-xs">VITE_FROM_EMAIL</code> and <code className="bg-card px-1 rounded font-mono text-xs">VITE_FROM_NAME</code></li>
-          </SetupSteps>
-          <div>
-            <Label className="mb-1.5 block">From email</Label>
-            <Input value={fromEmail} onChange={e => setFromEmail(e.target.value)} placeholder="coach@yourdomain.com" />
-          </div>
-          <div>
-            <Label className="mb-1.5 block">From name</Label>
-            <Input value={fromName} onChange={e => setFromName(e.target.value)} placeholder="Coach Myles | KOACH AI" />
-          </div>
-          {tested && (
-            <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2.5">
-              <CheckCircle2 className="w-4 h-4 text-success" />
-              <p className="text-sm font-semibold text-foreground">Email is set up on the server.</p>
-            </div>
-          )}
+          <p className="text-sm text-muted-foreground">
+            KOACH emails your clients for you: invites, check-in reminders and, if you turn them on, a welcome email when you add a client. There is nothing to connect.
+          </p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleTest} disabled={testing} className="flex-1">
-              {testing ? <><Loader2 className="animate-spin" /> Testing</> : 'Test connection'}
+            <Button variant="outline" onClick={sendTest} disabled={sending} className="flex-1">
+              {sending ? <><Loader2 className="animate-spin" /> Sending</> : 'Send me a test email'}
             </Button>
             <Button
               className="flex-1"
-              onClick={() => saveMutation.mutate({
-                resend_connected: true,
-                resend_from_email: fromEmail,
-                resend_from_name: fromName,
-              })}
+              onClick={() => saveMutation.mutate({ resend_connected: !enabled })}
               disabled={saveMutation.isPending}
             >
-              {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save and connect'}
+              {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : enabled ? 'Turn off welcome emails' : 'Turn on welcome emails'}
             </Button>
           </div>
         </div>
@@ -361,10 +347,10 @@ export default function IntegrationsTab() {
       onManage: () => setModal('calendly'),
     },
     {
-      logo: <Logo text="R" bg="bg-primary" textColor="text-primary-foreground" />,
-      name: 'Resend',
+      logo: <Logo text="@" bg="bg-primary" textColor="text-primary-foreground" />,
+      name: 'Client emails',
       tag: 'Email',
-      description: 'Sends your welcome emails, check-in reminders, progress reports and badge alerts.',
+      description: 'Invites and check-in reminders are always on. Turn welcome emails for new clients on or off.',
       connected: resendConnected,
       onConnect: () => setModal('resend'),
       onManage: () => setModal('resend'),

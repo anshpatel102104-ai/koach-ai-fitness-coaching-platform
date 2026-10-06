@@ -64,9 +64,7 @@ export default function FailedPaymentsPanel({ payments = [], onRetry, onMessage 
               <p className="num text-[18px] text-destructive">{money(p.amount, { cents: true })}</p>
               <div className="flex items-center gap-4 w-full sm:w-auto pl-12 sm:pl-0">
                 <button type="button" className={link} onClick={() => onRetry(p)}>Retry</button>
-                <button type="button" className={link} onClick={() => {}}>Update card</button>
                 <button type="button" className={link} onClick={() => onMessage(p)}>Message</button>
-                <button type="button" className={cn(link, 'text-muted-foreground')} onClick={() => {}}>Waive</button>
               </div>
             </div>
           ))}

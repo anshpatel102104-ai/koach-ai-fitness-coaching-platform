@@ -4,8 +4,8 @@ import { portalDb } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronRight, Camera, User, Target, Bell, Check, X,
-  CreditCard, Lock, Smartphone, Star, HelpCircle, LogOut
+  ChevronRight, Camera, Bell, Check, X,
+  CreditCard, Lock, HelpCircle, LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Initials, Stat, CountBadge } from '@/components/kit';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { PortalScreen, PortalHeader, Sheet, Bar } from '@/components/portal/PortalUI';
 import { format, parseISO } from 'date-fns';
 import { SignedImg } from '@/components/shared/SignedImage';
+import PasswordChange from '@/components/settings/PasswordChange';
 
 /* ── Sign out confirmation ── */
 function SignOutModal({ onCancel }) {
@@ -93,6 +94,7 @@ export default function PortalProfile({ user }) {
   const queryClient = useQueryClient();
   const fileRef = useRef();
   const [showSignOut, setShowSignOut] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-profile', user?.email],
@@ -205,17 +207,18 @@ export default function PortalProfile({ user }) {
         {/* Settings */}
         <section className="panel px-4 py-1">
           <ul className="divide-y divide-border">
-            <SettingsRow icon={User} label="Personal details" subtitle="Name, email, phone" onClick={() => {}} />
-            <SettingsRow icon={Target} label="Goals and fitness" subtitle="Goal weight, experience, injuries" onClick={() => {}} />
             <SettingsRow icon={Bell} label="Notifications" subtitle="What we remind you about" onClick={() => navigate('/portal/notifications')} />
             <SettingsRow icon={CreditCard} label="Billing and payments" subtitle="Plan, invoices, cards"
               badge={unpaidCount > 0 ? unpaidCount : null}
               onClick={() => navigate('/portal/billing')} />
-            <SettingsRow icon={Lock} label="Privacy and security" subtitle="Password and sign-in" onClick={() => {}} />
-            <SettingsRow icon={Smartphone} label="Connected apps" subtitle="Apple Health, wearables" onClick={() => {}} />
-            <SettingsRow icon={Star} label="Rate KOACH" subtitle="Tell us what to fix" onClick={() => {}} />
-            <SettingsRow icon={HelpCircle} label="Help and support" subtitle="Questions about the app" onClick={() => {}} />
+            <SettingsRow icon={Lock} label="Password" subtitle="Change the password you sign in with" onClick={() => setShowPassword((v) => !v)} />
+            <SettingsRow icon={HelpCircle} label="Help" subtitle="Message your coach" onClick={() => navigate('/portal/messages')} />
           </ul>
+          {showPassword && (
+            <div className="pb-4">
+              <PasswordChange update={(next) => portalDb.auth.updatePassword(next)} onDone={() => setShowPassword(false)} onCancel={() => setShowPassword(false)} />
+            </div>
+          )}
         </section>
 
         <Button variant="outline" size="lg" className="w-full text-destructive hover:text-destructive" onClick={() => setShowSignOut(true)}>

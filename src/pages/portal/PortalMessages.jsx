@@ -130,7 +130,9 @@ function ConversationView({ myClient, onBack }) {
   // Mark read
   useEffect(() => {
     const unread = messages.filter(m => m.sender === 'coach' && !m.is_read);
-    unread.forEach(m => portalDb.entities.Message.update(m.id, { is_read: true }).catch(() => {}));
+    if (!unread.length) return;
+    // One request for all of them (was one per message, on every poll).
+    portalDb.entities.Message.updateMany(unread.map(m => m.id), { is_read: true }).catch(() => {});
   }, [messages]);
 
   // Auto-resize textarea

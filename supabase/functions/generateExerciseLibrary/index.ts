@@ -51,6 +51,10 @@ Deno.serve(async (req) => {
   try {
     const caller = await getCaller(req);
     if (!caller) return jsonResponse({ error: 'Unauthorized' }, 401);
+    // Access check BEFORE the paid Claude call: no subscription, no AI request.
+    const svc = serviceClient();
+    const blocked = await guardAiUse(svc, caller, 'generateExerciseLibrary');
+    if (blocked) return jsonResponse(blocked.body, blocked.status);
     if (!anthropicConfigured()) return jsonResponse({ error: 'API key not configured' }, 500);
 
     const llm = await invokeClaude({ prompt: PROMPT, maxTokens: 16000, timeoutMs: 135_000, tool: EXERCISE_LIBRARY, system: TOOL_SYSTEM });
@@ -62,9 +66,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Invalid exercise data received', diagnostics: { coerce_notes: llm.coerceNotes, count: Array.isArray(exercises) ? exercises.length : null } }, 502);
     }
 
-    const svc = serviceClient();
-    const blocked = await guardAiUse(svc, caller, 'generateExerciseLibrary');
-    if (blocked) return jsonResponse(blocked.body, blocked.status);
     const created = [];
     for (let i = 0; i < exercises.length; i++) {
       const ex = exercises[i];

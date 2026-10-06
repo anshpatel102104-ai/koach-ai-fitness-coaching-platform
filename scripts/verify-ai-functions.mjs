@@ -210,6 +210,39 @@ const { rows: [ci] } = await db.query(
   await setCoach({ tier: 'starter', status: 'active', count: 0 });
 }
 
+// ── 1c. every AI edge function guards BEFORE its first Claude call ──────────
+// Static source check: in each handler, guardAiUse(...) must come before any
+// invokeClaude(...) or any local helper that calls it (e.g. mapImportColumns'
+// aiEnhanceMapping), so a caller without access never triggers a paid request.
+{
+  const { readdirSync, readFileSync, existsSync } = await import('node:fs');
+  const { AI_POLICY } = await import('../supabase/functions/_shared/aiPolicy.js');
+  const fnDir = new URL('../supabase/functions/', import.meta.url);
+  const guarded = [];
+  for (const name of readdirSync(fnDir)) {
+    const file = new URL(`${name}/index.ts`, fnDir);
+    if (!existsSync(file)) continue;
+    const src = readFileSync(file, 'utf8');
+    if (!/\binvokeClaude\b/.test(src) || !/\bguardAiUse\b/.test(src)) continue;
+    guarded.push(name);
+    const serveAt = src.indexOf('Deno.serve(');
+    // Module-level helpers that (transitively, one level) call invokeClaude.
+    const helpers = [...src.slice(0, serveAt).matchAll(/function\s+(\w+)\s*\(/g)]
+      .map((m, i, all) => ({ name: m[1], body: src.slice(m.index, all[i + 1]?.index ?? serveAt) }))
+      .filter((h) => /\binvokeClaude\s*\(/.test(h.body))
+      .map((h) => h.name);
+    const handler = src.slice(serveAt);
+    const aiCall = new RegExp(`\\b(?:${['invokeClaude', ...helpers].join('|')})\\s*\\(`);
+    const firstAi = handler.search(aiCall);
+    const firstGuard = handler.search(/\bguardAiUse\s*\(/);
+    check(`guard-before-AI: ${name}`, firstGuard !== -1 && (firstAi === -1 || firstGuard < firstAi),
+      `guardAiUse at ${firstGuard}, first AI call at ${firstAi}`);
+  }
+  const expected = Object.keys(AI_POLICY).filter((k) => existsSync(new URL(`${k}/index.ts`, fnDir)));
+  check('guard-before-AI: every AI_POLICY edge function was checked',
+    expected.length > 0 && expected.every((k) => guarded.includes(k)), `missing: ${expected.filter((k) => !guarded.includes(k))}`);
+}
+
 // ── 2. assistant tools: ownership scoping (the legacy hole, closed) ────────
 {
   const own = await executeAssistantTool(svc, COACH_A, 'get_client_data', { client_id: clientX.id });

@@ -56,6 +56,11 @@ jobs:
       - name: Check-in answer mapping
         run: node scripts/verify-checkin-responses.mjs
 
+      # Edge-function shared modules: request tracing / error logging and the
+      # AI usage ledger (charge, refund, refusal) end to end.
+      - name: Edge function tests
+        run: npx --yes deno@2 test --config supabase/functions/deno.json --allow-env --allow-net supabase/functions/_shared/
+
       # Lint and typecheck are reported but non-blocking for now: the repo
       # carries a known backlog (ESLint problems + pre-existing tsc errors). Flip continue-on-error to false once that backlog
       # is cleared so these become enforced gates.

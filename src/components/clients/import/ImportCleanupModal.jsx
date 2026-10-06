@@ -88,13 +88,13 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
           <div style={{ flexShrink: 0 }} className="px-6 py-4 border-b border-border">
             <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
               <Trash2 className="w-4 h-4 text-destructive" />
-              Review Imported Clients
+              Review imported clients
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-1">
               These are the <strong>{importedClients.length}</strong> client records created by the CSV import feature
               (they have an <code className="bg-muted px-1 rounded text-[11px]">external_id</code> set).
               Check the ones you want to delete, then confirm. Nothing is removed until you click&nbsp;
-              <strong>Delete Selected</strong>.
+              <strong>Delete selected</strong>.
             </p>
           </div>
 
@@ -150,7 +150,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
                             <span className={`text-sm font-semibold ${isSelected ? 'text-destructive' : 'text-foreground'}`}>
                               {client.name || '(no name)'}
                             </span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
                               client.lifecycle_status === 'active' ? 'bg-success/10 text-success'
                               : client.lifecycle_status === 'lead' ? 'bg-accent text-primary'
                               : 'bg-muted text-muted-foreground'
@@ -168,7 +168,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
                           </div>
                           <div className="mt-1 flex items-center gap-1.5">
                             <Info className="w-3 h-3 text-border flex-shrink-0" />
-                            <span className="text-[10px] text-muted-foreground font-mono truncate">
+                            <span className="text-[11px] text-muted-foreground font-mono truncate">
                               external_id: {client.external_id}
                             </span>
                           </div>
@@ -178,7 +178,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
                             </p>
                           )}
                         </div>
-                        <div className="text-[10px] text-border flex-shrink-0 mt-0.5">
+                        <div className="text-[11px] text-border flex-shrink-0 mt-0.5">
                           {client.created_date ? new Date(client.created_date).toLocaleDateString() : ''}
                         </div>
                       </button>
@@ -208,7 +208,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
                     </Button>
                     <Button
                       size="sm"
-                      className="bg-destructive hover:bg-destructive text-white"
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                       onClick={handleDelete}
                       disabled={deleting}
                     >
@@ -233,7 +233,7 @@ export default function ImportCleanupModal({ open, onOpenChange, clients = [], o
                     </Button>
                     <Button
                       size="sm"
-                      className="bg-destructive hover:bg-destructive text-white"
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                       disabled={!someChecked}
                       onClick={() => setConfirming(true)}
                     >

@@ -142,7 +142,7 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
                     : i < step ? 'bg-success/10 text-success'
                     : 'bg-muted text-muted-foreground'
                   }`}>
-                    <span>{i < step ? '✓' : i + 1}</span>
+                    <span>{i < step ? '' : i + 1}</span>
                     <span className="hidden sm:inline">{s}</span>
                   </div>
                   {i < STEPS.length - 1 && (
@@ -211,11 +211,11 @@ export default function ImportClientsModal({ open, onOpenChange, existingEmails 
                     onClick={handleConfirmImport}
                     disabled={committing}
                     size="sm"
-                    className="bg-success hover:bg-success text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {committing
                       ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Importing…</>
-                      : '✓ Confirm Import'
+                      : 'Confirm import'
                     }
                   </Button>
                 )}

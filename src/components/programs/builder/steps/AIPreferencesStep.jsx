@@ -1,16 +1,29 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const FieldLabel = ({ children, optional }) => (
-  <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
-    {children} {optional && <span className="normal-case tracking-normal font-normal text-[var(--tc-muted-foreground)]">— optional</span>}
+  <p className="mb-1.5 text-[13px] text-muted-foreground">
+    {children}{optional && <span className="text-muted-foreground/70">, optional</span>}
   </p>
+);
+
+const Pill = ({ active, onClick, children }) => (
+  <button
+    type="button"
+    aria-pressed={active}
+    onClick={onClick}
+    className={cn(
+      'h-8 rounded-md px-3 text-[13px] font-medium transition-colors',
+      active ? 'bg-primary text-primary-foreground' : 'border border-input bg-card text-foreground hover:bg-accent'
+    )}
+  >
+    {children}
+  </button>
 );
 
 const CARDIO_OPTIONS = [
@@ -32,7 +45,7 @@ const CARDIO_OPTIONS = [
 const PROGRESSIONS = [
   { value: 'linear', label: 'Linear' },
   { value: 'undulating', label: 'Undulating (DUP)' },
-  { value: 'block', label: 'Block Periodization' },
+  { value: 'block', label: 'Block periodization' },
 ];
 
 const QUICK_DURATIONS = ['4', '8', '12', '16'];
@@ -77,47 +90,14 @@ export default function AIPreferencesStep({ profile, onSubmit, isLoading }) {
   const isValid = isCustomDuration ? (Number(customDuration) >= 1 && Number(customDuration) <= 52) : !!form.duration;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-5"
-    >
-      {/* Duration */}
+    <div className="space-y-6">
       <div>
-        <FieldLabel>Program Duration</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_DURATIONS.map(d => {
-            const active = !isCustomDuration && form.duration === d;
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => selectDuration(d)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={{
-                  background: active ? 'var(--tc-primary)' : 'var(--tc-muted)',
-                  color: active ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-                  border: active ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-border)',
-                }}
-              >
-                {d} wks
-              </button>
-            );
-          })}
-          {/* Custom option */}
-          <button
-            type="button"
-            onClick={() => { setIsCustomDuration(true); setCustomDuration(''); u('duration', ''); }}
-            className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-            style={{
-              background: isCustomDuration ? 'var(--tc-primary)' : 'var(--tc-muted)',
-              color: isCustomDuration ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-              border: isCustomDuration ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-border)',
-            }}
-          >
-            Custom
-          </button>
+        <FieldLabel>Length</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK_DURATIONS.map(d => (
+            <Pill key={d} active={!isCustomDuration && form.duration === d} onClick={() => selectDuration(d)}>{d} weeks</Pill>
+          ))}
+          <Pill active={isCustomDuration} onClick={() => { setIsCustomDuration(true); setCustomDuration(''); u('duration', ''); }}>Other</Pill>
         </div>
         {isCustomDuration && (
           <div className="mt-2 flex items-center gap-2">
@@ -127,128 +107,91 @@ export default function AIPreferencesStep({ profile, onSubmit, isLoading }) {
               max={52}
               value={customDuration}
               onChange={e => handleCustomDurationChange(e.target.value)}
-              placeholder="e.g. 20"
-              className="h-8 text-sm w-24"
+              placeholder="20"
+              className="h-9 w-24"
               autoFocus
             />
-            <span className="text-xs text-muted-foreground">weeks (1–52)</span>
+            <span className="text-[13px] text-muted-foreground">weeks, 1 to 52</span>
           </div>
         )}
       </div>
 
-      {/* Progression */}
       <div>
-        <FieldLabel>Progression Model</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          {PROGRESSIONS.map(opt => {
-            const active = form.progression_style === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => u('progression_style', opt.value)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={{
-                  background: active ? 'var(--tc-primary)' : 'var(--tc-muted)',
-                  color: active ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-                  border: active ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-border)',
-                }}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+        <FieldLabel>Progression</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          {PROGRESSIONS.map(opt => (
+            <Pill key={opt.value} active={form.progression_style === opt.value} onClick={() => u('progression_style', opt.value)}>{opt.label}</Pill>
+          ))}
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1.5">
-          {form.progression_style === 'linear' && 'Add weight each session. Best for beginners–intermediate.'}
-          {form.progression_style === 'undulating' && 'Vary rep ranges each session (strength / hypertrophy / endurance). Best for intermediate+.'}
-          {form.progression_style === 'block' && 'Accumulation → Intensification → Realization phases. Best for advanced.'}
+        <p className="mt-1.5 text-[13px] text-muted-foreground">
+          {form.progression_style === 'linear' && 'Add load each session. Best for beginners and early intermediates.'}
+          {form.progression_style === 'undulating' && 'Rotate strength, hypertrophy and endurance rep ranges through the week. Intermediate and up.'}
+          {form.progression_style === 'block' && 'Accumulation, then intensification, then realization. For advanced lifters.'}
         </p>
       </div>
 
-      {/* Deload */}
-      <div className="flex items-start justify-between p-3 rounded-xl" style={{ border: '0.5px solid var(--tc-border)', background: 'var(--tc-muted)' }}>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground">Include Deload Weeks</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Reduced volume weeks to aid recovery and adaptation</p>
-          {form.include_deload && (
-            <div className="mt-2">
-              <Select value={form.deload_frequency} onValueChange={v => u('deload_frequency', v)}>
-                <SelectTrigger className="h-8 text-xs w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="every_3_weeks">Every 3 weeks</SelectItem>
-                  <SelectItem value="every_4_weeks">Every 4 weeks</SelectItem>
-                  <SelectItem value="every_5_weeks">Every 5 weeks</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+      <div className="border-t border-border pt-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[15px] font-semibold text-foreground">Deload weeks</p>
+            <p className="text-[13px] text-muted-foreground">Lighter weeks so they recover and keep progressing.</p>
+          </div>
+          <Switch checked={form.include_deload} onCheckedChange={v => u('include_deload', v)} />
         </div>
-        <Switch checked={form.include_deload} onCheckedChange={v => u('include_deload', v)} />
+        {form.include_deload && (
+          <Select value={form.deload_frequency} onValueChange={v => u('deload_frequency', v)}>
+            <SelectTrigger className="mt-3 h-9 w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="every_3_weeks">Every 3 weeks</SelectItem>
+              <SelectItem value="every_4_weeks">Every 4 weeks</SelectItem>
+              <SelectItem value="every_5_weeks">Every 5 weeks</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      {/* Cardio */}
-      <div className="p-3 rounded-xl" style={{ border: '0.5px solid var(--tc-border)', background: 'var(--tc-muted)' }}>
-        <div className="flex items-start justify-between">
+      <div className="border-t border-border pt-5">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-foreground">Include Cardio / Conditioning</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">Add conditioning work to the schedule</p>
+            <p className="text-[15px] font-semibold text-foreground">Cardio and conditioning</p>
+            <p className="text-[13px] text-muted-foreground">Adds conditioning work to the week.</p>
           </div>
           <Switch checked={form.include_cardio} onCheckedChange={v => u('include_cardio', v)} />
         </div>
         {form.include_cardio && (
           <div className="mt-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Select type(s)</p>
             <div className="flex flex-wrap gap-1.5">
-              {CARDIO_OPTIONS.map(type => {
-                const active = (form.cardio_types || []).includes(type);
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => toggleCardioType(type)}
-                    className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all"
-                    style={{
-                      background: active ? 'var(--tc-primary)' : 'var(--tc-card)',
-                      color: active ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-                      border: active ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-muted-foreground)',
-                    }}
-                  >
-                    {type}
-                  </button>
-                );
-              })}
+              {CARDIO_OPTIONS.map(type => (
+                <Pill key={type} active={(form.cardio_types || []).includes(type)} onClick={() => toggleCardioType(type)}>{type}</Pill>
+              ))}
             </div>
             {(form.cardio_types || []).length === 0 && (
-              <p className="text-[11px] text-destructive mt-1.5">Select at least one cardio type</p>
+              <p className="mt-1.5 text-[13px] text-destructive">Pick at least one.</p>
             )}
           </div>
         )}
       </div>
 
-      {/* Extra notes */}
-      <div>
-        <FieldLabel optional>Additional Coaching Notes for the AI</FieldLabel>
+      <div className="border-t border-border pt-5">
+        <FieldLabel optional>Anything else the AI should know</FieldLabel>
         <Textarea
           value={form.extra_notes}
           onChange={e => u('extra_notes', e.target.value)}
           rows={2}
-          placeholder="e.g. Client recovers slowly, prefers compound movements, has a competition in 16 weeks..."
+          placeholder="Recovers slowly, likes compound lifts, competing in 16 weeks"
           className="text-sm"
         />
       </div>
 
-      <div className="flex justify-end pt-2">
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+        <p className="text-[13px] text-muted-foreground">You check the draft before anything is saved.</p>
         <Button
           onClick={handleSubmit}
           disabled={isLoading || !isValid || (form.include_cardio && (form.cardio_types || []).length === 0)}
-          className="gap-2 text-sm font-semibold"
-          style={{ background: 'var(--tc-primary)' }}
         >
-          <Zap className="w-4 h-4" />
-          {isLoading ? 'Generating...' : 'Generate Program'}
+          {isLoading ? 'Drafting…' : 'Draft the program'}
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }

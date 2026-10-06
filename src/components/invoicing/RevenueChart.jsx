@@ -1,20 +1,12 @@
 import React, { useMemo } from 'react';
-import { Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Line, ComposedChart } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: 'var(--tc-foreground)', borderRadius: 10, padding: '10px 14px', border: '1px solid color-mix(in srgb, white 10%, transparent)' }}>
-      <div style={{ color: 'color-mix(in srgb, white 60%, transparent)', fontSize: 11, marginBottom: 4 }}>{label}</div>
-      <div style={{ color: 'var(--tc-primary-foreground)', fontSize: 16, fontWeight: 700 }}>${Number(payload[0]?.value || 0).toLocaleString()}</div>
-    </div>
-  );
-};
+import { Panel, PanelHeader } from '@/components/kit';
+import { CHART, ChartTooltip, money, moneyAxis } from '@/components/business/ui';
 
 export default function RevenueChart({ invoices = [] }) {
   const data = useMemo(() => {
-    const months = Array.from({ length: 12 }, (_, i) => {
+    return Array.from({ length: 12 }, (_, i) => {
       const d = subMonths(new Date(), 11 - i);
       const start = startOfMonth(d);
       const end = endOfMonth(d);
@@ -22,29 +14,31 @@ export default function RevenueChart({ invoices = [] }) {
         .filter(inv => inv.status === 'paid' && inv.paid_date)
         .filter(inv => { try { return isWithinInterval(parseISO(inv.paid_date), { start, end }); } catch { return false; } })
         .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-      return { month: format(d, 'MMM yy'), revenue };
+      return { month: format(d, 'MMM'), full: format(d, 'MMMM yyyy'), revenue };
     });
-    return months;
   }, [invoices]);
 
+  const total = data.reduce((s, d) => s + d.revenue, 0);
+
   return (
-    <div style={{ background: 'var(--tc-card)', borderRadius: 16, border: '1px solid var(--tc-muted)', padding: '20px 20px 12px' }}>
-      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tc-foreground)', margin: '0 0 16px' }}>Monthly Revenue</h3>
-      <ResponsiveContainer width="100%" height={200}>
-        <ComposedChart data={data} barCategoryGap="30%">
-          <defs>
-            <linearGradient id="revGradient" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--tc-primary)" />
-              <stop offset="100%" stopColor="var(--tc-ai)" />
-            </linearGradient>
-          </defs>
-          <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}`} />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'color-mix(in srgb, var(--tc-primary) 5%, transparent)' }} />
-          <Bar dataKey="revenue" fill="url(#revGradient)" radius={[6, 6, 0, 0]} />
-          <Line type="monotone" dataKey="revenue" stroke="var(--tc-warning)" strokeWidth={2} dot={false} strokeDasharray="4 2" />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
+    <Panel>
+      <PanelHeader title="Collected by month" subtitle={`${money(total)} over the last 12 months. This month in blue.`} />
+      <div className="px-3 sm:px-4 pb-4">
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={data} barCategoryGap="28%" margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke={CHART.grid} strokeWidth={1} />
+            <XAxis dataKey="month" tick={CHART.tick} axisLine={false} tickLine={false} />
+            <YAxis tick={CHART.tick} axisLine={false} tickLine={false} width={48} tickFormatter={moneyAxis} />
+            <Tooltip
+              cursor={{ fill: 'var(--tc-accent)' }}
+              content={<ChartTooltip format={(v) => money(v)} />}
+            />
+            <Bar isAnimationActive={false} dataKey="revenue" radius={[3, 3, 0, 0]} maxBarSize={36}>
+              {data.map((d, i) => <Cell key={d.month + i} fill={i === data.length - 1 ? CHART.brand : CHART.ink} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Panel>
   );
 }

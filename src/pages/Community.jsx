@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { isCoachRole } from '@/lib/useRoleGuard';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Page, PageHeader } from '@/components/kit';
 import GroupListView from '../components/community/GroupListView';
 import GroupDetailView from '../components/community/GroupDetailView';
 import GroupFormModal from '../components/community/GroupFormModal';
@@ -36,23 +39,19 @@ export default function Community() {
 
   const liveGroup = selectedGroup ? groups.find(g => g.id === selectedGroup.id) || selectedGroup : null;
 
+  const openCreate = () => { setEditingGroup(null); setShowForm(true); };
+
   return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="rounded-xl p-5 text-white flex items-center justify-between" style={{ background: 'var(--tc-sidebar)' }}>
-        <div>
-          <h1 className="text-xl font-semibold text-white">Community</h1>
-          <p className="text-sm text-white/50 mt-0.5">
-            {liveGroup ? liveGroup.name : 'Your groups and communities'}
-          </p>
-        </div>
-        {!liveGroup && isCoach && (
-          <button onClick={() => { setEditingGroup(null); setShowForm(true); }}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary transition-colors">
-            + Create Community
-          </button>
-        )}
-      </div>
+    <Page>
+      {!liveGroup && (
+        <PageHeader
+          title="Community"
+          subtitle={groups.length
+            ? `${groups.length} ${groups.length === 1 ? 'group' : 'groups'}. Clients post wins, compare scores and join challenges here.`
+            : 'Groups where clients post wins, compare scores and join challenges.'}
+          actions={isCoach ? <Button onClick={openCreate}><Plus /> New group</Button> : null}
+        />
+      )}
 
       {/* Content */}
       {liveGroup ? (
@@ -70,7 +69,7 @@ export default function Community() {
           isCoach={isCoach}
           onSelect={setSelectedGroup}
           onEdit={(group) => { setEditingGroup(group); setShowForm(true); }}
-          onCreate={() => { setEditingGroup(null); setShowForm(true); }}
+          onCreate={openCreate}
         />
       )}
 
@@ -80,6 +79,6 @@ export default function Community() {
         group={editingGroup}
         currentUser={currentUser}
       />
-    </div>
+    </Page>
   );
 }

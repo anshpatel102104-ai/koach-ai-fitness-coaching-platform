@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { TrendingUp, Minus, TrendingDown, Sliders } from 'lucide-react';
+import { Panel, PanelHeader, Segmented } from '@/components/kit';
+import { money } from '@/components/business/ui';
+import { cn } from '@/lib/utils';
 
 const SCENARIOS = [
-  { key: 'conservative', label: 'Conservative', icon: TrendingDown, color: 'var(--tc-destructive)', churnMult: 1.5, convMult: 0.5 },
-  { key: 'base', label: 'Base Case', icon: Minus, color: 'var(--tc-warning)', churnMult: 1.0, convMult: 1.0 },
-  { key: 'optimistic', label: 'Optimistic', icon: TrendingUp, color: 'var(--tc-success)', churnMult: 0.5, convMult: 1.5 },
+  { key: 'conservative', label: 'Cautious', churnMult: 1.5, convMult: 0.5 },
+  { key: 'base', label: 'Likely', churnMult: 1.0, convMult: 1.0 },
+  { key: 'optimistic', label: 'Hopeful', churnMult: 0.5, convMult: 1.5 },
 ];
 
 export default function BIForecast({ clients, leads }) {
@@ -44,70 +46,57 @@ export default function BIForecast({ clients, leads }) {
         + priceBoost;
 
       return {
-        label: `${days}d`,
+        label: `${days} days`,
         mrr: Math.max(0, Math.round(projectedMrr)),
         change: Math.round(projectedMrr - mrr),
       };
     });
   }, [activeScenario, whatIfLeads, whatIfChurn, whatIfPriceIncrease, mrr, activeClients, pipelineLeads, conversionRate, avgRate, avgLeadValue]);
 
-  const ScenarioIcon = scenario.icon;
-
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-bold text-foreground">Revenue Forecast</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">30 / 60 / 90 day projections</p>
-        </div>
-        <div className="flex gap-1">
-          {SCENARIOS.map(s => {
-            const Icon = s.icon;
-            return (
-              <button key={s.key} onClick={() => setActiveScenario(s.key)}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${activeScenario === s.key ? 'text-white shadow-sm' : 'bg-muted text-muted-foreground hover:bg-border'}`}
-                style={activeScenario === s.key ? { background: s.color } : {}}>
-                <Icon className="w-3 h-3" /> {s.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <Panel>
+      <PanelHeader
+        title="Forecast"
+        subtitle={`Recurring revenue in 30, 60 and 90 days. ${money(mrr)} today.`}
+        right={<Segmented className="hidden sm:inline-flex" size="sm" value={activeScenario} onChange={setActiveScenario} options={SCENARIOS.map(s => ({ value: s.key, label: s.label }))} />}
+      />
+      <Segmented className="sm:hidden mx-5 mb-3" size="sm" value={activeScenario} onChange={setActiveScenario} options={SCENARIOS.map(s => ({ value: s.key, label: s.label }))} />
 
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-3 mx-5 sm:mx-6 border-y border-border divide-x divide-border">
         {forecast.map(f => (
-          <div key={f.label} className="text-center p-3 rounded-xl border" style={{ borderColor: `${scenario.color}30`, background: `${scenario.color}08` }}>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">{f.label}</p>
-            <p className="text-lg font-bold" style={{ color: scenario.color }}>${f.mrr.toLocaleString()}</p>
-            <p className="text-[10px]" style={{ color: f.change >= 0 ? 'var(--tc-success)' : 'var(--tc-destructive)' }}>
-              {f.change >= 0 ? '+' : ''}{f.change.toLocaleString()}
+          <div key={f.label} className="py-4 px-3 first:pl-0">
+            <p className="text-[13px] text-muted-foreground">In {f.label}</p>
+            <p className="num text-[26px] leading-none mt-1 text-foreground">{money(f.mrr)}</p>
+            <p className={cn('text-[13px] mt-1', f.change < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+              {f.change >= 0 ? '+' : '−'}{money(Math.abs(f.change))}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="border-t border-border pt-4">
-        <div className="flex items-center gap-1.5 mb-3">
-          <Sliders className="w-3.5 h-3.5 text-primary" />
-          <p className="text-xs font-bold text-foreground">What-if Scenarios</p>
-        </div>
-        <div className="space-y-2">
+      <div className="px-5 sm:px-6 pt-4 pb-5">
+        <p className="text-sm font-semibold text-foreground mb-3">What if</p>
+        <div className="space-y-3">
           {[
-            { label: 'Convert extra leads', value: whatIfLeads, setter: setWhatIfLeads, max: 10, unit: 'leads', hint: `+$${Math.round(whatIfLeads * avgLeadValue).toLocaleString()}/mo` },
-            { label: 'Expected client losses', value: whatIfChurn, setter: setWhatIfChurn, max: 10, unit: 'clients', hint: `-$${Math.round(whatIfChurn * avgRate).toLocaleString()}/mo`, negative: true },
-            { label: 'Price increase', value: whatIfPriceIncrease, setter: setWhatIfPriceIncrease, max: 50, unit: '%', hint: `+$${Math.round(mrr * (whatIfPriceIncrease / 100)).toLocaleString()}/mo` },
+            { label: 'Extra leads converted', value: whatIfLeads, setter: setWhatIfLeads, max: 10, unit: '', hint: `+${money(whatIfLeads * avgLeadValue)}/mo` },
+            { label: 'Clients lost', value: whatIfChurn, setter: setWhatIfChurn, max: 10, unit: '', hint: `−${money(whatIfChurn * avgRate)}/mo`, negative: true },
+            { label: 'Price increase', value: whatIfPriceIncrease, setter: setWhatIfPriceIncrease, max: 50, unit: '%', hint: `+${money(mrr * (whatIfPriceIncrease / 100))}/mo` },
           ].map(item => (
-            <div key={item.label} className="flex items-center gap-3">
-              <p className="text-xs text-muted-foreground w-32 flex-shrink-0">{item.label}</p>
-              <input type="range" min={0} max={item.max} value={item.value}
+            <div key={item.label} className="grid grid-cols-[1fr_auto] sm:grid-cols-[150px_1fr_36px_88px] items-center gap-x-3 gap-y-1">
+              <p className="text-sm text-muted-foreground">{item.label}</p>
+              <span className="sm:hidden text-sm font-semibold text-foreground text-right tabular-nums">{item.value}{item.unit}</span>
+              <input
+                type="range" min={0} max={item.max} value={item.value}
                 onChange={e => item.setter(Number(e.target.value))}
-                className="flex-1 accent-primary h-1" />
-              <span className="text-xs font-bold text-foreground w-8 text-right">{item.value}{item.unit === '%' ? '%' : ''}</span>
-              <span className="text-[10px] font-semibold w-20 text-right" style={{ color: item.negative ? 'var(--tc-destructive)' : 'var(--tc-success)' }}>{item.hint}</span>
+                className="col-span-2 sm:col-span-1 w-full h-1 accent-[rgb(var(--foreground))]"
+                aria-label={item.label}
+              />
+              <span className="hidden sm:block text-sm font-semibold text-foreground text-right tabular-nums">{item.value}{item.unit}</span>
+              <span className={cn('hidden sm:block text-[13px] text-right tabular-nums', item.negative && item.value > 0 ? 'text-destructive' : 'text-muted-foreground')}>{item.hint}</span>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }

@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Sparkles, Loader2, BookOpen, Check, ChevronDown, Send, RefreshCw, Pencil } from 'lucide-react';
+import { Loader2, Check, ChevronDown, Send } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { db } from '@/api/supabaseClient';
 
 const TEMPLATES = [
-  { label: 'Great Check-in', text: "Awesome check-in this week! Your consistency is really showing. Keep up the great work and let's build on this momentum! 💪" },
-  { label: 'Motivation Boost', text: "Just wanted to say I'm proud of the effort you've been putting in. Some weeks are harder than others — keep showing up and the results will follow 🔥" },
-  { label: 'Nutrition Reminder', text: "Quick reminder to stay on track with your nutrition targets this week. Even 80% compliance makes a huge difference over time. You've got this!" },
-  { label: 'Missed Check-in', text: "Hey, I noticed you missed your check-in this week. Everything okay? Let me know if anything came up — I'm here to support you!" },
-  { label: 'Training Adjustment', text: "I've reviewed your recent sessions and made some adjustments to your program. Check the updated plan and let me know if you have questions!" },
-  { label: 'Weekly Win', text: "You crushed it this week! I saw real progress in your numbers. Let's keep that energy going into next week 🙌" },
+  { label: 'Good check-in', text: "Good check-in this week. The consistency is showing. Same plan, keep going." },
+  { label: 'Hard week', text: "Some weeks are harder than others. You kept showing up, and that is what counts." },
+  { label: 'Nutrition nudge', text: "Quick nudge on nutrition this week. Hitting your targets 80% of the time is plenty. Aim for that." },
+  { label: 'Missed check-in', text: "I didn't get your check-in this week. Everything okay? Let me know if something came up." },
+  { label: 'Program adjusted', text: "I've looked at your recent sessions and adjusted your program. Have a look at the updated plan and ask me anything." },
+  { label: 'Big week', text: "Big week. The numbers moved the right way. Let's keep that going into next week." },
 ];
 
 
@@ -19,7 +22,6 @@ export default function CheckInResponseBox({ checkIn, client, allClientCIs = [],
   const [reply, setReply] = useState(checkIn.coach_notes || '');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDraft, setAiDraft] = useState('');
-  const [showTemplates, setShowTemplates] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editMode, setEditMode] = useState(!checkIn.coach_notes);
 
@@ -35,7 +37,7 @@ export default function CheckInResponseBox({ checkIn, client, allClientCIs = [],
       });
       setAiDraft(res.data?.message || '');
     } catch (e) {
-      toast.error('Could not generate a draft. Please try again.');
+      toast.error('Could not draft a reply. Try again in a moment.');
     }
     setAiLoading(false);
   };
@@ -69,125 +71,80 @@ export default function CheckInResponseBox({ checkIn, client, allClientCIs = [],
 
   return (
     <div className="space-y-3">
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Coach Response</p>
-        <div className="flex gap-1.5 items-center">
-          {/* Templates dropdown */}
-          <div className="relative">
-            <Button
-              size="sm" variant="outline"
-              className="h-7 text-xs gap-1.5"
-              onClick={() => setShowTemplates(s => !s)}
-            >
-              <BookOpen className="w-3 h-3" /> Templates <ChevronDown className="w-3 h-3" />
-            </Button>
-            {showTemplates && (
-              <div className="absolute right-0 top-8 z-20 bg-card border border-border rounded-xl shadow-xl p-2 w-64 max-h-60 overflow-y-auto">
-                {TEMPLATES.map((t, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setReply(t.text); setEditMode(true); setShowTemplates(false); }}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-secondary transition-colors"
-                  >
-                    <p className="text-xs font-medium">{t.label}</p>
-                    <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.text}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Generate AI button */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
-            onClick={generateAI}
-            disabled={aiLoading}
-          >
-            {aiLoading
-              ? <Loader2 className="w-3 h-3 animate-spin" />
-              : <Sparkles className="w-3 h-3" />
-            }
-            {aiLoading ? 'Generating...' : 'Generate Response'}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[20px] text-foreground">Your reply</h2>
+        <div className="flex gap-2 items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">Templates <ChevronDown /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              {TEMPLATES.map((t, i) => (
+                <DropdownMenuItem key={i} onClick={() => { setReply(t.text); setEditMode(true); }} className="flex-col items-start gap-0.5">
+                  <span className="font-medium">{t.label}</span>
+                  <span className="text-[13px] text-muted-foreground line-clamp-1">{t.text}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" onClick={generateAI} disabled={aiLoading}>
+            {aiLoading && <Loader2 className="animate-spin" />}
+            {aiLoading ? 'Drafting…' : 'Draft with AI'}
           </Button>
         </div>
       </div>
 
-      {/* AI Draft card */}
       {aiDraft && (
-        <div className="bg-primary/6 border border-primary/25 rounded-xl p-3.5 space-y-3">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <p className="text-xs font-semibold text-primary">AI-Generated Response</p>
-          </div>
-          <p className="text-sm leading-relaxed text-foreground">{aiDraft}</p>
-          <div className="flex gap-2">
-            <Button size="sm" className="h-7 text-xs gap-1.5" onClick={useAIDraft}>
-              <Pencil className="w-3 h-3" /> Edit & Send
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={generateAI} disabled={aiLoading}>
-              <RefreshCw className="w-3 h-3" /> Regenerate
-            </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAiDraft('')}>Dismiss</Button>
+        <div className="rounded-xl bg-ai text-ai-foreground p-4 space-y-3">
+          <p className="text-[13px] text-ai-foreground/70">AI draft from {client?.name?.split(' ')[0] || 'their'}'s answers</p>
+          <p className="text-[15px] leading-relaxed">{aiDraft}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" className="bg-ai-foreground text-ai hover:bg-ai-foreground/90" onClick={useAIDraft}>Use and edit</Button>
+            <Button size="sm" variant="ghost" className="border border-ai-foreground/25 text-ai-foreground hover:bg-ai-foreground/10" onClick={generateAI} disabled={aiLoading}>Draft again</Button>
+            <Button size="sm" variant="ghost" className="text-ai-foreground/80 hover:bg-ai-foreground/10" onClick={() => setAiDraft('')}>Dismiss</Button>
           </div>
         </div>
       )}
 
-      {/* Edit / read view */}
       {editMode ? (
         <>
           <Textarea
             value={reply}
             onChange={e => setReply(e.target.value)}
-            placeholder="Write your coaching response..."
-            className="text-sm resize-none"
-            rows={4}
+            placeholder="Write your reply"
+            className="resize-y min-h-[140px]"
+            rows={5}
             autoFocus
           />
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">{reply.length} chars</span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[13px] text-muted-foreground">Sends to their inbox and saves on this check-in.</span>
             <div className="flex gap-2">
               {checkIn.coach_notes && (
-                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setReply(checkIn.coach_notes); setEditMode(false); }}>
+                <Button size="sm" variant="ghost" onClick={() => { setReply(checkIn.coach_notes); setEditMode(false); }}>
                   Cancel
                 </Button>
               )}
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={saving || !reply.trim()}
-                className="h-8 text-xs gap-1.5"
-              >
-                {saving
-                  ? <Loader2 className="w-3 h-3 animate-spin" />
-                  : saved
-                    ? <Check className="w-3 h-3" />
-                    : <Send className="w-3 h-3" />
-                }
-                {saved ? 'Sent!' : 'Send to Client'}
+              <Button size="sm" onClick={handleSave} disabled={saving || !reply.trim()}>
+                {saving ? <Loader2 className="animate-spin" /> : saved ? <Check /> : <Send />}
+                {saved ? 'Sent' : 'Send'}
               </Button>
             </div>
           </div>
         </>
       ) : reply ? (
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 group">
-          <p className="text-sm leading-relaxed text-foreground">{reply}</p>
+        <div className="rounded-lg bg-secondary p-4">
+          <p className="text-[15px] leading-relaxed text-foreground">{reply}</p>
           <button
             onClick={() => setEditMode(true)}
-            className="mt-2 text-[11px] text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
+            className="mt-2 text-[13px] font-semibold text-foreground underline underline-offset-4 decoration-1"
           >
-            <Pencil className="w-3 h-3" /> Edit response
+            Edit reply
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setEditMode(true)}
-          className="w-full py-3 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
-        >
-          + Write a response manually
-        </button>
+        <Button variant="outline" className="w-full" onClick={() => setEditMode(true)}>
+          Write a reply yourself
+        </Button>
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { BADGE_CONFIG, TIER_STYLES } from '@/lib/badges';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+/** Earned badges as quiet chips. Tier and description live in the tooltip. */
 export default function BadgeRow({ earnedKeys = [], max = 5, onAdd }) {
   const visible = earnedKeys.slice(0, max);
   const overflow = earnedKeys.length - max;
@@ -16,40 +17,31 @@ export default function BadgeRow({ earnedKeys = [], max = 5, onAdd }) {
           return (
             <Tooltip key={key}>
               <TooltipTrigger asChild>
-                <div
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold cursor-default"
-                  style={{
-                    background: `${tier.accent}18`,
-                    color: tier.accent,
-                    border: `1px solid ${tier.accent}40`,
-                  }}
-                >
-                  <span>{cfg.emoji}</span>
-                  <span className="hidden sm:inline">{cfg.label}</span>
-                </div>
+                <span className="inline-flex h-7 cursor-default items-center rounded-md bg-secondary px-2.5 text-[13px] font-medium text-foreground">
+                  {cfg.label}
+                </span>
               </TooltipTrigger>
               <TooltipContent>
                 <p className="text-xs font-medium">{cfg.desc}</p>
-                <p className="text-[10px] opacity-60 mt-0.5">{tier.label}</p>
+                <p className="mt-0.5 text-[11px] opacity-70">{tier.label}</p>
               </TooltipContent>
             </Tooltip>
           );
         })}
         {overflow > 0 && (
-          <span className="text-xs text-muted-foreground font-medium px-2 py-0.5 bg-sidebar-accent rounded-full border border-white/10">
-            +{overflow} more
-          </span>
+          <span className="px-1 text-[13px] text-muted-foreground">+{overflow} more</span>
         )}
         {onAdd && (
           <button
             onClick={onAdd}
-            className="w-6 h-6 rounded-full border border-dashed border-foreground text-muted-foreground hover:border-primary hover:text-primary transition-colors flex items-center justify-center text-sm font-bold"
+            aria-label="Award a badge"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-dashed border-input text-sm font-semibold text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
           >
             +
           </button>
         )}
         {earnedKeys.length === 0 && (
-          <span className="text-xs text-[var(--tc-muted-foreground)] italic">No achievements yet</span>
+          <span className="text-[13px] text-muted-foreground">None yet</span>
         )}
       </div>
     </TooltipProvider>

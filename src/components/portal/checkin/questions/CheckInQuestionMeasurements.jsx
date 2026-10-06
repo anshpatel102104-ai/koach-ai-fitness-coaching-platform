@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Segmented } from '@/components/kit';
 
 const FIELDS = [
   { key: 'chest', label: 'Chest' },
@@ -17,40 +18,32 @@ export default function CheckInQuestionMeasurements({ value, onChange, lastMeasu
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        {['in', 'cm'].map(u => (
-          <button key={u} onClick={() => setUnit(u)}
-            className="flex-1 py-2.5 text-sm font-bold transition-all"
-            style={{ background: unit === u ? 'rgb(var(--primary) / 0.3)' : 'transparent', color: unit === u ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.3)' }}>
-            {u}
-          </button>
-        ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] text-muted-foreground">All optional. Measure at the same spot each week.</p>
+        <Segmented size="sm" value={unit} onChange={setUnit} options={[{ value: 'in', label: 'in' }, { value: 'cm', label: 'cm' }]} />
       </div>
-
-      {FIELDS.map(f => (
-        <div key={f.key} className="p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-white/60 text-sm font-semibold">{f.label}</span>
-            {lastMeasurements?.[f.key] && (
-              <span className="text-white/25 text-[10px]">Last: {lastMeasurements[f.key]} {unit}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
+      <div className="divide-y divide-border rounded-xl shadow-[0_0_0_1px_rgb(var(--border))]">
+        {FIELDS.map(f => (
+          <label key={f.key} className="flex items-center gap-3 px-4 py-3">
+            <span className="flex-1">
+              <span className="block text-[15px] font-semibold text-foreground">{f.label}</span>
+              {lastMeasurements?.[f.key] && (
+                <span className="block text-[13px] text-muted-foreground">Last time {lastMeasurements[f.key]} {unit}</span>
+              )}
+            </span>
             <input
               type="number"
               inputMode="decimal"
               value={measurements[f.key] || ''}
               onChange={e => setField(f.key, e.target.value)}
-              placeholder="—"
-              className="flex-1 bg-transparent text-white text-xl font-bold outline-none placeholder-white/20"
-              style={{ fontSize: '28px' }}
+              placeholder="–"
+              className="num h-11 w-24 rounded-lg border border-input bg-card text-center text-[22px] text-foreground focus:outline-none focus:border-foreground"
             />
-            <span className="text-white/30 text-sm">{unit}</span>
-          </div>
-          <p className="text-white/20 text-[10px] mt-1">Optional</p>
-        </div>
-      ))}
+            <span className="w-6 text-[13px] text-muted-foreground">{unit}</span>
+          </label>
+        ))}
+      </div>
     </div>
   );
 }

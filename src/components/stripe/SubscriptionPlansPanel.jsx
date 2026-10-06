@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Package, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, Loader2, RefreshCw } from 'lucide-react';
+import { Panel } from '@/components/kit';
 import { toast } from 'sonner';
 
 export default function SubscriptionPlansPanel() {
@@ -27,7 +28,7 @@ export default function SubscriptionPlansPanel() {
     mutationFn: () => createProduct(form.name, parseFloat(form.amount), form.description, form.interval),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stripe-products'] });
-      toast.success('Plan created in Stripe!');
+      toast.success('Plan created in Stripe');
       setShowCreate(false);
       setForm({ name: '', amount: '', description: '', interval: 'month' });
     },
@@ -37,81 +38,72 @@ export default function SubscriptionPlansPanel() {
   const isValid = form.name.trim() && parseFloat(form.amount) > 0;
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-sidebar/10 flex items-center justify-center">
-            <Package className="w-3.5 h-3.5 text-foreground" />
-          </div>
-          <h3 className="text-sm font-bold text-foreground">Subscription Plans</h3>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-[22px] text-foreground">Plans in Stripe</h2>
+          <p className="text-sm text-muted-foreground mt-1">Recurring prices you can put clients on.</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => refetch()} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-muted transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-          <Button size="sm" className="h-7 px-2.5 text-xs bg-sidebar hover:bg-sidebar" onClick={() => setShowCreate(true)}>
-            <Plus className="w-3 h-3 mr-1" /> Create Plan
+        <div className="flex gap-1.5 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()} aria-label="Refresh plans">
+            <RefreshCw />
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setShowCreate(true)}>
+            <Plus /> New plan
           </Button>
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[1, 2].map(i => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="bg-background border border-border rounded-xl p-4 text-center">
-          <p className="text-xs text-muted-foreground">No products yet. Create your first coaching plan.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {products.map(p => {
+      <div className="mt-3">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground py-3">Loading plans…</p>
+        ) : products.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-3">No plans yet. Create one for your main coaching offer.</p>
+        ) : (
+          products.map(p => {
             const price = p.prices?.[0];
             const amount = price ? price.unit_amount / 100 : null;
             const interval = price?.recurring?.interval;
             return (
-              <div key={p.id} className="flex items-center gap-3 p-3 border border-border rounded-xl bg-background">
-                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center flex-shrink-0">
-                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                  {p.description && <p className="text-xs text-muted-foreground truncate">{p.description}</p>}
+              <div key={p.id} className="flex items-center justify-between gap-3 py-3 border-b border-border last:border-b-0">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-foreground truncate">{p.name}</p>
+                  {p.description && <p className="text-[13px] text-muted-foreground truncate">{p.description}</p>}
                 </div>
                 {amount !== null && (
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-foreground">${amount.toFixed(2)}</p>
-                    {interval && <p className="text-[10px] text-muted-foreground">/{interval}</p>}
-                  </div>
+                  <p className="flex-shrink-0 whitespace-nowrap">
+                    <span className="num text-[18px] text-foreground">${amount.toFixed(2)}</span>
+                    {interval && <span className="text-[13px] text-muted-foreground"> / {interval}</span>}
+                  </p>
                 )}
               </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
 
       {/* Create Plan Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Create Coaching Plan</DialogTitle>
+            <DialogTitle>New plan</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-1">
-            <div>
-              <Label className="text-xs">Plan Name *</Label>
-              <Input className="mt-1" placeholder="Monthly 1:1 Coaching" value={form.name}
+          <div className="space-y-4 mt-1">
+            <div className="space-y-1.5">
+              <Label>Name</Label>
+              <Input placeholder="Monthly 1:1 Coaching" value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Price (USD) *</Label>
-                <Input className="mt-1" type="number" placeholder="299.00" value={form.amount}
+              <div className="space-y-1.5">
+                <Label>Price (USD)</Label>
+                <Input type="number" placeholder="299.00" value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
               </div>
-              <div>
-                <Label className="text-xs">Billing Interval</Label>
+              <div className="space-y-1.5">
+                <Label>Billed</Label>
                 <Select value={form.interval} onValueChange={v => setForm(f => ({ ...f, interval: v }))}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="month">Monthly</SelectItem>
                     <SelectItem value="year">Yearly</SelectItem>
@@ -120,18 +112,18 @@ export default function SubscriptionPlansPanel() {
                 </Select>
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Description</Label>
-              <Textarea className="mt-1 resize-none" rows={2} placeholder="What's included..."
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Textarea className="resize-none" rows={2} placeholder="What's included"
                 value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             </div>
-            <Button className="w-full bg-sidebar hover:bg-sidebar" onClick={() => createMutation.mutate()}
+            <Button className="w-full" onClick={() => createMutation.mutate()}
               disabled={!isValid || createMutation.isPending}>
-              {createMutation.isPending ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> Creating...</> : 'Create Plan'}
+              {createMutation.isPending ? <><Loader2 className="animate-spin" /> Creating…</> : 'Create plan'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </Panel>
   );
 }

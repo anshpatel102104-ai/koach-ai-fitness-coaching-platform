@@ -1,31 +1,29 @@
 import React from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
 export default function CheckInQuestionText({ value, onChange, multiline = true, placeholder = '' }) {
   const MAX = 1000;
   return (
-    <div className="space-y-2">
+    <div>
       {multiline ? (
-        <textarea
+        <Textarea
           value={value || ''}
           onChange={e => onChange(e.target.value)}
-          placeholder={`Share your ${placeholder.toLowerCase() || 'thoughts'}...`}
+          placeholder={placeholder || 'Write it how you would say it to your coach.'}
           rows={6}
           maxLength={MAX}
-          className="w-full px-4 py-4 rounded-2xl text-white text-sm leading-relaxed resize-none focus:outline-none placeholder-white/20"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '16px' }}
+          className="text-base leading-relaxed"
         />
       ) : (
-        <input
-          type="text"
+        <Input
           value={value || ''}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full px-4 py-4 rounded-2xl text-white text-sm focus:outline-none placeholder-white/20"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '16px' }}
+          className="h-12 text-base"
         />
       )}
-      <p className="text-right text-white/20 text-[10px]">{(value || '').length}/{MAX}</p>
-      <p className="text-white/20 text-xs text-center mt-2">Tap outside to dismiss keyboard</p>
+      <p className="mt-1.5 text-right text-[13px] text-muted-foreground tabular-nums">{(value || '').length}/{MAX}</p>
     </div>
   );
 }

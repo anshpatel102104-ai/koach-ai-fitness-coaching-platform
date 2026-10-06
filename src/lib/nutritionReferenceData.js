@@ -325,21 +325,23 @@ export const SUPPLEMENT_CATEGORIES = ['All', 'Performance', 'Recovery', 'Hormone
 
 export const SUPPLEMENT_RATINGS = ['Essential', 'Recommended', 'Optional', 'Advanced'];
 
+// Tag colours are neutral on purpose: categories are told apart by their label,
+// not by a rainbow of fills (DESIGN.md anti-slop rule 9).
 export const SUPPLEMENT_RATING_COLORS = {
-  Essential:    { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  Recommended:  { bg: 'bg-blue-100',    text: 'text-blue-700' },
-  Optional:     { bg: 'bg-slate-100',   text: 'text-slate-600' },
-  Advanced:     { bg: 'bg-purple-100',  text: 'text-purple-700' },
+  Essential:    { bg: 'bg-secondary', text: 'text-foreground' },
+  Recommended:  { bg: 'bg-secondary', text: 'text-foreground' },
+  Optional:     { bg: 'bg-secondary', text: 'text-foreground' },
+  Advanced:     { bg: 'bg-secondary', text: 'text-foreground' },
 };
 
 export const SUPPLEMENT_CATEGORY_COLORS = {
-  Performance: { bg: 'bg-orange-100', text: 'text-orange-700' },
-  Recovery:    { bg: 'bg-blue-100',   text: 'text-blue-700' },
-  Hormones:    { bg: 'bg-purple-100', text: 'text-purple-700' },
-  'Fat Loss':  { bg: 'bg-rose-100',   text: 'text-rose-700' },
-  Brain:       { bg: 'bg-cyan-100',   text: 'text-cyan-700' },
-  Sleep:       { bg: 'bg-indigo-100', text: 'text-indigo-700' },
-  Gut:         { bg: 'bg-green-100',  text: 'text-green-700' },
+  Performance: { bg: 'bg-secondary', text: 'text-foreground' },
+  Recovery:    { bg: 'bg-secondary', text: 'text-foreground' },
+  Hormones:    { bg: 'bg-secondary', text: 'text-foreground' },
+  'Fat Loss':  { bg: 'bg-secondary', text: 'text-foreground' },
+  Brain:       { bg: 'bg-secondary', text: 'text-foreground' },
+  Sleep:       { bg: 'bg-secondary', text: 'text-foreground' },
+  Gut:         { bg: 'bg-secondary', text: 'text-foreground' },
 };
 
 // ─── VITAMINS ─────────────────────────────────────────────────────────────────
@@ -376,10 +378,10 @@ export const VITAMINS = [
 export const VITAMIN_TYPES = ['All', 'Fat-Soluble', 'Water-Soluble', 'Mineral', 'Electrolyte'];
 
 export const VITAMIN_TYPE_COLORS = {
-  'Fat-Soluble':  { bg: 'bg-amber-100',  text: 'text-amber-700' },
-  'Water-Soluble':{ bg: 'bg-blue-100',   text: 'text-blue-700' },
-  Mineral:        { bg: 'bg-slate-100',  text: 'text-slate-700' },
-  Electrolyte:    { bg: 'bg-cyan-100',   text: 'text-cyan-700' },
+  'Fat-Soluble':  { bg: 'bg-secondary', text: 'text-foreground' },
+  'Water-Soluble':{ bg: 'bg-secondary', text: 'text-foreground' },
+  Mineral:        { bg: 'bg-secondary', text: 'text-foreground' },
+  Electrolyte:    { bg: 'bg-secondary', text: 'text-foreground' },
 };
 
 // ─── SAUCES ───────────────────────────────────────────────────────────────────
@@ -418,10 +420,10 @@ export const SAUCES = [
 export const SAUCE_TIERS = ['All', 'Zero Cal', 'Low Cal', 'Moderate', 'High Protein'];
 
 export const SAUCE_TIER_COLORS = {
-  'Zero Cal':    { bg: 'bg-emerald-100', text: 'text-emerald-700' },
-  'Low Cal':     { bg: 'bg-blue-100',    text: 'text-blue-700' },
-  'Moderate':    { bg: 'bg-amber-100',   text: 'text-amber-700' },
-  'High Protein':{ bg: 'bg-purple-100',  text: 'text-purple-700' },
+  'Zero Cal':    { bg: 'bg-secondary', text: 'text-foreground' },
+  'Low Cal':     { bg: 'bg-secondary', text: 'text-foreground' },
+  'Moderate':    { bg: 'bg-secondary', text: 'text-foreground' },
+  'High Protein':{ bg: 'bg-secondary', text: 'text-foreground' },
 };
 
 // ─── SEASONINGS ───────────────────────────────────────────────────────────────
@@ -464,7 +466,7 @@ export const SEASONINGS = [
   // BBQ & AMERICAN
   { id: 'bbq-rub', name: 'BBQ Rub (sugar-free)', cuisine: 'BBQ', flavor: 'Smoky, sweet, savory', best_proteins: ['Ribs', 'Chicken', 'Brisket', 'Pork'], best_carbs: ['Potatoes', 'Corn'], recipe_ideas: ['Smoked brisket', 'BBQ chicken', 'Grilled ribs'], pairs_with: ['Smoked paprika', 'Cayenne', 'Black pepper'] },
   { id: 'montreal-steak', name: 'Montreal Steak Seasoning', cuisine: 'BBQ', flavor: 'Bold, peppery', best_proteins: ['Steak', 'Burgers', 'Pork'], best_carbs: ['Potatoes', 'Mushrooms'], recipe_ideas: ['Pan-seared steak', 'Burgers', 'Grilled salmon'], pairs_with: ['Garlic powder', 'Black pepper', 'Rosemary'] },
-  { id: 'everything-bagel', name: 'Everything Bagel Seasoning', cuisine: 'BBQ', flavor: 'Savory, complex', best_proteins: ['Eggs', 'Chicken', 'Fish', 'Avocado toast'], best_carbs: ['Avocado', 'Potatoes', 'Bagels'], recipe_ideas: ['Scrambled eggs', 'Avocado toast', 'Roasted salmon'], pairs_with: ['Everything — versatile!'] },
+  { id: 'everything-bagel', name: 'Everything Bagel Seasoning', cuisine: 'BBQ', flavor: 'Savory, complex', best_proteins: ['Eggs', 'Chicken', 'Fish', 'Avocado toast'], best_carbs: ['Avocado', 'Potatoes', 'Bagels'], recipe_ideas: ['Scrambled eggs', 'Avocado toast', 'Roasted salmon'], pairs_with: ['Almost anything'] },
   { id: 'lemon-pepper', name: 'Lemon Pepper', cuisine: 'BBQ', flavor: 'Bright, peppery', best_proteins: ['Fish', 'Chicken', 'Shrimp'], best_carbs: ['Pasta', 'Potatoes', 'Rice'], recipe_ideas: ['Lemon pepper chicken', 'Grilled fish', 'Pasta seasoning'], pairs_with: ['Garlic powder', 'Herbs'] },
   { id: 'ranch-seasoning', name: 'Ranch Seasoning', cuisine: 'BBQ', flavor: 'Herbal, savory', best_proteins: ['Chicken', 'Ground beef', 'Turkey'], best_carbs: ['Potatoes', 'Pasta', 'Vegetables'], recipe_ideas: ['Ranch dressing', 'Ranch chicken', 'Seasoned potatoes'], pairs_with: ['Garlic powder', 'Onion powder', 'Dill'] },
 ];
@@ -472,10 +474,10 @@ export const SEASONINGS = [
 export const SEASONING_CUISINES = ['All', 'Basics', 'Mediterranean', 'Middle Eastern', 'Asian', 'Latin', 'BBQ'];
 
 export const SEASONING_CUISINE_COLORS = {
-  Basics:          { bg: 'bg-slate-100',  text: 'text-slate-700' },
-  Mediterranean:   { bg: 'bg-blue-100',   text: 'text-blue-700' },
-  'Middle Eastern':{ bg: 'bg-amber-100',  text: 'text-amber-700' },
-  Asian:           { bg: 'bg-red-100',    text: 'text-red-700' },
-  Latin:           { bg: 'bg-orange-100', text: 'text-orange-700' },
-  BBQ:             { bg: 'bg-rose-100',   text: 'text-rose-700' },
+  Basics:          { bg: 'bg-secondary', text: 'text-foreground' },
+  Mediterranean:   { bg: 'bg-secondary', text: 'text-foreground' },
+  'Middle Eastern':{ bg: 'bg-secondary', text: 'text-foreground' },
+  Asian:           { bg: 'bg-secondary', text: 'text-foreground' },
+  Latin:           { bg: 'bg-secondary', text: 'text-foreground' },
+  BBQ:             { bg: 'bg-secondary', text: 'text-foreground' },
 };

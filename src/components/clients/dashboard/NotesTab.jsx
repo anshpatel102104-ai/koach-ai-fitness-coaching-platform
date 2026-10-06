@@ -46,16 +46,16 @@ export default function NotesTab({ client }) {
         <button
           onClick={save}
           disabled={saving || !newNote.trim()}
-          className="mt-2 bg-sidebar text-white text-sm font-semibold py-2 px-5 rounded-lg hover:bg-[var(--kc-2d3a55)] transition-colors disabled:opacity-40"
+          className="mt-2 bg-primary text-primary-foreground text-sm font-semibold py-2 px-5 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40"
         >
-          {saving ? 'Saving…' : 'Save Note'}
+          {saving ? 'Saving…' : 'Save note'}
         </button>
       </div>
 
       {/* Notes list */}
       <div className="flex-1 overflow-y-auto p-5 space-y-3">
         <div className="flex items-center justify-between mb-1">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Past Notes ({notes.length})</p>
+          <p className="text-xs font-semibold text-muted-foreground">Past Notes ({notes.length})</p>
         </div>
         {notes.length === 0 ? (
           <div className="text-center py-16">

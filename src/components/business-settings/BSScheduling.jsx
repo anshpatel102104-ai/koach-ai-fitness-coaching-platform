@@ -1,6 +1,8 @@
 import React from 'react';
 import { Calendar, Plus, X } from 'lucide-react';
-import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSGroup, BSAddButton } from './BSSection';
+import { cn } from '@/lib/utils';
+import { fieldClass } from '@/components/settings/SettingsLayout';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const RESPONSE_TIMES = [
@@ -41,52 +43,48 @@ export default function BSScheduling({ s, set }) {
   const removeSession = (id) => set('session_types', sessionTypes.filter(st => st.id !== id));
 
   return (
-    <BSSection icon={Calendar} title="Scheduling & Availability" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Working Hours</p>
-      <BSRow label="Day availability" hint="Set hours for each day">
+    <BSSection icon={Calendar} title="Scheduling" subtitle="When you work, how fast you reply, and how clients book calls." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+      <BSGroup>Working hours</BSGroup>
+      <BSRow label="Day availability" hint="Clients see when you are around.">
         <div className="space-y-2">
           {DAYS.map(day => {
             const d = hours[day] || DEFAULT_HOURS;
             return (
-              <div key={day} className="flex items-center gap-3">
+              <div key={day} className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <BSToggle value={d.enabled} onChange={v => updateDay(day, 'enabled', v)} />
-                <span className="text-sm font-medium text-muted-foreground w-24 flex-shrink-0">{day.slice(0, 3)}</span>
+                <span className="text-sm font-medium text-foreground w-10 flex-shrink-0">{day.slice(0, 3)}</span>
                 {d.enabled && (
                   <>
                     <input type="time" value={d.start || '09:00'} onChange={e => updateDay(day, 'start', e.target.value)}
-                      className="px-2 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary" />
+                      className={cn(fieldClass, 'w-auto px-2 tabular-nums')} />
                     <span className="text-muted-foreground text-sm">to</span>
                     <input type="time" value={d.end || '18:00'} onChange={e => updateDay(day, 'end', e.target.value)}
-                      className="px-2 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary" />
+                      className={cn(fieldClass, 'w-auto px-2 tabular-nums')} />
                   </>
                 )}
-                {!d.enabled && <span className="text-muted-foreground text-sm italic">Off</span>}
+                {!d.enabled && <span className="text-muted-foreground text-sm">Off</span>}
               </div>
             );
           })}
-          <button onClick={copyMonToWeekdays} className="text-xs text-primary font-semibold hover:underline mt-1">
+          <button onClick={copyMonToWeekdays} className="touch-compact mt-1 text-sm font-semibold text-foreground underline underline-offset-4">
             Copy Monday to all weekdays
           </button>
         </div>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Response Time</p>
-      <BSRow label="Expected response time" hint="Shown to clients in their app">
+      <BSGroup>Response time</BSGroup>
+      <BSRow label="Expected response time" hint="Shown to clients in their app.">
         <BSSelect value={s.response_time} onChange={v => set('response_time', v)} options={RESPONSE_TIMES} />
       </BSRow>
-      <BSRow label="Auto-reply outside hours" hint="Sent when client messages outside working hours">
+      <BSRow label="Auto-reply outside hours" hint="Sent when a client messages outside your hours.">
         <div className="space-y-2">
           <BSToggle value={s.auto_reply_enabled} onChange={v => set('auto_reply_enabled', v)} />
           {s.auto_reply_enabled && (
             <BSTextarea value={s.auto_reply_message} onChange={v => set('auto_reply_message', v)}
-              placeholder="Thanks for your message! I'll get back to you within [response time]. — Coach [Name]" rows={2} />
+              placeholder="Thanks for your message. I'll reply within [response time]. Coach [Name]" rows={2} />
           )}
         </div>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Session Booking</p>
+      <BSGroup>Session booking</BSGroup>
       <BSRow label="Allow session requests">
         <BSToggle value={s.allow_session_requests} onChange={v => set('allow_session_requests', v)} />
       </BSRow>
@@ -96,7 +94,7 @@ export default function BSScheduling({ s, set }) {
             {sessionTypes.map(st => (
               <div key={st.id} className="flex items-center gap-2">
                 <input value={st.name} onChange={e => updateSession(st.id, 'name', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl border border-border text-sm focus:outline-none focus:border-primary" />
+                  className={cn(fieldClass, 'flex-1')} />
                 <BSInput type="number" value={st.duration} onChange={v => updateSession(st.id, 'duration', v)} min={15} className="w-20" />
                 <span className="text-sm text-muted-foreground flex-shrink-0">min</span>
                 <button onClick={() => removeSession(st.id)} className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
@@ -104,9 +102,7 @@ export default function BSScheduling({ s, set }) {
                 </button>
               </div>
             ))}
-            <button onClick={addSessionType} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-              <Plus className="w-4 h-4" /> Add Session Type
-            </button>
+            <BSAddButton onClick={addSessionType}><Plus className="w-4 h-4" /> Add session type</BSAddButton>
           </div>
         </BSRow>
         <BSRow label="Booking notice required">
@@ -115,7 +111,7 @@ export default function BSScheduling({ s, set }) {
             <span className="text-sm text-muted-foreground">hours in advance</span>
           </div>
         </BSRow>
-        <BSRow label="Max sessions per client/month" hint="0 = unlimited">
+        <BSRow label="Sessions per client each month" hint="Set 0 for no limit.">
           <BSInput type="number" value={s.max_sessions_per_month} onChange={v => set('max_sessions_per_month', v)} min={0} className="w-24" />
         </BSRow>
         <BSRow label="Buffer between sessions">

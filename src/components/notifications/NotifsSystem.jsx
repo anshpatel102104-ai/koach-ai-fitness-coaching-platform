@@ -20,9 +20,9 @@ export default function NotifsSystem({ s, set }) {
   const upd = (key, val) => set('system', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="System & Account" emoji="⚙️"
+    <NSection title="System and account"
       onReset={() => set('system', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for System')}>
+      onTest={() => toast.success('Test notification sent for system')}>
 
       <NRow enabled={d.security_alerts.enabled} onToggle={v => upd('security_alerts', { enabled: v })}
         locked={true}

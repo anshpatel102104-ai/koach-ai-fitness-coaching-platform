@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { portalDb } from '@/api/supabaseClient';
 import { format, subDays } from 'date-fns';
 import { AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Copy, Loader2, Salad, Pill, FlaskConical, Droplets, Leaf, Download } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Copy, Loader2, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/kit';
+import { PortalScreen, PortalHeader, IconButton } from '@/components/portal/PortalUI';
 import SupplementsTab from '@/components/nutrition/reference/SupplementsTab';
 import VitaminsTab from '@/components/nutrition/reference/VitaminsTab';
 import SaucesTab from '@/components/nutrition/reference/SaucesTab';
@@ -24,11 +27,11 @@ import { SignedLink, SignedIframe } from '@/components/shared/SignedImage';
 const DEFAULT_TARGETS = { calories: 2000, protein: 150, carbs: 250, fats: 65 };
 
 const PORTAL_TABS = [
-  { id: 'log',         label: 'Meal Log',    icon: Salad },
-  { id: 'supplements', label: 'Supplements', icon: Pill },
-  { id: 'vitamins',    label: 'Vitamins',    icon: FlaskConical },
-  { id: 'sauces',      label: 'Sauces',      icon: Droplets },
-  { id: 'seasonings',  label: 'Seasonings',  icon: Leaf },
+  { id: 'log',         label: 'Log' },
+  { id: 'supplements', label: 'Supplements' },
+  { id: 'vitamins',    label: 'Vitamins' },
+  { id: 'sauces',      label: 'Sauces' },
+  { id: 'seasonings',  label: 'Seasonings' },
 ];
 
 export default function PortalNutrition({ user }) {
@@ -176,179 +179,146 @@ export default function PortalNutrition({ user }) {
   const isPdfPlan = nutritionPlan?.plan_type === 'pdf';
 
   return (
-    <div className="pb-32 bg-gradient-to-b from-card to-muted min-h-screen">
-
-      {/* Header */}
-      <div className="bg-card px-4 flex items-center justify-between"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)', paddingBottom: 12, boxShadow: '0 1px 0 rgb(var(--muted))' }}>
-        <h1 className="text-foreground font-black text-[24px]">Nutrition</h1>
-        <div className="flex items-center gap-2">
-          {/* Copy yesterday */}
-          <button
-            onClick={handleCopyYesterday}
-            disabled={copyingYesterday || !isToday}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground bg-muted disabled:opacity-40 active:opacity-70 transition-opacity"
-            title="Copy yesterday's foods">
-            {copyingYesterday ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-            Yesterday
-          </button>
-          {/* Date nav */}
-          <button onClick={() => handleDateChange(-1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted">
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <p className="text-muted-foreground text-xs font-bold min-w-[72px] text-center">
-            {isToday ? 'Today' : format(selectedDate, 'MMM d')}
-          </p>
-          <button onClick={() => handleDateChange(1)}
-            disabled={isToday}
-            className="w-8 h-8 rounded-lg flex items-center justify-center bg-muted disabled:opacity-40">
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
-
-      {/* PDF Plan Toggle (only for PDF plans) */}
-      {isPdfPlan && (
-        <div className="px-4 mt-3 flex gap-2">
-          {['plan', 'log'].map(view => (
-            <button
-              key={view}
-              onClick={() => setPdfView(view)}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                pdfView === view
-                  ? 'bg-sidebar text-white'
-                  : 'bg-card text-muted-foreground border border-border'
-              }`}
-            >
-              {view === 'plan' ? '📄 My Plan' : '📝 Log'}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Tab switcher */}
-      <div className="px-4 mt-3 flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-        {PORTAL_TABS.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setPortalTab(tab.id)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 border transition-all ${
-                portalTab === tab.id
-                  ? 'bg-sidebar text-white border-border'
-                  : 'bg-card text-muted-foreground border-border'
-              }`}
-            >
-              <Icon className="w-3 h-3" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Reference tabs */}
-      {portalTab === 'supplements' && <div className="px-4 mt-3"><SupplementsTab isPortal /></div>}
-      {portalTab === 'vitamins'    && <div className="px-4 mt-3"><VitaminsTab isPortal /></div>}
-      {portalTab === 'sauces'      && <div className="px-4 mt-3"><SaucesTab isPortal /></div>}
-      {portalTab === 'seasonings'  && <div className="px-4 mt-3"><SeasoningsTab isPortal /></div>}
-
-      {/* PDF Plan Viewer (for PDF plans on "My Plan" view) */}
-      {isPdfPlan && pdfView === 'plan' && nutritionPlan?.pdf_file_url && (
-        <div className="px-4 mt-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-sm text-foreground">{nutritionPlan.title}</h2>
-            <SignedLink
-              href={nutritionPlan.pdf_file_url}
-              download={`${nutritionPlan.title}.pdf`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border bg-card hover:bg-muted transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download
-            </SignedLink>
+    <PortalScreen>
+      <PortalHeader
+        title="Food"
+        eyebrow={format(selectedDate, 'EEEE, MMMM d')}
+        right={(
+          <div className="flex items-center gap-1">
+            <IconButton label="Previous day" onClick={() => handleDateChange(-1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </IconButton>
+            <span className="min-w-[56px] text-center text-[13px] font-semibold text-foreground">
+              {isToday ? 'Today' : format(selectedDate, 'MMM d')}
+            </span>
+            <IconButton label="Next day" onClick={() => handleDateChange(1)} disabled={isToday}>
+              <ChevronRight className="h-4 w-4" />
+            </IconButton>
           </div>
-          <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ height: '600px', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-            <SignedIframe
-              src={nutritionPlan.pdf_file_url}
-              title="Nutrition Plan PDF"
-              className="w-full h-full"
-              style={{ border: 'none' }}
-            />
-          </div>
-        </div>
-      )}
+        )}
+      />
 
-      {portalTab !== 'log' || (isPdfPlan && pdfView === 'plan') ? null : <>
-
-      {/* Daily macro summary */}
-      <div className="mt-3">
-        <DailyMacroHeader totals={totals} targets={targets} />
-      </div>
-
-      {/* Loading skeleton */}
-      {loading ? (
-        <div className="space-y-3 mx-4">
-          {[1,2,3,4].map(i => (
-            <div key={i} className="h-16 rounded-[18px] bg-card animate-pulse"
-              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }} />
-          ))}
-        </div>
-      ) : (
-        /* Meal cards */
-        <div className="space-y-1 mt-2">
-          {MEAL_DEFINITIONS.map(meal => (
-            <MealCard
-              key={meal.id}
-              meal={meal}
-              loggedFoods={logsForMeal(meal.id)}
-              mealTarget={meal.targetCal}
-              onAddFood={() => { setSelectedMeal(meal.id); setShowSearch(true); }}
-              onRemoveFood={(idx) => handleRemoveFood(meal.id, idx)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Water tracker */}
-      <div className="mt-2">
-        <WaterTracker glasses={waterIntake} goal={8} onUpdate={setWaterIntake} />
-      </div>
-
-      {/* Coach note */}
-      {nutritionPlan?.notes && (
-        <div className="mt-2">
-          <CoachNote note={nutritionPlan.notes} coachName={coachName} />
-        </div>
-      )}
-
-      {/* Supplement stack */}
-      <div className="mt-2">
-        <SupplementStack customSupplements={nutritionPlan?.supplements} />
-      </div>
-
-      {/* Hydration protocol */}
-      <HydrationProtocol weightLbs={null} />
-
-      {/* Sauces & seasonings */}
-      <SaucesSeasonings />
-
-      {/* Grocery list */}
-      <GroceryList nutritionPlan={nutritionPlan} />
-
-      {/* Food search sheet */}
-      <AnimatePresence>
-        {showSearch && (
-          <FoodSearchSheet
-            isOpen={showSearch}
-            onClose={() => setShowSearch(false)}
-            onSelectFood={handleAddFood}
-            mealName={MEAL_DEFINITIONS.find(m => m.id === selectedMeal)?.name}
-            dailyTargets={targets}
+      <div className="space-y-3">
+        {/* PDF Plan Toggle (only for PDF plans) */}
+        {isPdfPlan && (
+          <Segmented
+            className="w-full [&>button]:flex-1 [&>button]:justify-center"
+            value={pdfView}
+            onChange={setPdfView}
+            options={[{ value: 'plan', label: 'My plan' }, { value: 'log', label: 'Log' }]}
           />
         )}
-      </AnimatePresence>
-      </> /* end log tab */ }
-    </div>
+
+        {/* Tab switcher */}
+        <Segmented
+          size="sm"
+          className="w-full"
+          value={portalTab}
+          onChange={setPortalTab}
+          options={PORTAL_TABS.map(t => ({ value: t.id, label: t.label }))}
+        />
+
+        {/* Reference tabs */}
+        {portalTab === 'supplements' && <SupplementsTab isPortal />}
+        {portalTab === 'vitamins'    && <VitaminsTab isPortal />}
+        {portalTab === 'sauces'      && <SaucesTab isPortal />}
+        {portalTab === 'seasonings'  && <SeasoningsTab isPortal />}
+
+        {/* PDF Plan Viewer (for PDF plans on "My Plan" view) */}
+        {isPdfPlan && pdfView === 'plan' && nutritionPlan?.pdf_file_url && (
+          <section className="panel overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <h2 className="truncate text-lg text-foreground">{nutritionPlan.title}</h2>
+              <Button variant="outline" size="sm" asChild>
+                <SignedLink href={nutritionPlan.pdf_file_url} download={`${nutritionPlan.title}.pdf`}>
+                  <Download /> Download
+                </SignedLink>
+              </Button>
+            </div>
+            <div className="border-t border-border" style={{ height: '600px' }}>
+              <SignedIframe
+                src={nutritionPlan.pdf_file_url}
+                title="Nutrition plan PDF"
+                className="h-full w-full"
+                style={{ border: 'none' }}
+              />
+            </div>
+          </section>
+        )}
+
+        {portalTab !== 'log' || (isPdfPlan && pdfView === 'plan') ? null : <>
+
+        {/* Daily macro summary */}
+        <DailyMacroHeader totals={totals} targets={targets} />
+
+        {/* Meals */}
+        <section className="panel px-4 pt-4 pb-1">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xl text-foreground">Meals</h2>
+            <Button
+              variant="outline" size="sm"
+              onClick={handleCopyYesterday}
+              disabled={copyingYesterday || !isToday}
+              title="Copy yesterday's foods"
+            >
+              {copyingYesterday ? <Loader2 className="animate-spin" /> : <Copy />}
+              Copy yesterday
+            </Button>
+          </div>
+          {loading ? (
+            <div className="space-y-2 py-3">
+              {[1, 2, 3, 4].map(i => <div key={i} className="h-12 rounded-lg bg-secondary animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="mt-1 divide-y divide-border">
+              {MEAL_DEFINITIONS.map(meal => (
+                <MealCard
+                  key={meal.id}
+                  meal={meal}
+                  loggedFoods={logsForMeal(meal.id)}
+                  mealTarget={meal.targetCal}
+                  onAddFood={() => { setSelectedMeal(meal.id); setShowSearch(true); }}
+                  onRemoveFood={(idx) => handleRemoveFood(meal.id, idx)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Water tracker */}
+        <WaterTracker glasses={waterIntake} goal={8} onUpdate={setWaterIntake} />
+
+        {/* Coach note */}
+        {nutritionPlan?.notes && (
+          <CoachNote note={nutritionPlan.notes} coachName={coachName} />
+        )}
+
+        {/* Supplement stack */}
+        <SupplementStack customSupplements={nutritionPlan?.supplements} />
+
+        {/* Hydration protocol */}
+        <HydrationProtocol weightLbs={null} />
+
+        {/* Sauces & seasonings */}
+        <SaucesSeasonings />
+
+        {/* Grocery list */}
+        <GroceryList nutritionPlan={nutritionPlan} />
+
+        {/* Food search sheet */}
+        <AnimatePresence>
+          {showSearch && (
+            <FoodSearchSheet
+              isOpen={showSearch}
+              onClose={() => setShowSearch(false)}
+              onSelectFood={handleAddFood}
+              mealName={MEAL_DEFINITIONS.find(m => m.id === selectedMeal)?.name}
+              dailyTargets={targets}
+            />
+          )}
+        </AnimatePresence>
+        </> /* end log tab */ }
+      </div>
+    </PortalScreen>
   );
 }

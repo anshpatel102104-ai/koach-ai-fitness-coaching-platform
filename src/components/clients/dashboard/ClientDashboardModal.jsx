@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { X, Edit, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import LifecycleBadge from '../LifecycleBadge';
+import { LIFECYCLE_CONFIG } from '../LifecycleBadge';
 import LeadPipelinePanel from '../LeadPipelinePanel';
 import SummaryTab from './SummaryTab';
 import NotesTab from './NotesTab';
@@ -15,8 +15,10 @@ import GoalsHabitsTab from './GoalsHabitsTab';
 import MetricsTab from './MetricsTab';
 import ClientNutritionTab from './ClientNutritionTab';
 import ClientCalendarTab from './ClientCalendarTab';
-import { motion } from 'framer-motion';
-import { SignedImg } from '@/components/shared/SignedImage';
+import { useSignedUrl } from '@/components/shared/SignedImage';
+import { Initials, Segmented } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // ── Two-level navigation structure ──────────────────────────────────────────
 // Each section has a list of sub-tabs. 'key' matches the original tab keys so
@@ -73,16 +75,16 @@ const NAV_GROUPS = [
   },
   {
     key: 'goals_habits',
-    label: 'Goals & Habits',
+    label: 'Goals and habits',
     subs: [
-      { key: 'goals_habits_tab', label: 'Goals & Habits' },
+      { key: 'goals_habits_tab', label: 'Goals and habits' },
     ],
   },
   {
     key: 'metrics',
     label: 'Metrics',
     subs: [
-      { key: 'metrics_tab', label: 'All Metrics' },
+      { key: 'metrics_tab', label: 'All metrics' },
     ],
   },
   {
@@ -102,20 +104,14 @@ function findGroupForTab(tabKey) {
   return 'overview';
 }
 
-function getInitials(name = '') {
-  return name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase() || '?';
-}
-
-// "Coming soon" placeholder — used for tabs without real content yet.
+// Placeholder for sections that have no content yet.
 function ComingSoon({ label }) {
+  const name = label.charAt(0).toUpperCase() + label.slice(1);
   return (
-    <div className="h-full flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-12 h-12 rounded-xl bg-card border border-border flex items-center justify-center mx-auto mb-3">
-          <span className="text-lg">📋</span>
-        </div>
-        <p className="text-sm font-medium text-foreground capitalize">{label}</p>
-        <p className="text-xs text-muted-foreground mt-1">Coming soon</p>
+    <div className="p-5 sm:p-6">
+      <div className="panel px-5 py-8 sm:px-6">
+        <p className="text-[15px] font-semibold text-foreground">{name} isn&apos;t built yet</p>
+        <p className="text-sm text-muted-foreground mt-1">This section is on the roadmap. Nothing to do here for now.</p>
       </div>
     </div>
   );
@@ -176,9 +172,9 @@ export default function ClientDashboardModal({ client, checkIns = [], onClose, o
     select: d => [...d].sort((a, b) => new Date(b.earned_date) - new Date(a.earned_date)),
   });
 
-  if (!localClient) return null;
+  const avatarSrc = useSignedUrl(localClient?.avatar_url);
 
-  const initials = getInitials(localClient.name);
+  if (!localClient) return null;
 
   // When clicking a main group, switch to that group and jump to its first
   // visible sub-tab (respecting leadOnly filter).
@@ -200,119 +196,92 @@ export default function ClientDashboardModal({ client, checkIns = [], onClose, o
   const currentGroup = NAV_GROUPS.find(g => g.key === activeGroup);
   const visibleSubs = (currentGroup?.subs || []).filter(s => !s.leadOnly || isLead);
 
+  const lifeLabel = LIFECYCLE_CONFIG[localClient.lifecycle_status || 'lead']?.label;
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative w-full h-[95dvh] sm:h-[90vh] sm:max-w-[90vw] sm:rounded-xl rounded-t-2xl bg-card border border-border flex flex-col overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${localClient.name} dashboard`}
+        className="relative w-full h-[95dvh] sm:h-[90vh] sm:max-w-[90vw] sm:rounded-xl rounded-t-xl bg-background flex flex-col overflow-hidden ring-1 ring-border"
         style={{ maxWidth: 1100 }}
         onClick={e => e.stopPropagation()}
       >
-        {/* ── Navy header ── */}
-        <div className="flex-shrink-0" style={{ background: 'var(--tc-sidebar)' }}>
-
-          {/* Client info row */}
-          <div className="flex items-center gap-4 px-6 pt-5 pb-4">
-            <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 overflow-hidden"
-              style={{ background: 'var(--kc-1e2d45)', border: '1.5px solid color-mix(in srgb, white 12%, transparent)', color: 'var(--tc-primary)' }}>
-              {localClient.avatar_url
-                ? <SignedImg src={localClient.avatar_url} alt={localClient.name} className="w-full h-full object-cover" />
-                : <span>{initials}</span>
-              }
-            </div>
+        {/* ── Header ── */}
+        <div className="flex-shrink-0 bg-card border-b border-border">
+          <div className="flex items-center gap-4 px-4 pt-4 pb-3 sm:px-6 sm:pt-5">
+            <Initials name={localClient.name || ''} src={avatarSrc || undefined} tone="ink" size={44} />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="text-base font-bold text-white leading-tight">{localClient.name}</h2>
-                <LifecycleBadge status={localClient.lifecycle_status || 'lead'} />
-              </div>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--tc-muted-foreground)' }}>{localClient.email}</p>
+              <h2 className="text-[24px] sm:text-[26px] leading-tight text-foreground truncate">{localClient.name}</h2>
+              <p className="text-[13px] text-muted-foreground truncate mt-0.5">
+                {[lifeLabel, localClient.email].filter(Boolean).join(' \u00b7 ')}
+              </p>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button onClick={onEdit} title="Edit client"
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-                style={{ color: 'var(--tc-muted-foreground)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, white 8%, transparent)'; e.currentTarget.style.color = 'var(--tc-sidebar-accent-foreground)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--tc-muted-foreground)'; }}>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Button variant="outline" size="sm" className="hidden sm:inline-flex" onClick={() => navigate(`/client-profile?id=${client.id}`)}>
+                Full profile
+              </Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onEdit} title="Edit client" aria-label="Edit client">
                 <Edit className="w-4 h-4" />
-              </button>
-              <button onClick={() => navigate(`/client-profile?id=${client.id}`)} title="Full Profile"
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-                style={{ color: 'var(--tc-muted-foreground)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, white 8%, transparent)'; e.currentTarget.style.color = 'var(--tc-sidebar-accent-foreground)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--tc-muted-foreground)'; }}>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden" onClick={() => navigate(`/client-profile?id=${client.id}`)} title="Full profile" aria-label="Open full profile">
                 <ExternalLink className="w-4 h-4" />
-              </button>
-              <button onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors ml-1"
-                style={{ color: 'var(--tc-muted-foreground)' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'color-mix(in srgb, white 8%, transparent)'; e.currentTarget.style.color = 'var(--tc-sidebar-accent-foreground)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--tc-muted-foreground)'; }}>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onClose} aria-label="Close">
                 <X className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
 
-          {/* ── PRIMARY nav: 5 main groups ── */}
-          <div className="flex overflow-x-auto px-4 scrollbar-hide" style={{ borderTop: '1px solid color-mix(in srgb, white 6%, transparent)' }}>
+          {/* ── Primary nav: sections ── */}
+          <div className="flex gap-5 overflow-x-auto px-4 sm:px-6 scrollbar-hide" role="tablist">
             {NAV_GROUPS.map(g => {
-              // Hide Overview's Pipeline sub-tab group entirely for non-leads? No —
-              // always show Overview. But hide entire group if all its subs are leadOnly and not a lead.
+              // Hide a group entirely if all its subs are lead-only and this isn't a lead.
               const allLeadOnly = g.subs.every(s => s.leadOnly);
               if (allLeadOnly && !isLead) return null;
               const isActive = activeGroup === g.key;
               return (
                 <button
                   key={g.key}
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleGroupClick(g.key)}
-                  className="relative px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors flex-shrink-0"
-                  style={{ color: isActive ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)' }}
+                  className={cn(
+                    'touch-compact relative pb-3 pt-1 text-sm whitespace-nowrap transition-colors flex-shrink-0 border-b-2 -mb-px',
+                    isActive ? 'border-foreground text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground font-medium'
+                  )}
                 >
                   {g.label}
-                  {isActive && (
-                    <motion.div
-                      layoutId="group-indicator"
-                      className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full"
-                      style={{ background: 'var(--tc-primary)' }}
-                    />
-                  )}
                 </button>
               );
             })}
           </div>
-
-          {/* ── SECONDARY nav: sub-tabs for the active group ── */}
-          {visibleSubs.length > 1 && (
-            <div className="flex overflow-x-auto px-4 scrollbar-hide" style={{ background: 'color-mix(in srgb, white 4%, transparent)', borderTop: '1px solid color-mix(in srgb, white 4%, transparent)' }}>
-              {visibleSubs.map(s => {
-                const isActive = activeTab === s.key;
-                return (
-                  <button
-                    key={s.key}
-                    onClick={() => handleSubTabClick(s.key)}
-                    className="relative px-3 py-2 text-[11px] font-medium whitespace-nowrap transition-colors flex-shrink-0"
-                    style={{ color: isActive ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)' }}
-                  >
-                    {s.label}
-                    {isActive && (
-                      <motion.div
-                        layoutId="sub-indicator"
-                        className="absolute bottom-0 left-0 right-0 h-[1.5px] rounded-t-full"
-                        style={{ background: 'var(--tc-primary)' }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
+        {/* ── Secondary nav: sub-tabs for the active section ── */}
+        {visibleSubs.length > 1 && (
+          <div className="flex-shrink-0 px-4 sm:px-6 pt-4">
+            <Segmented
+              size="sm"
+              value={activeTab}
+              onChange={handleSubTabClick}
+              options={visibleSubs.map(s => ({ value: s.key, label: s.label }))}
+            />
+          </div>
+        )}
+
         {/* ── Tab content — all original renderers untouched ── */}
-        <div className="flex-1 overflow-hidden bg-background">
+        <div className="flex-1 overflow-hidden">
 
           {activeTab === 'pipeline' && (
-            <div className="h-full overflow-y-auto p-6 max-w-lg">
-              <LeadPipelinePanel client={localClient} onUpdate={handleClientUpdated} />
+            <div className="h-full overflow-y-auto p-4 sm:p-6">
+              <div className="panel p-5 sm:p-6 max-w-xl">
+                <h3 className="text-[22px] text-foreground mb-1">Lead pipeline</h3>
+                <p className="text-sm text-muted-foreground mb-5">Where this lead stands and when to follow up.</p>
+                <LeadPipelinePanel client={localClient} onUpdate={handleClientUpdated} />
+              </div>
             </div>
           )}
 

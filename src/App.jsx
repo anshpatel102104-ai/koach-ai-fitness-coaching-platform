@@ -158,6 +158,7 @@ const AuthenticatedApp = () => {
         <Route path="/food-log" element={<FoodLogPage />} />
         <Route path="/email-center" element={<EmailCenter />} />
         <Route path="/invoicing" element={<Invoicing />} />
+        <Route path="/payment-tracking" element={<Navigate to="/invoicing?view=payments" replace />} />
         <Route path="/packages" element={<Packages />} />
         <Route path="/coach-profile" element={<CoachProfile />} />
         <Route path="/business-settings" element={<BusinessSettings />} />

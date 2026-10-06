@@ -62,9 +62,9 @@ export default function Login() {
           {submitting ? 'Signing in…' : 'Sign in'}
         </AuthSubmit>
       </form>
-      <div className="flex flex-col items-center gap-2 text-xs">
+      <div className="flex flex-col items-center gap-3 text-[13px]">
         <Link to="/forgot-password" className={authLinkClass}>Forgot password?</Link>
-        <span className="text-white/40">
+        <span className="text-white/50">
           Don&apos;t have an account?{' '}
           <a href={WEBSITE_PRICING_URL} className="text-white hover:underline">Start free trial</a>
         </span>

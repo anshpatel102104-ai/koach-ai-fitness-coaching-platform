@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
-import { XCircle, CheckCircle2, Clock, Ban } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Panel, PanelHeader, EmptyState, Initials } from '@/components/kit';
+import { StatusDot, money } from '@/components/business/ui';
 import { toast } from 'sonner';
 
 const STATUS_CONFIG = {
-  active:   { label: 'Active',    cls: 'bg-success/10 text-success border border-success', icon: CheckCircle2 },
-  past_due: { label: 'Past Due',  cls: 'bg-warning/10 text-warning border border-warning',       icon: Clock },
-  canceled: { label: 'Canceled',  cls: 'bg-muted text-foreground border border-border',     icon: Ban },
-  trialing: { label: 'Trialing',  cls: 'bg-accent text-primary border border-accent',          icon: Clock },
-  unpaid:   { label: 'Unpaid',    cls: 'bg-destructive/10 text-destructive border border-destructive',             icon: XCircle },
+  active:   { label: 'Active',   tone: 'success' },
+  past_due: { label: 'Past due', tone: 'danger' },
+  canceled: { label: 'Canceled', tone: 'muted' },
+  trialing: { label: 'Trial',    tone: 'muted' },
+  unpaid:   { label: 'Unpaid',   tone: 'danger' },
 };
 
 export default function StripeSubscriptionTable({ subscriptions, clients, onRefresh }) {
@@ -33,52 +33,56 @@ export default function StripeSubscriptionTable({ subscriptions, clients, onRefr
     return sub.customer_email || sub.id;
   };
 
+  const th = 'px-3 py-2.5 text-[13px] font-normal text-muted-foreground text-left whitespace-nowrap';
+
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-      <div className="px-6 py-4 border-b border-border">
-        <h3 className="text-xs font-bold text-foreground uppercase tracking-widest">Stripe Subscriptions</h3>
-      </div>
+    <Panel className="overflow-hidden">
+      <PanelHeader title="Subscriptions" subtitle={subscriptions.length ? `${subscriptions.length} in Stripe` : undefined} />
       {subscriptions.length === 0 ? (
-        <p className="text-sm text-foreground text-center py-10">No subscriptions found. Create your first one above.</p>
+        <EmptyState className="pt-2" title="No subscriptions yet" body="Start one with New subscription and it shows up here." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto px-2 sm:px-3 pb-3">
+          <table className="w-full min-w-[560px]">
             <thead>
-              <tr className="border-b border-border text-left bg-muted">
-                <th className="px-6 py-3 text-xs text-foreground font-semibold">Client</th>
-                <th className="px-6 py-3 text-xs text-foreground font-semibold">Amount</th>
-                <th className="px-6 py-3 text-xs text-foreground font-semibold">Status</th>
-                <th className="px-6 py-3 text-xs text-foreground font-semibold">Next Payment</th>
-                <th className="px-6 py-3 text-xs text-foreground font-semibold"></th>
+              <tr className="border-b border-border">
+                <th className={th}>Client</th>
+                <th className={`${th} text-right`}>Amount</th>
+                <th className={th}>Status</th>
+                <th className={th}>Next payment</th>
+                <th className={th}><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {subscriptions.map(sub => {
                 const cfg = STATUS_CONFIG[sub.status] || STATUS_CONFIG.unpaid;
-                const Icon = cfg.icon;
                 const nextDate = sub.current_period_end
-                  ? new Date(sub.current_period_end * 1000).toLocaleDateString()
+                  ? new Date(sub.current_period_end * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                   : '—';
+                const name = getClientName(sub);
                 return (
-                  <tr key={sub.id} className="border-b border-border hover:bg-muted transition-colors">
-                    <td className="px-6 py-3.5 font-medium">{getClientName(sub)}</td>
-                    <td className="px-6 py-3.5">${(sub.amount || 0).toLocaleString()}/{sub.interval || 'mo'}</td>
-                    <td className="px-6 py-3.5">
-                      <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold', cfg.cls)}>
-                        <Icon className="w-3 h-3" />{cfg.label}
+                  <tr key={sub.id} className="border-b border-border last:border-b-0 hover:bg-accent/60 transition-colors">
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-3 min-w-0">
+                        <Initials name={name} size={32} tone={cfg.tone === 'danger' ? 'alert' : 'default'} />
+                        <span className="text-[15px] font-semibold text-foreground truncate">{name}</span>
                       </span>
                     </td>
-                    <td className="px-6 py-3.5 text-foreground">{nextDate}</td>
-                    <td className="px-6 py-3.5">
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <span className="num text-[17px] text-foreground">{money(sub.amount || 0)}</span>
+                      <span className="text-[13px] text-muted-foreground"> / {sub.interval || 'month'}</span>
+                    </td>
+                    <td className="px-3 py-3"><StatusDot tone={cfg.tone}>{cfg.label}</StatusDot></td>
+                    <td className="px-3 py-3 text-sm text-foreground">{nextDate}</td>
+                    <td className="px-3 py-3 text-right">
                       {sub.status === 'active' && (
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs"
+                          variant="link"
+                          className="text-muted-foreground hover:text-destructive"
                           disabled={canceling === sub.id}
                           onClick={() => handleCancel(sub)}
                         >
-                          {canceling === sub.id ? 'Canceling...' : 'Cancel'}
+                          {canceling === sub.id ? 'Canceling…' : 'Cancel'}
                         </Button>
                       )}
                     </td>
@@ -89,6 +93,6 @@ export default function StripeSubscriptionTable({ subscriptions, clients, onRefr
           </table>
         </div>
       )}
-    </div>
+    </Panel>
   );
 }

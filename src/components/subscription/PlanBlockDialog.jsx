@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -31,14 +30,14 @@ export default function PlanBlockDialog() {
     <Dialog open onOpenChange={(o) => { if (!o) setBlock(null); }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" />{TITLES[block.error] || 'Action not available'}</DialogTitle>
+          <DialogTitle>{TITLES[block.error] || 'Not available on your plan'}</DialogTitle>
           <DialogDescription>{block.message || 'This action is not available on your current plan.'}</DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={() => setBlock(null)}>Close</Button>
+          <Button variant="outline" onClick={() => setBlock(null)}>Close</Button>
           {upgrade && (
             <Button onClick={() => { setBlock(null); navigate('/subscription'); }}>
-              {block.error === 'billing_required' ? 'Subscribe' : 'Upgrade plan'}
+              {block.error === 'billing_required' ? 'Choose a plan' : 'See plans'}
             </Button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { BADGE_CONFIG } from '@/lib/badges';
 
 export function useNotifications() {
   const { me } = useAuth();
@@ -62,8 +63,8 @@ export function useNotifications() {
       category: 'achievement',
       is_read: true,
       is_dismissed: false,
-      title: `${b.client_name || 'Client'} earned a badge!`,
-      body: (b.badge_key || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      title: `${b.client_name || 'Client'} earned a badge`,
+      body: BADGE_CONFIG[b.badge_key]?.label || (b.badge_key || '').replace(/_/g, ' '),
       created_date: b.earned_date || b.created_date,
       link: '/adherence',
       client_name: b.client_name,

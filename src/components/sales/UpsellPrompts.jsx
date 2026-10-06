@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Panel, PanelHeader, Initials, CountBadge } from '@/components/kit';
 
 const UPSELL_OFFERS = [
-  { tier: 'one_on_one', label: '1:1 Upgrade', desc: 'Move to fully personalised 1:1 coaching', value: '$500/mo' },
-  { tier: 'group', label: 'Group Add-on', desc: 'Join the group coaching community', value: '$97/mo' },
-  { tier: 'low_ticket', label: 'Training Plan', desc: 'Self-guided 12-week program', value: '$47 one-time' },
+  { tier: 'one_on_one', label: '1:1 upgrade', desc: 'Move to fully personalised 1:1 coaching', value: '$500/mo' },
+  { tier: 'group', label: 'Group add-on', desc: 'Join the group coaching community', value: '$97/mo' },
+  { tier: 'low_ticket', label: '12-week plan', desc: 'Self-guided 12-week program', value: '$47 once' },
 ];
 
 export default function UpsellPrompts({ clients, programs }) {
@@ -25,46 +25,36 @@ export default function UpsellPrompts({ clients, programs }) {
   if (completingClients.length === 0) return null;
 
   return (
-    <div className="bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20 rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-primary">Upsell Opportunities</h2>
-        <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-medium">{completingClients.length}</span>
-      </div>
-      <p className="text-xs text-muted-foreground mb-4">These clients are near program completion — great time to offer an upgrade.</p>
-
-      <div className="space-y-3">
+    <Panel>
+      <PanelHeader
+        title={<span className="inline-flex items-center gap-2">Ready for what's next <CountBadge count={completingClients.length} tone="neutral" /></span>}
+        subtitle="Near the end of their program, or without one. A good week to talk about the next block."
+      />
+      <ul className="px-5 sm:px-6 divide-y divide-border">
         {completingClients.map(client => (
-          <div key={client.id} className="flex items-center gap-3 p-3 bg-card rounded-xl border border-border">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-              {client.name?.[0]}
+          <li key={client.id} className="flex items-center gap-3 py-3">
+            <Initials name={client.name || ''} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-foreground truncate">{client.name}</p>
+              <p className="text-sm text-muted-foreground truncate">{client.assigned_program_id ? 'Program almost finished' : 'No program assigned'}</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{client.name}</p>
-              <p className="text-xs text-muted-foreground">Nearing program end · perfect time to re-enroll</p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <Link to={`/client-profile?id=${client.id}`} className="hidden sm:inline text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">Profile</Link>
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/messages?client=${client.id}`}>Message</Link>
+              </Button>
             </div>
-            <div className="flex gap-2 flex-wrap justify-end">
-              {UPSELL_OFFERS.map(offer => (
-                <span key={offer.tier} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium whitespace-nowrap">
-                  {offer.label} {offer.value}
-                </span>
-              ))}
-              <Link to={`/messages?client=${client.id}`} className="text-[10px] bg-sidebar text-white px-2 py-0.5 rounded-full font-medium hover:bg-black transition-colors whitespace-nowrap">
-                Message
-              </Link>
-              <Link to={`/client-profile?id=${client.id}`} className="text-[10px] bg-card border border-border text-foreground px-2 py-0.5 rounded-full font-medium hover:bg-background transition-colors whitespace-nowrap">
-                View Profile
-              </Link>
-            </div>
-          </div>
+          </li>
         ))}
+      </ul>
+      <div className="px-5 sm:px-6 py-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <p className="text-[13px] text-muted-foreground">
+          Offers: {UPSELL_OFFERS.map(o => `${o.label} ${o.value}`).join(' · ')}
+        </p>
+        <Link to="/messages" className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2 whitespace-nowrap">
+          Message these clients
+        </Link>
       </div>
-
-      <Link to="/messages" className="block mt-4">
-        <Button variant="outline" size="sm" className="w-full text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground">
-          Message These Clients <ArrowRight className="w-3 h-3 ml-1" />
-        </Button>
-      </Link>
-    </div>
+    </Panel>
   );
 }

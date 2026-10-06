@@ -3,8 +3,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   CheckCircle2, AlertCircle, TrendingUp, TrendingDown,
-  Moon, Footprints, Flame, Smartphone, Info,
-  Activity, Zap, Droplets
+  Smartphone, Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -64,46 +63,38 @@ const CLIENT_APPS = [
   },
 ];
 
-/* ── Live data tile ── */
-function DataTile({ icon: Icon, label, value, unit, color, trend }) {
+/* ── Live data tile: label over a number, no icon tiles ── */
+function DataTile({ label, value, unit, trend }) {
   const isUp = trend > 0;
   const isDown = trend < 0;
   return (
-    <div className="bg-muted border border-border rounded-xl p-3 flex items-center gap-2.5">
-      <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', color)}>
-        <Icon className="w-3.5 h-3.5 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-        <p className="text-sm font-bold text-foreground tabular-nums leading-tight">
-          {value != null ? <>{value}<span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span></> : <span className="text-muted-foreground text-xs font-normal">—</span>}
+    <div className="rounded-lg bg-secondary px-3 py-2.5">
+      <p className="text-[13px] text-muted-foreground">{label}</p>
+      <div className="mt-0.5 flex items-baseline justify-between gap-2">
+        <p className="num text-xl leading-none text-foreground">
+          {value != null ? <>{value}<span className="ml-1 text-[13px] font-normal text-muted-foreground" style={{ fontFamily: 'var(--font-body)' }}>{unit}</span></> : <span className="text-sm font-normal text-muted-foreground">No data</span>}
         </p>
+        {trend != null && (
+          <span className={cn('inline-flex items-center gap-0.5 text-[13px] font-semibold tabular-nums',
+            isDown ? 'text-destructive' : isUp ? 'text-success' : 'text-muted-foreground')}>
+            {isDown ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
+            {isUp ? '+' : ''}{trend}%
+          </span>
+        )}
       </div>
-      {trend != null && (
-        <div className={cn('flex items-center gap-0.5 text-[10px] font-bold flex-shrink-0',
-          isDown ? 'text-destructive' : isUp ? 'text-success' : 'text-muted-foreground')}>
-          {isDown ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-          {isUp ? '+' : ''}{trend}%
-        </div>
-      )}
     </div>
   );
 }
 
 /* ── Insight row ── */
 function InsightRow({ insight }) {
-  const styles = {
-    warning: 'bg-warning/10 border-warning text-warning',
-    info: 'bg-accent border-accent text-primary',
-    success: 'bg-success/10 border-success text-success',
-  };
   const icons = {
-    warning: <AlertCircle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />,
-    info: <Info className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />,
-    success: <CheckCircle2 className="w-3.5 h-3.5 text-success flex-shrink-0 mt-0.5" />,
+    warning: <AlertCircle className="h-4 w-4 flex-shrink-0 text-warning mt-0.5" />,
+    info: <Info className="h-4 w-4 flex-shrink-0 text-muted-foreground mt-0.5" />,
+    success: <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success mt-0.5" />,
   };
   return (
-    <div className={cn('flex items-start gap-2 rounded-xl px-3 py-2.5 border text-xs font-medium leading-snug', styles[insight.type] || styles.info)}>
+    <div className="flex items-start gap-2 py-1.5 text-sm leading-snug text-foreground">
       {icons[insight.type] || icons.info}
       {insight.text}
     </div>
@@ -116,32 +107,18 @@ function AppDataView({ app }) {
   return (
     <div className="mt-3 space-y-3 border-t border-border pt-3">
       <div className="grid grid-cols-2 gap-2">
-        {d.steps != null && (
-          <DataTile icon={Footprints} label="Steps" value={d.steps.toLocaleString()} unit="steps" color="bg-primary" trend={app.trend?.steps} />
-        )}
-        {d.sleep != null && (
-          <DataTile icon={Moon} label="Sleep" value={d.sleep} unit="hrs" color="bg-primary" trend={app.trend?.sleep} />
-        )}
-        {d.calories != null && (
-          <DataTile icon={Flame} label="Calories" value={d.calories.toLocaleString()} unit="kcal" color="bg-orange-500" trend={app.trend?.calories} />
-        )}
-        {d.heartRate != null && (
-          <DataTile icon={Activity} label="Heart Rate" value={d.heartRate} unit="bpm" color="bg-destructive" />
-        )}
-        {d.recovery != null && (
-          <DataTile icon={Zap} label="Recovery" value={d.recovery} unit="/100" color="bg-success" />
-        )}
-        {d.protein != null && (
-          <DataTile icon={Droplets} label="Protein" value={d.protein} unit="g" color="bg-success" />
-        )}
-        {d.carbs != null && (
-          <DataTile icon={Flame} label="Carbs" value={d.carbs} unit="g" color="bg-warning" />
-        )}
+        {d.steps != null && <DataTile label="Steps" value={d.steps.toLocaleString()} unit="steps" trend={app.trend?.steps} />}
+        {d.sleep != null && <DataTile label="Sleep" value={d.sleep} unit="hrs" trend={app.trend?.sleep} />}
+        {d.calories != null && <DataTile label="Calories" value={d.calories.toLocaleString()} unit="kcal" trend={app.trend?.calories} />}
+        {d.heartRate != null && <DataTile label="Resting heart rate" value={d.heartRate} unit="bpm" />}
+        {d.recovery != null && <DataTile label="Recovery" value={d.recovery} unit="/100" />}
+        {d.protein != null && <DataTile label="Protein" value={d.protein} unit="g" />}
+        {d.carbs != null && <DataTile label="Carbs" value={d.carbs} unit="g" />}
       </div>
 
       {app.insights?.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Insights</p>
+        <div>
+          <p className="mb-1 text-[13px] font-semibold text-muted-foreground">What stands out</p>
           {app.insights.map((ins, i) => <InsightRow key={i} insight={ins} />)}
         </div>
       )}
@@ -160,14 +137,14 @@ export default function ClientConnectedApps({ clientId }) {
       toast.success(`${name} disconnected`);
     } else {
       setConnected(c => ({ ...c, [id]: true }));
-      toast.success(`${name} connected! Data will sync shortly.`);
+      toast.success(`${name} connected. Data will sync shortly.`);
     }
   };
 
   const anyConnected = Object.values(connected).some(Boolean);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Summary strip if any connected */}
       {anyConnected && (() => {
         const connectedApps = CLIENT_APPS.filter(a => connected[a.id]);
@@ -175,93 +152,65 @@ export default function ClientConnectedApps({ clientId }) {
           Object.entries(a.data || {}).forEach(([k, v]) => { if (v != null && acc[k] == null) acc[k] = v; });
           return acc;
         }, {});
+        const stats = [
+          merged.steps != null && { label: 'Steps', value: merged.steps.toLocaleString() },
+          merged.sleep != null && { label: 'Sleep', value: merged.sleep, unit: 'hrs' },
+          merged.calories != null && { label: 'Calories', value: merged.calories.toLocaleString(), unit: 'kcal' },
+          merged.heartRate != null && { label: 'Heart rate', value: merged.heartRate, unit: 'bpm' },
+        ].filter(Boolean);
         return (
-          <div className="bg-gradient-to-r from-accent/10 to-[var(--kc-f0f8ff)] border border-accent rounded-2xl p-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-primary mb-3">Today's Overview</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {merged.steps != null && (
-                <div className="text-center">
-                  <Footprints className="w-4 h-4 text-primary mx-auto mb-1" />
-                  <p className="text-base font-bold tabular-nums text-foreground">{merged.steps.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">steps</p>
+          <div className="panel p-5">
+            <p className="text-[13px] text-muted-foreground">Today from connected apps</p>
+            <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {stats.map(st => (
+                <div key={st.label}>
+                  <p className="num text-[26px] leading-none text-foreground">{st.value}{st.unit && <span className="ml-1 text-[0.55em]">{st.unit}</span>}</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">{st.label}</p>
                 </div>
-              )}
-              {merged.sleep != null && (
-                <div className="text-center">
-                  <Moon className="w-4 h-4 text-primary mx-auto mb-1" />
-                  <p className="text-base font-bold tabular-nums text-foreground">{merged.sleep}</p>
-                  <p className="text-[10px] text-muted-foreground">hrs sleep</p>
-                </div>
-              )}
-              {merged.calories != null && (
-                <div className="text-center">
-                  <Flame className="w-4 h-4 text-orange-400 mx-auto mb-1" />
-                  <p className="text-base font-bold tabular-nums text-foreground">{merged.calories.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground">kcal</p>
-                </div>
-              )}
-              {merged.heartRate != null && (
-                <div className="text-center">
-                  <Activity className="w-4 h-4 text-destructive mx-auto mb-1" />
-                  <p className="text-base font-bold tabular-nums text-foreground">{merged.heartRate}</p>
-                  <p className="text-[10px] text-muted-foreground">bpm avg</p>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         );
       })()}
 
-      {/* App cards */}
-      {CLIENT_APPS.map((app) => {
-        const isConnected = !!connected[app.id];
-        return (
-          <div
-            key={app.id}
-            className={cn(
-              'border rounded-2xl p-4 transition-all bg-card',
-              isConnected ? 'border-success' : 'border-border'
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl border border-border bg-card flex items-center justify-center flex-shrink-0 shadow-sm">
-                {app.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-semibold text-foreground">{app.name}</p>
-                  {isConnected && <CheckCircle2 className="w-3.5 h-3.5 text-success flex-shrink-0" />}
+      {/* App rows */}
+      <div className="panel divide-y divide-border px-5">
+        {CLIENT_APPS.map((app) => {
+          const isConnected = !!connected[app.id];
+          return (
+            <div key={app.id} className="py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-secondary">
+                  {app.icon}
                 </div>
-                <p className="text-[11px] text-muted-foreground">{app.subtitle}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[15px] font-semibold text-foreground">{app.name}</p>
+                    {isConnected && <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" />}
+                  </div>
+                  <p className="text-[13px] text-muted-foreground">{isConnected ? app.subtitle : app.description}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={isConnected ? 'outline' : 'default'}
+                  onClick={() => toggle(app.id)}
+                  className="flex-shrink-0"
+                >
+                  {isConnected ? 'Disconnect' : 'Connect'}
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant={isConnected ? 'outline' : 'default'}
-                onClick={() => toggle(app.id)}
-                className={cn(
-                  'text-xs h-8 px-3 flex-shrink-0',
-                  isConnected && 'border-border text-foreground hover:border-destructive hover:text-destructive hover:bg-destructive/10'
-                )}
-              >
-                {isConnected ? 'Disconnect' : 'Connect'}
-              </Button>
+
+              {isConnected && <AppDataView app={app} />}
             </div>
-
-            {!isConnected && (
-              <p className="text-xs text-muted-foreground mt-2 ml-[52px] leading-snug">{app.description}</p>
-            )}
-
-            {isConnected && <AppDataView app={app} />}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {!anyConnected && (
-        <div className="text-center py-8 border border-dashed border-border rounded-2xl">
-          <Smartphone className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm font-semibold text-foreground">No apps connected yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Connect apps above to see live data and coaching insights</p>
-        </div>
+        <p className="px-1 text-sm text-muted-foreground">
+          <Smartphone className="mr-1.5 inline h-4 w-4 align-[-3px]" />
+          Nothing connected yet. Connect an app to see steps, sleep and food logs here.
+        </p>
       )}
     </div>
   );

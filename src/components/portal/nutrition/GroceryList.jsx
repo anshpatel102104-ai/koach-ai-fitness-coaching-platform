@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DisclosureCard } from '@/components/portal/PortalUI';
 import { toast } from 'sonner';
 
 const PROTEIN_KEYWORDS = ['chicken', 'beef', 'steak', 'salmon', 'tuna', 'turkey', 'egg', 'shrimp', 'pork', 'tilapia', 'cod', 'protein', 'whey', 'greek yogurt', 'cottage cheese', 'tofu', 'tempeh', 'bison'];
@@ -20,10 +21,8 @@ function categorize(name) {
 }
 
 const CATEGORY_ORDER = ['Proteins', 'Carbs', 'Produce & Vegetables', 'Sauces & Condiments', 'Supplements', 'Other'];
-const CATEGORY_EMOJI = { Proteins: '🥩', Carbs: '🌾', 'Produce & Vegetables': '🥦', 'Sauces & Condiments': '🫙', Supplements: '💊', Other: '🛒' };
 
 export default function GroceryList({ nutritionPlan }) {
-  const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState({});
   const [copied, setCopied] = useState(false);
 
@@ -53,80 +52,56 @@ export default function GroceryList({ nutritionPlan }) {
     const lines = [];
     CATEGORY_ORDER.forEach(cat => {
       if (grouped[cat]?.length) {
-        lines.push(`\n${CATEGORY_EMOJI[cat]} ${cat}`);
-        grouped[cat].forEach(item => lines.push(`  • ${item}`));
+        lines.push(`\n${cat}`);
+        grouped[cat].forEach(item => lines.push(`- ${item}`));
       }
     });
     navigator.clipboard.writeText(lines.join('\n').trim());
     setCopied(true);
-    toast.success('Grocery list copied!');
+    toast.success('Grocery list copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="mx-4 mb-3 bg-card rounded-[18px] overflow-hidden"
-      style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgb(var(--muted))' }}>
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full px-4 py-4 flex items-center gap-3 active:bg-muted transition-colors">
-        <span className="text-xl">🛒</span>
-        <div className="flex-1 text-left">
-          <p className="text-foreground font-bold text-sm">Grocery List</p>
-          <p className="text-muted-foreground text-xs mt-0.5">
-            {totalItems > 0 ? `${totalItems} items from your meal plan` : 'Auto-generated from your meal plan'}
-          </p>
-        </div>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-4 h-4 text-border" />
-        </motion.div>
-      </button>
+    <DisclosureCard
+      title="Grocery list"
+      sub={totalItems > 0 ? `${totalItems} items from your meal plan` : 'Built from your meal plan'}
+    >
+      {totalItems === 0 ? (
+        <p className="py-2 text-sm text-muted-foreground">No meal plan assigned yet. Your coach will add one.</p>
+      ) : (
+        <>
+          <Button variant="outline" size="sm" className="mb-3" onClick={handleCopy}>
+            {copied ? <Check /> : <Copy />}
+            {copied ? 'Copied' : 'Copy list'}
+          </Button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-            className="border-t border-border px-4 pb-4 overflow-hidden">
-
-            {totalItems === 0 ? (
-              <p className="text-muted-foreground text-xs text-center py-6">No meal plan assigned yet. Ask your coach to assign a plan.</p>
-            ) : (
-              <>
-                <button onClick={handleCopy}
-                  className="mt-3 mb-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-primary border border-primary bg-accent active:opacity-70 transition-opacity">
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied!' : 'Copy List'}
-                </button>
-
-                {CATEGORY_ORDER.map(cat => {
-                  if (!grouped[cat]?.length) return null;
-                  return (
-                    <div key={cat} className="mb-4">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">
-                        {CATEGORY_EMOJI[cat]} {cat}
-                      </p>
-                      <div className="space-y-1.5">
-                        {grouped[cat].map(item => {
-                          const key = `${cat}-${item}`;
-                          return (
-                            <button key={item} onClick={() => setChecked(p => ({ ...p, [key]: !p[key] }))}
-                              className="w-full flex items-center gap-3 py-2 px-3 rounded-xl active:bg-muted transition-colors text-left">
-                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked[key] ? 'bg-success border-success' : 'border-border'}`}>
-                                {checked[key] && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                              </div>
-                              <span className={`text-xs font-medium transition-colors ${checked[key] ? 'line-through text-border' : 'text-foreground'}`}>
-                                {item}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          {CATEGORY_ORDER.map(cat => {
+            if (!grouped[cat]?.length) return null;
+            return (
+              <div key={cat} className="mb-3 last:mb-0">
+                <h3 className="text-[15px] font-semibold text-foreground">{cat}</h3>
+                <ul className="mt-1">
+                  {grouped[cat].map(item => {
+                    const key = `${cat}-${item}`;
+                    return (
+                      <li key={item}>
+                        <button type="button" onClick={() => setChecked(p => ({ ...p, [key]: !p[key] }))}
+                          className="flex w-full items-center gap-3 py-2 text-left">
+                          <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-colors ${checked[key] ? 'border-foreground bg-foreground text-background' : 'border-input'}`}>
+                            {checked[key] && <Check className="h-3 w-3" strokeWidth={3} />}
+                          </span>
+                          <span className={`text-sm ${checked[key] ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{item}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </>
+      )}
+    </DisclosureCard>
   );
 }

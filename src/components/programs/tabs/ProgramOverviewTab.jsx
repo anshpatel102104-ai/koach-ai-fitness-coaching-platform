@@ -1,102 +1,78 @@
 import React from 'react';
+import { KeyValue, Panel } from '@/components/kit';
 
-const EQUIPMENT_ICONS = {
-  barbell: '🏋️',
-  dumbbell: '🪑',
-  cable: '⚙️',
-  machine: '🤖',
-  bodyweight: '💪',
-  kettlebell: '🔔',
-  resistance_band: '📎',
-  trx: '🪢',
+const cap = (s = '') => {
+  const t = String(s).replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const PROGRAM_TAGS = {
-  strength:    ['Progressive overload', 'Compound lifts', 'Strength + conditioning'],
-  hypertrophy: ['Progressive overload', 'Volume-focused', 'Muscle hypertrophy'],
-  fat_loss:    ['Caloric deficit', 'HIIT intervals', 'Strength + conditioning'],
-  athletic:    ['Explosive power', 'Sport-specific', 'Conditioning'],
-  mobility:    ['Flexibility', 'Joint health', 'Active recovery'],
-  custom:      ['Custom program', 'Coach-designed'],
-};
+function Section({ title, children }) {
+  return (
+    <div>
+      <h3 className="mb-2 text-[18px] text-foreground">{title}</h3>
+      {children}
+    </div>
+  );
+}
 
 export default function ProgramOverviewTab({ program }) {
-  const allEquipment = new Set();
+  const allEquipment = new Set(program.equipment || []);
   program.workouts?.forEach(w => {
     w.exercises?.forEach(e => {
-      if (e.equipment) allEquipment.add(e.equipment);
+      if (e.equipment) allEquipment.add(cap(e.equipment));
     });
   });
 
-  const tags = PROGRAM_TAGS[program.category] || PROGRAM_TAGS.custom;
+  const tags = program.tags || [];
+  const facts = [
+    program.progression_model && { label: 'Progression', value: cap(program.progression_model) },
+    program.deload_frequency && program.deload_frequency !== 'never' && { label: 'Deload', value: cap(program.deload_frequency) },
+    program.estimated_session_length && { label: 'Session length', value: `${program.estimated_session_length} min` },
+    program.schedule_mode && { label: 'Schedule', value: program.schedule_mode === 'progress' ? 'Changes week by week' : 'Same every week' },
+  ].filter(Boolean);
+
+  const hasAnything = program.description || program.target_audience || program.goals || facts.length || allEquipment.size || tags.length;
+
+  if (!hasAnything) {
+    return <p className="text-sm text-muted-foreground">No details for this program yet. Add a description in the builder's program settings.</p>;
+  }
 
   return (
-    <div className="space-y-6 max-w-3xl">
-
-      {/* Description + tags */}
+    <div className="max-w-3xl space-y-6">
       {program.description && (
-        <div>
-          <p className="text-sm text-foreground leading-relaxed mb-3">{program.description}</p>
-          <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
-              <span
-                key={tag}
-                className="text-xs font-medium px-2.5 py-1 rounded-full"
-                style={{ background: 'var(--tc-accent)', color: 'var(--kc-3730a3)' }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+        <p className="text-[15px] leading-relaxed text-foreground">{program.description}</p>
+      )}
+
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {tags.map(tag => (
+            <span key={tag} className="rounded-md bg-secondary px-2 py-1 text-[13px] font-medium text-foreground">{tag}</span>
+          ))}
         </div>
       )}
 
-      {/* Equipment */}
+      {facts.length > 0 && (
+        <Panel className="px-5 py-2">
+          {facts.map(f => <KeyValue key={f.label} label={f.label} value={f.value} />)}
+        </Panel>
+      )}
+
       {allEquipment.size > 0 && (
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Equipment Needed</h3>
-          <div className="flex flex-wrap gap-2">
-            {Array.from(allEquipment).map((equip) => (
-              <div
-                key={equip}
-                className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg text-sm text-foreground"
-              >
-                <span className="text-base">{EQUIPMENT_ICONS[equip] || '⚙️'}</span>
-                <span className="capitalize">{equip.replace('_', ' ')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Section title="Equipment">
+          <p className="text-[15px] text-foreground">{Array.from(allEquipment).join(', ')}</p>
+        </Section>
       )}
 
-      {/* Target Audience */}
       {program.target_audience && (
-        <div className="p-4 rounded-xl bg-accent border-l-4 border-primary">
-          <h3 className="font-semibold text-primary mb-1 text-sm">Who Is This Program For?</h3>
-          <p className="text-sm text-primary leading-relaxed">{program.target_audience}</p>
-        </div>
+        <Section title="Who it's for">
+          <p className="text-[15px] leading-relaxed text-foreground">{program.target_audience}</p>
+        </Section>
       )}
 
-      {/* Goals & Results */}
       {program.goals && (
-        <div className="p-4 rounded-xl bg-success/10 border-l-4 border-success">
-          <h3 className="font-semibold text-success mb-1 text-sm">Program Goals & Expected Results</h3>
-          <p className="text-sm text-success leading-relaxed">{program.goals}</p>
-        </div>
-      )}
-
-      {/* Progression Model */}
-      {program.progression_model && (
-        <div className="p-4 rounded-xl bg-ai/10 border-l-4 border-ai">
-          <h3 className="font-semibold text-ai mb-1 text-sm">Progression Model</h3>
-          <p className="text-sm text-ai leading-relaxed">{program.progression_model}</p>
-        </div>
-      )}
-
-      {!program.description && !program.target_audience && !program.goals && !program.progression_model && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-sm">No additional details available for this program yet.</p>
-        </div>
+        <Section title="What it should do">
+          <p className="text-[15px] leading-relaxed text-foreground">{program.goals}</p>
+        </Section>
       )}
     </div>
   );

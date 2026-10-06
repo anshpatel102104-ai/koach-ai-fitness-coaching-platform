@@ -2,7 +2,8 @@ import React from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
 import { differenceInDays, parseISO } from 'date-fns';
-import { Trophy } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function ChallengeCard({ challenge, myClient, queryClient }) {
   const daysLeft = challenge.end_date
@@ -23,40 +24,28 @@ export default function ChallengeCard({ challenge, myClient, queryClient }) {
   });
 
   return (
-    <div className="bg-card rounded-2xl p-4 border border-warning"
-      style={{ boxShadow: '0 2px 16px rgb(var(--warning) / 0.1)' }}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center">
-            <Trophy className="w-4.5 h-4.5 text-warning" size={18} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-warning">Weekly Challenge</p>
-            <p className="text-foreground font-black text-sm">{challenge.title}</p>
-          </div>
+    <section className="panel relative overflow-hidden py-4 pl-5 pr-4">
+      <span className="absolute inset-y-0 left-0 w-1 bg-brand" aria-hidden />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[13px] text-muted-foreground">Group challenge</p>
+          <h2 className="mt-0.5 text-xl text-foreground">{challenge.title}</h2>
         </div>
         {daysLeft !== null && (
-          <span className="px-2 py-1 rounded-full bg-warning/10 text-warning text-[10px] font-black">
-            {daysLeft}d left
-          </span>
+          <span className="flex-shrink-0 text-[13px] font-semibold tabular-nums text-foreground">{daysLeft} day{daysLeft === 1 ? '' : 's'} left</span>
         )}
       </div>
 
       {challenge.description && (
-        <p className="text-muted-foreground text-xs leading-relaxed mb-3">{challenge.description}</p>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{challenge.description}</p>
       )}
 
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-xs font-semibold">{participantCount} members joined</p>
-        <button onClick={() => joinMutation.mutate()}
-          className="px-4 py-2 rounded-xl text-xs font-black transition-all"
-          style={isJoined
-            ? { background: 'rgb(var(--success))', color: 'rgb(var(--success))', border: '1.5px solid rgb(var(--success))' }
-            : { background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', color: 'white' }
-          }>
-          {isJoined ? '✓ Joined' : 'Join Challenge'}
-        </button>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <p className="text-[13px] text-muted-foreground">{participantCount} joined</p>
+        <Button size="sm" variant={isJoined ? 'outline' : 'default'} onClick={() => joinMutation.mutate()}>
+          {isJoined ? <><Check strokeWidth={3} /> Joined</> : 'Join challenge'}
+        </Button>
       </div>
-    </div>
+    </section>
   );
 }

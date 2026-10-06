@@ -1,17 +1,25 @@
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Page } from '@/components/kit';
 
-/** Loading placeholder for the coach dashboard — mirrors TodayView's layout. */
+/** Loading placeholder for Today — mirrors TodayView's first screen. */
 export default function DashboardSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-7 pb-24">
-      <Skeleton className="h-24 rounded-xl" />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+    <Page>
+      <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-72 rounded-lg" />
+          <Skeleton className="h-4 w-80 max-w-full rounded" />
+        </div>
+        <div className="flex gap-2">
+          {Array.from({ length: 7 }, (_, i) => <Skeleton key={i} className="h-[60px] flex-1 rounded-lg sm:w-[54px] sm:flex-none" />)}
+        </div>
       </div>
-      <Skeleton className="h-40 rounded-xl" />
-      <Skeleton className="h-32 rounded-xl" />
-      <Skeleton className="h-48 rounded-xl" />
-    </div>
+      <Skeleton className="h-[300px] rounded-xl" />
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
+        <Skeleton className="h-[380px] rounded-xl" />
+        <Skeleton className="h-[380px] rounded-xl" />
+      </div>
+    </Page>
   );
 }

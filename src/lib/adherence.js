@@ -104,27 +104,27 @@ export function averageAdherenceScore(checkIns, n = 4) {
 }
 
 /**
- * Score color class — green 80+, yellow 60–79, red <60
+ * Score colour class (design tokens) — success 80+, warning 60–79, destructive <60
  */
 export function scoreColor(score) {
   if (score === null) return 'text-muted-foreground';
-  if (score >= 80) return 'text-emerald-400';
-  if (score >= 60) return 'text-amber-400';
+  if (score >= 80) return 'text-success';
+  if (score >= 60) return 'text-warning';
   return 'text-destructive';
 }
 
 export function scoreBg(score) {
   if (score === null) return 'bg-secondary';
-  if (score >= 80) return 'bg-emerald-500/10 border-emerald-500/30';
-  if (score >= 60) return 'bg-amber-500/10 border-amber-500/30';
+  if (score >= 80) return 'bg-success-soft border-success/30';
+  if (score >= 60) return 'bg-warning-soft border-warning/30';
   return 'bg-destructive/10 border-destructive/30';
 }
 
 export function scoreLabel(score) {
-  if (score === null) return 'No Data';
-  if (score >= 80) return 'On Track';
-  if (score >= 60) return 'Needs Work';
-  return 'At Risk';
+  if (score === null) return 'No data';
+  if (score >= 80) return 'On plan';
+  if (score >= 60) return 'Partial';
+  return 'At risk';
 }
 
 /**

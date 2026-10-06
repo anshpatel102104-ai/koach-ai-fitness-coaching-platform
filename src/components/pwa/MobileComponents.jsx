@@ -43,8 +43,8 @@ export function MobileCard({ children, className = '', onClick, style = {} }) {
     <motion.div
       whileTap={onClick ? { scale: 0.98 } : undefined}
       onClick={onClick}
-      className={cn('bg-card rounded-2xl p-4', className)}
-      style={{ boxShadow: '0 2px 16px color-mix(in srgb, black 6%, transparent)', border: '1px solid var(--tc-muted)', ...style }}
+      className={cn('panel p-4', className)}
+      style={style}
     >
       {children}
     </motion.div>
@@ -56,10 +56,10 @@ export function MobileButton({
   children, onClick, variant = 'primary', loading = false,
   disabled = false, className = '', type = 'button', fullWidth = true,
 }) {
-  const base = 'flex items-center justify-center gap-2 rounded-2xl font-bold text-base transition-all min-h-[48px] px-6 py-3';
+  const base = 'flex items-center justify-center gap-2 rounded-lg font-semibold text-[15px] transition-colors min-h-[48px] px-6 py-3';
   const variants = {
-    primary: 'text-white',
-    secondary: 'bg-muted text-foreground hover:bg-border',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/85',
+    secondary: 'border border-input bg-card text-foreground hover:bg-accent',
     ghost: 'text-muted-foreground hover:text-foreground',
     danger: 'bg-destructive/10 text-destructive hover:bg-destructive/10',
   };
@@ -71,10 +71,6 @@ export function MobileButton({
       onClick={() => { if (!disabled && !loading) { haptic('medium'); onClick?.(); } }}
       disabled={disabled || loading}
       className={cn(base, variants[variant], fullWidth ? 'w-full' : '', disabled || loading ? 'opacity-50' : '', className)}
-      style={variant === 'primary' ? {
-        background: disabled ? 'var(--tc-muted-foreground)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))',
-        boxShadow: disabled ? 'none' : '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)',
-      } : undefined}
     >
       {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : children}
     </motion.button>
@@ -98,10 +94,10 @@ export function MobileInput({
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      {label && <label className="text-sm font-bold text-foreground">{label}{required && <span className="text-destructive ml-0.5">*</span>}</label>}
+      {label && <label className="text-sm font-medium text-foreground">{label}{required && <span className="text-destructive ml-0.5">*</span>}</label>}
       <div className={cn(
-        'flex items-center bg-card rounded-2xl border-2 transition-all min-h-[48px] px-4',
-        focused ? 'border-primary' : error ? 'border-destructive' : 'border-border',
+        'flex items-center bg-card rounded-lg border transition-shadow min-h-[48px] px-4',
+        focused ? 'border-foreground ring-1 ring-foreground' : error ? 'border-destructive' : 'border-input',
       )}>
         <input
           ref={inputRef}
@@ -114,7 +110,7 @@ export function MobileInput({
           required={required}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          className="flex-1 bg-transparent outline-none text-foreground placeholder-border"
+          className="flex-1 bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
           style={{ fontSize: 16, minHeight: 48 }} // prevents iOS zoom
         />
         {value && (
@@ -135,23 +131,23 @@ export function MobileHeader({ title, onBack, rightAction, rightLabel, transpare
     <div
       className="flex items-center justify-between px-4 h-14 flex-shrink-0"
       style={{
-        background: transparent ? 'transparent' : 'white',
-        borderBottom: transparent ? 'none' : '1px solid var(--tc-muted)',
+        background: transparent ? 'transparent' : 'rgb(var(--card))',
+        borderBottom: transparent ? 'none' : '1px solid rgb(var(--border))',
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
       {onBack ? (
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => { haptic('light'); onBack(); }}
-          className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+          className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
           <ChevronLeft className="w-5 h-5 text-foreground" />
         </motion.button>
       ) : <div className="w-9" />}
 
-      <h1 className="font-black text-foreground text-base text-center flex-1 px-4 truncate">{title}</h1>
+      <h1 className="text-foreground text-lg text-center flex-1 px-4 truncate">{title}</h1>
 
       {rightAction ? (
         <motion.button whileTap={{ scale: 0.9 }} onClick={() => { haptic('light'); rightAction(); }}
-          className="flex-shrink-0 text-primary font-bold text-sm">
+          className="flex-shrink-0 text-foreground font-semibold text-sm underline underline-offset-4">
           {rightLabel || 'Done'}
         </motion.button>
       ) : <div className="w-9" />}
@@ -189,7 +185,7 @@ export function MobileSheet({ open, onClose, children, title, snapPoints = ['50%
             dragConstraints={{ top: 0 }}
             dragElastic={{ top: 0, bottom: 0.3 }}
             onDragEnd={(_, info) => { if (info.offset.y > 100) onClose(); }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl overflow-hidden"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-2xl overflow-hidden"
             style={{ maxHeight: '90vh', paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
           >
             {/* Drag handle */}
@@ -202,9 +198,9 @@ export function MobileSheet({ open, onClose, children, title, snapPoints = ['50%
 
             {title && (
               <div className="flex items-center justify-between px-5 pb-3 border-b border-border">
-                <h2 className="font-black text-foreground text-base">{title}</h2>
+                <h2 className="text-foreground text-xl">{title}</h2>
                 <motion.button whileTap={{ scale: 0.9 }} onClick={onClose}
-                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  className="w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center">
                   <X className="w-4 h-4 text-muted-foreground" />
                 </motion.button>
               </div>
@@ -224,7 +220,7 @@ export function MobileSheet({ open, onClose, children, title, snapPoints = ['50%
 export function Skeleton({ className = '', style = {} }) {
   return (
     <div
-      className={cn('rounded-xl bg-border animate-pulse', className)}
+      className={cn('rounded-md bg-secondary animate-pulse', className)}
       style={style}
     />
   );
@@ -232,7 +228,7 @@ export function Skeleton({ className = '', style = {} }) {
 
 export function CardSkeleton() {
   return (
-    <div className="bg-card rounded-2xl p-4 space-y-3" style={{ boxShadow: '0 2px 12px color-mix(in srgb, black 5%, transparent)', border: '1px solid var(--tc-muted)' }}>
+    <div className="panel p-4 space-y-3">
       <Skeleton className="h-4 w-3/4" />
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-2/3" />

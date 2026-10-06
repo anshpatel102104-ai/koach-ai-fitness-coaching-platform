@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, Crown } from 'lucide-react';
+import { Panel, Initials } from '@/components/kit';
+import { Meter, money } from '@/components/business/ui';
 
 export default function BIRevenueBreakdown({ clients, payments }) {
   const activeClients = useMemo(() => clients.filter(c => c.lifecycle_status === 'active' || c.status === 'active'), [clients]);
@@ -19,60 +20,53 @@ export default function BIRevenueBreakdown({ clients, payments }) {
   const failedPayments = payments.filter(p => p.status === 'failed').length;
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-foreground mb-4">Revenue Breakdown</h3>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Where revenue comes from</h2>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-accent border border-accent">
-          <p className="text-[10px] text-primary font-semibold uppercase mb-1">Total MRR</p>
-          <p className="text-xl font-bold text-primary">${mrr.toLocaleString()}</p>
+      <div className="grid grid-cols-2 mt-4 border-y border-border divide-x divide-border">
+        <div className="py-3.5 pr-3">
+          <p className="text-[13px] text-muted-foreground">Monthly recurring</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{money(mrr)}</p>
         </div>
-        <div className="p-3 rounded-xl bg-ai/10 border border-ai">
-          <p className="text-[10px] text-ai font-semibold uppercase mb-1">Avg / Client</p>
-          <p className="text-xl font-bold text-ai">${avgRevenue.toLocaleString()}</p>
+        <div className="py-3.5 pl-4">
+          <p className="text-[13px] text-muted-foreground">Per client</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{money(avgRevenue)}</p>
         </div>
       </div>
 
-      {concentrationPct > 40 && (
-        <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning rounded-xl mb-4 text-xs text-warning">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />
-          <p>Top 3 clients = <strong>{concentrationPct}%</strong> of revenue — consider diversifying your client base</p>
+      {(concentrationPct > 40 || failedPayments > 0) && (
+        <div className="mt-4 space-y-2">
+          {concentrationPct > 40 && (
+            <p className="text-sm text-foreground border-l-2 border-warning pl-3">
+              Your top 3 clients bring in <span className="font-semibold">{concentrationPct}%</span> of revenue. Losing one would hurt.
+            </p>
+          )}
+          {failedPayments > 0 && (
+            <p className="text-sm text-destructive border-l-2 border-destructive pl-3 font-medium">
+              {failedPayments} failed payment{failedPayments !== 1 ? 's' : ''} to chase in Billing.
+            </p>
+          )}
         </div>
       )}
 
-      {failedPayments > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive rounded-xl mb-4 text-xs text-destructive">
-          <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-          <p><strong>{failedPayments}</strong> failed payment{failedPayments !== 1 ? 's' : ''} need attention</p>
-        </div>
-      )}
-
-      <div>
-        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Top Revenue Clients</p>
+      <div className="mt-5">
+        <p className="text-[13px] text-muted-foreground mb-1">Top clients by rate</p>
         {topClients.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No billing data yet — add monthly rates to clients</p>
+          <p className="text-sm text-muted-foreground">No rates yet. Add a monthly rate to each client.</p>
         ) : (
-          <div className="space-y-2">
-            {topClients.map((c, i) => {
-              const pct = mrr > 0 ? Math.round(((c.monthly_rate || 0) / mrr) * 100) : 0;
-              return (
-                <div key={c.id} className="flex items-center gap-2">
-                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 ${i === 0 ? 'bg-warning' : 'bg-border'}`}>
-                    {i === 0 ? <Crown className="w-3 h-3" /> : i + 1}
-                  </div>
-                  <p className="text-xs text-foreground flex-1 truncate">{c.name}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                    <p className="text-xs font-bold text-foreground w-10 text-right">${(c.monthly_rate || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          topClients.map((c) => {
+            const pct = mrr > 0 ? Math.round(((c.monthly_rate || 0) / mrr) * 100) : 0;
+            return (
+              <div key={c.id} className="grid grid-cols-[28px_1fr_64px_64px] items-center gap-3 py-2 border-b border-border last:border-b-0">
+                <Initials name={c.name} size={28} />
+                <p className="text-sm text-foreground truncate">{c.name}</p>
+                <Meter value={pct} />
+                <p className="num text-[17px] text-foreground text-right">{money(c.monthly_rate || 0)}</p>
+              </div>
+            );
+          })
         )}
       </div>
-    </div>
+    </Panel>
   );
 }

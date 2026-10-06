@@ -71,7 +71,7 @@ export default function HabitCard({ habit, completions, onToggleDay, onEdit, onD
     : (habit.days_of_week || []).sort().map(d => DAY_LABELS[d]).join(' · ');
 
   return (
-    <div className={`bg-card rounded-xl border shadow-sm p-4 transition-opacity ${isInactive ? 'opacity-50 border-border' : 'border-border'}`}>
+    <div className={`bg-card rounded-xl border p-4 transition-opacity ${isInactive ? 'opacity-50 border-border' : 'border-border'}`}>
       {/* Top row */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -81,7 +81,7 @@ export default function HabitCard({ habit, completions, onToggleDay, onEdit, onD
             <p className="text-[11px] text-muted-foreground mt-0.5">{freqLabel}</p>
           </div>
           {isInactive && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full flex-shrink-0">
               <EyeOff className="w-2.5 h-2.5" /> Inactive
             </span>
           )}
@@ -92,15 +92,15 @@ export default function HabitCard({ habit, completions, onToggleDay, onEdit, onD
           {/* Streak */}
           <div className="text-center">
             <div className="flex items-center gap-0.5 justify-center">
-              <Flame className={`w-3.5 h-3.5 ${streak > 0 ? 'text-orange-400' : 'text-border'}`} />
-              <span className={`text-sm font-bold ${streak > 0 ? 'text-orange-500' : 'text-border'}`}>{streak}</span>
+              <Flame className={`w-3.5 h-3.5 ${streak > 0 ? 'text-warning' : 'text-border'}`} />
+              <span className={`text-sm font-bold ${streak > 0 ? 'text-warning' : 'text-border'}`}>{streak}</span>
             </div>
-            <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wide">Streak</p>
+            <p className="text-xs text-muted-foreground font-semibold">Streak</p>
           </div>
           {/* Adherence */}
           <div className="text-center">
             <p className={`text-sm font-bold ${adherence >= 70 ? 'text-success' : adherence >= 40 ? 'text-warning' : 'text-destructive'}`}>{adherence}%</p>
-            <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wide">7-day</p>
+            <p className="text-xs text-muted-foreground font-semibold">7-day</p>
           </div>
           {/* Actions */}
           <div className="flex items-center gap-0.5 ml-1">
@@ -127,7 +127,7 @@ export default function HabitCard({ habit, completions, onToggleDay, onEdit, onD
 
           return (
             <div key={dateStr} className="flex flex-col items-center gap-1 flex-1">
-              <span className={`text-[9px] font-semibold ${today ? 'text-ai' : 'text-border'}`}>{label}</span>
+              <span className={`text-[11px] font-semibold ${today ? 'text-ai' : 'text-border'}`}>{label}</span>
               <button
                 onClick={() => scheduled && onToggleDay(habit, dateStr, done)}
                 disabled={!scheduled}
@@ -149,7 +149,7 @@ export default function HabitCard({ habit, completions, onToggleDay, onEdit, onD
                 )}
               </button>
               {today && (
-                <span className="text-[8px] font-bold text-ai uppercase">Today</span>
+                <span className="text-xs font-semibold text-ai">Today</span>
               )}
             </div>
           );

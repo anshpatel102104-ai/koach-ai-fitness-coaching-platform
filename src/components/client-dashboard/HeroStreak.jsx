@@ -1,15 +1,16 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 const MESSAGES = [
-  [0,  "Start your streak today"],
-  [1,  "Day 1 — every legend starts here"],
-  [3,  "Keep going! You're building a habit"],
-  [7,  "One full week — you're on fire!"],
-  [14, "Two weeks strong — unstoppable!"],
-  [30, "30 days — absolute consistency"],
+  [0,  'Log something today to start a streak.'],
+  [1,  'Day one. Do it again tomorrow.'],
+  [3,  'Three days in. This is how habits form.'],
+  [7,  'A full week without a gap.'],
+  [14, 'Two weeks in a row.'],
+  [30, 'Thirty days straight.'],
 ];
 
 function getMessage(streak) {
@@ -28,41 +29,23 @@ export default function HeroStreak({ streak = 0, recentLogs = [] }) {
   });
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🔥</span>
-          <div>
-            <p className="text-base font-semibold text-foreground">
-              <span className="text-2xl font-bold">{streak}</span> day streak
-            </p>
-            <p className="text-xs text-muted-foreground">{getMessage(streak)}</p>
-          </div>
-        </div>
-        {streak >= 7 && (
-          <div className="px-2.5 py-1 bg-warning/10 rounded-full">
-            <span className="text-xs font-semibold text-warning">Keep it up!</span>
-          </div>
-        )}
-      </div>
-
-      {/* 7 day dots */}
-      <div className="flex gap-1.5">
+    <section className="panel p-4">
+      <p className="num text-[32px] text-foreground">{streak}<span className="ml-1.5 text-[15px] text-muted-foreground">day streak</span></p>
+      <p className="text-sm text-muted-foreground">{getMessage(streak)}</p>
+      <div className="mt-3 grid grid-cols-7 gap-1.5">
         {dots.map((on, i) => {
           const isToday = i === todayIdx;
           return (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className={cn(
-                'w-7 h-7 rounded-full flex items-center justify-center',
-                on ? 'bg-sidebar' : isToday ? 'border-2 border-primary' : 'bg-muted'
-              )}>
-                {on && <span className="text-[9px] text-white font-bold">✓</span>}
-              </div>
-              <span className="text-[9px] text-muted-foreground">{DAYS[i]}</span>
+            <div key={i} className="flex flex-col items-center gap-1">
+              <span className={cn('flex h-8 w-full items-center justify-center rounded-md',
+                on ? 'bg-success text-white' : 'bg-secondary', isToday && !on && 'ring-2 ring-inset ring-brand')}>
+                {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </span>
+              <span className="text-[12px] text-muted-foreground">{DAYS[i]}</span>
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

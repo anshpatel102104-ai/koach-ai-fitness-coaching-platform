@@ -1,5 +1,9 @@
 import React, { useMemo } from 'react';
 import { Download } from 'lucide-react';
+import { Panel, PanelHeader } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { money } from '@/components/business/ui';
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
 
 export default function MonthlySummaryTable({ invoices = [], payments = [] }) {
@@ -43,56 +47,56 @@ export default function MonthlySummaryTable({ invoices = [], payments = [] }) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'monthly_summary.csv'; a.click();
   };
 
-  const fmt = (n) => `$${Number(n).toFixed(0)}`;
-  const th = { fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', padding: '8px 12px', background: 'var(--tc-background)', textAlign: 'right', whiteSpace: 'nowrap' };
-  const td = (bold, color) => ({ padding: '10px 12px', fontSize: 13, fontWeight: bold ? 700 : 500, color: color || 'var(--tc-foreground)', textAlign: 'right', borderBottom: '1px solid var(--tc-background)', whiteSpace: 'nowrap' });
+  const fmt = (n) => money(n);
+  const th = 'px-3 py-2.5 text-[13px] font-normal text-muted-foreground text-right whitespace-nowrap';
+  const td = 'px-3 py-2.5 text-sm text-foreground text-right whitespace-nowrap tabular-nums';
+  const recent = [...months].reverse();
 
   return (
-    <div style={{ background: 'var(--tc-card)', borderRadius: 14, border: '1px solid var(--tc-muted)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--tc-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tc-foreground)' }}>Monthly Financial Summary</span>
-        <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', color: 'var(--tc-foreground)', cursor: 'pointer' }}>
-          <Download size={12} /> Export CSV
-        </button>
-      </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+    <Panel className="overflow-hidden">
+      <PanelHeader
+        title="Month by month"
+        subtitle="Paid invoices for the last 12 months, newest first."
+        right={<Button variant="outline" size="sm" onClick={exportCSV}><Download /> Export CSV</Button>}
+      />
+      <div className="overflow-x-auto px-2 sm:px-3 pb-3">
+        <table className="w-full border-collapse min-w-[560px]">
           <thead>
-            <tr>
-              <th style={{ ...th, textAlign: 'left' }}>Month</th>
-              <th style={th}>New Revenue</th>
-              <th style={th}>Recurring</th>
-              <th style={th}>Refunds</th>
-              <th style={th}>Net Revenue</th>
-              <th style={th}>Clients</th>
+            <tr className="border-b border-border">
+              <th className={cn(th, 'text-left pl-3 sm:pl-3')}>Month</th>
+              <th className={th}>One-off</th>
+              <th className={th}>Recurring</th>
+              <th className={th}>Refunds</th>
+              <th className={th}>Net</th>
+              <th className={th}>Clients</th>
             </tr>
           </thead>
           <tbody>
-            {months.map(m => (
-              <tr key={m.month}>
-                <td style={{ ...td(false), textAlign: 'left', fontWeight: 600, color: 'var(--tc-foreground)' }}>{m.month}</td>
-                <td style={td()}>{fmt(m.newRev)}</td>
-                <td style={td()}>{fmt(m.recRev)}</td>
-                <td style={td(false, m.refundAmt > 0 ? 'var(--tc-warning)' : 'var(--tc-muted-foreground)')}>
+            {recent.map(m => (
+              <tr key={m.month} className="border-b border-border last:border-b-0">
+                <td className={cn(td, 'text-left font-medium')}>{m.month}</td>
+                <td className={td}>{fmt(m.newRev)}</td>
+                <td className={td}>{fmt(m.recRev)}</td>
+                <td className={cn(td, m.refundAmt > 0 ? 'text-foreground' : 'text-muted-foreground')}>
                   {m.refundAmt > 0 ? `−${fmt(m.refundAmt)}` : '—'}
                 </td>
-                <td style={td(true, m.net > 0 ? 'var(--tc-success)' : 'var(--tc-destructive)')}>{fmt(m.net)}</td>
-                <td style={td()}>{m.clients}</td>
+                <td className={cn(td, 'font-semibold', m.net < 0 && 'text-destructive')}>{fmt(m.net)}</td>
+                <td className={td}>{m.clients}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ background: 'var(--tc-background)' }}>
-              <td style={{ ...td(true), textAlign: 'left', color: 'var(--tc-foreground)' }}>Totals</td>
-              <td style={td(true)}>{fmt(totals.newRev)}</td>
-              <td style={td(true)}>{fmt(totals.recRev)}</td>
-              <td style={td(true, 'var(--tc-warning)')}>{totals.refundAmt > 0 ? `−${fmt(totals.refundAmt)}` : '—'}</td>
-              <td style={td(true, 'var(--tc-success)')}>{fmt(totals.net)}</td>
-              <td style={td(true)}>{totals.clients}</td>
+            <tr className="border-t-2 border-foreground/80">
+              <td className={cn(td, 'text-left font-semibold')}>12 months</td>
+              <td className={cn(td, 'font-semibold')}>{fmt(totals.newRev)}</td>
+              <td className={cn(td, 'font-semibold')}>{fmt(totals.recRev)}</td>
+              <td className={cn(td, 'font-semibold')}>{totals.refundAmt > 0 ? `−${fmt(totals.refundAmt)}` : '—'}</td>
+              <td className={cn(td, 'num text-[17px]')}>{fmt(totals.net)}</td>
+              <td className={cn(td, 'font-semibold')}>{totals.clients}</td>
             </tr>
           </tfoot>
         </table>
       </div>
-    </div>
+    </Panel>
   );
 }

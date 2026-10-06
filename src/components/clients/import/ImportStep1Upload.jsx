@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { FileText, AlertCircle } from 'lucide-react';
 
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
@@ -70,9 +70,6 @@ export default function ImportStep1Upload({ onParsed }) {
   return (
     <div className="space-y-6 py-4">
       <div className="text-center">
-        <div className="w-14 h-14 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-3">
-          <Upload className="w-7 h-7 text-primary" />
-        </div>
         <h3 className="text-base font-bold text-foreground">Upload your client CSV</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Export your clients from any platform (e.g. TrueCoach, PT Distinction, Google Sheets) and upload here.
@@ -85,7 +82,7 @@ export default function ImportStep1Upload({ onParsed }) {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
+        className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
           dragging ? 'border-primary bg-accent' : 'border-border hover:border-primary hover:bg-muted'
         }`}
       >

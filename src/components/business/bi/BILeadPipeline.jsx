@@ -1,15 +1,7 @@
 import React, { useMemo } from 'react';
-import { Clock, Zap } from 'lucide-react';
+import { Panel } from '@/components/kit';
+import { Meter, money } from '@/components/business/ui';
 import { differenceInDays } from 'date-fns';
-
-const SOURCE_COLORS = {
-  instagram: 'var(--kc-e1306c)',
-  referral: 'var(--tc-success)',
-  website: 'var(--tc-primary)',
-  tiktok: 'var(--kc-000000)',
-  youtube: 'var(--tc-destructive)',
-  other: 'var(--tc-muted-foreground)',
-};
 
 export default function BILeadPipeline({ leads }) {
   const pipelineLeads = useMemo(() => leads.filter(l => l.stage === 'lead' || l.stage === 'booked'), [leads]);
@@ -44,63 +36,56 @@ export default function BILeadPipeline({ leads }) {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [leads]);
 
-  return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-foreground mb-4">Lead Pipeline</h3>
+  const staleValue = stalePipelineLeads.reduce((s, l) => s + (l.deal_value || 0), 0);
 
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="text-center p-3 bg-accent rounded-xl">
-          <p className="text-lg font-bold text-primary">{pipelineLeads.length}</p>
-          <p className="text-[10px] text-primary font-medium">Active Leads</p>
+  return (
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Lead pipeline</h2>
+      <p className="text-sm text-muted-foreground mt-1">
+        {leads.length === 0
+          ? 'No leads tracked yet. Add them in Sales.'
+          : avgConversionDays ? `Leads take about ${avgConversionDays} days to become clients.` : `${leads.length} leads tracked.`}
+      </p>
+
+      <div className="grid grid-cols-3 mt-4 border-y border-border divide-x divide-border">
+        <div className="py-3.5 pr-3">
+          <p className="text-[13px] text-muted-foreground">Open leads</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{pipelineLeads.length}</p>
         </div>
-        <div className="text-center p-3 bg-success/10 rounded-xl">
-          <p className="text-lg font-bold text-success">{conversionRate}%</p>
-          <p className="text-[10px] text-success font-medium">Conversion</p>
+        <div className="py-3.5 px-3">
+          <p className="text-[13px] text-muted-foreground">Convert</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{conversionRate}%</p>
         </div>
-        <div className="text-center p-3 bg-warning/10 rounded-xl">
-          <p className="text-lg font-bold text-warning">${totalPipelineValue.toLocaleString()}</p>
-          <p className="text-[10px] text-warning font-medium">Pipeline Value</p>
+        <div className="py-3.5 pl-3">
+          <p className="text-[13px] text-muted-foreground">Worth</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{money(totalPipelineValue, { compact: true })}</p>
         </div>
       </div>
 
       {stalePipelineLeads.length > 0 && (
-        <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning rounded-xl mb-4 text-xs text-warning">
-          <Clock className="w-4 h-4 flex-shrink-0 mt-0.5 text-warning" />
-          <p><strong>{stalePipelineLeads.length} lead{stalePipelineLeads.length !== 1 ? 's' : ''}</strong> in pipeline 14+ days — following up today could add ${stalePipelineLeads.reduce((s, l) => s + (l.deal_value || 0), 0).toLocaleString()}/mo in revenue</p>
-        </div>
-      )}
-
-      {avgConversionDays && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 p-2.5 bg-muted rounded-xl">
-          <Zap className="w-3.5 h-3.5 text-primary" />
-          <span>Average lead → client: <strong>{avgConversionDays} days</strong></span>
-        </div>
+        <p className="mt-4 text-sm text-foreground border-l-2 border-warning pl-3">
+          <span className="font-semibold">{stalePipelineLeads.length} lead{stalePipelineLeads.length !== 1 ? 's have' : ' has'} waited 14 days or more.</span>{' '}
+          {staleValue > 0 ? `A follow-up today could add ${money(staleValue)} a month.` : 'A short follow-up today keeps them warm.'}
+        </p>
       )}
 
       {sourceBreakdown.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Lead Sources</p>
-          <div className="space-y-1.5">
+        <div className="mt-5">
+          <p className="text-[13px] text-muted-foreground mb-2">Where they come from</p>
+          <div className="space-y-2.5">
             {sourceBreakdown.slice(0, 5).map(([src, count]) => {
               const pct = Math.round((count / leads.length) * 100);
               return (
-                <div key={src} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: SOURCE_COLORS[src] || 'var(--tc-muted-foreground)' }} />
-                  <p className="text-xs text-muted-foreground capitalize flex-1">{src}</p>
-                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: SOURCE_COLORS[src] || 'var(--tc-muted-foreground)' }} />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-5 text-right">{count}</span>
+                <div key={src} className="grid grid-cols-[88px_1fr_28px] items-center gap-3">
+                  <p className="text-sm text-foreground capitalize truncate">{src}</p>
+                  <Meter value={pct} />
+                  <span className="text-sm text-muted-foreground text-right tabular-nums">{count}</span>
                 </div>
               );
             })}
           </div>
         </div>
       )}
-
-      {leads.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-4 italic">No leads tracked yet. Add leads in the Sales tab.</p>
-      )}
-    </div>
+    </Panel>
   );
 }

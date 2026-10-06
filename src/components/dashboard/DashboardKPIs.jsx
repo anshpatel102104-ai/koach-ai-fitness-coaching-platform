@@ -1,73 +1,24 @@
 import React, { useMemo } from 'react';
-import { Users, TrendingUp, ClipboardList, DollarSign } from 'lucide-react';
 import { differenceInDays, parseISO, startOfMonth, subMonths } from 'date-fns';
 import { compositeAdherenceScore } from '@/lib/adherence';
 import { useNavigate } from 'react-router-dom';
+import { Panel, PanelHeader, Stat } from '@/components/kit';
+import { cn } from '@/lib/utils';
 
-// Mini adherence bar shown under the % value
-function AdherenceBar({ pct }) {
-  const color = pct < 40 ? 'var(--tc-destructive)' : 'var(--tc-primary)';
+/** A stat that becomes a button when it has somewhere to go. */
+function Cell({ onClick, children }) {
+  const Comp = onClick ? 'button' : 'div';
   return (
-    <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: 'var(--tc-muted)' }}>
-      <div
-        className="h-full rounded-full transition-all"
-        style={{ width: `${Math.min(pct, 100)}%`, background: color }}
-      />
-    </div>
-  );
-}
-
-function KPICard({ icon: Icon, label, value, sub, subColor, color, bgGrad, borderColor, extra, onClick, dark }) {
-  if (dark) {
-    return (
-      <div
-        className="rounded-xl p-4 flex flex-col gap-2 transition-all hover:opacity-90 cursor-default"
-        onClick={onClick}
-        style={{ background: 'var(--tc-sidebar)', minHeight: 110 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, white 10%, transparent)' }}>
-            <Icon className="w-4 h-4 text-white/70" />
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'color-mix(in srgb, white 40%, transparent)' }}>{label}</p>
-        </div>
-        <div>
-          <p className="text-3xl font-extrabold leading-none text-white" style={{ letterSpacing: '-0.03em' }}>{value}</p>
-          {sub && <p className="text-xs mt-1 font-medium" style={{ color: 'color-mix(in srgb, white 40%, transparent)' }}>{sub}</p>}
-          {extra}
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div
-      className="rounded-xl p-4 flex flex-col gap-2 transition-all hover:shadow-md cursor-default"
+    <Comp
       onClick={onClick}
-      style={{
-        background: 'var(--tc-card)',
-        border: '1px solid var(--tc-border)',
-        minHeight: 110,
-      }}
+      className={cn('min-w-0 px-5 py-4 text-left sm:px-6', onClick && 'transition-colors hover:bg-accent/60')}
     >
-      <div className="flex items-center justify-between">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--tc-background)' }}>
-          <Icon className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
-      </div>
-      <div>
-        <p className="text-2xl font-bold leading-none text-foreground" style={{ letterSpacing: '-0.02em' }}>
-          {value}
-        </p>
-        {sub && (
-          <p className="text-xs mt-1" style={{ color: subColor || 'var(--tc-muted-foreground)' }}>{sub}</p>
-        )}
-        {extra}
-      </div>
-    </div>
+      {children}
+    </Comp>
   );
 }
 
+/** "This month": four numbers that frame the day. */
 export default function DashboardKPIs({ clients, checkIns, payments }) {
   const navigate = useNavigate();
   const now = new Date();
@@ -102,11 +53,6 @@ export default function DashboardKPIs({ clients, checkIns, payments }) {
     return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
   }, [clients, checkIns]);
 
-  const adherenceColor = avgAdherence === null ? 'var(--tc-muted-foreground)'
-    : avgAdherence >= 80 ? 'var(--tc-success)'
-    : avgAdherence >= 50 ? 'var(--tc-warning)'
-    : 'var(--tc-destructive)';
-
   // Pending reviews
   const pendingReviews = useMemo(() =>
     checkIns.filter(ci => !ci.coach_responded && !ci.coach_notes &&
@@ -135,60 +81,50 @@ export default function DashboardKPIs({ clients, checkIns, payments }) {
     return pct;
   }, [monthRevenue, lastMonthRevenue]);
 
+  const adherenceTone = avgAdherence === null ? undefined : avgAdherence >= 80 ? 'success' : avgAdherence >= 50 ? undefined : 'danger';
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-
-      {/* Active Clients — dark */}
-      <KPICard
-        dark
-        icon={Users}
-        label="Active Clients"
-        value={active}
-        sub={newThisMonth > 0 ? `+${newThisMonth} this month` : 'same as last month'}
-      />
-
-      {/* Avg Adherence — light */}
-      <KPICard
-        icon={TrendingUp}
-        label="Avg Adherence"
-        value={avgAdherence !== null ? `${avgAdherence}%` : 'No data yet'}
-        sub={avgAdherence !== null
-          ? avgAdherence >= 80 ? 'Great compliance 🎉'
-          : avgAdherence >= 50 ? 'Room to improve'
-          : 'Needs attention'
-          : 'Check-ins needed'}
-        subColor={adherenceColor}
-        extra={avgAdherence !== null ? <AdherenceBar pct={avgAdherence} /> : null}
-      />
-
-      {/* Pending Reviews — light */}
-      <KPICard
-        icon={ClipboardList}
-        label="Pending Reviews"
-        value={pendingReviews === 0 ? 'All clear' : pendingReviews}
-        sub={pendingReviews === 0 ? 'All caught up ✓' : `check-in${pendingReviews !== 1 ? 's' : ''} awaiting`}
-        onClick={pendingReviews > 0 ? () => navigate('/checkin-review') : undefined}
-      />
-
-      {/* Revenue — light */}
-      <KPICard
-        icon={DollarSign}
-        label="Revenue"
-        value={monthRevenue > 0 ? `$${monthRevenue.toLocaleString()}` : '—'}
-        sub={
-          monthRevenue > 0 && revenueTrend !== null
-            ? `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% vs last month`
-            : monthRevenue === 0
-            ? 'Set up billing to track'
-            : 'this month'
-        }
-        subColor={
-          monthRevenue === 0 ? 'var(--tc-muted-foreground)'
-          : revenueTrend !== null && revenueTrend >= 0 ? 'var(--tc-success)'
-          : 'var(--tc-destructive)'
-        }
-        onClick={monthRevenue === 0 ? () => navigate('/revenue') : undefined}
-      />
-    </div>
+    <Panel>
+      <PanelHeader title="This month" />
+      <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+        <Cell>
+          <Stat
+            label="Active clients"
+            value={active}
+            sub={newThisMonth > 0 ? `${newThisMonth} new this month` : 'None new this month'}
+          />
+        </Cell>
+        <Cell>
+          <Stat
+            label="Average adherence"
+            value={avgAdherence !== null ? `${avgAdherence}%` : '—'}
+            tone={adherenceTone}
+            sub={avgAdherence === null ? 'Waiting on check-ins' : avgAdherence >= 80 ? 'Most clients on plan' : avgAdherence >= 50 ? 'Room to tighten up' : 'Below where it should be'}
+          />
+        </Cell>
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+        <Cell onClick={pendingReviews > 0 ? () => navigate('/checkin-review') : undefined}>
+          <Stat
+            label="Check-ins waiting"
+            value={pendingReviews}
+            sub={pendingReviews === 0 ? 'All replied to' : `Oldest within 14 days`}
+          />
+        </Cell>
+        <Cell onClick={monthRevenue === 0 ? () => navigate('/revenue') : undefined}>
+          <Stat
+            label="Revenue"
+            value={monthRevenue > 0 ? `$${monthRevenue.toLocaleString()}` : '—'}
+            sub={
+              monthRevenue > 0 && revenueTrend !== null
+                ? `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% on last month`
+                : monthRevenue === 0
+                ? 'Set up billing to track it'
+                : 'So far this month'
+            }
+          />
+        </Cell>
+      </div>
+    </Panel>
   );
 }

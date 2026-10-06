@@ -1,21 +1,17 @@
 import React from 'react';
 import { CheckCircle2, AlertTriangle, SkipForward, Flag } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function ImportStep4Complete({ imported, skipped, flagged, errorLog = [], onDone }) {
   return (
     <div className="text-center space-y-6 py-4">
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      <div
         className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto"
       >
         <CheckCircle2 className="w-8 h-8 text-success" />
-      </motion.div>
+      </div>
 
       <div>
-        <h3 className="text-lg font-bold text-foreground">Import complete!</h3>
+        <h3 className="text-lg font-bold text-foreground">Import complete</h3>
         <p className="text-sm text-muted-foreground mt-1">Your clients have been added to KOACH AI.</p>
       </div>
 
@@ -30,13 +26,13 @@ export default function ImportStep4Complete({ imported, skipped, flagged, errorL
           <SkipForward className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-2xl font-bold text-warning">{skipped}</p>
           <p className="text-xs text-warning font-medium">Skipped</p>
-          <p className="text-[10px] text-warning mt-0.5">duplicates</p>
+          <p className="text-[11px] text-warning mt-0.5">duplicates</p>
         </div>
         <div className="bg-destructive/10 border border-destructive rounded-xl p-4">
           <Flag className="w-5 h-5 text-destructive mx-auto mb-1" />
           <p className="text-2xl font-bold text-destructive">{flagged}</p>
           <p className="text-xs text-destructive font-medium">Flagged</p>
-          <p className="text-[10px] text-destructive mt-0.5">review manually</p>
+          <p className="text-[11px] text-destructive mt-0.5">review manually</p>
         </div>
       </div>
 
@@ -59,9 +55,9 @@ export default function ImportStep4Complete({ imported, skipped, flagged, errorL
 
       <button
         onClick={onDone}
-        className="w-full py-3 rounded-xl bg-sidebar text-white text-sm font-semibold hover:bg-foreground transition-colors"
+        className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
       >
-        View Clients
+        View clients
       </button>
     </div>
   );

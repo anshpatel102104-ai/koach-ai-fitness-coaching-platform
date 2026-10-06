@@ -1,55 +1,43 @@
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
 import { format, differenceInDays, parseISO } from 'date-fns';
-
-const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+import { Button } from '@/components/ui/button';
+import { fmtMoney as fmt } from './shared';
 
 function DueBadge({ dueDate }) {
   if (!dueDate) return null;
   const days = differenceInDays(parseISO(dueDate), new Date());
-  if (days < 0) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--destructive) / 0.2)', color: 'rgb(var(--destructive))' }}>Overdue {Math.abs(days)}d</span>;
-  if (days <= 3) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgb(var(--warning) / 0.2)', color: 'rgb(var(--warning))' }}>Due in {days}d</span>;
-  return <span className="text-white/30 text-[10px]">Due {format(parseISO(dueDate), 'MMM d')}</span>;
+  if (days < 0) return <span className="text-[13px] font-semibold text-destructive">{Math.abs(days)} days late</span>;
+  if (days <= 3) return <span className="text-[13px] font-semibold text-warning">Due in {days} day{days === 1 ? '' : 's'}</span>;
+  return <span className="text-[13px] text-muted-foreground">Due {format(parseISO(dueDate), 'MMM d')}</span>;
 }
 
 export default function BillingOutstandingCard({ unpaidInvoices, totalDue, onPayAll, onPayInvoice, onViewInvoice }) {
+  const anyOverdue = unpaidInvoices.some(i => i.status === 'overdue' || (i.due_date && differenceInDays(parseISO(i.due_date), new Date()) < 0));
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, rgb(var(--destructive) / 0.2), rgb(var(--warning) / 0.15))', border: '1px solid rgb(var(--destructive) / 0.3)' }}>
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-destructive" />
-          <span className="text-destructive text-xs font-bold uppercase tracking-wide">Outstanding Balance</span>
-        </div>
+    <section className="panel relative overflow-hidden py-4 pl-5 pr-4">
+      <span className={`absolute inset-y-0 left-0 w-1 ${anyOverdue ? 'bg-destructive' : 'bg-brand'}`} aria-hidden />
+      <p className="text-[13px] text-muted-foreground">To pay</p>
+      <p className="num mt-1 text-[40px] text-foreground">{fmt(totalDue)}</p>
+      <p className="text-sm text-muted-foreground">{unpaidInvoices.length} unpaid invoice{unpaidInvoices.length > 1 ? 's' : ''}</p>
 
-        <p className="text-white font-black text-3xl mb-1">{fmt(totalDue)}</p>
-        <p className="text-white/40 text-xs mb-4">{unpaidInvoices.length} unpaid invoice{unpaidInvoices.length > 1 ? 's' : ''}</p>
+      <Button variant="brand" size="lg" className="mt-4 h-[52px] w-full text-base font-bold" onClick={onPayAll}>
+        Pay {fmt(totalDue)}
+      </Button>
 
-        <button onClick={onPayAll}
-          className="w-full py-3.5 rounded-xl text-sm font-black text-white transition-all active:scale-98"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 8px 24px rgb(var(--primary) / 0.4)' }}>
-          Pay Now — {fmt(totalDue)}
-        </button>
-
-        {unpaidInvoices.length > 1 && (
-          <div className="mt-3 space-y-2">
-            {unpaidInvoices.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 py-2 px-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-xs font-semibold truncate">{inv.invoice_number || 'Invoice'}</p>
-                  <p className="text-white/40 text-[10px] truncate">{inv.description}</p>
-                </div>
+      {unpaidInvoices.length > 1 && (
+        <ul className="mt-3 divide-y divide-border border-t border-border">
+          {unpaidInvoices.map(inv => (
+            <li key={inv.id} className="flex items-center gap-3 py-2.5">
+              <button type="button" onClick={() => onViewInvoice?.(inv)} className="min-w-0 flex-1 text-left">
+                <span className="block truncate text-sm font-semibold text-foreground">{inv.invoice_number || 'Invoice'}</span>
                 <DueBadge dueDate={inv.due_date} />
-                <span className="text-white text-xs font-bold">{fmt(inv.amount)}</span>
-                <button onClick={() => onPayInvoice(inv)}
-                  className="text-[10px] font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                  style={{ background: 'rgb(var(--primary) / 0.3)', color: 'rgb(var(--primary))' }}>
-                  Pay
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+              </button>
+              <span className="text-sm font-semibold tabular-nums text-foreground">{fmt(inv.amount)}</span>
+              <Button size="sm" variant="outline" onClick={() => onPayInvoice(inv)}>Pay</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

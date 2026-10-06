@@ -1,89 +1,112 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* KOACH design tokens.
+   Visual language (see DESIGN.md): a cool-grey canvas, flat white panels,
+   ink-black primary actions, a matte graphite sidebar, and the logo blue as
+   the single accent. Status colour is reserved for client data (on plan /
+   partial / missed) and errors — never decoration. */
 @layer base {
   :root {
-    --font-heading: 'Inter', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    --font-heading: 'Archivo', 'Hanken Grotesk', system-ui, sans-serif;
+    --font-body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
 
-    /* Main content — premium light */
-    --background: 250 250 250;
-    --foreground: 17 24 39;
+    --background: 238 239 241;       /* canvas */
+    --foreground: 17 19 24;          /* ink */
     --card: 255 255 255;
-    --card-foreground: 17 24 39;
+    --card-foreground: 17 19 24;
     --popover: 255 255 255;
-    --popover-foreground: 17 24 39;
-    --primary: 37 99 235;
+    --popover-foreground: 17 19 24;
+    --primary: 17 19 24;             /* primary actions are ink, like the references */
     --primary-foreground: 255 255 255;
     --secondary: 243 244 246;
-    --secondary-foreground: 17 24 39;
+    --secondary-foreground: 17 19 24;
     --muted: 243 244 246;
-    --muted-foreground: 107 114 128;
-    --accent: 239 246 255;
-    --accent-foreground: 29 78 216;
-    --destructive: 239 68 68;
+    --muted-foreground: 94 100 112;
+    --accent: 241 242 244;           /* hover / selected surface */
+    --accent-foreground: 17 19 24;
+    --destructive: 205 38 38;
     --destructive-foreground: 255 255 255;
-    --border: 229 231 235;
-    --input: 229 231 235;
-    /* consistent single border color */
-    --ring: 59 130 246;
-    --chart-1: 59 130 246;
-    --chart-2: 34 197 94;
-    --chart-3: 245 158 11;
-    --chart-4: 239 68 68;
-    --chart-5: 168 85 247;
-    --radius: 0.75rem;
+    --border: 226 228 232;
+    --input: 214 217 223;
+    --ring: 10 92 255;
+    --radius: 0.5rem;
 
-    /* Sidebar — matte black */
-    --sidebar-background: 10 10 10;
-    --sidebar-foreground: 161 161 170;
-    --sidebar-primary: 59 130 246;
+    /* Logo blue — the one brand accent. White-label overrides this family. */
+    --brand: 10 92 255;
+    --brand-foreground: 255 255 255;
+    --brand-soft: 232 239 255;
+
+    /* Status: client data only */
+    --success: 30 122 77;            /* on plan */
+    --success-soft: 230 243 236;
+    --warning: 168 108 10;           /* text-safe amber */
+    --warning-soft: 252 243 222;
+    --partial: 240 196 104;          /* partial-compliance fill */
+
+    --chart-1: 10 92 255;
+    --chart-2: 17 19 24;
+    --chart-3: 30 122 77;
+    --chart-4: 240 196 104;
+    --chart-5: 156 163 175;
+
+    /* Sidebar — matte graphite, identical in both themes */
+    --sidebar-background: 29 32 39;
+    --sidebar-foreground: 206 209 216;
+    --sidebar-muted: 134 140 152;
+    --sidebar-primary: 10 92 255;
     --sidebar-primary-foreground: 255 255 255;
-    --sidebar-accent: 24 24 27;
+    --sidebar-accent: 44 48 57;
     --sidebar-accent-foreground: 255 255 255;
-    --sidebar-border: 255 255 255 / 0.05;
-    --sidebar-ring: 59 130 246;
+    --sidebar-border: 255 255 255 / 0.06;
+    --sidebar-ring: 10 92 255;
 
-    --success: 34 197 94;
-    --warning: 245 158 11;
-    /* AI / premium accent (violet) — used by assistant, AI generators, etc. */
-    --ai: 124 58 237;
+    /* "AI" surfaces are ink panels with white text — not violet gradients. */
+    --ai: 29 32 39;
     --ai-foreground: 255 255 255;
   }
 
-  /* Dark mode — only content surfaces flip; the sidebar tokens intentionally
-     inherit from :root so the matte-black identity stays in both modes.
-     White-label brand overrides (--primary family) are applied at runtime on
+  /* Dark mode — only content surfaces flip; the sidebar keeps its identity.
+     White-label brand overrides (--brand family) are applied at runtime on
      top of whichever mode is active. */
   .dark {
-    --background: 12 13 16;
-    --foreground: 237 238 240;
-    --card: 24 25 28;
-    --card-foreground: 237 238 240;
-    --popover: 24 25 28;
-    --popover-foreground: 237 238 240;
-    --primary: 96 165 250;
-    --primary-foreground: 23 37 84;
-    --secondary: 33 35 40;
-    --secondary-foreground: 237 238 240;
-    --muted: 33 35 40;
-    --muted-foreground: 148 153 163;
-    --accent: 30 41 59;
-    --accent-foreground: 191 219 254;
+    --background: 14 15 18;
+    --foreground: 236 237 240;
+    --card: 24 26 31;
+    --card-foreground: 236 237 240;
+    --popover: 28 30 36;
+    --popover-foreground: 236 237 240;
+    --primary: 240 241 243;
+    --primary-foreground: 17 19 24;
+    --secondary: 34 37 43;
+    --secondary-foreground: 236 237 240;
+    --muted: 34 37 43;
+    --muted-foreground: 152 158 170;
+    --accent: 38 41 48;
+    --accent-foreground: 236 237 240;
     --destructive: 248 113 113;
-    --destructive-foreground: 255 255 255;
-    --border: 39 41 47;
-    --input: 39 41 47;
-    --ring: 59 130 246;
-    --success: 52 211 153;
-    --warning: 251 191 36;
-    --ai: 167 139 250;
-    /* dark navy-violet text on the lighter dark-mode --ai fill (same treatment
-       as --primary-foreground): white on #a78bfa is only 2.8:1 */
-    --ai-foreground: 46 16 101;
+    --destructive-foreground: 17 19 24;
+    --border: 42 45 52;
+    --input: 52 56 64;
+    --ring: 92 146 255;
+    --brand: 92 146 255;
+    --brand-foreground: 10 20 45;
+    --brand-soft: 24 36 64;
+    --success: 74 196 132;
+    --success-soft: 20 44 33;
+    --warning: 240 190 90;
+    --warning-soft: 48 38 18;
+    --partial: 200 160 80;
+    --chart-1: 92 146 255;
+    --chart-2: 236 237 240;
+    --chart-3: 74 196 132;
+    --chart-4: 200 160 80;
+    --chart-5: 110 116 128;
+    --ai: 34 37 43;
+    --ai-foreground: 236 237 240;
   }
 }
 
@@ -93,14 +116,55 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-family: var(--font-body);
+    font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: rgb(var(--background));
   }
-  h1, h2, h3, h4, h5, h6 {
+  /* Display type: condensed, heavy, tight — the references' headline voice. */
+  h1, h2, h3 {
+    font-family: var(--font-heading);
+    font-stretch: 78%;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+  }
+  h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+}
+
+@layer components {
+  /* Large data figures (184.2 lb, 98%, 1,850) */
+  .num {
+    font-family: var(--font-heading);
+    font-stretch: 78%;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .display {
+    font-family: var(--font-heading);
+    font-stretch: 78%;
+    font-weight: 800;
     letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  /* Flat white panel on the grey canvas */
+  .panel {
+    @apply rounded-xl bg-card text-card-foreground;
+    box-shadow: 0 0 0 1px rgb(var(--border) / 0.6);
+  }
+  /* Missed-day hatch used in compliance strips */
+  .hatch-missed {
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgb(var(--destructive)) 0 3px,
+      transparent 3px 6px
+    );
+    box-shadow: inset 0 0 0 1px rgb(var(--destructive));
   }
 }
 
@@ -130,17 +194,17 @@ input[type='range']::-webkit-slider-thumb {
   height: 22px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.4), 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 0 0 2px rgb(var(--foreground)), 0 1px 3px rgba(0,0,0,0.15);
   cursor: pointer;
   transition: box-shadow 0.2s;
 }
 input[type='range']::-webkit-slider-thumb:hover {
-  box-shadow: 0 0 0 5px rgba(59,130,246,0.2), 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 0 0 4px rgb(var(--foreground) / 0.15), 0 1px 3px rgba(0,0,0,0.15);
 }
 input[type='range']::-moz-range-thumb {
   width: 22px; height: 22px; border-radius: 50%;
   background: #fff; cursor: pointer; border: none;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.4);
+  box-shadow: 0 0 0 2px rgb(var(--foreground));
 }
 
 /* Touch tap feedback */
@@ -153,10 +217,10 @@ input[type='range']::-moz-range-thumb {
     min-height: 44px;
     min-width: 44px;
   }
+  /* Opt out of the 44px minimum for controls that are sized explicitly. */
   button.touch-compact, a.touch-compact {
     min-height: unset;
     min-width: unset;
-    padding: 10px;
   }
 }
 
@@ -167,6 +231,9 @@ input[type='range']::-moz-range-thumb {
     --tc-accent: rgb(var(--accent));
     --tc-accent-foreground: rgb(var(--accent-foreground));
     --tc-ai: rgb(var(--ai));
+    --tc-brand: rgb(var(--brand));
+    --tc-brand-foreground: rgb(var(--brand-foreground));
+    --tc-brand-soft: rgb(var(--brand-soft));
     --tc-background: rgb(var(--background));
     --tc-border: rgb(var(--border));
     --tc-card: rgb(var(--card));

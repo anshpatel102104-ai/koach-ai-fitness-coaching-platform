@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Initials } from '@/components/kit';
+import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 export default function ClientPickerStep({ selectedClients, onSelectClients, allClients }) {
@@ -14,8 +13,8 @@ export default function ClientPickerStep({ selectedClients, onSelectClients, all
       .filter((client) => {
         const query = searchQuery.toLowerCase();
         return (
-          client.name.toLowerCase().includes(query) ||
-          client.email.toLowerCase().includes(query)
+          (client.name || '').toLowerCase().includes(query) ||
+          (client.email || '').toLowerCase().includes(query)
         );
       })
       .sort((a, b) => {
@@ -25,7 +24,7 @@ export default function ClientPickerStep({ selectedClients, onSelectClients, all
         if (aHasProgram !== bHasProgram) {
           return aHasProgram ? 1 : -1;
         }
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       });
   }, [allClients, searchQuery]);
 
@@ -46,92 +45,63 @@ export default function ClientPickerStep({ selectedClients, onSelectClients, all
   };
 
   return (
-    <div className="space-y-4">
-      {/* Search */}
-      <Input
-        placeholder="Search by name or email..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="h-9"
-      />
+    <div className="space-y-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          placeholder="Name or email"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-10 w-full rounded-lg bg-secondary pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
 
-      {/* Select All */}
       {filteredClients.length > 0 && (
-        <label className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-secondary cursor-pointer transition-colors">
+        <label className="flex cursor-pointer items-center gap-3 px-1 py-1.5 text-sm">
           <Checkbox
             checked={selectedClients.length === filteredClients.length && filteredClients.length > 0}
             onCheckedChange={toggleAll}
           />
-          <span className="text-sm font-medium">
+          <span className="font-medium text-foreground">
             Select all {filteredClients.length} client{filteredClients.length !== 1 ? 's' : ''}
           </span>
+          {selectedClients.length > 0 && (
+            <span className="ml-auto text-[13px] text-muted-foreground">{selectedClients.length} selected</span>
+          )}
         </label>
       )}
 
-      {/* Client List */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="max-h-96 overflow-y-auto rounded-xl border border-border">
         {filteredClients.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">No clients found</p>
-          </div>
+          <p className="px-4 py-8 text-sm text-muted-foreground">No clients match that search.</p>
         ) : (
           filteredClients.map((client) => {
             const isSelected = selectedClients.includes(client.id);
             const hasProgram = !!client.assigned_program_id;
 
             return (
-              <motion.label
+              <label
                 key={client.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                  isSelected
-                    ? 'border-primary bg-primary/5'
-                    : hasProgram
-                    ? 'border-warning bg-warning/10'
-                    : 'border-border hover:bg-secondary'
-                }`}
-              >
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => toggleClient(client.id)}
-                />
-
-                <Avatar className="h-8 w-8">
-                  {client.avatar_url && <SignedImg src={client.avatar_url} alt={client.name} />}
-                  <AvatarFallback>{client.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{client.name}</p>
-                  {hasProgram ? (
-                    <p className="text-xs text-muted-foreground">Currently on: {client.assigned_program_id}</p>
-                  ) : (
-                    <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">
-                      No program assigned
-                    </span>
-                  )}
-                </div>
-
-                {hasProgram && (
-                  <div className="flex-shrink-0 flex items-center gap-1 text-warning">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-xs font-medium">Has program</span>
-                  </div>
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 border-b border-border px-3 py-2.5 transition-colors last:border-b-0',
+                  isSelected ? 'bg-accent' : 'hover:bg-accent/50'
                 )}
-              </motion.label>
+              >
+                <Checkbox checked={isSelected} onCheckedChange={() => toggleClient(client.id)} />
+                {client.avatar_url
+                  ? <SignedImg src={client.avatar_url} alt={client.name} className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
+                  : <Initials name={client.name} size={32} />}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[15px] font-semibold text-foreground">{client.name}</p>
+                  <p className={cn('truncate text-[13px]', hasProgram ? 'text-warning' : 'text-muted-foreground')}>
+                    {hasProgram ? 'On another program. This replaces it.' : 'No program yet'}
+                  </p>
+                </div>
+              </label>
             );
           })
         )}
       </div>
-
-      {selectedClients.length > 0 && (
-        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-          <p className="text-sm font-medium text-primary">
-            {selectedClients.length} client{selectedClients.length !== 1 ? 's' : ''} selected
-          </p>
-        </div>
-      )}
     </div>
   );
 }

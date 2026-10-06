@@ -1,103 +1,76 @@
 import React from 'react';
 import { averageAdherenceScore, calculateStreak, detectEarnedBadges, checkInScore } from '@/lib/adherence';
-import { Flame, Moon, Dumbbell, Salad, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AdherenceScore from './AdherenceScore';
 import BadgeRow from './BadgeRow';
 
-function MetricBar({ label, value, icon: Icon, color }) {
+const tone = (v) => v >= 75 ? 'bg-success' : v >= 50 ? 'bg-partial' : 'bg-destructive';
+
+function MetricBar({ label, value, display, pct, toneValue }) {
   if (value == null) return null;
+  const width = pct ?? Math.min(100, value);
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5 text-foreground">
-          <Icon className={cn('w-3.5 h-3.5', color)} />
-          <span>{label}</span>
-        </div>
-        <span className="font-medium">{value}%</span>
+    <div className="flex items-center gap-3">
+      <span className="w-16 flex-shrink-0 text-[13px] text-muted-foreground">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+        <div className={cn('h-full rounded-full', tone(toneValue ?? pct ?? value))} style={{ width: `${width}%` }} />
       </div>
-      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-        <div
-          className={cn('h-full rounded-full transition-all', value >= 75 ? 'bg-success' : value >= 50 ? 'bg-warning' : 'bg-destructive')}
-          style={{ width: `${Math.min(100, value)}%` }}
-        />
-      </div>
+      <span className="w-10 text-right text-[13px] font-semibold tabular-nums text-foreground">{display ?? `${value}%`}</span>
     </div>
   );
 }
 
-function ScoreTrend({ checkIns }) {
+function trendText(checkIns) {
   const scores = checkIns.slice(0, 4).map(checkInScore).filter(s => s !== null);
   if (scores.length < 2) return null;
   const diff = scores[0] - scores[scores.length - 1];
-  if (Math.abs(diff) < 3) return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
+  if (Math.abs(diff) < 3) return { text: 'Holding steady', cls: 'text-muted-foreground' };
   return diff > 0
-    ? <TrendingUp className="w-3.5 h-3.5 text-success" />
-    : <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
+    ? { text: `Up ${diff} pts`, cls: 'text-success' }
+    : { text: `Down ${Math.abs(diff)} pts`, cls: 'text-destructive' };
 }
 
+/** Per-client adherence summary: score, streak, latest check-in bars, badges. */
 export default function AdherencePanel({ client, checkIns, badges = [] }) {
   const score = averageAdherenceScore(checkIns, 4);
   const streak = calculateStreak(checkIns);
   const autoEarned = detectEarnedBadges(checkIns);
   const allBadgeKeys = [...new Set([...badges.map(b => b.badge_key), ...autoEarned])];
   const latest = checkIns[0];
-
-  const isAlert = score !== null && score < 50;
+  const trend = trendText(checkIns);
 
   return (
-    <div className={cn(
-      'rounded-xl border p-4 space-y-4',
-      isAlert ? 'bg-destructive/10 border-destructive' : 'bg-card border-border'
-    )}>
-      {/* Top row: score + streak + trend */}
+    <div className="space-y-4" data-client={client?.id}>
       <div className="flex items-center gap-4">
-        <AdherenceScore score={score} size="md" />
-        <div className="flex-1 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold">Adherence Score</span>
-            <ScoreTrend checkIns={checkIns} />
-            {isAlert && (
-              <span className="text-xs text-destructive font-medium bg-destructive/10 px-2 py-0.5 rounded-full">⚠ Alert</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-foreground">
-            <div className="flex items-center gap-1">
-              <Flame className="w-3.5 h-3.5 text-orange-500" />
-              <span className="font-medium text-foreground">{streak}</span> check-in streak
-            </div>
-          </div>
+        <AdherenceScore score={score} size="md" showLabel={false} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold text-foreground">
+            {score === null ? 'No score yet' : score >= 80 ? 'On plan' : score >= 50 ? 'Partly on plan' : 'Off plan'}
+          </p>
+          <p className="text-[13px] text-muted-foreground">
+            {streak}-week streak{trend && <> · <span className={trend.cls}>{trend.text}</span></>}
+          </p>
         </div>
       </div>
 
-      {/* Metric bars */}
       {latest && (
-        <div className="space-y-2.5">
-          <MetricBar label="Training" value={latest.compliance_training} icon={Dumbbell} color="text-primary" />
-          <MetricBar label="Nutrition" value={latest.compliance_nutrition} icon={Salad} color="text-accent" />
+        <div className="space-y-2">
+          <MetricBar label="Training" value={latest.compliance_training} />
+          <MetricBar label="Nutrition" value={latest.compliance_nutrition} />
           {latest.sleep_hours != null && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-foreground">
-                  <Moon className="w-3.5 h-3.5 text-ai" />
-                  <span>Sleep</span>
-                </div>
-                <span className="font-medium">{latest.sleep_hours}h</span>
-              </div>
-              <div className="h-1.5 bg-border rounded-full overflow-hidden">
-              <div
-                className={cn('h-full rounded-full', latest.sleep_hours >= 7 ? 'bg-success' : latest.sleep_hours >= 6 ? 'bg-warning' : 'bg-destructive')}
-                  style={{ width: `${Math.min(100, (latest.sleep_hours / 9) * 100)}%` }}
-                />
-              </div>
-            </div>
+            <MetricBar
+              label="Sleep"
+              value={latest.sleep_hours}
+              display={`${latest.sleep_hours}h`}
+              pct={Math.min(100, (latest.sleep_hours / 9) * 100)}
+              toneValue={latest.sleep_hours >= 7 ? 100 : latest.sleep_hours >= 6 ? 60 : 30}
+            />
           )}
         </div>
       )}
 
-      {/* Badges */}
       <div>
-        <p className="text-xs text-foreground mb-2 font-medium">Achievements</p>
+        <p className="mb-1.5 text-[13px] text-muted-foreground">Badges</p>
         <BadgeRow earnedKeys={allBadgeKeys} max={5} />
       </div>
     </div>

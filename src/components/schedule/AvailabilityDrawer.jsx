@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { X, Copy, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
@@ -128,157 +129,152 @@ export default function AvailabilityDrawer({ onClose, coachId }) {
   const dayBlocks = availability[selectedDay] || [];
   const isAvailable = (hour) => dayBlocks.some(b => b.start_time === `${String(hour).padStart(2, '0')}:00`);
 
-  return (
-    <motion.div
-      initial={{ x: 400 }}
-      animate={{ x: 0 }}
-      exit={{ x: 400 }}
-      className="fixed right-0 top-0 h-screen w-full sm:w-96 bg-card border-l border-border shadow-lg z-50 overflow-y-auto"
-    >
-      <div className="p-6 sticky top-0 bg-card border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Availability & Reminders</h2>
-        <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition">
-          <X className="w-5 h-5" />
+  const hourLabel = (h) => (h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? '12 pm' : `${h - 12} pm`);
+  const dayHours = dayBlocks.length;
+
+  const reminderRow = ({ label, hint, field, kind }) => (
+    <div key={field} className="py-3 border-b border-border last:border-b-0">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="text-[13px] text-muted-foreground mt-0.5">{hint}</p>
+        </div>
+        <Switch
+          checked={reminders[field]}
+          onCheckedChange={v => setReminders(prev => ({ ...prev, [field]: v }))}
+        />
+      </div>
+      {reminders[field] && (
+        <button onClick={() => setEditingReminder(kind)} className="touch-compact mt-1.5 text-[13px] font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+          Edit message
         </button>
-      </div>
+      )}
+    </div>
+  );
 
-      <div className="p-6 space-y-6">
-        {/* Timezone */}
-        <div>
-          <Label className="mb-2 block">Timezone</Label>
-          <Select value={timezone} onValueChange={setTimezone}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
-            </SelectContent>
-          </Select>
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} aria-hidden="true" />
+      <motion.div
+        initial={{ x: 400 }}
+        animate={{ x: 0 }}
+        exit={{ x: 400 }}
+        transition={{ type: 'tween', duration: 0.2 }}
+        className="fixed right-0 top-0 h-screen w-full sm:w-[420px] bg-card border-l border-border z-50 overflow-y-auto"
+        role="dialog"
+        aria-label="Availability and reminders"
+      >
+        <div className="px-6 pt-6 pb-4 sticky top-0 z-10 bg-card border-b border-border flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[22px] text-foreground">Availability</h2>
+            <p className="text-sm text-muted-foreground mt-1">When clients can book you, and the reminders they get.</p>
+          </div>
+          <button onClick={onClose} className="touch-compact p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Weekly Availability Grid */}
-        <div>
-          <Label className="mb-3 block">Weekly Availability</Label>
-          <div className="space-y-2 mb-4">
-            {DAYS.map((day, idx) => (
-              <button
-                key={idx}
-                onClick={() => setSelectedDay(idx)}
-                className={`w-full text-left px-3 py-2 rounded-lg transition ${
-                  selectedDay === idx ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-[var(--kc-eaecf5)]'
-                }`}
-              >
-                {day}
-              </button>
-            ))}
+        <div className="px-6 py-5 space-y-7">
+          {/* Timezone */}
+          <div className="space-y-1.5">
+            <Label>Time zone</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz.replace(/_/g, ' ')}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-1 mb-4 max-h-48 overflow-y-auto border border-border rounded-lg p-2">
-            {HOURS.map((hour, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleToggleBlock(idx)}
-                className={`w-full text-left px-2 py-1 rounded text-sm transition ${
-                  isAvailable(idx) ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {hour} - {HOURS[idx + 1] || '24:00'}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleCopyToWeekdays} className="flex-1">
-              <Copy className="w-4 h-4 mr-1" /> Copy to Weekdays
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleClearAll} className="flex-1">
-              <Trash2 className="w-4 h-4 mr-1" /> Clear All
-            </Button>
-          </div>
-        </div>
-
-        {/* Buffer Time */}
-        <div>
-          <Label className="mb-2 block">Buffer Between Sessions</Label>
-          <Select value={String(bufferMinutes)} onValueChange={v => setBufferMinutes(Number(v))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">No buffer</SelectItem>
-              <SelectItem value="5">5 minutes</SelectItem>
-              <SelectItem value="10">10 minutes</SelectItem>
-              <SelectItem value="15">15 minutes</SelectItem>
-              <SelectItem value="30">30 minutes</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Reminders */}
-        <div className="border-t pt-4">
-          <h3 className="font-semibold mb-3">Automated Reminders</h3>
-          
-          <div className="space-y-3">
-            {/* 24h Reminder */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm">24h before</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">Day before reminder</p>
-              </div>
-              <Switch
-                checked={reminders.reminder_24h_enabled}
-                onCheckedChange={v => setReminders(prev => ({ ...prev, reminder_24h_enabled: v }))}
-              />
+          {/* Weekly availability */}
+          <div>
+            <div className="flex items-baseline justify-between mb-2">
+              <Label>Weekly hours</Label>
+              <span className="text-[13px] text-muted-foreground">{DAYS[selectedDay]}: {dayHours} {dayHours === 1 ? 'hour' : 'hours'} open</span>
             </div>
-            {reminders.reminder_24h_enabled && (
-              <button onClick={() => setEditingReminder('24h')} className="text-xs text-primary hover:underline ml-0">
-                Edit message
-              </button>
-            )}
-
-            {/* 1h Reminder */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm">1 hour before</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">Hour before reminder</p>
-              </div>
-              <Switch
-                checked={reminders.reminder_1h_enabled}
-                onCheckedChange={v => setReminders(prev => ({ ...prev, reminder_1h_enabled: v }))}
-              />
+            <div className="grid grid-cols-7 gap-1 mb-3">
+              {DAYS.map((day, idx) => {
+                const has = (availability[idx] || []).length > 0;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedDay(idx)}
+                    className={cn(
+                      'touch-compact h-12 rounded-md text-[13px] font-medium transition-colors flex flex-col items-center justify-center gap-0.5',
+                      selectedDay === idx ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground hover:bg-accent'
+                    )}
+                  >
+                    {day.slice(0, 3)}
+                    <span className={cn('h-1 w-1 rounded-full', has ? (selectedDay === idx ? 'bg-primary-foreground' : 'bg-foreground') : 'bg-transparent')} />
+                  </button>
+                );
+              })}
             </div>
-            {reminders.reminder_1h_enabled && (
-              <button onClick={() => setEditingReminder('1h')} className="text-xs text-primary hover:underline ml-0">
-                Edit message
-              </button>
-            )}
 
-            {/* No-show Follow-up */}
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm">No-show follow-up</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">After 30 min if marked no-show</p>
-              </div>
-              <Switch
-                checked={reminders.noshow_enabled}
-                onCheckedChange={v => setReminders(prev => ({ ...prev, noshow_enabled: v }))}
-              />
+            <p className="text-[13px] text-muted-foreground mb-2">Tap the hours you take sessions.</p>
+            <div className="grid grid-cols-4 gap-1 mb-3 max-h-56 overflow-y-auto pr-1">
+              {HOURS.map((hour, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleToggleBlock(idx)}
+                  aria-pressed={isAvailable(idx)}
+                  className={cn(
+                    'touch-compact h-9 rounded-md text-[13px] tabular-nums transition-colors',
+                    isAvailable(idx) ? 'bg-primary text-primary-foreground font-semibold' : 'bg-secondary text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {hourLabel(idx)}
+                </button>
+              ))}
             </div>
-            {reminders.noshow_enabled && (
-              <button onClick={() => setEditingReminder('noshow')} className="text-xs text-primary hover:underline ml-0">
-                Edit message
-              </button>
-            )}
+
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleCopyToWeekdays} className="flex-1">
+                <Copy /> Copy to weekdays
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleClearAll} className="flex-1">
+                <Trash2 /> Clear all
+              </Button>
+            </div>
+          </div>
+
+          {/* Buffer Time */}
+          <div className="space-y-1.5">
+            <Label>Gap between sessions</Label>
+            <Select value={String(bufferMinutes)} onValueChange={v => setBufferMinutes(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">No gap</SelectItem>
+                <SelectItem value="5">5 minutes</SelectItem>
+                <SelectItem value="10">10 minutes</SelectItem>
+                <SelectItem value="15">15 minutes</SelectItem>
+                <SelectItem value="30">30 minutes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reminders */}
+          <div>
+            <h3 className="text-lg text-foreground mb-1">Reminders</h3>
+            <p className="text-[13px] text-muted-foreground mb-1">Sent to the client automatically.</p>
+            {reminderRow({ label: "A day before", hint: "24 hours ahead of the session", field: "reminder_24h_enabled", kind: "24h" })}
+            {reminderRow({ label: "An hour before", hint: "60 minutes ahead", field: "reminder_1h_enabled", kind: "1h" })}
+            {reminderRow({ label: "No-show follow-up", hint: "30 minutes after a session marked no-show", field: "noshow_enabled", kind: "noshow" })}
           </div>
         </div>
 
-        {/* Save Button */}
-        <Button
-          onClick={async () => {
-            await Promise.all([saveAvailability(), saveBuffer(), saveReminders()]);
-            onClose();
-          }}
-          className="w-full"
-        >
-          Save Settings
-        </Button>
-      </div>
-    </motion.div>
+        <div className="sticky bottom-0 bg-card border-t border-border px-6 py-4">
+          <Button
+            onClick={async () => {
+              await Promise.all([saveAvailability(), saveBuffer(), saveReminders()]);
+              onClose();
+            }}
+            className="w-full"
+          >
+            Save availability
+          </Button>
+        </div>
+      </motion.div>
+    </>
   );
 }

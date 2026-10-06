@@ -25,7 +25,7 @@ export default function ImportStep3Review({ headers, rows, mapping, existingEmai
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
     { key: 'status', label: 'Status' },
-    { key: 'start_date', label: 'Start Date' },
+    { key: 'start_date', label: 'Start date' },
     { key: 'tags', label: 'Tags' },
   ].filter(f => reverseMap[f.key]);
 
@@ -40,7 +40,7 @@ export default function ImportStep3Review({ headers, rows, mapping, existingEmai
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-foreground">Preview import</h3>
+          <h3 className="text-[18px] text-foreground">Preview import</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Showing first {Math.min(PREVIEW_COUNT, rows.length)} of {rows.length} clients.
             Review before confirming.
@@ -67,13 +67,13 @@ export default function ImportStep3Review({ headers, rows, mapping, existingEmai
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-muted border-b border-border">
-                <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">#</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap">#</th>
                 {DISPLAY_FIELDS.map(f => (
-                  <th key={f.key} className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                  <th key={f.key} className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap">
                     {f.label}
                   </th>
                 ))}
-                <th className="text-left px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-muted">
@@ -99,11 +99,11 @@ export default function ImportStep3Review({ headers, rows, mapping, existingEmai
                     })}
                     <td className="px-3 py-2">
                       {isDuplicate ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-[10px] font-semibold border border-warning whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/10 text-warning text-[11px] font-semibold border border-warning whitespace-nowrap">
                           Skip (dup)
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-semibold border border-success whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-semibold border border-success whitespace-nowrap">
                           Import
                         </span>
                       )}

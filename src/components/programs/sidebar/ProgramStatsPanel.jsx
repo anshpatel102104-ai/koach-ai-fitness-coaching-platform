@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, Gauge, Users } from 'lucide-react';
+import { Panel, PanelHeader, Stat } from '@/components/kit';
 
 export default function ProgramStatsPanel({ stats = {} }) {
   const {
@@ -12,56 +12,21 @@ export default function ProgramStatsPanel({ stats = {} }) {
   } = stats;
 
   return (
-    <div>
-      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">
-        Program Stats
-      </h3>
-
-      {/* Two metric cards side by side */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
-        <div className="rounded-xl border border-border bg-card p-3 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Users className="w-3.5 h-3.5" style={{ color: 'var(--tc-primary)' }} />
-          </div>
-          <p className="text-xl font-bold text-foreground">{assignedCount}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Assigned</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-3 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <TrendingUp className="w-3.5 h-3.5" style={{ color: 'var(--tc-primary)' }} />
-          </div>
-          <p className="text-xl font-bold text-foreground">
-            {completionRate != null ? `${completionRate}%` : '—'}
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Completion</p>
-        </div>
-      </div>
-
-      {/* Sessions logged — real data, honest empty state */}
-      <div className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--tc-accent)' }}>
-          <Gauge className="w-4 h-4" style={{ color: 'var(--kc-3730a3)' }} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Sessions Logged</p>
-          {loaded && totalSessions === 0 ? (
-            <p className="text-sm font-semibold text-muted-foreground">No sessions yet</p>
-          ) : (
-            <p className="text-sm font-bold text-foreground">
-              {completedSessions}
-              <span className="text-xs font-normal text-muted-foreground ml-1">/ {totalSessions} completed</span>
-            </p>
-          )}
-        </div>
+    <Panel>
+      <PanelHeader title="How it's going" className="sm:px-5 sm:pt-5" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-5 px-5 pb-5">
+        <Stat label="Assigned" value={assignedCount} size="sm" />
+        <Stat label="Sessions done" value={completionRate != null ? `${completionRate}%` : '—'} size="sm" />
+        <Stat
+          label="Sessions logged"
+          value={loaded && totalSessions === 0 ? '0' : completedSessions}
+          sub={loaded && totalSessions === 0 ? 'None logged yet' : `of ${totalSessions} due`}
+          size="sm"
+        />
         {avgDifficulty != null && (
-          <div className="ml-auto text-right">
-            <p className="text-[10px] text-muted-foreground">Avg difficulty</p>
-            <p className="text-sm font-bold text-foreground">
-              {avgDifficulty}<span className="text-xs font-normal text-muted-foreground"> / 10</span>
-            </p>
-          </div>
+          <Stat label="Felt like" value={avgDifficulty} unit="/ 10" size="sm" />
         )}
       </div>
-    </div>
+    </Panel>
   );
 }

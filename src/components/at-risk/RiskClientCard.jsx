@@ -1,326 +1,280 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { differenceInDays, parseISO, format } from 'date-fns';
-import {
-  ChevronDown, ChevronUp, MessageSquare, User, Calendar, CheckSquare,
-  Sparkles, ArrowUp, Loader2
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { averageAdherenceScore, checkInScore } from '@/lib/adherence';
-import { SEVERITY_CONFIG, FLAG_ICONS } from '@/lib/riskEngine';
-import { getRiskLevel } from './RiskBreakdown';
+import { differenceInDays, format, parseISO } from 'date-fns';
+import { Check, ChevronDown, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { db } from '@/api/supabaseClient';
+import { averageAdherenceScore, checkInScore } from '@/lib/adherence';
+import { Initials, ComplianceStrip } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { describeFlag, weeklyCompliance } from '@/components/dashboard/todayModel';
+import { inkPrimaryBtn, inkOutlineBtn } from '@/components/dashboard/AIInsightsFeed';
+import { riskLevel, RISK_LEVELS } from './RiskBreakdown';
 
-const RISK_LEVEL_STYLES = {
-  critical: { dot: 'bg-destructive', badge: 'bg-destructive/10 text-destructive border-destructive', border: 'border-destructive ring-1 ring-destructive', label: 'Critical' },
-  moderate: { dot: 'bg-warning', badge: 'bg-warning/10 text-warning border-warning', border: 'border-warning', label: 'Moderate' },
-  watch:    { dot: 'bg-primary',  badge: 'bg-accent text-primary border-primary',   border: 'border-primary',  label: 'Watch' },
-};
+const SEVERITY_TEXT = { high: 'text-destructive', medium: 'text-warning', low: 'text-muted-foreground' };
+const SEVERITY_LABEL = { high: 'High', medium: 'Medium', low: 'Low' };
 
-const RECOMMENDED_ACTIONS = {
-  missed_checkin: '📋 Send check-in reminder',
-  low_adherence:  '📞 Schedule a call',
-  low_nutrition:  '🥗 Review nutrition plan',
-  missed_workouts:'💪 Adjust workout program',
-  negative_notes: '💬 Personal check-in message',
-  mood_low:       '❤️ Wellness check-in',
-  declining_trend:'📊 Review program difficulty',
-  no_progress:    '⚖️ Reassess goals & plan',
-  low_sleep:      '😴 Sleep coaching session',
-};
+function recommendedAction(flags, lastMsgDays) {
+  if (lastMsgDays === null || lastMsgDays > 5) return 'Send a check-in message';
+  const top = flags[0];
+  if (top?.key === 'missed_checkin') return 'Ask for their check-in';
+  if (top?.key === 'low_adherence' || top?.key === 'missed_workouts') return 'Book a call';
+  if (top?.key === 'mood_low' || top?.key === 'negative_notes') return 'Send a personal note';
+  return 'Review their program';
+}
 
-export default function RiskClientCard({ entry, lastMessages, selected, onToggleSelect, onResolve }) {
-  const { client, flags, riskScore, clientCheckIns } = entry;
-  const [expanded, setExpanded] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState(null);
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [coachNote, setCoachNote] = useState('');
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+/** Drafts an intervention plan with the AI. Ink panel; coach edits before sending. */
+function AIInterventionPanel({ entry, client, onClose, onSend }) {
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState(null);
+  const [message, setMessage] = useState('');
 
-  const riskLevel = getRiskLevel(flags.length);
-  const styles = RISK_LEVEL_STYLES[riskLevel];
-
-  const avgScore = averageAdherenceScore(clientCheckIns, 3);
-  const lastMsg = lastMessages.filter(m => m.client_id === client.id)
-    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))[0];
-  const daysNoMsg = lastMsg ? differenceInDays(new Date(), parseISO(lastMsg.created_date)) : null;
-  const lastCheckIn = clientCheckIns[0];
-  const daysNoCheckIn = lastCheckIn ? differenceInDays(new Date(), parseISO(lastCheckIn.date)) : null;
-
-  const topFlag = flags[0];
-  const recommendedAction = RECOMMENDED_ACTIONS[topFlag?.key] || '💬 Check in with client';
-
-  const messageMutation = useMutation({
-    mutationFn: (content) => db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages'] }); toast.success('Message sent!'); },
-  });
-
-  const updateClientMutation = useMutation({
-    mutationFn: (data) => db.entities.Client.update(client.id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['clients'] }); },
-  });
-
-  const handleAISuggest = async () => {
-    setLoadingAI(true);
+  const generate = async () => {
+    setLoading(true);
+    const flagSummary = entry.flags.map(f => f.label + (f.detail ? `: ${f.detail}` : '')).join(', ');
     try {
-      const factStr = flags.map(f => f.label + (f.detail ? ': ' + f.detail : '')).join('; ');
       const res = await db.functions.invoke('aiBusinessInsights', {
         action: 'interventionPlan',
         clientName: client.name,
-        riskFactors: factStr,
+        riskFactors: flagSummary,
         goal: client.goal,
-        avgAdherence: avgScore,
+        riskScore: entry.riskScore,
       });
-      setAiSuggestion(res.data);
-    } catch { toast.error('AI suggestion failed'); }
-    setLoadingAI(false);
+      setPlan(res.data);
+      setMessage(res.data?.message_script || '');
+    } catch { toast.error('Couldn\'t draft a plan. Try again in a moment.'); }
+    setLoading(false);
   };
 
-  const handleSendAIMessage = () => {
-    if (!aiSuggestion?.message_script) return;
-    messageMutation.mutate(aiSuggestion.message_script);
-    setAiSuggestion(null);
-  };
-
-  const handleMarkImproving = () => {
-    updateClientMutation.mutate({ lifecycle_status: 'active' });
-    toast.success(`${client.name} marked as improving`);
-    onResolve(client.id);
-  };
-
-  const handleMarkResolved = () => {
-    updateClientMutation.mutate({ lifecycle_status: 'active' });
-    toast.success(`${client.name} resolved from at-risk`);
-    onResolve(client.id);
-  };
-
-  const handleEscalate = () => {
-    updateClientMutation.mutate({ lifecycle_status: 'at_risk', lifecycle_notes: 'Escalated: ' + flags.map(f => f.label).join(', ') });
-    toast.warning(`${client.name} escalated to critical`);
-  };
+  const first = client.name?.split(' ')[0] || 'them';
 
   return (
-    <div className={cn('bg-card border-2 rounded-xl overflow-hidden transition-all', styles.border)}>
-      {/* Card header */}
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Checkbox */}
-          <input type="checkbox" checked={selected} onChange={onToggleSelect}
-            className="mt-1 w-4 h-4 rounded accent-primary flex-shrink-0" onClick={e => e.stopPropagation()} />
-
-          {/* Avatar with pulsing dot */}
-          <div className="relative flex-shrink-0">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-              style={{ background: 'linear-gradient(135deg, var(--tc-sidebar), var(--tc-sidebar-accent))' }}>
-              {client.name?.[0]?.toUpperCase()}
-            </div>
-            <div className={cn('absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white animate-pulse', styles.dot)} />
-          </div>
-
-          {/* Client info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-sm text-foreground">{client.name}</span>
-              <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full border', styles.badge)}>
-                {styles.label}
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {client.goal?.replace(/_/g, ' ') || 'General fitness'}
-              {daysNoCheckIn !== null && ` · No check-in: ${daysNoCheckIn}d`}
-            </p>
-            {/* Risk factors summary */}
-            <p className="text-[10px] text-foreground mt-1 leading-relaxed">
-              {flags.slice(0, 3).map(f => f.detail || f.label).join(' · ')}
-              {flags.length > 3 && ` · +${flags.length - 3} more`}
-            </p>
-          </div>
-
-          {/* Score + expand */}
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            {avgScore !== null && (
-              <span className={cn('text-sm font-bold', avgScore >= 80 ? 'text-success' : avgScore >= 50 ? 'text-warning' : 'text-destructive')}>
-                {avgScore}%
-              </span>
-            )}
-            <button onClick={() => setExpanded(e => !e)}
-              className="p-1 rounded hover:bg-muted transition-colors">
-              {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Info row */}
-        <div className="flex flex-wrap gap-3 mt-3 text-[10px] text-muted-foreground">
-          {daysNoMsg !== null && (
-            <span className={cn(daysNoMsg > 7 ? 'text-destructive' : '')}>
-              Last contact: {daysNoMsg}d ago
-            </span>
-          )}
-          {client.lifecycle_status === 'at_risk' && (
-            <span className="text-orange-500">Manually flagged</span>
-          )}
-        </div>
-
-        {/* Recommended action + quick buttons */}
-        <div className="flex flex-wrap items-center gap-2 mt-3">
-          <span className="text-[10px] bg-muted px-2 py-1 rounded-full text-foreground font-medium flex-shrink-0">
-            {recommendedAction}
-          </span>
-        </div>
-        <div className="flex gap-2 mt-2 flex-wrap">
-          <button onClick={() => navigate(`/messages?clientId=${client.id}`)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold bg-accent border border-primary text-primary hover:bg-accent">
-            <MessageSquare className="w-3 h-3" /> Message
-          </button>
-          <button onClick={() => navigate(`/schedule?clientId=${client.id}`)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-border text-foreground hover:bg-background">
-            <Calendar className="w-3 h-3" /> Schedule Call
-          </button>
-          <button onClick={() => navigate(`/client-profile?clientId=${client.id}`)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-border text-foreground hover:bg-background">
-            <User className="w-3 h-3" /> Profile
-          </button>
-          <button onClick={handleMarkResolved}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-success bg-success/10 text-success hover:bg-success/10">
-            <CheckSquare className="w-3 h-3" /> Resolve
-          </button>
-          <button onClick={handleAISuggest} disabled={loadingAI}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border border-ai bg-ai/10 text-ai hover:bg-ai/10 disabled:opacity-50 ml-auto">
-            {loadingAI ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-            ✨ AI Suggest
-          </button>
-        </div>
-
-        {/* AI Suggestion panel */}
-        {aiSuggestion && (
-          <div className="mt-3 p-3 rounded-xl border border-ai bg-ai/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-ai uppercase tracking-wide">AI Intervention Plan</span>
-              <button onClick={() => setAiSuggestion(null)} className="text-[10px] text-ai hover:text-ai">✕</button>
-            </div>
-            <div className="space-y-1.5 text-[10px] text-foreground">
-              <div><span className="font-semibold">Immediate:</span> {aiSuggestion.immediate_action}</div>
-              {aiSuggestion.program_adjustment && <div><span className="font-semibold">Program:</span> {aiSuggestion.program_adjustment}</div>}
-              <div><span className="font-semibold">Follow-up:</span> {aiSuggestion.followup}</div>
-            </div>
-            <div className="border border-ai rounded-lg p-2 bg-card">
-              <p className="text-[10px] font-semibold text-ai mb-1">Suggested Message:</p>
-              <textarea defaultValue={aiSuggestion.message_script} rows={2}
-                className="w-full text-[10px] resize-none focus:outline-none bg-transparent text-foreground"
-                onChange={e => setAiSuggestion({ ...aiSuggestion, message_script: e.target.value })} />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={handleSendAIMessage}
-                className="flex-1 py-1.5 rounded-lg text-[10px] font-semibold bg-ai text-ai-foreground hover:bg-ai">
-                Send Message
-              </button>
-              <button onClick={() => setAiSuggestion(null)}
-                className="px-3 py-1.5 rounded-lg text-[10px] font-semibold border border-ai text-ai">
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
+    <div className="rounded-xl bg-ai p-5 text-ai-foreground">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-[18px]">Plan for {first}</h3>
+        <button onClick={onClose} className="text-[13px] text-ai-foreground/60 underline-offset-4 hover:text-ai-foreground hover:underline">Close</button>
       </div>
-
-      {/* Expanded detail */}
-      {expanded && (
-        <div className="border-t border-muted px-4 pb-4 pt-3 space-y-4 bg-background">
-          {/* All risk flags */}
+      {!plan ? (
+        <>
+          <p className="mt-2 text-sm leading-relaxed text-ai-foreground/80">
+            The AI reads {first}&apos;s {entry.flags.length} risk factor{entry.flags.length === 1 ? '' : 's'} and drafts a first step, a message and a program change. You edit anything before it goes out.
+          </p>
+          <button onClick={generate} disabled={loading} className={cn(inkPrimaryBtn, 'mt-4 disabled:opacity-60')}>
+            {loading ? 'Drafting…' : 'Draft a plan'}
+          </button>
+        </>
+      ) : (
+        <div className="mt-3 space-y-4 text-sm">
           <div>
-            <p className="text-[10px] font-bold text-foreground uppercase tracking-wide mb-2">Risk Factors</p>
-            <div className="space-y-1.5">
-              {flags.map(f => (
-                <div key={f.key} className={cn('flex items-start gap-2 px-3 py-2 rounded-lg border text-[10px]', SEVERITY_CONFIG[f.severity].color)}>
-                  <span className="flex-shrink-0">{FLAG_ICONS[f.icon] || '⚠️'}</span>
-                  <div><span className="font-semibold">{f.label}</span>{f.detail && <span className="ml-1 opacity-70">— {f.detail}</span>}</div>
-                </div>
-              ))}
+            <p className="text-[13px] text-ai-foreground/60">First step</p>
+            <p className="mt-0.5 leading-relaxed">{plan.immediate_action}</p>
+          </div>
+          <div>
+            <p className="text-[13px] text-ai-foreground/60">Message, drafted by AI. Edit before sending.</p>
+            <textarea
+              rows={3}
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              className="mt-1.5 w-full resize-none rounded-lg border border-ai-foreground/20 bg-ai-foreground/5 p-3 text-sm text-ai-foreground placeholder:text-ai-foreground/40 focus:outline-none focus:ring-1 focus:ring-ai-foreground/40"
+            />
+            <div className="mt-2 flex gap-2">
+              <button onClick={() => onSend(message)} className={inkPrimaryBtn}>Send to {first}</button>
+              <button onClick={generate} disabled={loading} className={inkOutlineBtn}>{loading ? 'Drafting…' : 'Redraft'}</button>
             </div>
           </div>
-
-          {/* Recent check-ins */}
-          {clientCheckIns.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold text-foreground uppercase tracking-wide mb-2">Recent Check-ins</p>
-              <div className="space-y-1.5">
-                {clientCheckIns.slice(0, 3).map((ci, i) => {
-                  const s = checkInScore(ci);
-                  return (
-                    <div key={i} className="flex items-center gap-2 text-[10px] bg-card border border-border rounded-lg px-3 py-1.5">
-                      <span className="text-muted-foreground w-16 flex-shrink-0">{format(parseISO(ci.date), 'MMM d')}</span>
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${s ?? 0}%`, background: s >= 80 ? 'var(--tc-success)' : s >= 50 ? 'var(--tc-warning)' : 'var(--tc-destructive)' }} />
-                      </div>
-                      <span className="font-semibold w-8 text-right">{s ?? '—'}{s !== null ? '%' : ''}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+          <div>
+            <p className="text-[13px] text-ai-foreground/60">Program change</p>
+            <p className="mt-0.5 leading-relaxed">{plan.program_adjustment}</p>
+          </div>
+          {plan.follow_up_timeline && (
+            <p className="border-t border-ai-foreground/15 pt-3 text-[13px] text-ai-foreground/70">Follow up: {plan.follow_up_timeline}</p>
           )}
-
-          {/* Adherence mini chart */}
-          {clientCheckIns.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold text-foreground uppercase tracking-wide mb-2">4-Week Trend</p>
-              <div className="bg-card border border-border rounded-lg p-3">
-                <MiniAdherenceChart checkIns={clientCheckIns} />
-              </div>
-            </div>
-          )}
-
-          {/* Coach note */}
-          <div>
-            <p className="text-[10px] font-bold text-foreground uppercase tracking-wide mb-1.5">Private Notes</p>
-            <textarea value={coachNote} onChange={e => setCoachNote(e.target.value)} rows={2}
-              placeholder="Add a private coaching note..."
-              className="w-full text-xs border border-border rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary bg-card" />
-          </div>
-
-          {/* Resolution options */}
-          <div>
-            <p className="text-[10px] font-bold text-foreground uppercase tracking-wide mb-2">Resolution</p>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={handleMarkImproving}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-success/10 border border-success text-success hover:bg-success/10">
-                <ArrowUp className="w-3 h-3" /> Mark as Improving
-              </button>
-              <button onClick={handleMarkResolved}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-accent border border-primary text-primary hover:bg-accent">
-                ✓ Mark as Resolved
-              </button>
-              <button onClick={handleEscalate}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-destructive/10 border border-destructive text-destructive hover:bg-destructive/10">
-                🚨 Escalate
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 }
 
-function MiniAdherenceChart({ checkIns }) {
-  const recent = checkIns.slice(0, 4).reverse();
-  if (!recent.length) return null;
+/**
+ * One at-risk client as a table row (Clients-list pattern): red-ring avatar,
+ * name + the main reason, 8-week compliance strip, adherence, actions.
+ * Expands to the full picture and the AI plan.
+ */
+export default function RiskClientCard({ entry, messages, onSendNudge, onResolve, selected, onSelect }) {
+  const [expanded, setExpanded] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+  const [notes, setNotes] = useState('');
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { client, flags, clientCheckIns } = entry;
+
+  const level = riskLevel(entry);
+  const levelCfg = RISK_LEVELS[level];
+  const clientMsgs = messages.filter(m => m.client_id === client.id).sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+  const lastMsg = clientMsgs[0];
+  const lastMsgDays = lastMsg ? differenceInDays(new Date(), parseISO(lastMsg.created_date)) : null;
+  const recommended = recommendedAction(flags, lastMsgDays);
+  const avgScore = averageAdherenceScore(clientCheckIns, 4);
+  const cells = weeklyCompliance(client, clientCheckIns, 8);
+
+  const updateClientMutation = useMutation({
+    mutationFn: ({ data }) => db.entities.Client.update(client.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Client status updated');
+    },
+  });
+
+  const sendMsgMutation = useMutation({
+    mutationFn: (content) => db.entities.Message.create({ client_id: client.id, client_name: client.name, sender: 'coach', content }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages'] }); toast.success(`Sent to ${client.name}`); },
+  });
+
   return (
-    <div className="flex items-end gap-1 h-10">
-      {recent.map((ci, i) => {
-        const score = checkInScore(ci) ?? 0;
-        const color = score >= 80 ? 'var(--tc-success)' : score >= 50 ? 'var(--tc-warning)' : 'var(--tc-destructive)';
-        return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full rounded-t" style={{ height: `${Math.max(4, score * 0.34)}px`, background: color }} />
-            <span className="text-[8px] text-muted-foreground">W{i + 1}</span>
+    <div className={cn('border-t border-border first:border-t-0', selected && 'bg-accent/50')}>
+      <div className="flex items-center gap-3 px-4 py-3.5 sm:px-6">
+        <button
+          onClick={() => onSelect(client.id)}
+          aria-pressed={selected}
+          aria-label={selected ? `Deselect ${client.name}` : `Select ${client.name}`}
+          className={cn('touch-compact flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded border-[1.5px] transition-colors',
+            selected ? 'border-primary bg-primary text-primary-foreground' : 'border-input hover:border-foreground')}
+        >
+          {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+        </button>
+
+        <button onClick={() => setExpanded(e => !e)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <Initials name={client.name} size={40} tone={level === 'watch' ? 'default' : 'alert'} />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline gap-2">
+              <span className="truncate text-[15px] font-semibold text-foreground">{client.name}</span>
+              <span className={cn('flex-shrink-0 text-[13px] font-semibold', levelCfg.text)}>{levelCfg.label}</span>
+            </span>
+            <span className="block truncate text-sm text-muted-foreground">
+              {describeFlag(flags[0], clientCheckIns)}
+              {flags.length > 1 && ` · ${flags.length - 1} more`}
+            </span>
+          </span>
+        </button>
+
+        <ComplianceStrip weeks={cells} size="sm" className="hidden md:flex" label={`${client.name}, last 8 weeks`} />
+
+        <span className="num w-12 flex-shrink-0 text-right text-[19px] text-foreground">
+          {avgScore !== null ? `${avgScore}%` : <span className="text-muted-foreground">—</span>}
+        </span>
+
+        <div className="hidden flex-shrink-0 items-center gap-1 sm:flex">
+          <Button size="sm" variant="outline" onClick={() => onSendNudge(client.id, client.name)}>
+            <MessageSquare /> Message
+          </Button>
+        </div>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Collapse' : 'Expand'}
+          className="touch-compact flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="grid grid-cols-1 gap-6 border-t border-border bg-background/60 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="min-w-0 space-y-5">
+            <div>
+              <p className="text-[13px] text-muted-foreground">Suggested next step</p>
+              <p className="mt-0.5 text-[15px] font-semibold text-foreground">{recommended}</p>
+              <p className="mt-0.5 text-[13px] text-muted-foreground">
+                {lastMsgDays === null ? 'No messages with them yet.' : lastMsgDays === 0 ? 'Last message today.' : `Last message ${lastMsgDays} day${lastMsgDays === 1 ? '' : 's'} ago.`}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => onSendNudge(client.id, client.name)}>Message {client.name?.split(' ')[0]}</Button>
+                <Button size="sm" variant="outline" onClick={() => navigate(`/schedule?clientId=${client.id}`)}>Book a call</Button>
+                <Button size="sm" variant="outline" onClick={() => navigate(`/client-profile?id=${client.id}`)}>Profile</Button>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-[13px] text-muted-foreground">Why they&apos;re flagged</p>
+              <ul>
+                {flags.map(f => (
+                  <li key={f.key} className="flex items-baseline justify-between gap-4 border-b border-border py-2 last:border-b-0">
+                    <span className="text-sm text-foreground">{describeFlag(f, clientCheckIns)}</span>
+                    <span className={cn('flex-shrink-0 text-[13px] font-semibold', SEVERITY_TEXT[f.severity])}>{SEVERITY_LABEL[f.severity] || f.severity}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="mb-2 text-[13px] text-muted-foreground">Last check-ins</p>
+              {clientCheckIns.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No check-ins on record.</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {clientCheckIns.slice(0, 3).map(ci => {
+                    const s = checkInScore(ci);
+                    return (
+                      <div key={ci.id || ci.date} className="rounded-lg bg-card px-3 py-2.5 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+                        <p className="text-[13px] text-muted-foreground">{format(parseISO(ci.date), 'MMM d')}</p>
+                        <p className={cn('num text-[20px]', s === null ? 'text-muted-foreground' : s >= 80 ? 'text-foreground' : s >= 50 ? 'text-warning' : 'text-destructive')}>{s ?? '—'}{s !== null && '%'}</p>
+                        <p className="text-[12px] leading-tight text-muted-foreground">
+                          {ci.compliance_training != null && <>Training {Math.round(ci.compliance_training)}%<br /></>}
+                          {ci.compliance_nutrition != null && <>Nutrition {Math.round(ci.compliance_nutrition)}%</>}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        );
-      })}
+
+          <div className="min-w-0 space-y-5">
+            {showAI ? (
+              <AIInterventionPanel
+                entry={entry}
+                client={client}
+                onClose={() => setShowAI(false)}
+                onSend={(msg) => { sendMsgMutation.mutate(msg); setShowAI(false); }}
+              />
+            ) : (
+              <div className="rounded-xl bg-ai p-5 text-ai-foreground">
+                <h3 className="text-[18px]">Need a plan?</h3>
+                <p className="mt-1.5 text-sm text-ai-foreground/80">Let the AI draft a first step and a message from {client.name?.split(' ')[0]}&apos;s data.</p>
+                <button onClick={() => setShowAI(true)} className={cn(inkPrimaryBtn, 'mt-4')}>Draft an intervention</button>
+              </div>
+            )}
+
+            <div>
+              <label htmlFor={`notes-${client.id}`} className="mb-1.5 block text-[13px] text-muted-foreground">Private notes</label>
+              <Textarea
+                id={`notes-${client.id}`}
+                rows={2}
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Only you see these"
+                className="resize-none bg-card"
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => { updateClientMutation.mutate({ data: { lifecycle_status: 'active' } }); toast.success('Marked as improving'); }}>
+                Improving
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { updateClientMutation.mutate({ data: { lifecycle_status: 'active' } }); onResolve(client.id); }}>
+                Resolved
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => { updateClientMutation.mutate({ data: { lifecycle_status: 'at_risk' } }); toast.success('Escalated'); }}>
+                Escalate
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

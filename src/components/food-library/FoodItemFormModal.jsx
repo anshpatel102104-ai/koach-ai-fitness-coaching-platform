@@ -38,15 +38,15 @@ function MacroBar({ protein, carbs, fats }) {
 
   return (
     <div className="space-y-1.5 mt-1">
-      <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5">
-        <div className="bg-primary rounded-full transition-all duration-300" style={{ width: `${pPct}%` }} />
-        <div className="bg-warning rounded-full transition-all duration-300" style={{ width: `${cPct}%` }} />
-        <div className="bg-destructive rounded-full transition-all duration-300" style={{ width: `${fPct}%` }} />
+      <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary">
+        <div className="bg-foreground transition-[width] duration-300" style={{ width: `${pPct}%` }} />
+        <div className="bg-muted-foreground/70 transition-[width] duration-300" style={{ width: `${cPct}%` }} />
+        <div className="bg-input transition-[width] duration-300" style={{ width: `${fPct}%` }} />
       </div>
-      <div className="flex justify-between text-[10px] font-semibold">
-        <span className="text-primary">P {pPct}%</span>
-        <span className="text-warning">C {cPct}%</span>
-        <span className="text-destructive">F {fPct}%</span>
+      <div className="flex justify-between text-[13px] text-muted-foreground tabular-nums">
+        <span>Protein {pPct}%</span>
+        <span>Carbs {cPct}%</span>
+        <span>Fat {fPct}%</span>
       </div>
     </div>
   );
@@ -78,21 +78,21 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
     setSaving(false);
   }
 
-  const labelClass = 'text-xs font-semibold text-foreground block mb-1';
+  const labelClass = 'text-sm font-semibold text-foreground block mb-1';
   const isEdit = !!food;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Food' : 'Add Food'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit food' : 'Add food'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
           {/* Name & Brand */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className={labelClass}>Name *</Label>
+              <Label className={labelClass}>Name</Label>
               <Input placeholder="e.g. Chicken Breast" value={form.name} onChange={e => set('name', e.target.value)} />
             </div>
             <div>
@@ -104,7 +104,7 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
           {/* Serving */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className={labelClass}>Serving Size</Label>
+              <Label className={labelClass}>Serving size</Label>
               <Input type="number" placeholder="100" value={form.serving_size} onChange={e => set('serving_size', e.target.value)} />
             </div>
             <div>
@@ -112,7 +112,7 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
               <select
                 value={form.serving_unit}
                 onChange={e => set('serving_unit', e.target.value)}
-                className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full h-9 rounded-lg border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
               </select>
@@ -128,10 +128,10 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
                   key={cat}
                   onClick={() => set('category', cat)}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
+                    'px-3 h-8 rounded-md text-[13px] font-medium border transition-colors',
                     form.category === cat
                       ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card border-border text-muted-foreground hover:border-primary/40'
+                      : 'bg-card border-input text-foreground hover:bg-accent'
                   )}
                 >
                   {cat}
@@ -145,13 +145,13 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
             <Label className={labelClass}>Macros per serving</Label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { field: 'calories', label: 'Calories', unit: 'kcal', color: 'text-orange-600' },
-                { field: 'protein',  label: 'Protein',  unit: 'g',    color: 'text-primary' },
-                { field: 'carbs',    label: 'Carbs',    unit: 'g',    color: 'text-warning' },
-                { field: 'fats',     label: 'Fats',     unit: 'g',    color: 'text-destructive' },
+                { field: 'calories', label: 'Calories', unit: 'kcal', color: '' },
+                { field: 'protein',  label: 'Protein',  unit: 'g',    color: '' },
+                { field: 'carbs',    label: 'Carbs',    unit: 'g',    color: '' },
+                { field: 'fats',     label: 'Fats',     unit: 'g',    color: '' },
               ].map(({ field, label, unit, color }) => (
                 <div key={field} className="text-center">
-                  <p className={cn('text-[10px] font-semibold mb-1', color)}>{label}<br /><span className="text-muted-foreground font-normal">{unit}</span></p>
+                  <p className={cn('text-[13px] text-muted-foreground mb-1', color)}>{label}<br /><span className="text-muted-foreground font-normal">{unit}</span></p>
                   <Input
                     type="number"
                     placeholder="0"
@@ -182,7 +182,7 @@ export default function FoodItemFormModal({ open, onOpenChange, food, onSubmit }
         <div className="flex justify-end gap-2 pt-4 border-t border-border mt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !form.name.trim()} className="gap-2 min-w-[100px]">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : isEdit ? 'Update Food' : 'Add Food'}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving</> : isEdit ? 'Save changes' : 'Add food'}
           </Button>
         </div>
       </DialogContent>

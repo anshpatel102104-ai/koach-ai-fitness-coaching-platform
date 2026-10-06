@@ -1,25 +1,14 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Pencil, Trash2, Loader2, Database } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { Panel, Segmented, EmptyState } from '@/components/kit';
 import { toast } from 'sonner';
 import FoodItemFormModal from './FoodItemFormModal';
 
 const CATEGORY_TABS = ['All', 'Protein', 'Carbs', 'Fats', 'Vegetables', 'Dairy', 'Fruits'];
-
-const CATEGORY_COLORS = {
-  Protein:    'bg-accent text-primary',
-  Carbs:      'bg-warning/10 text-warning',
-  Fats:       'bg-orange-100 text-orange-700',
-  Vegetables: 'bg-success/10 text-success',
-  Dairy:      'bg-accent text-primary',
-  Fruits:     'bg-pink-100 text-pink-700',
-  Other:      'bg-secondary text-muted-foreground',
-};
 
 const DEFAULT_FOODS = [
   { name: "Chicken Breast", brand: "Generic", serving_size: 100, serving_unit: "g",      calories: 165, protein: 31,  carbs: 0,   fats: 3.6, category: "Protein",    is_custom: false },
@@ -59,11 +48,11 @@ export default function FoodDatabaseTab() {
 
   const createMutation = useMutation({
     mutationFn: (data) => db.entities.FoodItem.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food added!'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food added'); },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.entities.FoodItem.update(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food updated!'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-database'] }); toast.success('Food updated'); },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => db.entities.FoodItem.delete(id),
@@ -82,7 +71,7 @@ export default function FoodDatabaseTab() {
     if (toCreate.length === 0) {
       toast.info('All default foods are already in your library.');
     } else {
-      toast.success(`${toCreate.length} default food${toCreate.length !== 1 ? 's' : ''} loaded!`);
+      toast.success(`${toCreate.length} starter food${toCreate.length !== 1 ? 's' : ''} added`);
     }
     setSeeding(false);
   }
@@ -105,151 +94,116 @@ export default function FoodDatabaseTab() {
     return matchSearch && matchCat;
   });
 
+  const COLS = 'sm:grid sm:grid-cols-[minmax(0,2.2fr)_90px_80px_70px_70px_70px_72px] sm:gap-3 sm:items-center';
+
   return (
     <div className="space-y-5">
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or brand..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
+      <Panel className="overflow-hidden">
+        {/* Header row */}
+        <div className="flex flex-col gap-3 px-4 sm:px-5 pt-4 pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or brand"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={seedDefaults} disabled={seeding}>
+                {seeding ? <Loader2 className="animate-spin" /> : <Database />}
+                Add 20 starter foods
+              </Button>
+              <Button size="sm" onClick={() => { setEditingFood(null); setShowForm(true); }}>
+                <Plus /> Add food
+              </Button>
+            </div>
+          </div>
+          <Segmented
+            size="sm"
+            value={activeCategory}
+            onChange={setActiveCategory}
+            options={CATEGORY_TABS.map(cat => ({ value: cat, label: cat }))}
           />
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={seedDefaults}
-            disabled={seeding}
-            className="gap-1.5 text-xs"
-          >
-            {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-            Load Default Foods
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => { setEditingFood(null); setShowForm(true); }}
-          >
-            <Plus className="w-4 h-4" /> Add Food
-          </Button>
-        </div>
-      </div>
 
-      {/* Category filter tabs */}
-      <div className="flex gap-1 flex-wrap">
-        {CATEGORY_TABS.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-semibold transition-all border',
-              activeCategory === cat
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-card border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
+        {/* Food list */}
+        {isLoading ? (
+          <div className="border-t border-border">
+            {[0,1,2,3,4].map(i => (
+              <div key={i} className="px-5 py-4 border-b border-border last:border-b-0"><div className="h-3 w-1/3 rounded bg-secondary" /></div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            className="border-t border-border"
+            title={search || activeCategory !== 'All' ? 'No foods match.' : 'No foods yet.'}
+            body={search || activeCategory !== 'All' ? 'Try another search or category.' : 'Add your own, or start with 20 common foods like chicken breast, oats and rice.'}
+            action={!(search || activeCategory !== 'All') && (
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => { setEditingFood(null); setShowForm(true); }}><Plus /> Add food</Button>
+                <Button variant="outline" size="sm" onClick={seedDefaults} disabled={seeding}>
+                  {seeding ? <Loader2 className="animate-spin" /> : <Database />} Add starter foods
+                </Button>
+              </div>
             )}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+          />
+        ) : (
+          <div role="table" aria-label="Food database">
+            <div className={`hidden ${COLS} px-5 py-2.5 border-y border-border text-[13px] text-muted-foreground`} role="row">
+              <span>Food</span>
+              <span>Serving</span>
+              <span className="text-right">kcal</span>
+              <span className="text-right">Protein</span>
+              <span className="text-right">Carbs</span>
+              <span className="text-right">Fat</span>
+              <span />
+            </div>
 
-      {/* Food list */}
-      {isLoading ? (
-        <div className="space-y-2">
-          {[0,1,2,3,4].map(i => (
-            <div key={i} className="h-14 bg-secondary/50 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="text-5xl mb-4">🍽️</div>
-          <p className="font-semibold text-foreground text-sm">No foods yet</p>
-          <p className="text-xs text-muted-foreground mt-1 mb-5">
-            Add your first food or load a starter set of 20 common foods
-          </p>
-          <div className="flex justify-center gap-2">
-            <Button variant="outline" size="sm" onClick={seedDefaults} disabled={seeding} className="gap-1.5">
-              {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-              Load Defaults
-            </Button>
-            <Button size="sm" onClick={() => { setEditingFood(null); setShowForm(true); }} className="gap-1.5">
-              <Plus className="w-4 h-4" /> Add Food
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[2fr_1fr_repeat(4,_1fr)_auto] gap-2 px-4 py-2.5 border-b border-border bg-secondary/40 text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
-            <span>Name</span>
-            <span>Serving</span>
-            <span className="text-center">Calories</span>
-            <span className="text-center">Protein</span>
-            <span className="text-center">Carbs</span>
-            <span className="text-center">Fats</span>
-            <span />
-          </div>
-
-          <AnimatePresence initial={false}>
-            {filtered.map((food, i) => (
-              <motion.div
+            {filtered.map(food => (
+              <div
                 key={food.id}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.18, delay: Math.min(i * 0.03, 0.2) }}
-                className="grid grid-cols-[2fr_1fr_repeat(4,_1fr)_auto] gap-2 items-center px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                role="row"
+                className={`flex items-center gap-3 ${COLS} px-4 sm:px-5 py-3 border-b border-border last:border-b-0 hover:bg-accent/50 transition-colors`}
               >
-                {/* Name + category */}
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{food.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {food.brand && <span className="text-[10px] text-muted-foreground">{food.brand}</span>}
-                    <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', CATEGORY_COLORS[food.category] ?? CATEGORY_COLORS.Other)}>
-                      {food.category ?? 'Other'}
-                    </span>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold text-foreground truncate">{food.name}</p>
+                  <p className="text-[13px] text-muted-foreground truncate">
+                    {[food.brand, food.category ?? 'Other'].filter(Boolean).join(' · ')}
+                    <span className="sm:hidden tabular-nums"> · {food.serving_size}{food.serving_unit ?? 'g'} · {food.calories ?? '—'} kcal · {food.protein ?? '—'} g P · {food.carbs ?? '—'} g C · {food.fats ?? '—'} g F</span>
+                  </p>
                 </div>
-
-                {/* Serving */}
-                <span className="text-xs text-muted-foreground">
-                  {food.serving_size}{food.serving_unit ?? 'g'}
-                </span>
-
-                {/* Macros */}
-                <span className="text-xs font-bold text-orange-600 text-center">{food.calories ?? '—'}</span>
-                <span className="text-xs text-primary font-semibold text-center">{food.protein ?? '—'}g</span>
-                <span className="text-xs text-warning font-semibold text-center">{food.carbs ?? '—'}g</span>
-                <span className="text-xs text-destructive font-semibold text-center">{food.fats ?? '—'}g</span>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1">
+                <span className="hidden sm:block text-sm text-muted-foreground tabular-nums">{food.serving_size}{food.serving_unit ?? 'g'}</span>
+                <span className="hidden sm:block num text-lg text-foreground text-right">{food.calories ?? '—'}</span>
+                <span className="hidden sm:block text-sm text-foreground text-right tabular-nums">{food.protein ?? '—'} g</span>
+                <span className="hidden sm:block text-sm text-foreground text-right tabular-nums">{food.carbs ?? '—'} g</span>
+                <span className="hidden sm:block text-sm text-foreground text-right tabular-nums">{food.fats ?? '—'} g</span>
+                <div className="flex items-center justify-end gap-0.5 flex-shrink-0">
                   <button
                     onClick={() => { setEditingFood(food); setShowForm(true); }}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    aria-label={`Edit ${food.name}`}
+                    className="touch-compact p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
-                    <Pencil className="w-3.5 h-3.5" />
+                    <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => deleteMutation.mutate(food.id)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                    aria-label={`Delete ${food.name}`}
+                    className="touch-compact p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent transition-colors"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </AnimatePresence>
-        </div>
-      )}
+          </div>
+        )}
+      </Panel>
 
-      {/* Count */}
       {filtered.length > 0 && (
-        <p className="text-xs text-muted-foreground text-right">{filtered.length} food{filtered.length !== 1 ? 's' : ''}</p>
+        <p className="text-[13px] text-muted-foreground tabular-nums">{filtered.length} food{filtered.length !== 1 ? 's' : ''}</p>
       )}
 
       {/* Form modal */}

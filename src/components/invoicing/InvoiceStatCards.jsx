@@ -1,60 +1,40 @@
 import React from 'react';
-import { DollarSign, TrendingUp, Clock, AlertTriangle, BarChart2 } from 'lucide-react';
 import { startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { StatStrip, money, plural } from '@/components/business/ui';
 
-function StatCard({ icon: Icon, label, value, sub, color, bg }) {
-  return (
-    <div style={{ background: 'var(--tc-card)', border: '1px solid var(--tc-muted)', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-        <div style={{ width: 32, height: 32, borderRadius: 9, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={15} color={color} />
-        </div>
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--tc-foreground)', letterSpacing: '-0.02em' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>{sub}</div>}
-    </div>
-  );
-}
-
-export default function InvoiceStatCards({ invoices = [] }) {
+/** Invoice totals derived from the invoice list. Exposed for the page sentence. */
+export function invoiceTotals(invoices = []) {
   const now = new Date();
-  const thisMonthStart = startOfMonth(now);
-  const thisMonthEnd = endOfMonth(now);
-  const lastMonthStart = startOfMonth(subMonths(now, 1));
-  const lastMonthEnd = endOfMonth(subMonths(now, 1));
-
   const inRange = (dateStr, start, end) => {
     try { return isWithinInterval(parseISO(dateStr), { start, end }); } catch { return false; }
   };
-
   const paid = invoices.filter(i => i.status === 'paid');
   const totalRevenue = paid.reduce((s, i) => s + Number(i.amount || 0), 0);
-
-  const thisMonthRev = paid.filter(i => i.paid_date && inRange(i.paid_date, thisMonthStart, thisMonthEnd))
+  const thisMonthRev = paid.filter(i => i.paid_date && inRange(i.paid_date, startOfMonth(now), endOfMonth(now)))
     .reduce((s, i) => s + Number(i.amount || 0), 0);
-  const lastMonthRev = paid.filter(i => i.paid_date && inRange(i.paid_date, lastMonthStart, lastMonthEnd))
+  const lastMonthRev = paid.filter(i => i.paid_date && inRange(i.paid_date, startOfMonth(subMonths(now, 1)), endOfMonth(subMonths(now, 1))))
     .reduce((s, i) => s + Number(i.amount || 0), 0);
   const moPct = lastMonthRev === 0 ? null : Math.round(((thisMonthRev - lastMonthRev) / lastMonthRev) * 100);
-
-  const outstanding = invoices.filter(i => ['sent', 'viewed', 'draft'].includes(i.status))
-    .reduce((s, i) => s + Number(i.amount || 0), 0);
-
+  const open = invoices.filter(i => ['sent', 'viewed', 'draft'].includes(i.status));
+  const outstanding = open.reduce((s, i) => s + Number(i.amount || 0), 0);
   const overdue = invoices.filter(i => i.status === 'overdue');
   const overdueAmt = overdue.reduce((s, i) => s + Number(i.amount || 0), 0);
-
   const allAmounts = invoices.filter(i => i.amount).map(i => Number(i.amount));
   const avgInvoice = allAmounts.length ? allAmounts.reduce((a, b) => a + b, 0) / allAmounts.length : 0;
+  return { paid, totalRevenue, thisMonthRev, lastMonthRev, moPct, open, outstanding, overdue, overdueAmt, avgInvoice };
+}
 
-  const fmt = (n) => n >= 1000 ? `$${(n/1000).toFixed(1)}k` : `$${n.toFixed(0)}`;
-
+export default function InvoiceStatCards({ invoices = [] }) {
+  const t = invoiceTotals(invoices);
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-      <StatCard icon={DollarSign} label="Total Revenue" value={fmt(totalRevenue)} sub={`${paid.length} payments`} color="var(--tc-success)" bg="var(--tc-success)" />
-      <StatCard icon={TrendingUp} label="This Month" value={fmt(thisMonthRev)} sub={moPct === null ? 'No prior data' : `${moPct >= 0 ? '+' : ''}${moPct}% vs last month`} color="var(--tc-primary)" bg="var(--tc-accent)" />
-      <StatCard icon={Clock} label="Outstanding" value={fmt(outstanding)} sub="Awaiting payment" color="var(--tc-warning)" bg="var(--tc-warning)" />
-      <StatCard icon={AlertTriangle} label="Overdue" value={fmt(overdueAmt)} sub={`${overdue.length} invoice${overdue.length !== 1 ? 's' : ''}`} color="var(--tc-destructive)" bg="var(--tc-destructive)" />
-      <StatCard icon={BarChart2} label="Avg Invoice" value={fmt(avgInvoice)} sub="Per invoice" color="var(--tc-ai)" bg="var(--tc-ai)" />
-    </div>
+    <StatStrip
+      items={[
+        { label: 'Collected this month', value: money(t.thisMonthRev), sub: t.moPct === null ? 'Nothing last month to compare' : `${t.moPct >= 0 ? 'Up' : 'Down'} ${Math.abs(t.moPct)}% on last month` },
+        { label: 'Outstanding', value: money(t.outstanding), sub: `${plural(t.open.length, 'invoice')} not paid yet` },
+        { label: 'Overdue', value: money(t.overdueAmt), sub: plural(t.overdue.length, 'invoice'), tone: t.overdue.length ? 'danger' : undefined },
+        { label: 'Collected all time', value: money(t.totalRevenue, { compact: true }), sub: plural(t.paid.length, 'payment') },
+        { label: 'Average invoice', value: money(t.avgInvoice) },
+      ]}
+    />
   );
 }

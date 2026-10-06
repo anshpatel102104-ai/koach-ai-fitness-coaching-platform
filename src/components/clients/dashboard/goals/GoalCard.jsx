@@ -21,8 +21,8 @@ function MacroBar({ label, current, target, color }) {
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-semibold" style={{ color }}>{label}</span>
-        <span className="text-[10px] text-muted-foreground">{current ?? 0}g / {target ?? 0}g</span>
+        <span className="text-[11px] font-semibold" style={{ color }}>{label}</span>
+        <span className="text-[11px] text-muted-foreground">{current ?? 0}g / {target ?? 0}g</span>
       </div>
       <Bar pct={pct} color={color} />
     </div>
@@ -46,15 +46,15 @@ export default function GoalCard({ goal, onEdit, onDelete, onToggleComplete }) {
   const simplePct = goal.goal_type === 'simple' ? (goal.progress_pct ?? 0) : 0;
 
   const TYPE_META = {
-    numeric:   { label: 'Numeric',   color: 'var(--tc-primary)', bg: 'var(--tc-accent)' },
-    nutrition: { label: 'Nutrition', color: 'var(--tc-success)', bg: 'var(--tc-success)' },
-    simple:    { label: 'Simple',    color: 'var(--tc-ai)', bg: 'var(--tc-ai)' },
+    numeric:   { label: 'Numeric',   color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+    nutrition: { label: 'Nutrition', color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+    simple:    { label: 'Simple',    color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
   };
   const meta = TYPE_META[goal.goal_type] || TYPE_META.simple;
 
   return (
     <div className={cn(
-      'bg-card rounded-xl border shadow-sm p-4 transition-opacity',
+      'bg-card rounded-xl border p-4 transition-opacity',
       isCompleted ? 'border-success opacity-75' : 'border-border'
     )}>
       {/* Header */}
@@ -69,7 +69,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onToggleComplete }) {
           </div>
         </div>
         <div className="flex items-center gap-0.5 flex-shrink-0">
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full mr-1"
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full mr-1"
             style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
           <button onClick={() => onEdit(goal)} title="Edit"
             className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground hover:text-muted-foreground transition-colors">
@@ -99,7 +99,7 @@ export default function GoalCard({ goal, onEdit, onDelete, onToggleComplete }) {
             </span>
           </div>
           <Bar pct={numericPct} color={meta.color} />
-          <p className="text-[10px] text-muted-foreground mt-1 text-right">{numericPct}% of goal</p>
+          <p className="text-[11px] text-muted-foreground mt-1 text-right">{numericPct}% of goal</p>
         </div>
       )}
 

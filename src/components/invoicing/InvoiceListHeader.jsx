@@ -1,22 +1,17 @@
 import React from 'react';
 
+/** Shared column template for the invoice table (header + rows). */
+export const INVOICE_GRID = 'md:grid md:grid-cols-[minmax(0,1.7fr)_minmax(0,1.5fr)_96px_72px_112px_32px] md:items-center md:gap-4';
+
 export default function InvoiceListHeader() {
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '34px minmax(120px,1.8fr) minmax(140px,2.5fr) 90px minmax(90px,1fr) 90px auto',
-      gap: 12,
-      padding: '8px 16px',
-      background: 'var(--tc-background)',
-      borderBottom: '1px solid var(--tc-muted)',
-    }}>
+    <div className={`hidden ${INVOICE_GRID} px-5 sm:px-6 py-2.5 border-b border-border text-[13px] text-muted-foreground`}>
+      <div>Client</div>
+      <div>Description</div>
+      <div className="text-right">Amount</div>
+      <div>Due</div>
+      <div>Status</div>
       <div />
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Client</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Amount</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dates</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actions</div>
     </div>
   );
 }

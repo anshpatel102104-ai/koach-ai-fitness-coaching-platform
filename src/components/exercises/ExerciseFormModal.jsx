@@ -87,55 +87,55 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading">{exercise ? 'Edit Exercise' : 'Add Exercise'}</DialogTitle>
+          <DialogTitle className="text-[26px]">{exercise ? `Edit ${exercise.name || 'exercise'}` : 'Add an exercise'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-2">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label>Exercise Name *</Label>
-              <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required placeholder="e.g., Barbell Back Squat" />
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Name</Label>
+              <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} required placeholder="Barbell back squat" />
             </div>
             <div className="col-span-2">
-              <Label>Description</Label>
-              <Textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} placeholder="Brief overview of the exercise" />
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Description</Label>
+              <Textarea value={form.description} onChange={e => setForm({...form, description: e.target.value})} rows={2} placeholder="One line on what it trains and why" />
             </div>
             <div>
-              <Label>Primary Muscle Group</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Main muscle</Label>
               <Select value={form.muscle_group} onValueChange={v => setForm({...form, muscle_group: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['chest','back','shoulders','biceps','triceps','legs','glutes','core','full_body','cardio'].map(m => (
-                    <SelectItem key={m} value={m}>{m.replace('_',' ')}</SelectItem>
+                    <SelectItem key={m} value={m}>{(m.charAt(0).toUpperCase() + m.slice(1)).replace('_',' ')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Equipment</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Equipment</Label>
               <Select value={form.equipment} onValueChange={v => setForm({...form, equipment: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['barbell','dumbbell','cable','machine','bodyweight','kettlebell','resistance_band','trx','other'].map(e => (
-                    <SelectItem key={e} value={e}>{e.replace('_',' ')}</SelectItem>
+                    <SelectItem key={e} value={e}>{(e.charAt(0).toUpperCase() + e.slice(1)).replace('_',' ')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Movement Pattern</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Pattern</Label>
               <Select value={form.movement_pattern} onValueChange={v => setForm({...form, movement_pattern: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {['push','pull','hinge','squat','carry','rotation','isometric','cardio'].map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                    <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Difficulty</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Level</Label>
               <Select value={form.difficulty} onValueChange={v => setForm({...form, difficulty: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -149,8 +149,8 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
 
           {/* Secondary Muscles */}
           <div>
-            <Label>Secondary Muscles</Label>
-            <div className="flex flex-wrap gap-1.5 mb-2 mt-1">
+            <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Also works</Label>
+            <div className="mb-2 flex flex-wrap gap-1.5">
               {form.secondary_muscles?.map((m, i) => (
                 <Badge key={i} variant="secondary" className="gap-1 text-xs pr-1">
                   {m}
@@ -159,7 +159,7 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
               ))}
             </div>
             <div className="flex gap-2">
-              <Input value={newMuscle} onChange={e => setNewMuscle(e.target.value)} placeholder="e.g., glutes" className="h-8 text-sm"
+              <Input value={newMuscle} onChange={e => setNewMuscle(e.target.value)} placeholder="Glutes" className="h-8 text-sm"
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMuscle(); }}} />
               <Button type="button" variant="outline" size="sm" onClick={addMuscle}>Add</Button>
             </div>
@@ -168,21 +168,21 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
           {/* Tempo & Rest */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Tempo (ecc–pause–con–pause)</Label>
-              <Input value={form.tempo} onChange={e => setForm({...form, tempo: e.target.value})} placeholder="e.g. 3-1-2-0" />
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Tempo (down, pause, up, pause)</Label>
+              <Input value={form.tempo} onChange={e => setForm({...form, tempo: e.target.value})} placeholder="3-1-2-0" />
             </div>
             <div>
-              <Label>Default Rest (seconds)</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Rest between sets (seconds)</Label>
               <Input type="number" value={form.default_rest_seconds} onChange={e => setForm({...form, default_rest_seconds: Number(e.target.value)})} />
             </div>
           </div>
 
           {/* Video */}
-          <div className="space-y-3 p-4 bg-secondary/40 rounded-xl">
-            <h3 className="font-medium text-sm">Demo Video</h3>
+          <div className="space-y-3 rounded-xl border border-border p-4">
+            <h3 className="text-[18px] text-foreground">Demo</h3>
             <div>
-              <Label className="text-xs text-muted-foreground">YouTube / Vimeo URL or direct MP4 link</Label>
-              <div className="flex gap-2 mt-1">
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">YouTube, Vimeo or a direct video link</Label>
+              <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input value={form.video_url} onChange={e => setForm({...form, video_url: e.target.value})} placeholder="https://youtube.com/watch?v=..." className="pl-9" />
@@ -197,19 +197,19 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
             <label className="flex items-center gap-2 cursor-pointer">
               <Button type="button" variant="outline" size="sm" className="pointer-events-none" disabled={uploading}>
                 {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                Upload Video
+                Upload a video
               </Button>
               <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
-              {form.video_url && <span className="text-xs text-accent font-medium">✓ Video set</span>}
+              {form.video_url && <span className="text-[13px] font-medium text-success">Video added</span>}
             </label>
             <div>
-              <Label className="text-xs text-muted-foreground">Custom Thumbnail (optional)</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Thumbnail, optional</Label>
               <label className="flex items-center gap-2 cursor-pointer mt-1">
                 <Button type="button" variant="outline" size="sm" className="pointer-events-none" disabled={uploading}>
-                  <Upload className="w-4 h-4 mr-2" /> Upload Thumbnail
+                  <Upload className="w-4 h-4 mr-2" /> Upload a thumbnail
                 </Button>
                 <input type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
-                {form.thumbnail_url && <span className="text-xs text-accent font-medium">✓ Thumbnail set</span>}
+                {form.thumbnail_url && <span className="text-[13px] font-medium text-success">Thumbnail added</span>}
               </label>
             </div>
 
@@ -217,26 +217,26 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
             <div className="flex items-center gap-3 pt-1">
               <Switch checked={!!form.is_coach_branded} onCheckedChange={v => setForm({...form, is_coach_branded: v})} />
               <div>
-                <p className="text-sm font-medium">Coach-Branded Video</p>
-                <p className="text-xs text-muted-foreground">Mark as your own form demo for clients</p>
+                <p className="text-sm font-semibold text-foreground">This is your own demo</p>
+                <p className="text-[13px] text-muted-foreground">Clients see it marked as filmed by you.</p>
               </div>
             </div>
           </div>
 
           {/* Form Cues */}
           <div>
-            <Label className="font-medium">Form Cues</Label>
-            <div className="space-y-1.5 mt-2 mb-2">
+            <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Form cues</Label>
+            <div className="mb-2 space-y-1.5">
               {form.form_cues?.map((cue, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-secondary/40 rounded-lg text-sm">
-                  <span className="w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0">{i+1}</span>
+                <div key={i} className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-sm">
+                  <span className="num w-4 flex-shrink-0 text-[15px] text-muted-foreground">{i+1}</span>
                   <span className="flex-1">{cue}</span>
                   <button type="button" onClick={() => removeCue(i)}><X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" /></button>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
-              <Input value={newCue} onChange={e => setNewCue(e.target.value)} placeholder="Add a form cue..." className="h-8 text-sm"
+              <Input value={newCue} onChange={e => setNewCue(e.target.value)} placeholder="Add a cue, then press Enter" className="h-8 text-sm"
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCue(); }}} />
               <Button type="button" variant="outline" size="sm" onClick={addCue}><Plus className="w-3.5 h-3.5" /></Button>
             </div>
@@ -244,17 +244,17 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
 
           {/* Common Mistakes */}
           <div>
-            <Label className="font-medium">Common Mistakes</Label>
-            <div className="space-y-1.5 mt-2 mb-2">
+            <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Common mistakes</Label>
+            <div className="mb-2 space-y-1.5">
               {form.common_mistakes?.map((m, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-chart-4/5 border border-chart-4/15 rounded-lg text-sm">
+                <div key={i} className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm">
                   <span className="flex-1">{m}</span>
                   <button type="button" onClick={() => removeMistake(i)}><X className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" /></button>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
-              <Input value={newMistake} onChange={e => setNewMistake(e.target.value)} placeholder="Add a common mistake..." className="h-8 text-sm"
+              <Input value={newMistake} onChange={e => setNewMistake(e.target.value)} placeholder="Add a mistake, then press Enter" className="h-8 text-sm"
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMistake(); }}} />
               <Button type="button" variant="outline" size="sm" onClick={addMistake}><Plus className="w-3.5 h-3.5" /></Button>
             </div>
@@ -262,15 +262,15 @@ export default function ExerciseFormModal({ open, onOpenChange, exercise, onSucc
 
           {/* Coach Notes */}
           <div>
-            <Label>Private Coach Notes</Label>
-            <Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} placeholder="Internal notes, not shown to clients" />
+            <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Private notes</Label>
+            <Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} placeholder="Only you see these" />
           </div>
 
           <div className="flex justify-end gap-3 pt-2 border-t border-border">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {exercise ? 'Update Exercise' : 'Add to Library'}
+              {exercise ? 'Save changes' : 'Add to library'}
             </Button>
           </div>
         </form>

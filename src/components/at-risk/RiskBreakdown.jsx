@@ -1,63 +1,36 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { Segmented } from '@/components/kit';
 
-const COLUMNS = [
-  { key: 'critical', label: 'Critical Risk', emoji: '🔴', desc: '3+ risk factors · Immediate attention', bg: 'bg-destructive/10', border: 'border-destructive', badge: 'bg-destructive/10 text-destructive', minFlags: 3 },
-  { key: 'moderate', label: 'Moderate Risk', emoji: '🟡', desc: '2 risk factors · Attention this week', bg: 'bg-warning/10', border: 'border-warning', badge: 'bg-warning/10 text-warning', minFlags: 2 },
-  { key: 'watch',    label: 'Watch List',   emoji: '🔵', desc: '1 risk factor · Keep an eye on',   bg: 'bg-accent',  border: 'border-primary',  badge: 'bg-accent text-primary',  minFlags: 1 },
-];
-
-function getRiskLevel(flagCount) {
-  if (flagCount >= 3) return 'critical';
-  if (flagCount >= 2) return 'moderate';
+/** Risk level from the risk engine's score and flag count. */
+export function riskLevel(entry) {
+  const { riskScore, flags } = entry;
+  if (flags.length >= 3 || riskScore >= 60) return 'critical';
+  if (flags.length === 2 || riskScore >= 30) return 'moderate';
   return 'watch';
 }
 
-export default function RiskBreakdown({ atRisk, activeColumn, onColumnClick }) {
-  const grouped = { critical: [], moderate: [], watch: [] };
-  for (const entry of atRisk) {
-    const level = getRiskLevel(entry.flags.length);
-    grouped[level].push(entry);
-  }
+export const RISK_LEVELS = {
+  critical: { label: 'Urgent', text: 'text-destructive', hint: 'Needs you today' },
+  moderate: { label: 'This week', text: 'text-warning', hint: 'Get to them this week' },
+  watch:    { label: 'Watch', text: 'text-muted-foreground', hint: 'Keep an eye on' },
+};
 
+/**
+ * Segmented filter over the at-risk list: All / Urgent / This week / Watch,
+ * each with its count. Replaces the old three coloured columns.
+ */
+export default function RiskBreakdown({ atRisk, onFilter, activeFilter }) {
+  const count = (lvl) => atRisk.filter(e => riskLevel(e) === lvl).length;
   return (
-    <div className="grid grid-cols-3 gap-3 mb-5">
-      {COLUMNS.map(col => {
-        const entries = grouped[col.key];
-        const isActive = activeColumn === col.key;
-        return (
-          <button key={col.key} onClick={() => onColumnClick(col.key)}
-            className={cn('text-left p-3 rounded-xl border-2 transition-all hover:shadow-sm',
-              col.bg, isActive ? col.border + ' ring-2 ring-offset-1' : 'border-transparent hover:' + col.border)}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-base">{col.emoji}</span>
-              <span className={cn('text-xs font-bold px-1.5 py-0.5 rounded-full', col.badge)}>{entries.length}</span>
-            </div>
-            <p className="text-xs font-bold text-foreground mb-0.5">{col.label}</p>
-            <p className="text-[10px] text-muted-foreground leading-tight mb-2">{col.desc}</p>
-            {/* Stacked avatars */}
-            {entries.length > 0 && (
-              <div className="flex -space-x-1.5">
-                {entries.slice(0, 5).map((e, i) => (
-                  <div key={e.client.id}
-                    className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg, var(--tc-destructive), var(--tc-ai))', zIndex: 5 - i }}>
-                    {e.client.name?.[0]?.toUpperCase()}
-                  </div>
-                ))}
-                {entries.length > 5 && (
-                  <div className="w-5 h-5 rounded-full border-2 border-white bg-border flex items-center justify-center text-[7px] font-bold text-muted-foreground">
-                    +{entries.length - 5}
-                  </div>
-                )}
-              </div>
-            )}
-            {entries.length === 0 && <p className="text-[10px] text-muted-foreground italic">None</p>}
-          </button>
-        );
-      })}
-    </div>
+    <Segmented
+      value={activeFilter}
+      onChange={onFilter}
+      options={[
+        { value: 'all', label: 'All', count: atRisk.length },
+        { value: 'critical', label: RISK_LEVELS.critical.label, count: count('critical') },
+        { value: 'moderate', label: RISK_LEVELS.moderate.label, count: count('moderate') },
+        { value: 'watch', label: RISK_LEVELS.watch.label, count: count('watch') },
+      ]}
+    />
   );
 }
-
-export { getRiskLevel };

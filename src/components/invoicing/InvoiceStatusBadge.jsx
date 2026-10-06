@@ -1,22 +1,17 @@
 import React from 'react';
-import { CheckCircle2, AlertTriangle, Eye, Send, FileText, XCircle } from 'lucide-react';
+import { StatusDot } from '@/components/business/ui';
 
-const STATUS_CONFIG = {
-  draft:     { label: 'Draft',     bg: 'var(--tc-muted)', color: 'var(--tc-muted-foreground)', icon: FileText },
-  sent:      { label: 'Sent',      bg: 'var(--tc-accent)', color: 'var(--tc-primary)', icon: Send },
-  viewed:    { label: 'Viewed',    bg: 'var(--tc-accent)', color: 'var(--tc-primary)', icon: Eye },
-  paid:      { label: 'Paid',      bg: 'var(--tc-success)', color: 'var(--tc-success)', icon: CheckCircle2 },
-  overdue:   { label: 'Overdue',   bg: 'var(--tc-destructive)', color: 'var(--tc-destructive)', icon: AlertTriangle },
-  cancelled: { label: 'Cancelled', bg: 'var(--tc-muted)', color: 'var(--tc-muted-foreground)', icon: XCircle },
+/** Invoice status as text with a small dot. Paid = green, Due = grey, Overdue = red. */
+export const INVOICE_STATUS = {
+  draft:     { label: 'Draft',     tone: 'muted' },
+  sent:      { label: 'Due',       tone: 'muted' },
+  viewed:    { label: 'Due, viewed', tone: 'muted' },
+  paid:      { label: 'Paid',      tone: 'success' },
+  overdue:   { label: 'Overdue',   tone: 'danger' },
+  cancelled: { label: 'Cancelled', tone: 'muted' },
 };
 
-export default function InvoiceStatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.draft;
-  const Icon = cfg.icon;
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 9999, background: cfg.bg, color: cfg.color, fontSize: 11, fontWeight: 700 }}>
-      <Icon size={11} />
-      {cfg.label}
-    </span>
-  );
+export default function InvoiceStatusBadge({ status, className }) {
+  const cfg = INVOICE_STATUS[status] || INVOICE_STATUS.draft;
+  return <StatusDot tone={cfg.tone} className={className}>{cfg.label}</StatusDot>;
 }

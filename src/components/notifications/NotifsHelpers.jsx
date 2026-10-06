@@ -1,59 +1,72 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
-export function NSection({ title, emoji, onReset, onTest, children }) {
+/** Settings section: flat white panel, condensed title, text actions on the right. */
+export function NSection({ title, onReset, onTest, children }) {
   return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{ boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)' }}>
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/60">
-        <div className="flex items-center gap-2">
-          <span className="text-base">{emoji}</span>
-          <h2 className="font-bold text-foreground text-sm">{title}</h2>
-        </div>
-        <div className="flex items-center gap-2">
+    <section className="panel overflow-hidden">
+      <div className="flex items-center justify-between gap-4 px-5 sm:px-6 pt-5 pb-3">
+        <h2 className="text-[20px] text-foreground">{title}</h2>
+        <div className="flex items-center gap-3">
           {onTest && (
-            <button onClick={onTest}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-              Send Test
+            <button
+              onClick={onTest}
+              className="touch-compact text-[13px] font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2"
+            >
+              Send a test
             </button>
           )}
-          <button onClick={onReset}
-            className="text-xs text-muted-foreground hover:text-muted-foreground font-medium transition-colors">
+          <button
+            onClick={onReset}
+            className="touch-compact text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
             Reset
           </button>
         </div>
       </div>
-      <div className="divide-y divide-muted">{children}</div>
-    </div>
+      <div className="divide-y divide-border border-t border-border">{children}</div>
+    </section>
   );
 }
 
+/** On/off switch: ink when on, hairline grey when off. */
 export function NToggle({ value, onChange, disabled }) {
   return (
     <button
       onClick={() => !disabled && onChange(!value)}
       disabled={disabled}
-      className={`relative flex-shrink-0 rounded-full transition-all ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+      role="switch"
+      aria-checked={!!value}
+      className={cn(
+        'touch-compact relative flex-shrink-0 rounded-full transition-colors',
+        value ? 'bg-primary' : 'bg-input',
+        disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+      )}
       style={{ width: 40, height: 22 }}
       type="button"
     >
-      <div className="absolute inset-0 rounded-full transition-all"
-        style={{ background: value ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'var(--tc-border)' }} />
-      <div className="absolute top-0.5 rounded-full bg-card shadow transition-all"
-        style={{ width: 18, height: 18, left: value ? 20 : 2, transition: 'left 0.15s' }} />
+      <span
+        className="absolute top-0.5 rounded-full bg-card"
+        style={{ width: 18, height: 18, left: value ? 20 : 2, transition: 'left 0.15s' }}
+      />
     </button>
   );
 }
 
+const SEG_TRACK = 'inline-flex items-center gap-0.5 rounded-lg bg-card p-0.5 shadow-[0_0_0_1px_rgb(var(--border)/0.9)]';
+const SEG_BTN = 'touch-compact h-7 px-2.5 rounded-md text-[12px] font-medium whitespace-nowrap transition-colors';
+
 export function NDelivery({ value = 'push_email', onChange, options = ['off', 'push', 'email', 'push_email'] }) {
-  const LABELS = { off: 'Off', push: 'Push', email: 'Email', push_email: 'Push + Email' };
+  const LABELS = { off: 'Off', push: 'Push', email: 'Email', push_email: 'Push and email' };
   return (
-    <div className="flex items-center gap-1">
+    <div className={SEG_TRACK}>
       {options.map(o => (
-        <button key={o} onClick={() => onChange(o)}
-          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
-          style={{
-            background: value === o ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'var(--tc-muted)',
-            color: value === o ? 'white' : 'var(--tc-muted-foreground)',
-          }}>
+        <button
+          key={o}
+          type="button"
+          onClick={() => onChange(o)}
+          className={cn(SEG_BTN, value === o ? 'bg-primary text-primary-foreground' : 'text-foreground/80 hover:bg-accent')}
+        >
           {LABELS[o]}
         </button>
       ))}
@@ -64,8 +77,11 @@ export function NDelivery({ value = 'push_email', onChange, options = ['off', 'p
 export function NSelect({ value, onChange, options }) {
   return (
     <div className="relative">
-      <select value={value ?? ''} onChange={e => onChange(e.target.value)}
-        className="pl-2.5 pr-7 py-1.5 rounded-lg border border-border text-xs text-foreground font-semibold focus:outline-none focus:border-primary appearance-none bg-card">
+      <select
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value)}
+        className="h-8 pl-2.5 pr-7 rounded-lg border border-input text-[13px] text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-ring appearance-none bg-card"
+      >
         {options.map(o => (
           <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>
             {typeof o === 'string' ? o : o.label}
@@ -89,12 +105,15 @@ export function NMultiCheck({ values = [], onChange, options }) {
         const label = typeof o === 'string' ? o : o.label;
         const active = values.includes(val);
         return (
-          <button key={val} onClick={() => toggle(val)}
-            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
-            style={{
-              background: active ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'var(--tc-muted)',
-              color: active ? 'white' : 'var(--tc-muted-foreground)',
-            }}>
+          <button
+            key={val}
+            type="button"
+            onClick={() => toggle(val)}
+            className={cn(
+              'touch-compact h-7 px-2.5 rounded-md text-[12px] font-medium border transition-colors',
+              active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground/80 border-input hover:bg-accent'
+            )}
+          >
             {label}
           </button>
         );
@@ -105,15 +124,15 @@ export function NMultiCheck({ values = [], onChange, options }) {
 
 export function NRow({ enabled, title, description, locked, children, onToggle }) {
   return (
-    <div className={`px-6 py-4 transition-colors ${!enabled && !locked ? 'opacity-60' : ''}`}>
+    <div className="px-5 sm:px-6 py-4">
       <div className="flex items-start gap-4">
         <NToggle value={enabled} onChange={onToggle} disabled={locked} />
-        <div className="flex-1 min-w-0">
+        <div className={cn('flex-1 min-w-0', !enabled && !locked && 'opacity-60')}>
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            {locked && <span className="text-[10px] bg-warning/10 text-warning font-bold px-2 py-0.5 rounded-full">Required</span>}
+            <p className="text-[15px] font-semibold text-foreground">{title}</p>
+            {locked && <span className="text-[12px] font-medium text-muted-foreground">Always on</span>}
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
+          <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{description}</p>
           {enabled && <div className="mt-3 flex flex-wrap gap-3 items-center">{children}</div>}
         </div>
       </div>

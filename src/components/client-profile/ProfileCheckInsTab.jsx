@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, ChevronDown, ChevronUp, CheckCircle2, Flag, Clock } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle2, Flag, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 
-const moodEmoji = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😤' };
+const moodLabel = { great: 'Great', good: 'Good', okay: 'Okay', tired: 'Tired', stressed: 'Stressed' };
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pending',  icon: Clock,         class: 'bg-warning/10 border-warning text-warning' },
@@ -24,7 +24,7 @@ function StatusBadge({ status, onChange }) {
       onChange={e => onChange(e.target.value)}
       onClick={e => e.stopPropagation()}
       className={cn(
-        'text-[10px] font-bold border rounded-lg px-2 py-1 cursor-pointer appearance-none text-center',
+        'text-[11px] font-bold border rounded-lg px-2 py-1 cursor-pointer appearance-none text-center',
         cfg.class
       )}
     >
@@ -51,16 +51,16 @@ function CheckInCard({ ci, clientId }) {
 
   return (
     <div className={cn(
-      'bg-card rounded-2xl border overflow-hidden transition-all',
-      status === 'flagged' ? 'border-destructive' : status === 'reviewed' ? 'border-success' : 'border-border'
+      'bg-card rounded-xl border overflow-hidden transition-all',
+      status === 'flagged' ? 'border-destructive/50' : 'border-border'
     )}>
       {/* Header row */}
       <button
         className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-muted transition-colors text-left"
         onClick={() => setOpen(v => !v)}
       >
-        <div className="w-9 h-9 rounded-xl bg-muted border border-border flex items-center justify-center text-base flex-shrink-0">
-          {moodEmoji[ci.mood] || '📋'}
+        <div className="w-16 flex-shrink-0 text-[13px] text-muted-foreground">
+          {moodLabel[ci.mood] || 'No mood'}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground">{format(new Date(ci.date), 'MMM d, yyyy')}</p>
@@ -85,19 +85,19 @@ function CheckInCard({ ci, clientId }) {
             {ci.weight && (
               <div className="bg-muted rounded-xl p-2.5 text-center">
                 <p className="text-sm font-bold tabular-nums text-foreground">{ci.weight}</p>
-                <p className="text-[9px] text-muted-foreground">lbs</p>
+                <p className="text-[11px] text-muted-foreground">lbs</p>
               </div>
             )}
             {ci.sleep_hours && (
               <div className="bg-muted rounded-xl p-2.5 text-center">
                 <p className="text-sm font-bold tabular-nums text-foreground">{ci.sleep_hours}h</p>
-                <p className="text-[9px] text-muted-foreground">sleep</p>
+                <p className="text-[11px] text-muted-foreground">sleep</p>
               </div>
             )}
             {ci.energy_level && (
               <div className="bg-muted rounded-xl p-2.5 text-center">
                 <p className="text-sm font-bold tabular-nums text-foreground">{ci.energy_level}/10</p>
-                <p className="text-[9px] text-muted-foreground">energy</p>
+                <p className="text-[11px] text-muted-foreground">energy</p>
               </div>
             )}
           </div>
@@ -107,20 +107,20 @@ function CheckInCard({ ci, clientId }) {
             <div className="space-y-2">
               {ci.compliance_training != null && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Training</span>
+                  <span className="text-[11px] text-muted-foreground w-16 flex-shrink-0">Training</span>
                   <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
                     <div className="bg-primary h-full rounded-full" style={{ width: `${ci.compliance_training}%` }} />
                   </div>
-                  <span className="text-[10px] font-bold text-primary w-8 text-right">{ci.compliance_training}%</span>
+                  <span className="text-[11px] font-bold text-primary w-8 text-right">{ci.compliance_training}%</span>
                 </div>
               )}
               {ci.compliance_nutrition != null && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Nutrition</span>
+                  <span className="text-[11px] text-muted-foreground w-16 flex-shrink-0">Nutrition</span>
                   <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
                     <div className="bg-success h-full rounded-full" style={{ width: `${ci.compliance_nutrition}%` }} />
                   </div>
-                  <span className="text-[10px] font-bold text-success w-8 text-right">{ci.compliance_nutrition}%</span>
+                  <span className="text-[11px] font-bold text-success w-8 text-right">{ci.compliance_nutrition}%</span>
                 </div>
               )}
             </div>
@@ -128,21 +128,21 @@ function CheckInCard({ ci, clientId }) {
 
           {ci.notes && (
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Client Notes</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Client notes</p>
               <p className="text-sm text-foreground leading-relaxed">{ci.notes}</p>
             </div>
           )}
 
           {ci.coach_notes && (
             <div className="bg-accent/10 rounded-xl p-3">
-              <p className="text-[10px] font-bold text-primary uppercase tracking-wide mb-1">Coach Response</p>
+              <p className="text-xs font-semibold text-primary mb-1">Coach response</p>
               <p className="text-sm text-foreground leading-relaxed">{ci.coach_notes}</p>
             </div>
           )}
 
           {ci.photo_urls?.length > 0 && (
             <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Photos</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Photos</p>
               <div className="grid grid-cols-3 gap-2">
                 {ci.photo_urls.map((url, i) => (
                   <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
@@ -173,10 +173,7 @@ export default function ProfileCheckInsTab({ client, checkIns }) {
   };
 
   if (checkIns.length === 0) return (
-    <div className="bg-card rounded-2xl border border-border flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-        <ClipboardCheck className="w-5 h-5 text-muted-foreground" />
-      </div>
+    <div className="bg-card rounded-xl border border-border flex flex-col items-center justify-center py-14 text-center px-6">
       <p className="text-sm font-semibold text-foreground">No check-ins yet</p>
       <p className="text-xs text-muted-foreground mt-1">Client check-ins will appear here once submitted</p>
     </div>

@@ -1,14 +1,14 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { Check } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const today = new Date();
 const weekStart = startOfWeek(today, { weekStartsOn: 1 });
 
+/** Week strip of day tiles. Selected day = ink, today = brand dot, done = green check, missed = red dot. */
 export default function WeekScheduleSelector({ program, workoutSessions, selectedDay, onSelectDay }) {
   const workouts = program?.workouts || [];
-  const scrollRef = useRef(null);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const getStatus = (day) => {
@@ -26,117 +26,41 @@ export default function WeekScheduleSelector({ program, workoutSessions, selecte
   };
 
   return (
-    <div className="px-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 px-1">This Week</p>
-      <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1"
-        style={{ scrollSnapType: 'x mandatory' }}>
-        {days.map((day, i) => {
-          const w = workouts[i % workouts.length];
-          const isRest = !w || w.day_name?.toLowerCase().includes('rest');
-          const status = getStatus(day);
-          const isSelected = selectedDay === i;
-          const isTodayCard = isSameDay(day, today);
-          const done = status === 'done';
-          const missed = status === 'missed';
+    <div className="grid grid-cols-7 gap-1.5" role="tablist" aria-label="This week">
+      {days.map((day, i) => {
+        const w = workouts.length ? workouts[i % workouts.length] : null;
+        const isRest = !w || w.day_name?.toLowerCase().includes('rest');
+        const status = getStatus(day);
+        const isSelected = selectedDay === i;
+        const isTodayTile = isSameDay(day, today);
+        const label = isRest ? 'Rest' : ((w?.day_name || '').split(/\s+/).filter(Boolean).map(p => p[0].toUpperCase()).join('').slice(0, 3) || 'Day');
 
-          return (
-            <motion.button
-              key={i}
-              onClick={() => onSelectDay(i)}
-              whileTap={{ scale: 0.93 }}
-              style={{
-                width: isTodayCard ? 86 : 80,
-                minWidth: isTodayCard ? 86 : 80,
-                height: 104,
-                scrollSnapAlign: 'start',
-                borderRadius: 18,
-                flexShrink: 0,
-                background: isSelected
-                  ? 'linear-gradient(160deg, rgb(var(--primary)) 0%, rgb(var(--ai)) 100%)'
-                  : isTodayCard
-                  ? 'rgb(var(--accent))'
-                  : 'rgb(var(--card))',
-                border: isSelected
-                  ? 'none'
-                  : isTodayCard
-                  ? '2px solid rgb(var(--accent))'
-                  : '1.5px solid rgb(var(--muted))',
-                boxShadow: isSelected
-                  ? '0 6px 20px rgb(var(--primary) / 0.35)'
-                  : isTodayCard
-                  ? '0 2px 12px rgb(var(--primary) / 0.12)'
-                  : '0 1px 6px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 6px 8px',
-                transition: 'box-shadow 0.2s',
-              }}>
-              {/* Day label */}
-              <p style={{
-                fontSize: 9,
-                fontWeight: 900,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: isSelected ? 'rgba(255,255,255,0.7)' : isTodayCard ? 'rgb(var(--primary))' : 'rgb(var(--muted-foreground))',
-              }}>
-                {format(day, 'EEE')}
-              </p>
-
-              {/* Date number */}
-              <p style={{
-                fontSize: isTodayCard ? 20 : 17,
-                fontWeight: 900,
-                color: isSelected ? 'rgb(var(--card))' : isTodayCard ? 'rgb(var(--primary))' : 'rgb(var(--foreground))',
-                lineHeight: 1,
-              }}>
-                {format(day, 'd')}
-              </p>
-
-              {/* Workout name */}
-              <p style={{
-                fontSize: 9,
-                fontWeight: 700,
-                color: isSelected ? 'rgba(255,255,255,0.65)' : isRest ? 'rgb(var(--muted-foreground))' : 'rgb(var(--muted-foreground))',
-                textAlign: 'center',
-                maxWidth: 72,
-                lineHeight: 1.3,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}>
-                {isRest ? 'Rest' : (w?.day_name?.split(' ').slice(0, 2).join(' ') || 'Day')}
-              </p>
-
-              {/* Status indicator */}
-              <div style={{
-                width: done || missed ? 18 : 14,
-                height: done || missed ? 18 : 14,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: done
-                  ? (isSelected ? 'rgba(255,255,255,0.3)' : 'rgb(var(--success))')
-                  : missed
-                  ? (isSelected ? 'rgba(255,255,255,0.15)' : 'rgb(var(--destructive))')
-                  : isTodayCard
-                  ? (isSelected ? 'rgba(255,255,255,0.25)' : 'rgb(var(--accent))')
-                  : 'transparent',
-                border: status === 'upcoming' && !isTodayCard ? '1.5px dashed rgb(var(--muted-foreground))' : 'none',
-              }}>
-                {done && <Check style={{ width: 10, height: 10, color: isSelected ? 'white' : 'white', strokeWidth: 3.5 }} />}
-                {missed && <span style={{ fontSize: 8, fontWeight: 900, color: isSelected ? 'rgba(255,255,255,0.7)' : 'rgb(var(--destructive))' }}>✕</span>}
-                {isTodayCard && !done && !missed && (
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: isSelected ? 'white' : 'rgb(var(--primary))' }} />
-                )}
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
+        return (
+          <button
+            key={i}
+            type="button"
+            role="tab"
+            title={isRest ? 'Rest' : w?.day_name}
+            aria-selected={isSelected}
+            onClick={() => onSelectDay(i)}
+            className={cn(
+              'touch-compact relative flex min-w-0 flex-col items-center gap-0.5 rounded-lg px-0.5 pt-2 pb-2 transition-colors',
+              isSelected ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground shadow-[0_0_0_1px_rgb(var(--border))] hover:bg-accent',
+            )}
+          >
+            <span className={cn('text-[12px]', isSelected ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(day, 'EEE')}</span>
+            <span className="num text-[22px]">{format(day, 'd')}</span>
+            <span className={cn('w-full truncate text-center text-[11px] leading-tight', isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{label}</span>
+            <span className="mt-1 flex h-4 items-center justify-center">
+              {status === 'done' && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-success text-white"><Check className="h-2.5 w-2.5" strokeWidth={3.5} /></span>
+              )}
+              {status === 'missed' && !isRest && <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-label="Missed" />}
+              {isTodayTile && status !== 'done' && <span className="h-1.5 w-1.5 rounded-full bg-brand" aria-label="Today" />}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

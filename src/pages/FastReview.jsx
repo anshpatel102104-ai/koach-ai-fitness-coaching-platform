@@ -1,34 +1,32 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { differenceInDays, parseISO, format } from 'date-fns';
-import {
-  ChevronLeft, CheckCircle2, Sparkles, MessageSquare,
-  Flame, Footprints, Check, Loader2, Send, Moon, Zap,
-  TrendingDown, TrendingUp, Minus, BookOpen, ChevronDown,
-  ClipboardCheck, ChevronUp, AlertTriangle, X, Play,
-  Brain, Camera, ArrowRight, AlertCircle, Home, Activity
-} from 'lucide-react';
+import { differenceInDays, parseISO } from 'date-fns';
+import { Check, Loader2, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
-import { compositeAdherenceScore, scoreColor } from '@/lib/adherence';
+import { Button } from '@/components/ui/button';
+import { Panel, EmptyState } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { compositeAdherenceScore } from '@/lib/adherence';
 import { evaluateClientRisk } from '@/lib/riskEngine';
-import { generateRecommendations, PRIORITY_STYLES, CATEGORY_ICONS } from '@/lib/decisionEngine';
-import { applyRecommendation, getConfirmText } from '@/lib/applyRecommendation';
+import { generateRecommendations } from '@/lib/decisionEngine';
 import { Link } from 'react-router-dom';
-import { SignedImg } from '@/components/shared/SignedImage';
+import {
+  ReviewStatTiles, PhotoStrip, AnswersPanel, checkInAnswers, Disclosure, RecommendationList,
+  weekNumber, sentLabel, previousCheckIn, possessive,
+} from '@/components/checkin/reviewParts';
 
 /* ─── Constants ─── */
-const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
-const MOOD_LABEL = { great: 'Great', good: 'Good', okay: 'Okay', tired: 'Tired', stressed: 'Stressed' };
-
 const TEMPLATES = [
-  { label: '🔥 Great Check-in', text: "Awesome check-in this week! Your consistency is really showing. Keep up the great work and let's build on this momentum! 💪" },
-  { label: '💪 Motivation Boost', text: "Just wanted to say I'm proud of the effort you've been putting in. Some weeks are harder than others — keep showing up and the results will follow 🔥" },
-  { label: '🥗 Nutrition Reminder', text: "Quick reminder to stay on track with your nutrition targets this week. Even 80% compliance makes a huge difference over time. You've got this!" },
-  { label: '📅 Missed Check-in', text: "Hey, I noticed you missed your check-in this week. Everything okay? Let me know if anything came up — I'm here to support you!" },
-  { label: '😴 Sleep Check', text: "Your sleep has been lower than ideal lately. Try to prioritize 7–8 hours — recovery is where the real progress happens. Let me know if you need any sleep tips!" },
+  { label: 'Good check-in', text: "Good check-in this week. The consistency is showing. Same plan, keep going." },
+  { label: 'Hard week', text: "Some weeks are harder than others. You kept showing up, and that's what moves the needle." },
+  { label: 'Nutrition nudge', text: "Quick nudge on nutrition this week. Hitting your targets 80% of the time is plenty. Aim for that." },
+  { label: 'Missed check-in', text: "I didn't get your check-in this week. Everything okay? Let me know if something came up." },
+  { label: 'Sleep', text: "Sleep has been under 7 hours lately. Let's make that the one thing to fix this week: lights out 30 minutes earlier." },
 ];
 
 /* ─── Queue builder ─── */
@@ -72,134 +70,36 @@ function buildQueue(checkIns, clients) {
   return items;
 }
 
-/* ─── AI prompt builder ─── */
-
-/* ─── Mini weight sparkline ─── */
-function WeightSparkline({ clientCIs }) {
+/* ─── Mini weight sparkline (ink line, last point marked) ─── */
+function WeightSparkline({ clientCIs, target }) {
   const weights = clientCIs.filter(c => c.weight).slice(0, 6).reverse();
   if (weights.length < 2) return null;
   const vals = weights.map(c => c.weight);
   const min = Math.min(...vals) - 2;
   const max = Math.max(...vals) + 2;
   const range = max - min || 1;
-  const W = 80, H = 28;
+  const W = 120, H = 36;
   const pts = vals.map((v, i) => ({
     x: (i / (vals.length - 1)) * W,
     y: H - ((v - min) / range) * H,
   }));
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
   const diff = (vals[vals.length - 1] - vals[0]).toFixed(1);
-  const isDown = Number(diff) < 0;
-  const isUp = Number(diff) > 0;
-  const color = isDown ? 'var(--tc-success)' : isUp ? 'var(--tc-destructive)' : 'var(--tc-muted-foreground)';
 
   return (
-    <div className="flex items-center gap-2">
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
-        <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3" fill={color} />
-      </svg>
+    <Panel className="flex items-center justify-between gap-4 px-4 py-3.5">
       <div>
-        <p className="text-sm font-bold tabular-nums text-foreground">{vals[vals.length - 1]} lbs</p>
-        <p className={cn('text-[10px] font-semibold flex items-center gap-0.5',
-          isDown ? 'text-success' : isUp ? 'text-destructive' : 'text-muted-foreground')}>
-          {isDown ? <TrendingDown className="w-2.5 h-2.5" /> : isUp ? <TrendingUp className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
-          {isUp ? '+' : ''}{diff} lbs
+        <p className="text-[13px] text-muted-foreground">Weight, last {vals.length} check-ins</p>
+        <p className="text-[15px] font-semibold text-foreground mt-0.5 tabular-nums">
+          {Number(diff) > 0 ? '+' : Number(diff) < 0 ? '−' : ''}{Math.abs(diff)} lb
+          {target ? <span className="font-normal text-muted-foreground"> · goal {target} lb</span> : null}
         </p>
       </div>
-    </div>
-  );
-}
-
-/* ─── Stat tile ─── */
-function StatTile({ icon: Icon, label, value, sub, color, bg }) {
-  return (
-    <div className={cn('flex flex-col items-center gap-1 rounded-xl py-3 px-1 border', bg || 'bg-muted border-border')}>
-      <Icon className={cn('w-3.5 h-3.5', color || 'text-muted-foreground')} />
-      <span className={cn('text-base font-bold tabular-nums leading-none', color || 'text-foreground')}>{value ?? '–'}</span>
-      {sub && <span className="text-[9px] text-muted-foreground">{sub}</span>}
-      <span className="text-[9px] text-muted-foreground text-center">{label}</span>
-    </div>
-  );
-}
-
-/* ─── Compliance bar ─── */
-function ComplianceBar({ label, value, icon }) {
-  if (value == null) return null;
-  const pct = Math.min(100, Math.max(0, value));
-  const color = pct >= 80 ? 'bg-success' : pct >= 60 ? 'bg-warning' : 'bg-destructive';
-  const textColor = pct >= 80 ? 'text-success' : pct >= 60 ? 'text-warning' : 'text-destructive';
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-foreground flex items-center gap-1">{icon} {label}</span>
-        <span className={cn('text-xs font-bold tabular-nums', textColor)}>{pct}%</span>
-      </div>
-      <div className="h-2 bg-border rounded-full overflow-hidden">
-        <div className={cn('h-full rounded-full transition-all duration-700', color)} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
-/* ─── Inline recommendation ─── */
-function InlineRec({ rec, checkIn, client }) {
-  const [stage, setStage] = useState('idle');
-  const styles = PRIORITY_STYLES[rec.priority];
-  const confirmText = getConfirmText(rec);
-
-  const handleConfirm = async () => {
-    setStage('applying');
-    try {
-      const msg = await applyRecommendation(rec, checkIn, client);
-      setStage('done');
-      toast.success(msg);
-    } catch (err) {
-      toast.error(err.message);
-      setStage('idle');
-    }
-  };
-
-  return (
-    <div className={cn('rounded-xl border transition-all',
-      stage === 'done' ? 'opacity-50 bg-muted border-border'
-      : stage === 'confirm' ? 'bg-accent border-primary'
-      : 'bg-card border-border hover:border-primary')}>
-      <div className="flex items-center gap-2.5 px-3 py-2.5">
-        <div className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', styles.dot)} />
-        <span className="text-sm flex-shrink-0">{CATEGORY_ICONS[rec.category]}</span>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-foreground leading-tight">{rec.title}</p>
-          <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 line-clamp-1">{rec.reason}</p>
-        </div>
-        {stage === 'idle' && (
-          <button onClick={() => setStage('confirm')}
-            className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border bg-accent/10 border-primary text-primary hover:bg-accent active:scale-95 transition-all">
-            <Zap className="w-3 h-3" /> {rec.actionLabel}
-          </button>
-        )}
-        {stage === 'applying' && <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />}
-        {stage === 'done' && <span className="flex items-center gap-1 text-[11px] font-bold text-success flex-shrink-0"><Check className="w-3 h-3" /> Done</span>}
-        {stage === 'confirm' && (
-          <div className="flex gap-1.5 flex-shrink-0">
-            <button onClick={handleConfirm} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold active:scale-95">
-              <Check className="w-3 h-3" /> Apply
-            </button>
-            <button onClick={() => setStage('idle')} className="w-7 h-7 flex items-center justify-center rounded-lg bg-card border border-border active:scale-95">
-              <X className="w-3 h-3 text-muted-foreground" />
-            </button>
-          </div>
-        )}
-      </div>
-      {stage === 'confirm' && confirmText && (
-        <div className="px-3 pb-2.5">
-          <div className="flex items-start gap-1.5 bg-card border border-accent rounded-lg px-2.5 py-2">
-            <AlertCircle className="w-3 h-3 text-primary flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-foreground leading-snug">{confirmText}</p>
-          </div>
-        </div>
-      )}
-    </div>
+      <svg width={W} height={H} viewBox={`-3 -3 ${W + 6} ${H + 6}`} className="text-foreground flex-shrink-0">
+        <path d={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3.5" className="fill-brand" />
+      </svg>
+    </Panel>
   );
 }
 
@@ -208,12 +108,13 @@ function FeedbackComposer({ checkIn, client, allCIs, onSent }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [fromAI, setFromAI] = useState(false);
 
   const generateAI = async () => {
     setAiLoading(true);
     const result = (await db.functions.invoke('aiMessageAssistant', { action: 'generateCheckInResponse', client, checkIn, recentCheckIns: allCIs })).data?.message || '';
     setText(result);
+    setFromAI(!!result);
     setAiLoading(false);
   };
 
@@ -225,47 +126,50 @@ function FeedbackComposer({ checkIn, client, allCIs, onSent }) {
       db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: text.trim(), tag: 'check_in', is_read: false }),
     ]);
     setSending(false);
-    toast.success('Feedback sent! 🎉');
+    toast.success('Reply sent');
     onSent();
   };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <button onClick={() => setShowTemplates(s => !s)}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium text-foreground hover:text-foreground hover:bg-muted">
-            <BookOpen className="w-3 h-3" /> Templates <ChevronDown className="w-3 h-3" />
-          </button>
-          {showTemplates && (
-            <div className="absolute left-0 top-9 z-30 bg-card border border-border rounded-xl shadow-xl p-2 w-72 max-h-64 overflow-y-auto">
-              {TEMPLATES.map((t, i) => (
-                <button key={i} onClick={() => { setText(t.text); setShowTemplates(false); }}
-                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-muted transition-colors">
-                  <p className="text-xs font-semibold text-foreground">{t.label}</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.text}</p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <button onClick={generateAI} disabled={aiLoading}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-primary bg-accent/10 text-xs font-medium text-primary hover:bg-accent disabled:opacity-60 transition-colors">
-          {aiLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-          {aiLoading ? 'Generating…' : 'AI Draft'}
-        </button>
+      <div className="relative">
+        <Textarea
+          value={text} onChange={e => { setText(e.target.value); }}
+          placeholder={`Write to ${client?.name?.split(' ')[0] || 'them'}, or let the AI draft it.`}
+          className="resize-y min-h-[160px]" rows={6}
+        />
+        {aiLoading && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-md bg-card/80">
+            <span className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Drafting…</span>
+          </div>
+        )}
       </div>
-      <Textarea
-        value={text} onChange={e => setText(e.target.value)}
-        placeholder="Write your coaching response..." className="text-sm resize-none" rows={4} autoFocus
-      />
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{text.length} chars</span>
-        <button onClick={send} disabled={sending || !text.trim()}
-          className="flex items-center gap-1.5 h-9 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all hover:bg-primary/90">
-          {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-          Send Feedback
-        </button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={generateAI} disabled={aiLoading}>
+          {text.trim() ? 'Draft again' : 'Draft with AI'}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">Templates <ChevronDown /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-72">
+            {TEMPLATES.map((t, i) => (
+              <DropdownMenuItem key={i} onClick={() => { setText(t.text); setFromAI(false); }} className="flex-col items-start gap-0.5">
+                <span className="font-medium">{t.label}</span>
+                <span className="text-[13px] text-muted-foreground line-clamp-1">{t.text}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] text-muted-foreground">
+          {fromAI ? `Drafted by AI from ${possessive(client)} answers. Edit anything before sending.` : 'Sends to their inbox and saves on the check-in.'}
+        </p>
+        <Button onClick={send} disabled={sending || !text.trim()} className="flex-shrink-0">
+          {sending && <Loader2 className="animate-spin" />}
+          Send reply
+        </Button>
       </div>
     </div>
   );
@@ -288,7 +192,7 @@ function ApplyChangesPanel({ checkIn, client, onCalDone, onCardioDone }) {
         db.entities.NutritionPlan.update(plan.id, { calories: newCals }),
         db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: `Your daily calorie target has been updated to ${newCals} kcal (${delta > 0 ? '+' : ''}${delta} kcal adjustment).`, tag: 'nutrition', is_read: false }),
       ]);
-      const label = `${delta > 0 ? '+' : ''}${delta} kcal → ${newCals}`;
+      const label = `${delta > 0 ? '+' : ''}${delta} kcal, now ${newCals}`;
       toast.success(`Calories adjusted: ${label}`);
       setCalResult(label);
       onCalDone?.(label);
@@ -305,59 +209,37 @@ function ApplyChangesPanel({ checkIn, client, onCalDone, onCardioDone }) {
       db.entities.CheckIn.update(checkIn.id, { coach_notes: (checkIn.coach_notes ? checkIn.coach_notes + '\n' : '') + '[Cardio] ' + msg }),
       db.entities.Message.create({ client_id: checkIn.client_id, client_name: checkIn.client_name, sender: 'coach', content: msg, tag: 'training', is_read: false }),
     ]);
-    const label = dir === 'up' ? '+1 cardio session' : '−1 cardio session';
-    toast.success(`Cardio adjusted: ${label}`);
+    const label = dir === 'up' ? 'One cardio session added' : 'One cardio session removed';
+    toast.success(label);
     setCardioResult(label);
     onCardioDone?.(label);
     setSaving(false);
   };
 
   return (
-    <div className="space-y-3">
-      {/* Calories */}
+    <div className="space-y-4">
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
-          <Flame className="w-3 h-3 text-orange-400" /> Adjust Calories
-        </p>
+        <p className="text-[13px] text-muted-foreground mb-2">Daily calories</p>
         {calResult ? (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10 border border-success">
-            <Check className="w-3.5 h-3.5 text-success" />
-            <span className="text-xs font-semibold text-success">{calResult}</span>
-          </div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-success"><Check className="w-4 h-4" /> {calResult}</p>
         ) : (
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-4 gap-2">
             {[[-250, '−250'], [-150, '−150'], [+150, '+150'], [+250, '+250']].map(([d, l]) => (
-              <button key={d} onClick={() => adjustCal(d)} disabled={saving}
-                className={cn('py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95',
-                  d < 0 ? 'bg-destructive/10 border-destructive text-destructive hover:bg-destructive/10'
-                        : 'bg-success/10 border-success text-success hover:bg-success/10')}>
-                {saving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : l}
-              </button>
+              <Button key={d} variant="outline" onClick={() => adjustCal(d)} disabled={saving} className="tabular-nums">
+                {saving ? <Loader2 className="animate-spin" /> : l}
+              </Button>
             ))}
           </div>
         )}
       </div>
-
-      {/* Cardio */}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
-          <Footprints className="w-3 h-3 text-primary" /> Adjust Cardio
-        </p>
+        <p className="text-[13px] text-muted-foreground mb-2">Cardio</p>
         {cardioResult ? (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10 border border-success">
-            <Check className="w-3.5 h-3.5 text-success" />
-            <span className="text-xs font-semibold text-success">{cardioResult}</span>
-          </div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-success"><Check className="w-4 h-4" /> {cardioResult}</p>
         ) : (
-          <div className="grid grid-cols-2 gap-1.5">
-            <button onClick={() => adjustCardio('up')} disabled={saving}
-              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border bg-accent border-accent text-primary hover:bg-accent active:scale-95 transition-all">
-              <ChevronUp className="w-3.5 h-3.5" /> Increase
-            </button>
-            <button onClick={() => adjustCardio('down')} disabled={saving}
-              className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold border bg-muted border-border text-foreground hover:bg-[var(--kc-eceef5)] active:scale-95 transition-all">
-              <ChevronDown className="w-3.5 h-3.5" /> Decrease
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={() => adjustCardio('up')} disabled={saving}>Add a session</Button>
+            <Button variant="outline" onClick={() => adjustCardio('down')} disabled={saving}>Drop a session</Button>
           </div>
         )}
       </div>
@@ -368,34 +250,21 @@ function ApplyChangesPanel({ checkIn, client, onCalDone, onCardioDone }) {
 /* ─────────────────────────────────────────
    Main client review card
 ───────────────────────────────────────── */
-function ClientReviewCard({ item, onMarkReviewed, markSaving }) {
+function ClientReviewCard({ item, onMarkReviewed, markSaving, position, total, overdueCount }) {
   const { ci: checkIn, client, clientCIs, riskEntry, daysAgo, tier } = item;
-  const [activePanel, setActivePanel] = useState(null); // 'feedback' | 'changes' | 'recs'
   const [feedbackSent, setFeedbackSent] = useState(!!checkIn.coach_responded || !!checkIn.coach_notes);
   const [aiSending, setAiSending] = useState(false);
   const [aiDone, setAiDone] = useState(false);
-  const [photoIdx, setPhotoIdx] = useState(0);
   const [isReviewedLocal, setIsReviewedLocal] = useState(checkIn.review_status === 'reviewed');
+  const [answersOpen, setAnswersOpen] = useState(false);
 
   const avgScore = compositeAdherenceScore(clientCIs);
   const recommendations = useMemo(() => generateRecommendations(checkIn, client, clientCIs), [checkIn, client, clientCIs]);
-  const photos = checkIn.photo_urls || [];
-
-  const TIER = {
-    0: { label: 'At Risk', bg: 'bg-destructive/10', border: 'border-destructive', text: 'text-destructive', dot: 'bg-destructive' },
-    1: { label: 'Overdue', bg: 'bg-warning/10', border: 'border-warning', text: 'text-warning', dot: 'bg-warning' },
-    2: { label: 'New', bg: 'bg-accent', border: 'border-accent', text: 'text-primary', dot: 'bg-primary' },
-  }[tier];
-
-  const sleepColor = !checkIn.sleep_hours ? 'text-muted-foreground'
-    : checkIn.sleep_hours >= 7 ? 'text-success'
-    : checkIn.sleep_hours >= 6 ? 'text-warning' : 'text-destructive';
-  const energyColor = !checkIn.energy_level ? 'text-muted-foreground'
-    : checkIn.energy_level >= 7 ? 'text-success'
-    : checkIn.energy_level >= 4 ? 'text-warning' : 'text-destructive';
-  const stressColor = !checkIn.stress_level ? 'text-muted-foreground'
-    : checkIn.stress_level <= 3 ? 'text-success'
-    : checkIn.stress_level <= 6 ? 'text-warning' : 'text-destructive';
+  const prev = previousCheckIn(checkIn, clientCIs);
+  const answers = checkInAnswers(checkIn);
+  const flaggedCount = answers.filter(a => a.flagged).length;
+  const week = weekNumber(checkIn, client, clientCIs);
+  const name = client?.name || checkIn.client_name || 'Client';
 
   const sendAI = async () => {
     if (aiSending || aiDone || feedbackSent) return;
@@ -408,7 +277,7 @@ function ClientReviewCard({ item, onMarkReviewed, markSaving }) {
     setAiDone(true);
     setFeedbackSent(true);
     setAiSending(false);
-    toast.success('AI feedback sent! ✨');
+    toast.success('AI reply sent');
   };
 
   const handleMarkReviewed = async () => {
@@ -417,215 +286,100 @@ function ClientReviewCard({ item, onMarkReviewed, markSaving }) {
     await onMarkReviewed();
   };
 
-  const togglePanel = (name) => setActivePanel(p => p === name ? null : name);
-
-  const goalLabel = client?.goal?.replace(/_/g, ' ') || null;
+  const status = tier === 0 ? { label: 'At risk', cls: 'text-destructive' }
+    : tier === 1 ? { label: `${daysAgo} days waiting`, cls: 'text-destructive' }
+    : null;
 
   return (
     <div className="space-y-4">
-
-      {/* ── Header ── */}
-      <div className="flex items-start gap-3">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-accent border border-accent flex items-center justify-center text-primary font-bold text-2xl flex-shrink-0 shadow-sm">
-          {(client?.name || checkIn.client_name || '?')[0].toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0 pt-0.5">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h2 className="font-heading font-bold text-xl text-foreground leading-tight">{client?.name || checkIn.client_name}</h2>
-            <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full border', TIER.bg, TIER.border, TIER.text)}>
-              {TIER.label}
-            </span>
-            {(feedbackSent || isReviewedLocal) && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-success bg-success/10 border border-success px-2 py-0.5 rounded-full">
-                <Check className="w-2.5 h-2.5" /> Reviewed
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-            <span>{format(parseISO(checkIn.date), 'MMM d')}</span>
-            {daysAgo > 0 && (
-              <span className={cn(daysAgo > 7 ? 'text-destructive font-medium' : daysAgo > 3 ? 'text-warning' : '')}>
-                · {daysAgo}d ago
-              </span>
-            )}
-            {checkIn.mood && <span className="flex items-center gap-1">{MOOD_EMOJI[checkIn.mood]} {MOOD_LABEL[checkIn.mood]}</span>}
-            {goalLabel && <span className="capitalize">· 🎯 {goalLabel}</span>}
-          </div>
-        </div>
-        {avgScore !== null && (
-          <div className="text-right flex-shrink-0">
-            <p className="text-[10px] text-muted-foreground mb-0.5">Adherence</p>
-            <p className={cn('text-2xl font-bold tabular-nums leading-none', scoreColor(avgScore))}>{avgScore}<span className="text-sm font-normal text-muted-foreground">%</span></p>
-          </div>
-        )}
+      <div className="flex items-center gap-3 text-[15px]">
+        <span className="text-muted-foreground">Check-in {position} of {total}</span>
+        {overdueCount > 0 && <span className="ml-auto text-sm font-semibold text-destructive">{overdueCount} overdue</span>}
       </div>
 
-      {/* ── Risk flags ── */}
+      <div>
+        <h1 className="text-[32px] sm:text-[38px] leading-[1.05] text-foreground">{name}</h1>
+        <p className="text-[15px] text-muted-foreground mt-1">
+          {week ? `Week ${week}, ` : ''}{sentLabel(checkIn)}
+          {status && <span className={cn('font-medium', status.cls)}> · {status.label}</span>}
+          {avgScore !== null && <span> · {avgScore}% adherence</span>}
+          {(feedbackSent || isReviewedLocal) && <span className="text-success font-medium"> · Reviewed</span>}
+        </p>
+      </div>
+
       {riskEntry?.flags?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {riskEntry.flags.slice(0, 5).map(f => (
-            <span key={f.key} className="flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 border border-destructive px-2 py-1 rounded-full">
-              <AlertTriangle className="w-2.5 h-2.5" /> {f.label}
-            </span>
-          ))}
-        </div>
+        <p className="text-sm text-destructive">{riskEntry.flags.slice(0, 5).map(f => f.label).join(', ')}</p>
       )}
 
-      {/* ── Wellness stats ── */}
-      <div className="grid grid-cols-5 gap-2">
-        <StatTile icon={Moon} label="Sleep" value={checkIn.sleep_hours} sub="hrs" color={sleepColor}
-          bg={!checkIn.sleep_hours ? 'bg-muted border-border' : checkIn.sleep_hours < 6 ? 'bg-destructive/10 border-destructive' : 'bg-muted border-border'} />
-        <StatTile icon={Zap} label="Energy" value={checkIn.energy_level} sub="/10" color={energyColor}
-          bg={!checkIn.energy_level ? 'bg-muted border-border' : checkIn.energy_level < 4 ? 'bg-destructive/10 border-destructive' : 'bg-muted border-border'} />
-        <StatTile icon={Brain} label="Stress" value={checkIn.stress_level} sub="/10" color={stressColor}
-          bg={!checkIn.stress_level ? 'bg-muted border-border' : checkIn.stress_level > 6 ? 'bg-destructive/10 border-destructive' : 'bg-muted border-border'} />
-        <div className="col-span-2 flex flex-col justify-center bg-muted border border-border rounded-xl py-3 px-3 gap-2.5">
-          <ComplianceBar label="Training" value={checkIn.compliance_training} icon="💪" />
-          <ComplianceBar label="Nutrition" value={checkIn.compliance_nutrition} icon="🥗" />
-        </div>
-      </div>
+      <ReviewStatTiles checkIn={checkIn} prev={prev} />
 
-      {/* ── Weight + adherence strip ── */}
+      <PhotoStrip urls={checkIn.photo_urls || []} />
+
       {clientCIs.filter(c => c.weight).length >= 2 && (
-        <div className="flex items-center justify-between bg-muted border border-border rounded-xl px-4 py-3">
-          <div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Weight Trend</p>
-            <WeightSparkline clientCIs={clientCIs} />
-          </div>
-          {client?.target_weight && (
-            <div className="text-right">
-              <p className="text-[10px] text-muted-foreground">Goal</p>
-              <p className="text-sm font-bold text-foreground tabular-nums">{client.target_weight} lbs</p>
-            </div>
-          )}
-        </div>
+        <WeightSparkline clientCIs={clientCIs} target={client?.target_weight} />
       )}
 
-      {/* ── Progress photos ── */}
-      {photos.length > 0 && (
+      {(answers.length > 0 || checkIn.notes) && (
         <div>
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Camera className="w-3 h-3" /> Progress Photos ({photos.length})
-          </p>
-          <a href={photos[photoIdx]} target="_blank" rel="noreferrer">
-            <SignedImg src={photos[photoIdx]} alt="progress" className="w-full h-52 object-cover rounded-xl border border-border hover:opacity-95 transition-opacity" />
-          </a>
-          {photos.length > 1 && (
-            <div className="flex gap-1.5 mt-2 justify-center">
-              {photos.map((_, i) => (
-                <button key={i} onClick={() => setPhotoIdx(i)}
-                  className={cn('w-2 h-2 rounded-full transition-all', i === photoIdx ? 'bg-primary' : 'bg-border')} />
-              ))}
-            </div>
-          )}
+          <Panel>
+            <button
+              type="button"
+              onClick={() => setAnswersOpen(o => !o)}
+              aria-expanded={answersOpen}
+              className="w-full flex items-center gap-2 px-4 py-3.5 text-left"
+            >
+              <span className="text-[15px] font-semibold text-foreground">
+                {answers.length} answer{answers.length !== 1 ? 's' : ''}{flaggedCount > 0 ? `, ${flaggedCount} flagged` : ''}
+              </span>
+              <ChevronDown className={cn('ml-auto h-4 w-4 text-muted-foreground transition-transform', answersOpen && 'rotate-180')} />
+            </button>
+          </Panel>
+          {answersOpen && <AnswersPanel checkIn={checkIn} client={client} className="mt-2" />}
         </div>
       )}
 
-      {/* ── Client notes ── */}
-      {checkIn.notes && (
-        <div className="bg-warning/10 border border-warning rounded-xl p-3.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-warning mb-1.5">Client Notes</p>
-          <p className="text-sm text-foreground leading-relaxed">{checkIn.notes}</p>
-        </div>
-      )}
-
-      {/* ── Previous coach response ── */}
       {checkIn.coach_notes && (
-        <div className="bg-accent/10 border border-accent rounded-xl p-3.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-primary mb-1.5">Your Previous Response</p>
-          <p className="text-sm text-foreground leading-relaxed">{checkIn.coach_notes}</p>
-        </div>
+        <Panel className="px-4 py-3.5">
+          <p className="text-[13px] text-muted-foreground">Your last reply</p>
+          <p className="text-[15px] text-foreground leading-relaxed mt-1 whitespace-pre-line">{checkIn.coach_notes}</p>
+        </Panel>
       )}
 
-      {/* ─────── ACTION BUTTONS ─────── */}
-      <div className="space-y-2">
-        {/* Row 1: AI + Message */}
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={sendAI} disabled={aiSending || aiDone || feedbackSent}
-            className={cn(
-              'flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all active:scale-95',
-              aiDone || feedbackSent
-                ? 'bg-ai/10 border-ai text-ai opacity-60 cursor-default'
-                : 'bg-ai/10 border-ai text-ai hover:bg-ai/10')}>
-            {aiSending ? <Loader2 className="w-4 h-4 animate-spin" /> : (aiDone || feedbackSent) ? <Check className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            {aiDone ? 'AI Sent ✓' : feedbackSent ? 'Responded ✓' : 'AI Feedback'}
-          </button>
-
-          <button onClick={() => togglePanel('feedback')}
-            className={cn(
-              'flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all active:scale-95',
-              activePanel === 'feedback'
-                ? 'bg-accent/10 border-primary text-primary shadow-sm'
-                : 'bg-card border-border text-primary hover:bg-accent/10 hover:border-primary')}>
-            <MessageSquare className="w-4 h-4" /> Send Feedback
-          </button>
-        </div>
-
-        {/* Row 2: Apply Changes + Suggestions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => togglePanel('changes')}
-            className={cn(
-              'flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all active:scale-95',
-              activePanel === 'changes'
-                ? 'bg-orange-100 border-orange-200 text-orange-600 shadow-sm'
-                : 'bg-orange-50 border-orange-100 text-orange-600 hover:bg-orange-100')}>
-            <Activity className="w-4 h-4" /> Apply Changes
-          </button>
-
-          {recommendations.length > 0 && (
-            <button onClick={() => togglePanel('recs')}
-              className={cn(
-                'flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all active:scale-95',
-                activePanel === 'recs'
-                  ? 'bg-accent/10 border-primary text-primary shadow-sm'
-                  : 'bg-muted border-border text-foreground hover:bg-[var(--kc-eceef5)]')}>
-              <Zap className="w-4 h-4 text-warning" />
-              Suggestions ({recommendations.length})
+      {/* Reply */}
+      <Panel className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-[15px] font-semibold text-foreground">Reply</p>
+          {!feedbackSent && (
+            <button onClick={sendAI} disabled={aiSending || aiDone} className="text-[13px] font-semibold text-foreground underline underline-offset-4 decoration-1 disabled:opacity-50">
+              {aiSending ? 'Sending AI reply…' : 'Send an AI reply as is'}
             </button>
           )}
-          {recommendations.length === 0 && (
-            <div className="flex items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-border text-xs text-muted-foreground">
-              No suggestions
-            </div>
-          )}
         </div>
-
-        {/* Expanded panels */}
-        {activePanel === 'feedback' && (
-          <div className="bg-muted border border-border rounded-xl p-4 fade-up">
-            <FeedbackComposer checkIn={checkIn} client={client} allCIs={clientCIs}
-              onSent={() => { setFeedbackSent(true); setActivePanel(null); }} />
-          </div>
+        {feedbackSent ? (
+          <p className="text-sm text-muted-foreground">{aiDone ? 'AI reply sent.' : 'Replied.'} Mark it reviewed below, or move on.</p>
+        ) : (
+          <FeedbackComposer checkIn={checkIn} client={client} allCIs={clientCIs} onSent={() => setFeedbackSent(true)} />
         )}
+      </Panel>
 
-        {activePanel === 'changes' && (
-          <div className="bg-muted border border-border rounded-xl p-4 fade-up">
-            <ApplyChangesPanel checkIn={checkIn} client={client} />
-          </div>
-        )}
+      {/* Secondary tools */}
+      <Panel className="overflow-hidden">
+        <Disclosure title="Suggested changes" meta={recommendations.length ? `${recommendations.length}` : 'None'}>
+          <RecommendationList recommendations={recommendations} checkIn={checkIn} client={client} />
+        </Disclosure>
+        <Disclosure title="Adjust the plan" meta="Calories or cardio">
+          <ApplyChangesPanel checkIn={checkIn} client={client} />
+        </Disclosure>
+      </Panel>
 
-        {activePanel === 'recs' && (
-          <div className="space-y-1.5 fade-up">
-            {recommendations.slice(0, 4).map(rec => (
-              <InlineRec key={rec.id} rec={rec} checkIn={checkIn} client={client} />
-            ))}
-          </div>
-        )}
-
-        {/* Mark Reviewed */}
-        <button onClick={handleMarkReviewed} disabled={markSaving || isReviewedLocal}
-          className={cn(
-            'w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-semibold transition-all active:scale-95',
-            isReviewedLocal
-              ? 'bg-success/10 border-success text-success cursor-default opacity-80'
-              : 'bg-success/10 border-success text-success hover:bg-success/10')}>
-          {markSaving
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : isReviewedLocal
-              ? <><CheckCircle2 className="w-4 h-4" /> Marked as Reviewed</>
-              : <><ClipboardCheck className="w-4 h-4" /> Mark as Reviewed</>}
-        </button>
-      </div>
+      <Button
+        variant="outline"
+        className="w-full h-12"
+        onClick={handleMarkReviewed}
+        disabled={markSaving || isReviewedLocal}
+      >
+        {markSaving ? <Loader2 className="animate-spin" /> : isReviewedLocal ? <><Check /> Reviewed</> : 'Mark reviewed'}
+      </Button>
     </div>
   );
 }
@@ -654,14 +408,10 @@ export default function FastReview() {
 
   const total = queue.length;
   const completedCount = Object.values(reviewed).filter(Boolean).length;
-  const progressPct = total > 0 ? (completedCount / total) * 100 : 0;
   const safeIdx = Math.min(idx, Math.max(0, activeQueue.length - 1));
   const current = activeQueue[safeIdx];
 
-  // Key counts for header pills
-  const atRiskCount = activeQueue.filter(i => i.tier === 0).length;
   const overdueCount = activeQueue.filter(i => i.tier === 1).length;
-  const newCount = activeQueue.filter(i => i.tier === 2).length;
 
   const handleMark = async () => {
     if (!current) return;
@@ -670,112 +420,69 @@ export default function FastReview() {
     setReviewed(r => ({ ...r, [current.ci.id]: true }));
     queryClient.invalidateQueries({ queryKey: ['checkins-fast'] });
     setMarkSaving(false);
-    toast.success('Marked as reviewed ✓');
+    toast.success('Marked reviewed');
   };
 
   const goNext = () => { if (safeIdx < activeQueue.length - 1) setIdx(i => i + 1); };
   const goPrev = () => { if (safeIdx > 0) setIdx(i => i - 1); };
 
   if (isLoading) return (
-    <div className="flex justify-center items-center min-h-screen bg-muted">
-      <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+    <div className="flex justify-center items-center py-32">
+      <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-full animate-spin" />
     </div>
   );
 
   const allDone = activeQueue.length === 0;
+  const isLast = safeIdx >= activeQueue.length - 1;
 
   return (
-    <div className="min-h-screen bg-muted">
-      {/* ── Top nav bar ── */}
-      <div className="sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center gap-3 shadow-sm">
-        <Link to="/" className="flex items-center justify-center w-9 h-9 rounded-xl border border-border bg-card hover:bg-muted transition-colors flex-shrink-0">
-          <Home className="w-4 h-4 text-muted-foreground" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-[15px] font-heading font-bold text-foreground flex items-center gap-2">
-            <Play className="w-4 h-4 text-primary fill-primary" />
-            Run My Day
-          </h1>
-          {!allDone && (
-            <p className="text-[11px] text-muted-foreground tabular-nums">
-              {safeIdx + 1} of {activeQueue.length} · {completedCount > 0 && `${completedCount} done`}
-            </p>
-          )}
-        </div>
-        {!allDone && (
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {atRiskCount > 0 && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-destructive/10 border border-destructive text-destructive">🚨 {atRiskCount}</span>}
-            {overdueCount > 0 && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-warning/10 border border-warning text-warning">⏰ {overdueCount}</span>}
-            {newCount > 0 && <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-accent/10 border border-accent text-primary">📋 {newCount}</span>}
-          </div>
-        )}
-      </div>
-
-      {/* ── Progress bar ── */}
-      {!allDone && (
-        <div className="h-1 bg-border">
-          <div className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${Math.max(progressPct, completedCount > 0 ? 5 : 2)}%` }} />
+    <div className="min-h-[calc(100vh-56px)] bg-background">
+      {/* Progress segments */}
+      {!allDone && total > 0 && (
+        <div className="flex gap-1 px-4 pt-3 max-w-xl mx-auto" aria-label={`${completedCount} of ${total} done`}>
+          {queue.map((item) => (
+            <span
+              key={item.ci.id}
+              className={cn('h-1 flex-1 rounded-full', reviewed[item.ci.id] ? 'bg-success' : item.ci.id === current?.ci.id ? 'bg-primary' : 'bg-border')}
+            />
+          ))}
         </div>
       )}
 
-      {/* ── Content ── */}
-      <div className="max-w-xl mx-auto px-4 pt-4 pb-28">
-
+      <div className="max-w-xl mx-auto px-4 pt-5 pb-32">
         {allDone ? (
-          /* All done state */
-          <div className="flex flex-col items-center justify-center py-24 gap-5 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-success/10 border border-success flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-foreground font-heading">All caught up! 🎉</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                {completedCount > 0
-                  ? `You reviewed ${completedCount} client${completedCount !== 1 ? 's' : ''} — great coaching session!`
-                  : 'No pending check-ins right now. Check back soon!'}
-              </p>
-            </div>
-            <Link to="/"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors">
-              <Home className="w-4 h-4" /> Back to Dashboard
-            </Link>
-          </div>
+          <Panel className="mt-10">
+            <EmptyState
+              title={completedCount > 0 ? `That's everyone. ${completedCount} check-in${completedCount !== 1 ? 's' : ''} reviewed.` : 'Nothing waiting on you.'}
+              body={completedCount > 0 ? 'Good session. New check-ins will show up here as clients send them.' : 'No check-ins from the last three weeks need a reply.'}
+              action={<Button asChild><Link to="/">Back to Today</Link></Button>}
+            />
+          </Panel>
         ) : (
-          /* Client card */
           current && (
-            <div key={current.ci.id} className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-sm fade-up">
-              <ClientReviewCard
-                item={current}
-                onMarkReviewed={handleMark}
-                markSaving={markSaving}
-              />
-            </div>
+            <ClientReviewCard
+              key={current.ci.id}
+              item={current}
+              onMarkReviewed={handleMark}
+              markSaving={markSaving}
+              position={safeIdx + 1}
+              total={activeQueue.length}
+              overdueCount={overdueCount}
+            />
           )
         )}
       </div>
 
-      {/* ── Sticky bottom nav ── */}
+      {/* Sticky bottom bar */}
       {!allDone && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--kc-w-95)] backdrop-blur-sm border-t border-border safe-area-inset-bottom">
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           <div className="max-w-xl mx-auto px-4 py-3 flex gap-3">
-            <button onClick={goPrev} disabled={safeIdx === 0}
-              className="flex items-center gap-1.5 h-12 px-4 rounded-xl border border-border bg-card text-sm font-semibold text-foreground disabled:opacity-30 active:scale-95 transition-all flex-shrink-0 hover:bg-muted">
-              <ChevronLeft className="w-4 h-4" /> Back
-            </button>
-            <button
-              onClick={safeIdx < activeQueue.length - 1 ? goNext : undefined}
-              disabled={safeIdx >= activeQueue.length - 1}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold transition-all active:scale-95',
-                safeIdx >= activeQueue.length - 1
-                  ? 'bg-success/10 border border-success text-success cursor-default'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm'
-              )}>
-              {safeIdx >= activeQueue.length - 1
-                ? <><CheckCircle2 className="w-4 h-4" /> Last Client</>
-                : <>Next Client <ArrowRight className="w-4 h-4" /></>}
-            </button>
+            <Button variant="outline" className="h-12 px-5 text-[15px]" onClick={goPrev} disabled={safeIdx === 0}>
+              Back
+            </Button>
+            <Button className="flex-1 h-12 text-[15px]" onClick={isLast ? undefined : goNext} disabled={isLast}>
+              {isLast ? 'Last one' : 'Next client'}
+            </Button>
           </div>
         </div>
       )}

@@ -1,28 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { Panel, PanelHeader, Segmented } from '@/components/kit';
+import { CHART, ChartTooltip, ChartLegend, money, moneyAxis } from '@/components/business/ui';
 import { subMonths, format, startOfMonth, parseISO, endOfMonth } from 'date-fns';
 
 const RANGES = [
-  { label: '3M', months: 3 },
-  { label: '6M', months: 6 },
-  { label: '1Y', months: 12 },
+  { label: '3 mo', months: 3 },
+  { label: '6 mo', months: 6 },
+  { label: '1 yr', months: 12 },
 ];
-
-function CustomTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-sidebar text-white rounded-xl p-3 shadow-xl text-xs">
-      <p className="font-bold mb-2 text-border">{label}</p>
-      {payload.map((p, i) => (
-        <div key={i} className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-muted-foreground">{p.name}:</span>
-          <span className="font-semibold">${(p.value || 0).toLocaleString()}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function BIRevenueChart({ clients, payments }) {
   const [range, setRange] = useState(6);
@@ -48,7 +34,8 @@ export default function BIRevenueChart({ clients, payments }) {
       const newRevenue = newClients.reduce((s, c) => s + (c.monthly_rate || 0), 0);
 
       return {
-        month: format(d, 'MMM yy'),
+        month: format(d, 'MMM'),
+        full: format(d, 'MMMM yyyy'),
         mrr,
         newRevenue,
         existingRevenue: Math.max(0, mrr - newRevenue),
@@ -61,60 +48,41 @@ export default function BIRevenueChart({ clients, payments }) {
   // Milestone markers
   const milestones = [1000, 5000, 10000].filter(m => m <= maxMrr * 1.2 && m > 0);
 
+  const latest = data[data.length - 1]?.mrr || 0;
+  const first = data[0]?.mrr || 0;
+  const change = latest - first;
+
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-bold text-foreground">Revenue Trend</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Monthly Recurring Revenue over time</p>
-        </div>
-        <div className="flex gap-1">
-          {RANGES.map(r => (
-            <button key={r.label} onClick={() => setRange(r.months)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${range === r.months ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}>
-              {r.label}
-            </button>
-          ))}
-        </div>
+    <Panel>
+      <PanelHeader
+        title="Recurring revenue"
+        subtitle={`${money(latest)} a month now, ${change === 0 ? 'flat' : `${change > 0 ? 'up' : 'down'} ${money(Math.abs(change))}`} over ${range} months.`}
+        right={<Segmented className="hidden sm:inline-flex" size="sm" value={range} onChange={setRange} options={RANGES.map(r => ({ value: r.months, label: r.label }))} />}
+      />
+      <Segmented className="sm:hidden mx-5 mb-2" size="sm" value={range} onChange={setRange} options={RANGES.map(r => ({ value: r.months, label: r.label }))} />
+      <div className="px-3 sm:px-4">
+        <ResponsiveContainer width="100%" height={230}>
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+            <CartesianGrid vertical={false} stroke={CHART.grid} />
+            <XAxis dataKey="month" tick={CHART.tick} axisLine={false} tickLine={false} />
+            <YAxis tick={CHART.tick} axisLine={false} tickLine={false} width={48} tickFormatter={moneyAxis} />
+            <Tooltip cursor={{ fill: 'var(--tc-accent)' }} content={<ChartTooltip format={(v) => money(v)} />} />
+            {milestones.map(m => (
+              <ReferenceLine key={m} y={m} stroke={CHART.grey} strokeDasharray="4 4" strokeWidth={1}
+                label={{ value: moneyAxis(m), position: 'insideTopLeft', fontSize: 11, fill: CHART.grey }} />
+            ))}
+            <Bar isAnimationActive={false} dataKey="existingRevenue" name="Existing clients" stackId="mrr" fill={CHART.ink} maxBarSize={36} />
+            <Bar isAnimationActive={false} dataKey="newRevenue" name="New this month" stackId="mrr" fill={CHART.newBar} radius={[3, 3, 0, 0]} maxBarSize={36} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-
-      <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-          <defs>
-            <linearGradient id="mrrGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--tc-primary)" stopOpacity={0.15} />
-              <stop offset="95%" stopColor="var(--tc-primary)" stopOpacity={0} />
-            </linearGradient>
-            <linearGradient id="newGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--tc-success)" stopOpacity={0.15} />
-              <stop offset="95%" stopColor="var(--tc-success)" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--tc-muted)" />
-          <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false}
-            tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`} />
-          <Tooltip content={<CustomTooltip />} />
-          {milestones.map(m => (
-            <ReferenceLine key={m} y={m} stroke="var(--tc-warning)" strokeDasharray="4 4"
-              label={{ value: `$${m >= 1000 ? m / 1000 + 'k' : m} MRR`, position: 'right', fontSize: 9, fill: 'var(--tc-warning)' }} />
-          ))}
-          <Area type="monotone" dataKey="existingRevenue" name="Existing Clients" stroke="var(--tc-primary)" strokeWidth={2} fill="url(#mrrGrad)" dot={false} />
-          <Area type="monotone" dataKey="newRevenue" name="New Clients" stroke="var(--tc-success)" strokeWidth={2} fill="url(#newGrad)" dot={false} />
-        </AreaChart>
-      </ResponsiveContainer>
-
-      <div className="flex gap-4 mt-2">
-        {[
-          { color: 'var(--tc-primary)', label: 'Existing Revenue' },
-          { color: 'var(--tc-success)', label: 'New Client Revenue' },
-        ].map(l => (
-          <div key={l.label} className="flex items-center gap-1.5">
-            <div className="w-3 h-1.5 rounded-full" style={{ background: l.color }} />
-            <span className="text-[10px] text-muted-foreground">{l.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+      <ChartLegend
+        className="px-5 sm:px-6 pt-2 pb-5"
+        items={[
+          { color: CHART.ink, label: 'Existing clients' },
+          { color: CHART.newBar, label: 'New clients that month' },
+        ]}
+      />
+    </Panel>
   );
 }

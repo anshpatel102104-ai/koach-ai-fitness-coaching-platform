@@ -46,8 +46,8 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
   const submit = async () => {
     setSaving(true);
     const noteText = [
-      wins.length ? `✅ Wins: ${wins.join(', ')}` : '',
-      issues.length ? `⚠️ Struggles: ${issues.join(', ')}` : '',
+      wins.length ? `Wins: ${wins.join(', ')}` : '',
+      issues.length ? `Struggles: ${issues.join(', ')}` : '',
       note ? `Notes: ${note}` : '',
     ].filter(Boolean).join('\n');
 
@@ -59,7 +59,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
     });
     setSaving(false);
     setDone(true);
-    toast.success('Nutrition check-in submitted!');
+    toast.success('Nutrition check-in sent');
   };
 
   const handleClose = () => {
@@ -71,14 +71,14 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-md max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl">
         <div className="px-5 pt-5 pb-4 border-b border-border bg-card flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center">
               <Salad className="w-4.5 h-4.5 text-success" />
             </div>
             <div>
-              <DialogTitle className="font-heading font-bold text-base">Weekly Nutrition Check-In</DialogTitle>
+              <DialogTitle className="text-base">Weekly Nutrition Check-In</DialogTitle>
               <p className="text-xs text-muted-foreground">How well did you follow your plan this week?</p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
             <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
               <CheckCircle2 className="w-14 h-14 text-success" />
               <div>
-                <p className="text-lg font-bold text-foreground">Check-In Submitted!</p>
+                <p className="text-lg font-bold text-foreground">Check-in sent</p>
                 <p className="text-sm text-muted-foreground mt-1">Great work staying accountable. Your coach will review this.</p>
               </div>
               <Button onClick={handleClose}>Done</Button>
@@ -108,7 +108,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
                   onChange={e => setRating(Number(e.target.value))}
                   className="w-full accent-primary"
                 />
-                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>Poor</span><span>Perfect</span>
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
                       onClick={() => toggleTag(wins, setWins, w)}
                       className={cn(
                         'text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all',
-                        wins.includes(w) ? 'bg-success text-white border-success' : 'bg-card text-foreground border-border hover:border-success'
+                        wins.includes(w) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:border-success'
                       )}
                     >
                       {w}
@@ -142,7 +142,7 @@ export default function NutritionCheckInModal({ open, onOpenChange, planId, clie
                       onClick={() => toggleTag(issues, setIssues, s)}
                       className={cn(
                         'text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all',
-                        issues.includes(s) ? 'bg-destructive text-white border-destructive' : 'bg-card text-foreground border-border hover:border-destructive'
+                        issues.includes(s) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:border-destructive'
                       )}
                     >
                       {s}

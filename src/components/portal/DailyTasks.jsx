@@ -1,54 +1,48 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function DailyTasks({ tasks, onToggle }) {
-  const done = tasks.filter(t => t.completed);
-  const pending = tasks.filter(t => !t.completed);
+/**
+ * Today's list: plain rows with a check circle. Rows that open another
+ * screen show a chevron; counters (meals, water) tick up on tap.
+ * tasks: [{ id, label, sublabel?, completed, navigates? }]
+ */
+export default function DailyTasks({ tasks, onToggle, title = "Today's list" }) {
+  const done = tasks.filter(t => t.completed).length;
 
   return (
-    <div className="mx-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-white font-bold text-base">Today's Tasks</p>
-        <span className="text-white/40 text-xs font-semibold">{done.length} of {tasks.length} complete</span>
+    <section className="panel px-4 pt-4 pb-1">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-xl text-foreground">{title}</h2>
+        <span className="text-[13px] text-muted-foreground tabular-nums">{done} of {tasks.length} done</span>
       </div>
-      <div className="space-y-2">
-        <AnimatePresence>
-          {[...pending, ...done].map((task) => (
-            <motion.button
-              key={task.id}
-              layout
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 12 }}
+      <ul className="mt-2 divide-y divide-border">
+        {tasks.map(task => (
+          <li key={task.id}>
+            <button
+              type="button"
               onClick={() => onToggle(task.id)}
-              className={cn('w-full flex items-center gap-3 p-3.5 rounded-2xl transition-all text-left',
-                task.completed ? 'opacity-50' : '')}
-              style={{
-                background: task.completed ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)',
-                border: `1px solid ${task.completed ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.10)'}`,
-              }}>
-              <motion.div
-                initial={false}
-                animate={{ scale: task.completed ? [1.2, 1] : 1 }}
-                transition={{ duration: 0.2 }}>
-                {task.completed
-                  ? <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-                  : <Circle className="w-5 h-5 text-white/20 flex-shrink-0" />}
-              </motion.div>
-              <div className="flex-1 min-w-0">
-                <p className={cn('text-sm font-semibold', task.completed ? 'text-white/30 line-through' : 'text-white')}>
-                  {task.emoji} {task.label}
-                </p>
-                {task.sublabel && !task.completed && (
-                  <p className="text-[10px] text-white/30 mt-0.5">{task.sublabel}</p>
+              className="flex w-full items-center gap-3 py-3 text-left"
+            >
+              <span
+                className={cn(
+                  'inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full transition-colors',
+                  task.completed ? 'bg-success text-white' : 'border-[1.5px] border-input',
                 )}
-              </div>
-            </motion.button>
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
+              >
+                {task.completed && <Check className="h-4 w-4" strokeWidth={3} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={cn('block text-[15px] font-semibold', task.completed ? 'text-muted-foreground' : 'text-foreground')}>
+                  {task.label}
+                </span>
+                {task.sublabel && <span className="block text-[13px] text-muted-foreground truncate">{task.sublabel}</span>}
+              </span>
+              {task.navigates && <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted-foreground" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

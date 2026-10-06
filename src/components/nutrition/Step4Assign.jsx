@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
-  User, Search, CheckCircle2, CalendarDays, AlertTriangle,
-  ChevronDown, BookmarkPlus, FileText, Send, Users, UserPlus,
-  ArrowRight, Sparkles,
+  User, Search, Check, AlertTriangle,
+  ChevronDown, BookmarkPlus, Users,
+  ArrowRight, Loader2,
 } from 'lucide-react';
+import { Initials } from '@/components/kit';
 import { format } from 'date-fns';
 
 // ── Client Picker ─────────────────────────────────────────────────────────────
@@ -36,27 +37,23 @@ function ClientPicker({ value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-border bg-background hover:border-primary/40 transition-all text-left"
+        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md border border-input bg-card hover:bg-accent transition-colors text-left"
       >
         {selected ? (
           <>
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-primary">
-                {(selected.full_name || selected.name || '?')[0].toUpperCase()}
-              </span>
-            </div>
+            <Initials name={selected.full_name || selected.name || '?'} size={32} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{selected.full_name || selected.name}</p>
               <p className="text-xs text-muted-foreground truncate">{selected.email || ''}</p>
             </div>
-            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+            <Check className="w-4 h-4 text-foreground shrink-0" />
           </>
         ) : (
           <>
             <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
               <Users className="w-4 h-4 text-muted-foreground" />
             </div>
-            <span className="text-sm text-muted-foreground flex-1">Select a client…</span>
+            <span className="text-sm text-muted-foreground flex-1">Pick a client</span>
             <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
           </>
         )}
@@ -69,7 +66,7 @@ function ClientPicker({ value, onChange }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 left-0 right-0 mt-1.5 bg-popover border border-border rounded-xl shadow-xl overflow-hidden"
+            className="absolute z-50 left-0 right-0 mt-1.5 bg-popover border border-border rounded-xl shadow-md overflow-hidden"
           >
             {/* Search */}
             <div className="p-2 border-b border-border">
@@ -80,8 +77,8 @@ function ClientPicker({ value, onChange }) {
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search clients…"
-                  className="w-full pl-8 pr-3 py-1.5 text-sm bg-background rounded-lg border border-input focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Search clients"
+                  className="w-full pl-8 pr-3 h-9 text-sm bg-card rounded-md border border-input focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
@@ -89,7 +86,7 @@ function ClientPicker({ value, onChange }) {
             {/* List */}
             <div className="max-h-52 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="py-6 text-center text-xs text-muted-foreground">No clients found</div>
+                <div className="px-4 py-6 text-sm text-muted-foreground">No clients match that search.</div>
               ) : (
                 filtered.map(c => (
                   <button
@@ -97,23 +94,19 @@ function ClientPicker({ value, onChange }) {
                     type="button"
                     onClick={() => { onChange(c.id); setOpen(false); setSearch(''); }}
                     className={cn(
-                      'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/50 transition-colors text-left',
-                      value === c.id && 'bg-accent/50'
+                      'w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left',
+                      value === c.id && 'bg-accent'
                     )}
                   >
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-primary">
-                        {(c.full_name || c.name || '?')[0].toUpperCase()}
-                      </span>
-                    </div>
+                    <Initials name={c.full_name || c.name || '?'} size={28} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{c.full_name || c.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{c.email || ''}</p>
                     </div>
                     {c.nutrition_plan_id && (
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-warning/10 text-warning shrink-0">Has plan</span>
+                      <span className="text-xs text-muted-foreground shrink-0">Has a plan</span>
                     )}
-                    {value === c.id && <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />}
+                    {value === c.id && <Check className="w-4 h-4 text-foreground shrink-0" />}
                   </button>
                 ))
               )}
@@ -132,18 +125,14 @@ function TemplateSaveForm({ onSave, onCancel }) {
   const CATEGORIES = ['Fat Loss', 'Muscle Gain', 'Maintenance', 'Performance', 'Recomposition', 'Vegetarian/Vegan', 'Custom'];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-lg"
-    >
-      <p className="text-sm font-bold text-foreground">Save as Template</p>
+    <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+      <p className="text-sm font-semibold text-foreground">Save as a template</p>
       <div>
-        <Label className="text-xs font-semibold mb-1.5 block">Template Name</Label>
+        <Label className="text-sm font-semibold mb-1.5 block">Template name</Label>
         <Input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="e.g. 12-Week Fat Loss Standard"
+          placeholder="12-week fat loss"
           autoFocus
         />
       </div>
@@ -156,10 +145,10 @@ function TemplateSaveForm({ onSave, onCancel }) {
               type="button"
               onClick={() => setCategory(c)}
               className={cn(
-                'px-2.5 py-1 rounded-full text-xs font-semibold border transition-all',
+                'px-2.5 h-8 rounded-md text-[13px] font-medium border transition-colors',
                 category === c
                   ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                  : 'bg-card text-foreground border-input hover:bg-accent'
               )}
             >
               {c}
@@ -169,69 +158,55 @@ function TemplateSaveForm({ onSave, onCancel }) {
       </div>
       <div className="flex gap-2 pt-1">
         <Button variant="outline" size="sm" onClick={onCancel} className="flex-1">Cancel</Button>
-        <Button size="sm" onClick={() => onSave(name, category)} disabled={!name} className="flex-1 bg-gradient-to-r from-primary to-ai text-white border-0">
-          Save Template
+        <Button size="sm" onClick={() => onSave(name, category)} disabled={!name} className="flex-1">
+          Save template
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 // ── Success Screen ────────────────────────────────────────────────────────────
 function SuccessScreen({ clientName, planName, calories, startDate, hasNote, onViewClient, onGenerateAnother }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center text-center py-6 gap-4"
-    >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-        className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center"
-      >
-        <CheckCircle2 className="w-10 h-10 text-success" />
-      </motion.div>
-
+    <div className="py-4 space-y-5">
       <div>
-        <h2 className="text-xl font-bold font-heading text-foreground mb-1">
-          Plan assigned to {clientName}! 🎉
-        </h2>
+        <h2 className="text-2xl text-foreground mb-1">Sent to {clientName}</h2>
         <p className="text-sm text-muted-foreground">
-          {clientName} will see their new plan in the client app
+          {clientName} will see the plan in their app from the start date.
         </p>
       </div>
 
-      <div className="w-full bg-gradient-to-br from-accent to-ai/10 border border-accent rounded-2xl p-4 space-y-2 text-left">
-        <div className="flex items-center gap-2">
-          <span className="text-base">🥗</span>
-          <span className="text-sm font-bold text-foreground">{planName}</span>
+      <div className="rounded-xl border border-border bg-card divide-y divide-border">
+        <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+          <span className="text-sm text-muted-foreground">Plan</span>
+          <span className="text-sm font-semibold text-foreground text-right">{planName}</span>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-card border border-primary/20 text-primary">
-            {calories} kcal/day
-          </span>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <CalendarDays className="w-3.5 h-3.5" /> Starts {format(new Date(startDate), 'MMM d, yyyy')}
-          </span>
+        <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+          <span className="text-sm text-muted-foreground">Calories</span>
+          <span className="text-sm font-semibold text-foreground tabular-nums">{calories} a day</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+          <span className="text-sm text-muted-foreground">Starts</span>
+          <span className="text-sm font-semibold text-foreground">{format(new Date(startDate), 'MMM d, yyyy')}</span>
         </div>
         {hasNote && (
-          <p className="text-xs text-success font-semibold flex items-center gap-1">
-            <Send className="w-3.5 h-3.5" /> Message sent to {clientName} ✓
-          </p>
+          <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+            <span className="text-sm text-muted-foreground">Your note</span>
+            <span className="text-sm font-semibold text-success">Sent as a message</span>
+          </div>
         )}
       </div>
 
-      <div className="w-full space-y-2 pt-1">
-        <Button onClick={onViewClient} className="w-full gap-2 bg-gradient-to-r from-primary to-ai text-white border-0">
-          View {clientName}'s Profile <ArrowRight className="w-4 h-4" />
+      <div className="space-y-2">
+        <Button onClick={onViewClient} className="w-full">
+          Open {clientName}'s profile <ArrowRight />
         </Button>
-        <Button variant="outline" onClick={onGenerateAnother} className="w-full gap-2">
-          <Sparkles className="w-4 h-4 text-primary" /> Generate Another Plan
+        <Button variant="outline" onClick={onGenerateAnother} className="w-full">
+          Draft another plan
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -370,7 +345,7 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
           recipient_id: selectedClient.portal_user_id,
           category: 'ai',
           type: 'meal_plan_assigned',
-          title: 'Your new meal plan is ready! 🥗',
+          title: 'Your new meal plan is ready',
           body: `${planName} — ${result.calories} kcal/day`,
           is_read: false,
           related_client_id: selectedClientId,
@@ -406,7 +381,7 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
         template_category: category,
       }));
       queryClient.invalidateQueries({ queryKey: ['nutrition'] });
-      toast.success(`Template "${templateName || planName}" saved to library!`);
+      toast.success(`Saved ${templateName || planName} as a template`);
       setShowTemplateForm(false);
     } catch (err) {
       toast.error('Failed to save template: ' + err.message);
@@ -446,44 +421,28 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
     <div className="space-y-5">
       {/* Plan name header */}
       <div>
-        <h2 className="text-xl font-bold font-heading mb-1">Save & Assign Plan</h2>
-        <p className="text-sm text-muted-foreground">Name the plan and assign it to a client</p>
+        <h2 className="text-2xl mb-1">Save and assign</h2>
+        <p className="text-sm text-muted-foreground">Name the plan, pick the client, and add a note if you like.</p>
       </div>
 
       {/* Editable plan name */}
       <div>
-        <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5 block">Plan Name</Label>
+        <Label className="text-sm font-semibold text-foreground mb-1.5 block">Plan name</Label>
         <input
           type="text"
           value={planName}
           onChange={e => setPlanName(e.target.value)}
-          className="w-full text-base font-bold bg-background border border-input rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+          className="w-full text-[15px] font-semibold bg-card border border-input rounded-md px-3 h-10 focus:outline-none focus:ring-2 focus:ring-ring"
         />
         {/* Macro badges */}
-        <div className="flex flex-wrap gap-2 mt-2">
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
-            🔥 {result.calories} kcal
-          </span>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-destructive/10 text-destructive border border-destructive">
-            P {result.protein}g
-          </span>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-warning/10 text-warning border border-warning">
-            C {result.carbs}g
-          </span>
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-accent text-primary border border-primary">
-            F {result.fats}g
-          </span>
-        </div>
+        <p className="text-[13px] text-muted-foreground mt-2 tabular-nums">
+          <span className="font-semibold text-foreground">{result.calories} kcal</span> · {result.protein} g protein · {result.carbs} g carbs · {result.fats} g fat
+        </p>
       </div>
 
       {/* Assign to client card */}
-      <div className="bg-gradient-to-br from-accent/60 to-ai/60 border border-accent rounded-2xl p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <UserPlus className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <p className="text-sm font-bold text-foreground">Who is this plan for?</p>
-        </div>
+      <div className="bg-card border border-border rounded-xl p-4 space-y-4">
+        <p className="text-sm font-semibold text-foreground">Who is this plan for?</p>
 
         <ClientPicker value={selectedClientId} onChange={v => { setSelectedClientId(v); setClientError(''); }} />
 
@@ -495,10 +454,10 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
 
         {/* Existing plan warning */}
         {clientExistingPlan && (
-          <div className="bg-warning/10 border border-warning rounded-xl p-3 space-y-2">
+          <div className="bg-warning-soft rounded-lg p-3 space-y-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
-              <p className="text-xs font-semibold text-warning">
+              <p className="text-sm text-foreground">
                 {selectedClient?.full_name || 'This client'} already has a plan: <strong>{clientExistingPlan.title}</strong>
               </p>
             </div>
@@ -515,10 +474,10 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
                   replaceExisting ? 'left-4' : 'left-0.5'
                 )} />
               </div>
-              <span className="text-xs font-semibold text-warning">Replace existing plan</span>
+              <span className="text-sm font-semibold text-foreground">Replace the current plan</span>
             </label>
             {replaceExisting && (
-              <p className="text-[11px] text-warning">⚠️ This will replace <strong>{clientExistingPlan.title}</strong></p>
+              <p className="text-[13px] text-warning">{clientExistingPlan.title} will be replaced.</p>
             )}
           </div>
         )}
@@ -526,29 +485,29 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
         {/* Start date */}
         <div>
           <Label className="text-xs font-semibold mb-1.5 block text-foreground flex items-center gap-1.5">
-            <CalendarDays className="w-3.5 h-3.5" /> Start Date
+            Start date
           </Label>
           <input
             type="date"
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
-            className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full border border-input rounded-md px-3 h-10 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
         {/* Personal note */}
         <div>
           <Label className="text-xs font-semibold mb-1.5 block text-foreground flex items-center gap-1.5">
-            <Send className="w-3.5 h-3.5" /> Personal Note to Client <span className="font-normal text-muted-foreground">(optional)</span>
+            Note to the client <span className="font-normal text-muted-foreground">(optional)</span>
           </Label>
           <Textarea
             value={personalNote}
             onChange={e => setPersonalNote(e.target.value)}
-            placeholder={`e.g. "Hey ${selectedClient?.full_name?.split(' ')[0] || 'there'}, I built this plan specifically around your schedule — let's get it!"`}
+            placeholder={`${selectedClient?.full_name?.split(' ')[0] || 'Hi'}, this is built around your shift pattern. Start with breakfast and tell me how the portions feel.`}
             className="resize-none h-20 text-sm"
           />
           {personalNote && (
-            <p className="text-[11px] text-muted-foreground mt-1">This message will be sent to the client when the plan is assigned</p>
+            <p className="text-[13px] text-muted-foreground mt-1">Sent as a message when you assign the plan.</p>
           )}
         </div>
       </div>
@@ -567,15 +526,12 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
         <Button
           onClick={handleAssign}
           disabled={assigning}
-          className="w-full h-11 gap-2 bg-gradient-to-r from-primary to-ai hover:from-primary hover:to-ai border-0 text-white font-bold text-sm"
+          className="w-full h-11"
         >
           {assigning ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-              Assigning…
-            </span>
+            <><Loader2 className="animate-spin" /> Assigning</>
           ) : (
-            <><User className="w-4 h-4" /> Assign to Client</>
+            <><User /> Assign to client</>
           )}
         </Button>
 
@@ -585,16 +541,16 @@ export default function Step4Assign({ result, onRegenerate, onOpenChange, onRese
           onClick={() => setShowTemplateForm(t => !t)}
           className="w-full gap-2"
         >
-          <BookmarkPlus className="w-4 h-4" /> Save as Template
+          <BookmarkPlus /> Save as a template
         </Button>
 
         {/* Tertiary — Save as Draft */}
         <button
           type="button"
           onClick={handleSaveDraft}
-          className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 py-1"
+          className="w-full text-sm font-semibold text-foreground underline underline-offset-4 py-1"
         >
-          <FileText className="w-3.5 h-3.5" /> Save as Draft
+          Save as a draft
         </button>
       </div>
     </div>

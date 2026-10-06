@@ -1,35 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { differenceInDays, parseISO, subWeeks } from 'date-fns';
-import { ArrowUp, ArrowDown, Minus, MessageSquare, User, Flag, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, MessageSquare, ChevronUp, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
 import { useNavigate } from 'react-router-dom';
+import { Panel, Segmented, Initials, ComplianceStrip, EmptyState } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { weeklyCompliance } from '@/components/dashboard/todayModel';
 
 const FILTER_CHIPS = ['All', 'On Track', 'Needs Attention', 'At Risk', 'Inactive'];
+const CHIP_LABELS = { All: 'All', 'On Track': 'On plan', 'Needs Attention': 'Partial', 'At Risk': 'At risk', Inactive: 'Quiet 14+ days' };
 
-function scoreBadge(score) {
-  if (score === null) return 'bg-muted text-muted-foreground';
-  if (score >= 80) return 'bg-success/10 text-success border border-success';
-  if (score >= 50) return 'bg-warning/10 text-warning border border-warning';
-  return 'bg-destructive/10 text-destructive border border-destructive';
-}
+const pctTone = (v) => v == null ? 'text-muted-foreground' : v >= 80 ? 'text-foreground' : v >= 50 ? 'text-warning' : 'text-destructive';
 
-function rowBg(score) {
-  if (score === null) return '';
-  if (score >= 80) return 'bg-success/30';
-  if (score >= 50) return 'bg-warning/20';
-  return 'bg-destructive/20';
-}
-
-function MiniBar({ value, color }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden min-w-[48px]">
-        <div className="h-full rounded-full transition-all" style={{ width: `${value ?? 0}%`, background: color }} />
-      </div>
-      <span className="text-xs font-semibold tabular-nums w-7 text-right text-foreground">{value ?? '—'}{value != null ? '%' : ''}</span>
-    </div>
-  );
+function statusLine({ overall, daysSinceLast, trend }) {
+  if (daysSinceLast === null) return 'No check-ins yet';
+  if (daysSinceLast > 14) return `Quiet for ${daysSinceLast} days`;
+  const when = daysSinceLast === 0 ? 'today' : daysSinceLast === 1 ? 'yesterday' : `${daysSinceLast} days ago`;
+  if (overall !== null && overall < 50) return `Struggling, last check-in ${when}`;
+  if (trend === 'down') return `Slipping, last check-in ${when}`;
+  if (trend === 'up') return `Improving, last check-in ${when}`;
+  return `Last check-in ${when}`;
 }
 
 function calcClientStats(client, checkIns, rangeWeeks) {
@@ -77,7 +69,8 @@ export default function AdherenceTable({ clients, checkIns, rangeWeeks, onSelect
 
   const rows = useMemo(() => clients.map(client => {
     const cis = cisByClient[client.id] || [];
-    return { client, ...calcClientStats(client, cis, rangeWeeks) };
+    const sortedCis = [...cis].sort((a, b) => new Date(b.date) - new Date(a.date));
+    return { client, ...calcClientStats(client, cis, rangeWeeks), cells: weeklyCompliance(client, sortedCis, 8) };
   }), [clients, cisByClient, rangeWeeks]);
 
   const filtered = useMemo(() => {
@@ -104,8 +97,26 @@ export default function AdherenceTable({ clients, checkIns, rangeWeeks, onSelect
   };
 
   const SortIcon = ({ k }) => sortKey === k
-    ? (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)
-    : <ChevronDown className="w-3 h-3 opacity-30" />;
+    ? (sortDir === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)
+    : null;
+
+  const chipCount = (c) => {
+    if (c === 'All') return rows.length;
+    if (c === 'On Track') return rows.filter(r => r.overall !== null && r.overall >= 80).length;
+    if (c === 'Needs Attention') return rows.filter(r => r.overall !== null && r.overall >= 50 && r.overall < 80).length;
+    if (c === 'At Risk') return rows.filter(r => r.overall !== null && r.overall < 50).length;
+    return rows.filter(r => r.daysSinceLast === null || r.daysSinceLast > 14).length;
+  };
+
+  const SortHead = ({ label, k, className }) => (
+    <th className={cn('px-3 py-2.5 text-left text-[13px] font-medium text-muted-foreground', className)}>
+      {k ? (
+        <button onClick={() => toggleSort(k)} className={cn('inline-flex items-center gap-1 text-[13px] font-medium hover:text-foreground', sortKey === k && 'text-foreground')}>
+          {label}<SortIcon k={k} />
+        </button>
+      ) : label}
+    </th>
+  );
 
   const exportCSV = () => {
     const headers = ['Client', 'Overall', 'Workout', 'Nutrition', 'Check-in', 'Streak', 'Trend', 'Last Active'];
@@ -122,132 +133,83 @@ export default function AdherenceTable({ clients, checkIns, rangeWeeks, onSelect
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 border-b border-border">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
-          {FILTER_CHIPS.map(c => (
-            <button key={c} onClick={() => setChip(c)}
-              className={cn('flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-all',
-                chip === c ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-border')}>
-              {c}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2 sm:ml-auto">
-          <input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)}
-            className="border border-border rounded-lg px-3 py-1.5 text-xs w-40 bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary" />
-          <button onClick={exportCSV}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-background whitespace-nowrap">
-            Export CSV
-          </button>
+    <div>
+      {/* Toolbar: segmented filters left, search + export right */}
+      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Segmented
+          value={chip}
+          onChange={setChip}
+          options={FILTER_CHIPS.map(c => ({ value: c, label: CHIP_LABELS[c], count: chipCount(c) }))}
+        />
+        <div className="flex gap-2">
+          <div className="relative flex-1 lg:w-64 lg:flex-none">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search clients" value={search} onChange={e => setSearch(e.target.value)} className="h-10 bg-card pl-9" />
+          </div>
+          <Button variant="outline" onClick={exportCSV}>Export CSV</Button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[860px]">
-          <thead className="bg-background border-b border-border">
-            <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground">Client</th>
-              {[
-                { label: 'Overall', key: 'overall' },
-                { label: 'Workout %', key: 'workout' },
-                { label: 'Nutrition %', key: 'nutrition' },
-                { label: 'Check-in %', key: 'ciAdherence' },
-                { label: 'Streak', key: 'streak' },
-                { label: 'Trend', key: null },
-                { label: 'Last Active', key: 'daysSinceLast' },
-                { label: 'Actions', key: null },
-              ].map(col => (
-                <th key={col.label}
-                  onClick={col.key ? () => toggleSort(col.key) : undefined}
-                  className={cn('px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground',
-                    col.key && 'cursor-pointer hover:text-foreground select-none')}>
-                  <span className="flex items-center gap-1">
-                    {col.label}
-                    {col.key && <SortIcon k={col.key} />}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-12 text-center text-xs text-muted-foreground">No clients match the current filter</td></tr>
-            ) : filtered.map(({ client, overall, workout, nutrition, ciAdherence, streak, trend, daysSinceLast }) => (
-              <tr key={client.id}
-                onClick={() => onSelectClient(client)}
-                className={cn('border-t border-muted cursor-pointer hover:bg-background transition-colors', rowBg(overall))}>
-                {/* Client */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-primary-foreground font-bold text-xs"
-                      style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-                      {client.name?.[0]?.toUpperCase()}
-                    </div>
-                    <span className="font-semibold text-foreground text-xs">{client.name}</span>
-                  </div>
-                </td>
-                {/* Overall */}
-                <td className="px-4 py-3">
-                  <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', scoreBadge(overall))}>
-                    {overall !== null ? `${overall}%` : '—'}
-                  </span>
-                </td>
-                {/* Workout */}
-                <td className="px-4 py-3 min-w-[120px]">
-                  <MiniBar value={workout} color="var(--tc-primary)" />
-                </td>
-                {/* Nutrition */}
-                <td className="px-4 py-3 min-w-[120px]">
-                  <MiniBar value={nutrition} color="var(--tc-warning)" />
-                </td>
-                {/* Check-in */}
-                <td className="px-4 py-3 min-w-[120px]">
-                  <MiniBar value={ciAdherence} color="var(--tc-ai)" />
-                </td>
-                {/* Streak */}
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1 text-xs font-semibold text-foreground">
-                    {streak >= 7 ? '🔥' : ''}
-                    {streak}w
-                  </span>
-                </td>
-                {/* Trend */}
-                <td className="px-4 py-3">
-                  {trend === 'up' ? <ArrowUp className="w-4 h-4 text-success" />
-                   : trend === 'down' ? <ArrowDown className="w-4 h-4 text-destructive" />
-                   : <Minus className="w-4 h-4 text-muted-foreground" />}
-                </td>
-                {/* Last Active */}
-                <td className="px-4 py-3">
-                  <span className={cn('text-xs', daysSinceLast === null ? 'text-muted-foreground' : daysSinceLast > 14 ? 'text-destructive' : daysSinceLast > 7 ? 'text-warning' : 'text-success')}>
-                    {daysSinceLast === null ? 'Never' : daysSinceLast === 0 ? 'Today' : `${daysSinceLast}d ago`}
-                  </span>
-                </td>
-                {/* Actions */}
-                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                  <div className="flex gap-1">
-                    <button onClick={() => navigate(`/messages?clientId=${client.id}`)}
-                      className="p-1.5 rounded-lg hover:bg-border transition-colors" title="Message">
-                      <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button onClick={() => navigate(`/client-profile?clientId=${client.id}`)}
-                      className="p-1.5 rounded-lg hover:bg-border transition-colors" title="Profile">
-                      <User className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button onClick={() => onSelectClient(client)}
-                      className="p-1.5 rounded-lg hover:bg-border transition-colors" title="View Detail">
-                      <Flag className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
-                </td>
+      <Panel className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-sm">
+            <thead className="border-b border-border">
+              <tr>
+                <th className="py-2.5 pl-5 pr-3 text-left text-[13px] font-medium text-muted-foreground sm:pl-6">Client</th>
+                <th className="px-3 py-2.5 text-left text-[13px] font-medium text-muted-foreground">Last 8 weeks</th>
+                <SortHead label="Overall" k="overall" className="text-right" />
+                <SortHead label="Training" k="workout" className="text-right" />
+                <SortHead label="Nutrition" k="nutrition" className="text-right" />
+                <SortHead label="Check-ins" k="ciAdherence" className="text-right" />
+                <SortHead label="Streak" k="streak" className="text-right" />
+                <th className="py-2.5 pl-3 pr-5 text-right text-[13px] font-medium text-muted-foreground sm:pr-6"><span className="sr-only">Actions</span></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr><td colSpan={8}><EmptyState title="No clients match this filter." /></td></tr>
+              ) : filtered.map(({ client, overall, workout, nutrition, ciAdherence, streak, trend, daysSinceLast, cells }) => (
+                <tr key={client.id}
+                  onClick={() => onSelectClient(client)}
+                  className="cursor-pointer border-t border-border transition-colors first:border-t-0 hover:bg-accent/60">
+                  <td className="py-3 pl-5 pr-3 sm:pl-6">
+                    <div className="flex items-center gap-3">
+                      <Initials name={client.name} size={36} tone={(overall !== null && overall < 50) || (daysSinceLast !== null && daysSinceLast > 14) ? 'alert' : 'default'} />
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-semibold text-foreground">{client.name}</p>
+                        <p className={cn('truncate text-[13px]', daysSinceLast === null || daysSinceLast > 14 ? 'text-destructive' : 'text-muted-foreground')}>
+                          {statusLine({ overall, daysSinceLast, trend })}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-3"><ComplianceStrip weeks={cells} size="sm" label={`${client.name}, last 8 weeks`} /></td>
+                  <td className="px-3 py-3 text-right">
+                    <span className="num inline-flex items-center gap-1 text-[19px] text-foreground">
+                      {trend === 'up' && <ArrowUp className="h-3.5 w-3.5 text-success" aria-label="Up" />}
+                      {trend === 'down' && <ArrowDown className="h-3.5 w-3.5 text-destructive" aria-label="Down" />}
+                      {overall !== null ? `${overall}%` : '—'}
+                    </span>
+                  </td>
+                  <td className={cn('px-3 py-3 text-right font-semibold tabular-nums', pctTone(workout))}>{workout != null ? `${workout}%` : '—'}</td>
+                  <td className={cn('px-3 py-3 text-right font-semibold tabular-nums', pctTone(nutrition))}>{nutrition != null ? `${nutrition}%` : '—'}</td>
+                  <td className={cn('px-3 py-3 text-right font-semibold tabular-nums', pctTone(ciAdherence))}>{ciAdherence}%</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-foreground">{streak} wk</td>
+                  <td className="py-3 pl-3 pr-5 sm:pr-6" onClick={e => e.stopPropagation()}>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" className="w-8 px-0" title={`Message ${client.name}`} aria-label={`Message ${client.name}`}
+                        onClick={() => navigate(`/messages?clientId=${client.id}`)}>
+                        <MessageSquare />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/client-profile?clientId=${client.id}`)}>Profile</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
     </div>
   );
 }

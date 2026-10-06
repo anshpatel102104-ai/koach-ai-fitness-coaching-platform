@@ -1,162 +1,173 @@
 import React, { useState, useMemo } from 'react';
 import { format, differenceInDays, parseISO } from 'date-fns';
-import { UserPlus, RefreshCw, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { RefreshCw } from 'lucide-react';
+import { getAtRiskClients } from '@/lib/riskEngine';
+import { Page, Panel, PanelHeader, CountBadge } from '@/components/kit';
 import RunMyDayCenter from './RunMyDayCenter';
-import { compositeAdherenceScore } from '@/lib/adherence';
 import DashboardKPIs from './DashboardKPIs';
 import TodaySchedule from './TodaySchedule';
 import WeeklySnapshot from './WeeklySnapshot';
 import FirstTimeBanner from './FirstTimeBanner';
 import AIInsightsFeed from './AIInsightsFeed';
+import WeekStrip from './WeekStrip';
+import NeedsYouPanel from './NeedsYouPanel';
+import RosterPulse from './RosterPulse';
+import FirstRunWelcome from './FirstRunWelcome';
 import BIDashboardCard from '@/components/business/bi/BIDashboardCard';
+import {
+  isActiveClient, groupCheckIns, rosterPulseRows, weekLabels,
+  describeFlag, describeCheckIn, unreadThreads,
+} from './todayModel';
 
+/** "Run my day": every open item, grouped by urgency, with a manual refresh. */
 function ActionCenterSection({ clients, checkIns, messages, payments }) {
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const totalUnresolved = useMemo(() => {
-    let count = 0;
-    const active = clients.filter(c => c.status === 'active' || c.lifecycle_status === 'active');
-    // missed check-ins (10+ days)
-    active.forEach(c => {
-      const cis = checkIns.filter(ci => ci.client_id === c.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-      const days = cis[0] ? differenceInDays(new Date(), parseISO(cis[0].date)) : 999;
-      if (days >= 10) count++;
-    });
-    // no program
-    clients.forEach(c => {
-      if (!c.assigned_program_id && (c.lifecycle_status || c.status) !== 'lead') count++;
-    });
-    // payments
-    count += (payments || []).filter(p => p.status === 'failed' || p.status === 'pending').length;
-    // low adherence
-    clients.forEach(c => {
-      const cis = checkIns.filter(ci => ci.client_id === c.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-      if (cis.length < 2) return;
-      const score = compositeAdherenceScore(cis);
-      if (score !== null && score < 65) count++;
-    });
-    // pending reviews
-    count += checkIns.filter(ci => !ci.coach_responded && !ci.coach_notes && differenceInDays(new Date(), parseISO(ci.date)) <= 14).length;
-    return count;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, checkIns, payments, refreshKey]);
+  const [openCount, setOpenCount] = useState(0);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-foreground tracking-tight">Action Center</h2>
-          {totalUnresolved > 0 && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20">
-              {totalUnresolved}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+    <Panel>
+      <PanelHeader
+        title={<span className="inline-flex items-center gap-2">Run my day <CountBadge count={openCount} tone="neutral" /></span>}
+        subtitle="Every open item across your roster, most urgent first."
+        right={
           <button
             onClick={() => setRefreshKey(k => k + 1)}
-            className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Refresh action items"
+            className="touch-compact rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            title="Refresh the list"
+            aria-label="Refresh the list"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="h-4 w-4" />
           </button>
-          <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border border-border">
-            <Zap className="w-2.5 h-2.5" /> AI
-          </span>
-        </div>
-      </div>
-      <RunMyDayCenter clients={clients} checkIns={checkIns} messages={messages} payments={payments} refreshKey={refreshKey} />
-    </div>
+        }
+      />
+      <RunMyDayCenter
+        clients={clients}
+        checkIns={checkIns}
+        messages={messages}
+        payments={payments}
+        refreshKey={refreshKey}
+        onCountChange={setOpenCount}
+      />
+    </Panel>
   );
 }
 
-export default function TodayView({ clients, checkIns, messages, payments = [] }) {
-  const navigate = useNavigate();
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const activeCount = clients.filter(c => c.status === 'active' || c.lifecycle_status === 'active').length;
+function headlineFor(counts) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total === 0) return 'Nothing is waiting on you. Your roster is on plan.';
+  const first = counts.findIndex(n => n > 0);
+  const start = ['Start with the red column.', 'Start with the clients slipping.', 'Start with your messages.'][first];
+  return `${total} ${total === 1 ? 'thing needs' : 'things need'} you today. ${start}`;
+}
 
-  // Count clients needing attention (stale check-in or low adherence). Drives
-  // whether AI Insights is promoted above the informational sections.
-  const flaggedCount = useMemo(() => {
-    let n = 0;
-    clients.forEach(c => {
-      const active = c.status === 'active' || c.lifecycle_status === 'active';
-      if (!active) return;
-      const cis = checkIns.filter(ci => ci.client_id === c.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-      const days = cis[0] ? differenceInDays(new Date(), parseISO(cis[0].date)) : 999;
-      if (days >= 10) { n++; return; }
-      if (cis.length >= 2) {
-        const s = compositeAdherenceScore(cis);
-        if (s !== null && s < 65) n++;
-      }
+export default function TodayView({ clients, checkIns, messages, payments = [], user }) {
+  const now = useMemo(() => new Date(), []);
+  const ciMap = useMemo(() => groupCheckIns(checkIns), [checkIns]);
+  const activeClients = useMemo(() => clients.filter(isActiveClient), [clients]);
+
+  // Column 1 — check-ins waiting on a reply (last 14 days), longest wait first.
+  const reviews = useMemo(() => {
+    const items = checkIns
+      .filter(ci => !ci.coach_responded && !ci.coach_notes && ci.date && differenceInDays(now, parseISO(ci.date)) <= 14)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const rows = items.slice(0, 3).map(ci => {
+      const client = clients.find(c => c.id === ci.client_id);
+      return {
+        key: ci.id,
+        name: client?.name || ci.client_name || 'Client',
+        detail: describeCheckIn(ci, ciMap[ci.client_id] || []),
+        href: `/checkin-detail?id=${ci.id}&clientId=${ci.client_id}`,
+      };
     });
-    return n;
+    return { items, rows };
+  }, [checkIns, clients, ciMap, now]);
+
+  // Column 2 — clients the risk engine flags.
+  const slipping = useMemo(() => {
+    const items = getAtRiskClients(clients, checkIns);
+    const rows = items.slice(0, 3).map(e => ({
+      key: e.client.id,
+      name: e.client.name,
+      detail: describeFlag(e.flags[0], e.clientCheckIns),
+      href: `/client-profile?id=${e.client.id}`,
+    }));
+    return { items, rows };
   }, [clients, checkIns]);
 
-  // Sections below Run My Day, ordered by unresolved signal (highest first),
-  // stable within equal counts. Run My Day itself is always pinned to the top.
-  const orderedSections = useMemo(() => {
-    const secs = [
-      { key: 'schedule', count: 0, node: <TodaySchedule clients={clients} /> },
-      { key: 'insights', count: flaggedCount, node: clients.length > 0
-          ? <AIInsightsFeed clients={clients} checkIns={checkIns} messages={messages} /> : null },
-      { key: 'snapshot', count: 0, node: <WeeklySnapshot checkIns={checkIns} clients={clients} /> },
-      { key: 'bi', count: 0, node: clients.length > 0 ? <BIDashboardCard /> : null },
-    ].filter(s => s.node);
-    return secs.map((s, i) => ({ ...s, i })).sort((a, b) => b.count - a.count || a.i - b.i);
-  }, [clients, checkIns, messages, flaggedCount]);
+  // Column 3 — unread client messages, grouped by thread.
+  const threads = useMemo(() => {
+    const items = unreadThreads(messages, clients);
+    const rows = items.slice(0, 3).map(t => ({
+      key: t.clientId,
+      name: t.name,
+      detail: t.preview,
+      href: `/messages?clientId=${t.clientId}`,
+    }));
+    return { items, rows };
+  }, [messages, clients]);
+  const unreadCount = useMemo(() => threads.items.reduce((s, t) => s + t.count, 0), [threads]);
+
+  const labels = useMemo(() => weekLabels(8, now), [now]);
+  const pulseRows = useMemo(() => rosterPulseRows(clients, ciMap, 8, now), [clients, ciMap, now]);
 
   const [showBanner, setShowBanner] = useState(() => {
-    return localStorage.getItem('koach_onboarding_complete') === '1' &&
-           localStorage.getItem('koach_banner_dismissed') !== '1';
+    try {
+      return localStorage.getItem('koach_onboarding_complete') === '1' &&
+             localStorage.getItem('koach_banner_dismissed') !== '1';
+    } catch { return false; }
   });
 
   const dismissBanner = () => {
-    localStorage.setItem('koach_banner_dismissed', '1');
+    try { localStorage.setItem('koach_banner_dismissed', '1'); } catch { /* storage blocked */ }
     setShowBanner(false);
   };
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-8 py-4 sm:py-8 space-y-5 sm:space-y-7 pb-24">
+  // First run: no clients yet → the welcome checklist replaces Today.
+  if (clients.length === 0) {
+    return <FirstRunWelcome user={user} clientCount={0} />;
+  }
 
-      {/* ── Header ─────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 bg-sidebar rounded-xl p-4 sm:p-6">
-        <div>
-          <h1 className="text-base sm:text-xl font-semibold text-white" style={{ letterSpacing: '-0.02em' }}>
-            {greeting}, Coach
-          </h1>
-          <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }}>
-            {format(new Date(), 'EEE, MMM d')} · {activeCount} active client{activeCount !== 1 ? 's' : ''}
+  return (
+    <Page className="pb-24 lg:pb-12">
+      {/* ── Date + one sentence, week strip on the right ── */}
+      <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[32px] text-foreground sm:text-[40px]">{format(now, 'EEEE, MMMM d')}</h1>
+          <p className="mt-1.5 text-[15px] text-muted-foreground sm:text-base">
+            {headlineFor([reviews.items.length, slipping.items.length, unreadCount])}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/clients')}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all shrink-0 border min-h-[44px]"
-          style={{ background: 'color-mix(in srgb, white 10%, transparent)', color: 'var(--tc-sidebar-accent-foreground)', borderColor: 'color-mix(in srgb, white 20%, transparent)' }}
-        >
-          <UserPlus className="w-3.5 h-3.5" />
-          Add Client
-        </button>
+        <WeekStrip activeClients={activeClients} ciMap={ciMap} now={now} />
+      </header>
+
+      {/* ── What needs you ── */}
+      <NeedsYouPanel reviews={reviews} slipping={slipping} threads={threads} unreadCount={unreadCount} />
+
+      {/* ── Roster pulse + AI briefing ── */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <RosterPulse rows={pulseRows} labels={labels} total={pulseRows.length} />
+        <AIInsightsFeed clients={clients} checkIns={checkIns} messages={messages} className="self-start" />
       </div>
 
-      {/* ── First-Time Welcome Banner ───────────────── */}
-      <AnimatePresence>
-        {showBanner && <FirstTimeBanner onDismiss={dismissBanner} />}
-      </AnimatePresence>
+      {/* ── Below the fold: the rest of the day ── */}
+      {showBanner && (
+        <div className="mt-5">
+          <FirstTimeBanner onDismiss={dismissBanner} />
+        </div>
+      )}
 
-      {/* ── KPI Strip (context) ────────────────────── */}
-      <DashboardKPIs clients={clients} checkIns={checkIns} payments={payments} />
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <ActionCenterSection clients={clients} checkIns={checkIns} messages={messages} payments={payments} />
+        <div className="flex min-w-0 flex-col gap-5">
+          <TodaySchedule clients={clients} />
+          <DashboardKPIs clients={clients} checkIns={checkIns} payments={payments} />
+          <BIDashboardCard />
+        </div>
+      </div>
 
-      {/* ── Run My Day — pinned to the top of the actionable stack ── */}
-      <ActionCenterSection clients={clients} checkIns={checkIns} messages={messages} payments={payments} />
-
-      {/* ── Remaining sections, ordered by unresolved signal ── */}
-      {orderedSections.map(s => (
-        <React.Fragment key={s.key}>{s.node}</React.Fragment>
-      ))}
-    </div>
+      <div className="mt-5">
+        <WeeklySnapshot checkIns={checkIns} clients={clients} />
+      </div>
+    </Page>
   );
 }

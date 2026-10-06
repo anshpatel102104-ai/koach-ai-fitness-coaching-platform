@@ -1,19 +1,13 @@
 import React from 'react';
 import { getUserTier } from '@/lib/subscription';
 import { cn } from '@/lib/utils';
-import { Zap } from 'lucide-react';
 
+/** Plain plan label, e.g. "Pro plan". */
 export default function TierBadge({ user, className }) {
   const tier = getUserTier(user);
-
   return (
-    <div className={cn(
-      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold",
-      tier.badge,
-      className
-    )}>
-      <Zap className="w-3 h-3" />
-      {tier.name}
-    </div>
+    <span className={cn('inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-[13px] font-medium text-foreground', className)}>
+      {tier.name} plan
+    </span>
   );
 }

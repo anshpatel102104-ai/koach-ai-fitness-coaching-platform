@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Sparkles, Loader2, CheckCircle } from 'lucide-react';
+import { X, Loader2, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import AIOnboardingQuestionnaire from './AIOnboardingQuestionnaire';
@@ -124,40 +126,33 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
       assigned_nutrition_id: nutritionRecord.id,
     });
 
-    toast.success('AI plan approved and saved to client! 🎉');
+    toast.success('Plan approved and saved to the client');
     onSaved?.();
     onClose();
   };
 
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-black/40" />
       <div
-        className="relative bg-card rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
+        className="relative bg-card rounded-xl w-full flex flex-col overflow-hidden ring-1 ring-border"
         style={{ maxWidth: 860, height: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0"
-          style={{ background: 'var(--tc-sidebar)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">AI Onboarding</h2>
-              <p className="text-[11px]" style={{ color: 'var(--tc-muted-foreground)' }}>
-                {client.name} · Generating starting program &amp; meal plan
-              </p>
-              <AiUsageMeter className="mt-0.5" />
-            </div>
+        <div className="flex items-start sm:items-center justify-between gap-4 px-5 sm:px-6 py-4 border-b border-border bg-card flex-shrink-0">
+          <div className="min-w-0">
+            <h2 className="text-[24px] leading-tight text-foreground">AI onboarding</h2>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              Starting program and meal plan for {client.name}. You review everything before it&apos;s saved.
+            </p>
+            <AiUsageMeter className="mt-1" />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <StepIndicator step={step} />
-            <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-white hover:bg-[var(--kc-w-10)] transition-colors">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={onClose} aria-label="Close">
               <X className="w-4 h-4" />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -191,56 +186,49 @@ export default function AIOnboardingModal({ client, onClose, onSaved }) {
 
 function StepIndicator({ step }) {
   const steps = [
-    { key: 'questionnaire', label: 'Questionnaire' },
-    { key: 'generating',    label: 'Generating' },
+    { key: 'questionnaire', label: 'Questions' },
+    { key: 'generating',    label: 'Drafting' },
     { key: 'review',        label: 'Review' },
   ];
   const activeIdx = steps.findIndex(s => s.key === step);
   return (
-    <div className="flex items-center gap-1">
+    <ol className="hidden sm:flex items-center gap-1 text-[13px]" aria-label="Progress">
       {steps.map((s, i) => (
-        <React.Fragment key={s.key}>
-          <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full transition-all ${
-            i === activeIdx ? 'text-white' : i < activeIdx ? 'text-success' : 'text-muted-foreground'
-          }`}>
-            {i < activeIdx
-              ? <CheckCircle className="w-3 h-3" />
-              : <span className="w-3 h-3 rounded-full flex items-center justify-center text-[9px]"
-                  style={{ background: i === activeIdx ? 'var(--tc-primary)' : 'var(--tc-foreground)' }}>
-                  {i + 1}
-                </span>
-            }
-            <span className="hidden sm:inline">{s.label}</span>
-          </div>
-          {i < steps.length - 1 && <div className="w-4 h-px bg-foreground" />}
-        </React.Fragment>
+        <li key={s.key} className="flex items-center gap-1">
+          <span className={cn(
+            'inline-flex items-center gap-1.5 px-2 py-1 rounded-md',
+            i === activeIdx ? 'bg-primary text-primary-foreground font-semibold' : i < activeIdx ? 'text-foreground' : 'text-muted-foreground'
+          )}>
+            {i < activeIdx ? <CheckCircle className="w-3.5 h-3.5 text-success" /> : <span className="tabular-nums">{i + 1}</span>}
+            {s.label}
+          </span>
+          {i < steps.length - 1 && <span className="w-3 h-px bg-border" />}
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
 function GeneratingScreen({ client }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-6 p-8">
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--tc-primary) 13.3333%, transparent), color-mix(in srgb, var(--tc-ai) 13.3333%, transparent))' }}>
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-      <div className="text-center">
-        <h3 className="text-lg font-bold text-foreground mb-1">Generating AI Plan…</h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          Building a personalised training program and meal plan for {client.name}.
-          This usually takes 20–40 seconds.
+    <div className="h-full flex items-center justify-center p-6 bg-background">
+      <section className="w-full max-w-md rounded-xl bg-ai text-ai-foreground p-6">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <h3 className="text-[22px]">Drafting the plan</h3>
+        </div>
+        <p className="mt-3 text-[15px] text-ai-foreground/80">
+          Building a training split and meal plan for {client.name} from their answers. Usually 20 to 40 seconds.
         </p>
-      </div>
-      <div className="flex flex-col gap-2 w-full max-w-xs">
-        {['Analysing client profile…', 'Building training split…', 'Calculating macros…', 'Structuring meal plan…'].map((msg, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" style={{ animationDelay: `${i * 300}ms` }} />
-            {msg}
-          </div>
-        ))}
-      </div>
+        <ul className="mt-4 space-y-1.5 text-sm text-ai-foreground/70">
+          {['Reading their profile', 'Choosing a training split', 'Working out calories and macros', 'Laying out meals'].map(msg => (
+            <li key={msg} className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-ai-foreground/50" />
+              {msg}
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }

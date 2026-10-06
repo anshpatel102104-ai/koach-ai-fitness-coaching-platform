@@ -3,11 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import {
-  Link2, UserPlus, Check, Users, ChevronDown, ChevronUp, Send, Copy, CheckCircle2, Hourglass, Star, Sparkles, ChevronRight, X
-} from 'lucide-react';
+import { UserPlus, Check, ChevronDown, ChevronUp, Copy, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Page, PageHeader, Panel, PanelHeader, InkPanel, Initials, KeyValue, Segmented, Stat, EmptyState } from '@/components/kit';
 import { hasFeature } from '@/lib/subscription';
 import { getMyTeamId } from '@/lib/teamUtils';
 import AIOnboardingModal from '@/components/clients/ai-onboarding/AIOnboardingModal';
@@ -15,127 +14,76 @@ import AIOnboardingOverviewModal from '@/components/clients/ai-onboarding/AIOnbo
 
 /* ─── Status config ─── */
 const STATUS_CONFIG = {
-  pending:   { label: 'Intake Started',    color: 'var(--tc-warning)', bg: 'var(--tc-warning)', icon: Hourglass },
-  completed: { label: 'Intake Complete',   color: 'var(--tc-primary)', bg: 'var(--tc-accent)', icon: CheckCircle2 },
-  converted: { label: 'Active Client',     color: 'var(--tc-success)', bg: 'var(--tc-success)', icon: Star },
+  pending:   { label: 'Intake started',  variant: 'warning' },
+  completed: { label: 'Ready to review', variant: 'brand' },
+  converted: { label: 'Active client',   variant: 'success' },
 };
 
 const GOAL_LABEL = {
-  fat_loss: '🔥 Fat Loss', muscle_gain: '💪 Muscle Gain', hybrid: '⚡ Hybrid',
-  strength: '🏋️ Strength', endurance: '🏃 Endurance', general_fitness: '🎯 General',
+  fat_loss: 'Fat loss', muscle_gain: 'Muscle gain', hybrid: 'Hybrid',
+  strength: 'Strength', endurance: 'Endurance', general_fitness: 'General fitness',
 };
 
 /* ─── Status Badge ─── */
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-  const Icon = cfg.icon;
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-      style={{ background: cfg.bg, color: cfg.color }}>
-      <Icon className="w-3 h-3" />
-      {cfg.label}
-    </span>
-  );
+  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }
 
-/* ─── Intake Response Card ─── */
+/* ─── Intake response row ─── */
 function ResponseCard({ response, onApprove, isApproving }) {
   const [expanded, setExpanded] = useState(false);
+  const facts = [
+    response.goal && (GOAL_LABEL[response.goal] || response.goal),
+    response.age && `${response.age} yrs`,
+    response.current_weight && `${response.current_weight} lb`,
+    response.training_days_per_week && `${response.training_days_per_week}x a week`,
+    response.created_date && new Date(response.created_date).toLocaleDateString(),
+  ].filter(Boolean);
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-3 p-4">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm"
-          style={{ background: 'var(--tc-accent)', color: 'var(--tc-primary)' }}>
-          {response.name?.[0]?.toUpperCase() || '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground truncate">{response.name || 'Unknown'}</p>
-          <p className="text-xs text-muted-foreground truncate">{response.email}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <StatusBadge status={response.status} />
-          <button onClick={() => setExpanded(e => !e)} className="text-border hover:text-muted-foreground transition-colors">
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+    <div className="py-1">
+      <div className="flex items-center gap-3 py-3">
+        <Initials name={response.name || response.email || '?'} size={40} />
+        <button onClick={() => setExpanded(e => !e)} className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[15px] font-semibold text-foreground">{response.name || 'Unknown'}</span>
+          <span className="block truncate text-sm text-muted-foreground">{facts.join(' · ') || response.email}</span>
+        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <span className="hidden sm:inline-flex"><StatusBadge status={response.status} /></span>
+          <button onClick={() => setExpanded(e => !e)} aria-label={expanded ? 'Hide answers' : 'Show answers'}
+            className="touch-compact flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
-      {/* Chips */}
-      <div className="px-4 pb-3 flex flex-wrap gap-1.5">
-        {response.goal && (
-          <span className="text-[10px] bg-muted border border-border px-2 py-0.5 rounded-full text-muted-foreground">
-            {GOAL_LABEL[response.goal] || response.goal}
-          </span>
-        )}
-        {response.age && (
-          <span className="text-[10px] bg-muted border border-border px-2 py-0.5 rounded-full text-muted-foreground">
-            {response.age} yrs
-          </span>
-        )}
-        {response.current_weight && (
-          <span className="text-[10px] bg-muted border border-border px-2 py-0.5 rounded-full text-muted-foreground">
-            {response.current_weight} lbs
-          </span>
-        )}
-        {response.training_days_per_week && (
-          <span className="text-[10px] bg-muted border border-border px-2 py-0.5 rounded-full text-muted-foreground">
-            {response.training_days_per_week}x/week
-          </span>
-        )}
-        <span className="text-[10px] bg-muted border border-border px-2 py-0.5 rounded-full text-muted-foreground">
-          {response.created_date ? new Date(response.created_date).toLocaleDateString() : ''}
-        </span>
-      </div>
-
-      {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-border px-4 py-4 space-y-2.5 bg-muted/50">
+        <div className="mb-3 rounded-lg bg-secondary px-4 py-1">
+          <div className="py-2 sm:hidden"><StatusBadge status={response.status} /></div>
+          <KeyValue label="Email" value={response.email || '—'} />
           {[
             ['Height', response.height],
             ['Phone', response.phone],
             ['Experience', response.previous_experience],
-            ['Food Preferences', response.food_preferences],
-            ['Health Notes', response.health_conditions],
+            ['Food preferences', response.food_preferences],
+            ['Health notes', response.health_conditions],
             ['Motivation', response.motivation],
             ['Schedule', response.schedule_preferences],
           ].filter(([, v]) => v).map(([label, value]) => (
-            <div key={label} className="flex gap-2">
-              <span className="text-[10px] font-bold text-muted-foreground w-28 flex-shrink-0 pt-0.5 uppercase tracking-wide">{label}</span>
-              <span className="text-xs text-foreground leading-relaxed">{value}</span>
-            </div>
+            <KeyValue key={label} label={label} value={value} />
           ))}
         </div>
       )}
 
-      {/* Action */}
       {response.status !== 'converted' && (
-        <div className="border-t border-border px-4 py-3 bg-card flex gap-2">
-          <Button
-            size="sm"
-            className="flex-1 gap-2 text-xs"
-            onClick={() => onApprove(response)}
-            disabled={isApproving}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            {isApproving ? 'Approving...' : 'Approve & Create Client'}
+        <div className="mb-3 flex justify-end">
+          <Button size="sm" onClick={() => onApprove(response)} disabled={isApproving}>
+            <UserPlus />
+            {isApproving ? 'Approving' : 'Approve and create client'}
           </Button>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ─── Stats card ─── */
-function StatCard({ icon: Icon, value, label, color }) {
-  return (
-    <div className="bg-card border border-border rounded-2xl p-4 text-center shadow-sm">
-      <div className="w-8 h-8 rounded-xl mx-auto mb-2 flex items-center justify-center" style={{ background: `${color}15` }}>
-        <Icon className="w-4 h-4" style={{ color }} />
-      </div>
-      <p className="text-2xl font-bold tabular-nums" style={{ color }}>{value}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5 font-medium uppercase tracking-wide">{label}</p>
     </div>
   );
 }
@@ -195,7 +143,7 @@ export default function OnboardingManager() {
         clientId: client.id,
         clientName: resp.name,
         clientEmail: resp.email,
-        welcomeMessage: `${coachName} approved your application — welcome to your coaching portal!`,
+        welcomeMessage: `${coachName} approved your application. Welcome to your coaching app.`,
       });
 
       return client;
@@ -203,9 +151,9 @@ export default function OnboardingManager() {
     onSuccess: (client) => {
       qc.invalidateQueries({ queryKey: ['onboarding-responses'] });
       qc.invalidateQueries({ queryKey: ['clients'] });
-      toast.success(`${client.name} approved! Setup email sent.`);
+      toast.success(`${client.name} approved. Setup email sent.`);
     },
-    onError: () => toast.error('Failed to approve. Please try again.'),
+    onError: () => toast.error('Could not approve. Try again.'),
   });
 
   const [aiClient, setAiClient] = useState(null);
@@ -233,7 +181,7 @@ export default function OnboardingManager() {
   const copyLink = () => {
     navigator.clipboard.writeText(onboardingUrl);
     setCopied(true);
-    toast.success('Intake link copied!');
+    toast.success('Intake link copied');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -245,259 +193,192 @@ export default function OnboardingManager() {
     : filterStatus === 'pending' ? responses.filter(r => r.status !== 'converted')
     : responses.filter(r => r.status === filterStatus);
 
+  const waitingCount = responses.filter(r => r.status === 'completed').length;
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      {/* ── Header ── */}
-      <div className="bg-sidebar rounded-xl p-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Client Onboarding</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }}>Send your intake link and review submissions</p>
-        </div>
-        <button
-          onClick={copyLink}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: 'var(--tc-card)', color: 'var(--tc-foreground)' }}
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied ? 'Copied!' : 'Copy Intake Link'}
-        </button>
-      </div>
+    <Page>
+      <PageHeader
+        title="Client intake"
+        subtitle={waitingCount
+          ? `${waitingCount} ${waitingCount === 1 ? 'intake is' : 'intakes are'} ready to review. Approve one to create the client and send their setup email.`
+          : 'Send one link. New clients answer 13 short questions, then you approve them here.'}
+        actions={
+          <Button onClick={copyLink} variant={copied ? 'secondary' : 'default'}>
+            {copied ? <Check /> : <Copy />}
+            {copied ? 'Copied' : 'Copy intake link'}
+          </Button>
+        }
+      />
 
-      {/* ── AI Onboarding Premium Card ── */}
-      <button
-        onClick={() => setShowOverview(true)}
-        className="w-full text-left rounded-2xl overflow-hidden shadow-lg transition-all hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] relative"
-        style={{ background: 'linear-gradient(135deg, var(--tc-sidebar) 0%, var(--kc-1a2744) 60%, var(--kc-1e1a3a) 100%)' }}
-      >
-        {/* Decorative glows */}
-        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-25 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, var(--tc-ai), transparent 70%)' }} />
-        <div className="absolute -bottom-8 -left-4 w-32 h-32 rounded-full opacity-20 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, var(--tc-primary), transparent 70%)' }} />
-
-        <div className="relative p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3.5">
-              {/* Icon */}
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-
-              <div>
-                {/* Badge */}
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full mb-1.5"
-                  style={{ background: 'color-mix(in srgb, var(--tc-ai) 18%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-ai) 35%, transparent)' }}>
-                  <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: 'var(--tc-ai)' }}>Pro &amp; Elite</span>
-                </div>
-                <p className="text-base font-bold text-white leading-tight">AI Onboarding</p>
-                <p className="text-xs mt-1 leading-relaxed" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }}>
-                  Generate a tailored program + meal plan for any client using AI — you review and approve before anything saves.
-                </p>
-              </div>
-            </div>
-
-            {/* Arrow */}
-            <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
-              style={{ background: 'color-mix(in srgb, white 8%, transparent)' }}>
-              <ChevronRight className="w-4 h-4" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }} />
-            </div>
-          </div>
-
-          {/* Feature pills */}
-          <div className="flex flex-wrap gap-1.5 mt-4">
-            {['Training Program', 'Meal Plan', 'Goal-Matched', 'Review & Approve'].map(tag => (
-              <span key={tag} className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: 'color-mix(in srgb, white 7%, transparent)', color: 'color-mix(in srgb, white 50%, transparent)', border: '1px solid color-mix(in srgb, white 10%, transparent)' }}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom CTA strip */}
-        <div className="px-5 py-3 flex items-center justify-between"
-          style={{ background: 'color-mix(in srgb, black 30%, transparent)', borderTop: '1px solid color-mix(in srgb, white 6%, transparent)' }}>
-          {canAIOnboard ? (
-            <span className="text-xs font-semibold" style={{ color: 'color-mix(in srgb, white 60%, transparent)' }}>
-              Click to get started →
-            </span>
-          ) : (
-            <span className="text-xs font-semibold" style={{ color: 'color-mix(in srgb, var(--tc-ai) 80%, transparent)' }}>
-              Upgrade to Pro or Elite to unlock →
-            </span>
-          )}
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: canAIOnboard ? 'var(--tc-success)' : 'var(--tc-ai)' }} />
-            <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: canAIOnboard ? 'var(--tc-success)' : 'color-mix(in srgb, var(--tc-ai) 70%, transparent)' }}>
-              {canAIOnboard ? 'Available' : 'Pro+'}
-            </span>
-          </div>
-        </div>
-      </button>
-
-      {/* Overview modal */}
-      {showOverview && (
-        <AIOnboardingOverviewModal
-          canUse={canAIOnboard}
-          onClose={() => setShowOverview(false)}
-          onGetStarted={() => { setShowOverview(false); setShowAIPicker(true); }}
-          onUpgrade={() => { setShowOverview(false); window.location.href = '/subscription'; }}
-        />
-      )}
-
-      {/* Client picker panel — slides in after "Get Started" */}
-      {canAIOnboard && showAIPicker && (
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 flex items-center justify-between"
-            style={{ background: 'linear-gradient(135deg, var(--tc-sidebar), var(--kc-1a2744))' }}>
-            <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4" style={{ color: 'var(--tc-ai)' }} />
-              <p className="text-sm font-bold text-white">AI Onboarding — Select a Client</p>
-            </div>
-            <button onClick={() => { setShowAIPicker(false); setAiClient(null); setClientSearch(''); }}
-              className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{ background: 'color-mix(in srgb, white 8%, transparent)', color: 'color-mix(in srgb, white 40%, transparent)' }}>
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="p-5 space-y-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Search Client</p>
-              <input
-                autoFocus
-                type="text"
-                value={clientSearch}
-                onChange={e => { setClientSearch(e.target.value); setAiClient(null); }}
-                placeholder="Search clients by name or email…"
-                className="w-full text-sm border border-border rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary bg-muted"
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        {/* Intakes */}
+        <Panel>
+          <PanelHeader
+            title="Intakes"
+            right={responses.length > 0 && (
+              <Segmented
+                size="sm"
+                value={filterStatus}
+                onChange={setFilterStatus}
+                options={[
+                  { value: 'all', label: 'All', count: responses.length },
+                  { value: 'pending', label: 'Waiting', count: pending.length },
+                  { value: 'converted', label: 'Active', count: converted.length },
+                ]}
               />
-              {clientSearch && !aiClient && (
-                <div className="mt-1 border border-border rounded-xl overflow-hidden shadow-sm max-h-48 overflow-y-auto">
-                  {filteredClients.length === 0 ? (
-                    <p className="text-xs text-muted-foreground px-3 py-3">No clients found</p>
-                  ) : filteredClients.slice(0, 8).map(c => (
-                    <button key={c.id}
-                      onClick={() => { setAiClient(c); setClientSearch(c.name); }}
-                      className="w-full text-left px-3 py-2.5 hover:bg-accent flex items-center justify-between gap-2 transition-colors border-b border-border last:border-0">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                          style={{ background: 'var(--tc-accent)', color: 'var(--tc-primary)' }}>
-                          {c.name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{c.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{c.email}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-border" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {aiClient && (
-              <div className="rounded-xl border border-accent bg-accent p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: 'var(--tc-primary)', color: 'var(--tc-primary-foreground)' }}>
-                    {aiClient.name?.[0]?.toUpperCase() || '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-primary">{aiClient.name}</p>
-                    <p className="text-[10px] text-primary">
-                      {[aiClient.goal?.replace(/_/g, ' '), aiClient.current_weight && `${aiClient.current_weight} lbs`, aiClient.height].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                </div>
-                <button onClick={() => { setAiClient(null); setClientSearch(''); }}
-                  className="text-primary hover:text-primary text-xs">✕</button>
-              </div>
             )}
-            <button
-              onClick={() => aiClient && setShowAIModal(true)}
-              disabled={!aiClient}
-              className="w-full flex items-center justify-center gap-2 text-sm font-bold text-white py-3 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: aiClient ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'var(--tc-muted-foreground)' }}>
-              <Sparkles className="w-4 h-4" />
-              {aiClient ? `Generate AI Plan for ${aiClient.name}` : 'Select a client to continue'}
-            </button>
-            <p className="text-center text-[10px] text-muted-foreground">Nothing is saved until you review and approve</p>
+          />
+          <div className="divide-y divide-border px-5 pb-2 sm:px-6">
+            {isLoading ? (
+              [1, 2, 3].map(i => (
+                <div key={i} className="flex items-center gap-3 py-4">
+                  <div className="h-10 w-10 rounded-full bg-secondary" />
+                  <div className="flex-1 space-y-2"><div className="h-3 w-1/3 rounded bg-secondary" /><div className="h-3 w-1/2 rounded bg-secondary" /></div>
+                </div>
+              ))
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                className="px-0 sm:px-0"
+                title={responses.length === 0 ? 'No intakes yet' : 'Nothing in this view'}
+                body={responses.length === 0 ? 'Copy your link and send it to someone who wants coaching.' : 'Try another filter.'}
+                action={responses.length === 0 && <Button variant="outline" onClick={copyLink}><Copy /> Copy intake link</Button>}
+              />
+            ) : (
+              filtered.map(r => (
+                <ResponseCard
+                  key={r.id}
+                  response={r}
+                  onApprove={approveMutation.mutate}
+                  isApproving={approveMutation.isPending && approveMutation.variables?.id === r.id}
+                />
+              ))
+            )}
           </div>
-        </div>
-      )}
+        </Panel>
 
-      {/* How it works */}
-      <div className="bg-accent border border-accent rounded-2xl p-4 space-y-2.5">
-        <p className="text-xs font-bold text-primary uppercase tracking-widest">How it works</p>
-        <div className="space-y-2">
-          {[
-            { n: '1', text: 'Copy your unique intake link below.' },
-            { n: '2', text: 'Send it to a prospective client via text, email, or DM.' },
-            { n: '3', text: 'Client completes the premium guided onboarding (no account needed yet).' },
-            { n: '4', text: 'You review their intake here and click "Approve" to create their client profile.' },
-          ].map(s => (
-            <div key={s.n} className="flex items-start gap-2.5">
-              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                {s.n}
-              </span>
-              <p className="text-xs text-primary leading-relaxed">{s.text}</p>
+        {/* Side column */}
+        <div className="space-y-5">
+          <Panel className="p-5">
+            <div className="grid grid-cols-3 gap-3">
+              <Stat label="Intakes" value={responses.length} size="sm" />
+              <Stat label="Waiting" value={pending.length} size="sm" />
+              <Stat label="Approved" value={converted.length} size="sm" />
             </div>
-          ))}
+          </Panel>
+
+          {/* Intake link */}
+          <Panel>
+            <PanelHeader title="Your intake link" subtitle="Send it by text, email or DM. Don't post it publicly." />
+            <div className="space-y-4 px-5 pb-5 sm:px-6">
+              <div className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2.5">
+                <p className="flex-1 truncate font-mono text-[13px] text-muted-foreground">{onboardingUrl}</p>
+                <button onClick={copyLink} aria-label="Copy link" className="touch-compact flex-shrink-0 p-1 text-foreground">
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </button>
+              </div>
+              <ol className="space-y-3">
+                {[
+                  'Copy the link.',
+                  'Send it to someone who wants coaching.',
+                  'They answer 13 short questions. No account needed.',
+                  'Their answers land here. Approve to create the client.',
+                ].map((text, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-foreground text-[13px] font-bold text-foreground">{i + 1}</span>
+                    <p className="pt-0.5 text-sm text-foreground">{text}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </Panel>
+
+          {/* AI onboarding */}
+          <InkPanel
+            title="Draft a first plan with AI"
+            footer={
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="secondary" onClick={() => setShowOverview(true)}>
+                  {canAIOnboard ? 'Choose a client' : 'See how it works'}
+                </Button>
+                <span className="text-[13px] text-ai-foreground/70">{canAIOnboard ? 'Included in your plan' : 'Pro and Elite plans'}</span>
+              </div>
+            }
+          >
+            A training program and meal plan matched to the client's goal. You review and approve before anything is saved.
+          </InkPanel>
+
+          {/* Overview modal */}
+          {showOverview && (
+            <AIOnboardingOverviewModal
+              canUse={canAIOnboard}
+              onClose={() => setShowOverview(false)}
+              onGetStarted={() => { setShowOverview(false); setShowAIPicker(true); }}
+              onUpgrade={() => { setShowOverview(false); window.location.href = '/subscription'; }}
+            />
+          )}
+
+          {/* Client picker panel — shown after "Get Started" */}
+          {canAIOnboard && showAIPicker && (
+            <Panel>
+              <PanelHeader
+                title="Pick a client"
+                subtitle="Nothing is saved until you review and approve."
+                right={
+                  <button onClick={() => { setShowAIPicker(false); setAiClient(null); setClientSearch(''); }}
+                    aria-label="Close" className="touch-compact flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent">
+                    <X className="h-4 w-4" />
+                  </button>
+                }
+              />
+              <div className="space-y-3 px-5 pb-5 sm:px-6">
+                <input
+                  autoFocus
+                  type="text"
+                  value={clientSearch}
+                  onChange={e => { setClientSearch(e.target.value); setAiClient(null); }}
+                  placeholder="Search by name or email"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-[15px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+                />
+                {clientSearch && !aiClient && (
+                  <div className="max-h-56 divide-y divide-border overflow-y-auto rounded-md border border-border">
+                    {filteredClients.length === 0 ? (
+                      <p className="px-3 py-3 text-sm text-muted-foreground">No clients match.</p>
+                    ) : filteredClients.slice(0, 8).map(c => (
+                      <button key={c.id}
+                        onClick={() => { setAiClient(c); setClientSearch(c.name); }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-accent">
+                        <Initials name={c.name || '?'} size={28} />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-foreground">{c.name}</span>
+                          <span className="block truncate text-[13px] text-muted-foreground">{c.email}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {aiClient && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-secondary p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Initials name={aiClient.name || '?'} size={32} tone="ink" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground">{aiClient.name}</p>
+                        <p className="truncate text-[13px] text-muted-foreground">
+                          {[aiClient.goal?.replace(/_/g, ' '), aiClient.current_weight && `${aiClient.current_weight} lb`, aiClient.height].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setAiClient(null); setClientSearch(''); }} aria-label="Clear"
+                      className="touch-compact text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+                  </div>
+                )}
+                <Button className="w-full" onClick={() => aiClient && setShowAIModal(true)} disabled={!aiClient}>
+                  {aiClient ? `Draft a plan for ${aiClient.name}` : 'Pick a client first'}
+                </Button>
+              </div>
+            </Panel>
+          )}
         </div>
       </div>
-
-      {/* Intake link card */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center flex-shrink-0">
-            <Link2 className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-foreground">Your Private Intake Link</p>
-            <p className="text-xs text-muted-foreground">Only share with prospective clients — do not post publicly</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 bg-muted border border-border rounded-xl px-3 py-2.5">
-          <p className="text-xs text-muted-foreground flex-1 truncate font-mono">{onboardingUrl}</p>
-          <button onClick={copyLink} className="text-primary hover:text-primary flex-shrink-0 p-1">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <Button className="w-full gap-2" onClick={copyLink} variant={copied ? 'secondary' : 'default'}>
-          {copied
-            ? <><Check className="w-4 h-4" /> Link Copied!</>
-            : <><Link2 className="w-4 h-4" /> Copy Intake Link</>}
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={Send}        value={responses.length} label="Total Sent"  color="var(--tc-primary)" />
-        <StatCard icon={Hourglass}   value={pending.length}   label="Pending"     color="var(--tc-warning)" />
-        <StatCard icon={CheckCircle2}value={converted.length} label="Approved"    color="var(--tc-success)" />
-      </div>
-
-      {/* Filter tabs */}
-      {responses.length > 0 && (
-        <div className="flex gap-2">
-          {[
-            { id: 'all',       label: `All (${responses.length})` },
-            { id: 'pending',   label: `Pending (${pending.length})` },
-            { id: 'converted', label: `Active (${converted.length})` },
-          ].map(tab => (
-            <button key={tab.id} onClick={() => setFilterStatus(tab.id)}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                filterStatus === tab.id
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border text-muted-foreground hover:border-border'
-              )}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* AI Onboarding Modal */}
       {showAIModal && aiClient && (
@@ -512,34 +393,6 @@ export default function OnboardingManager() {
           }}
         />
       )}
-
-      {/* Response list */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2].map(i => (
-            <div key={i} className="h-20 bg-card rounded-2xl border border-border animate-pulse" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="bg-card border border-border rounded-2xl py-14 text-center shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
-            <Users className="w-5 h-5 text-border" />
-          </div>
-          <p className="text-sm font-semibold text-foreground">No intakes yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Copy your link and share it with a prospective client.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(r => (
-            <ResponseCard
-              key={r.id}
-              response={r}
-              onApprove={approveMutation.mutate}
-              isApproving={approveMutation.isPending && approveMutation.variables?.id === r.id}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    </Page>
   );
 }

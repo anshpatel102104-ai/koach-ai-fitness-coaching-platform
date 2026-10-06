@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { differenceInDays, parseISO, startOfWeek, subWeeks } from 'date-fns';
-import { Clock, CheckCircle2, TrendingUp, Flame } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Panel, Stat } from '@/components/kit';
 
 function calcStreak(clientCIs) {
   const sorted = [...clientCIs].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -14,21 +13,7 @@ function calcStreak(clientCIs) {
   return streak;
 }
 
-function StatCard({ label, value, dot, iconBg, iconColor, children }) {
-  return (
-    <div className={cn('bg-card rounded-xl border p-4 shadow-sm', `border-${dot.split('-')[1]}-100`)}>
-      <div className="flex items-center justify-between mb-3">
-        <div className={cn('w-2 h-2 rounded-full', dot)} />
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', iconBg)}>
-          {children}
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-    </div>
-  );
-}
-
+/** Four plain stat pairs in one panel: waiting, reviewed, response rate, streaks. */
 export default function CheckInStatsRow({ checkIns, clients, latestPerClient }) {
   const stats = useMemo(() => {
     const pending = latestPerClient.filter(ci =>
@@ -61,50 +46,11 @@ export default function CheckInStatsRow({ checkIns, clients, latestPerClient }) 
   }, [checkIns, clients, latestPerClient]);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-      <div className="bg-card rounded-xl border border-orange-100 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="w-2 h-2 rounded-full bg-orange-400" />
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-50">
-            <Clock className="w-4 h-4 text-orange-500" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Pending Reviews</p>
-      </div>
-
-      <div className="bg-card rounded-xl border border-success p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="w-2 h-2 rounded-full bg-success" />
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-success/10">
-            <CheckCircle2 className="w-4 h-4 text-success" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold text-foreground">{stats.reviewedThisWeek}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Reviewed This Week</p>
-      </div>
-
-      <div className="bg-card rounded-xl border border-accent p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="w-2 h-2 rounded-full bg-primary" />
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent">
-            <TrendingUp className="w-4 h-4 text-primary" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold text-foreground">{stats.responseRate}%</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Avg Response Rate</p>
-      </div>
-
-      <div className="bg-card rounded-xl border border-ai p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="w-2 h-2 rounded-full bg-ai" />
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-ai/10">
-            <Flame className="w-4 h-4 text-ai" />
-          </div>
-        </div>
-        <p className="text-2xl font-bold text-foreground">{stats.streakLeaders}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Streak Leaders</p>
-      </div>
-    </div>
+    <Panel className="grid grid-cols-2 lg:grid-cols-4 gap-y-6 px-5 py-5 sm:px-6">
+      <Stat label="Waiting on you" value={stats.pending} />
+      <Stat label="Reviewed this week" value={stats.reviewedThisWeek} />
+      <Stat label="Submitted last week" value={`${stats.responseRate}%`} sub="of active clients" />
+      <Stat label="On a 3+ week streak" value={stats.streakLeaders} sub="clients" />
+    </Panel>
   );
 }

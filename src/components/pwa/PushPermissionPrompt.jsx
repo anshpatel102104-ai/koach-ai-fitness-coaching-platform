@@ -59,28 +59,23 @@ export default function PushPermissionPrompt({ onDismiss }) {
   if (step === 'denied_final') {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 100 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 100 }}
-        className="fixed bottom-24 left-4 right-4 z-[60]">
-        <div className="bg-card rounded-2xl p-4 shadow-lg border border-orange-200">
+        exit={{ opacity: 0, y: 24 }}
+        className="fixed bottom-24 left-4 right-4 z-[60] mx-auto max-w-md">
+        <div className="panel p-4">
           <div className="flex items-start gap-3">
-            <Bell className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+            <Bell className="mt-0.5 h-5 w-5 flex-shrink-0 text-muted-foreground" />
             <div className="flex-1">
-              <p className="text-foreground font-bold text-sm mb-1">
-                Enable notifications in your device settings to stay connected
-              </p>
-              <p className="text-muted-foreground text-xs">You won't miss check-in reminders or coach messages</p>
+              <p className="text-[15px] font-semibold text-foreground">Notifications are off in your phone's settings</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Turn them on there to get check-in reminders and messages from your coach.</p>
             </div>
-            <button onClick={onDismiss} className="flex-shrink-0">
-              <X className="w-4 h-4 text-muted-foreground" />
+            <button onClick={onDismiss} aria-label="Close" className="touch-compact flex-shrink-0 text-muted-foreground">
+              <X className="h-4 w-4" />
             </button>
           </div>
-          <button
-            onClick={handleSettings}
-            className="mt-3 w-full py-2 rounded-lg font-bold text-sm text-primary-foreground"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-            Go to Settings
+          <button onClick={handleSettings} className="mt-3 h-10 w-full rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+            Open settings
           </button>
         </div>
       </motion.div>
@@ -90,38 +85,27 @@ export default function PushPermissionPrompt({ onDismiss }) {
   if (step === 'denied') {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 100 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 100 }}
-        className="fixed bottom-0 left-0 right-0 z-[60]">
-        <motion.div
-          initial={{ y: 400 }}
-          animate={{ y: 0 }}
-          className="bg-card rounded-t-3xl p-6 pt-5">
-          <button onClick={onDismiss} className="absolute top-4 right-4">
-            <X className="w-5 h-5 text-muted-foreground" />
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.3 }}
+        className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-2xl bg-card p-5"
+        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        <button onClick={onDismiss} aria-label="Close" className="touch-compact absolute right-4 top-4 text-muted-foreground">
+          <X className="h-5 w-5" />
+        </button>
+        <div className="mx-auto max-w-md">
+          <p className="display text-[24px] text-foreground">Notifications are off.</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">
+            To turn them back on, allow notifications for KOACH in your phone's settings.
+          </p>
+          <button onClick={handleSettings} className="mt-5 h-12 w-full rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground">
+            Open phone settings
           </button>
-
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ background: 'var(--tc-warning)', border: '1px solid var(--tc-warning)' }}>
-              <Bell className="w-6 h-6 text-warning" />
-            </div>
-            <p className="text-foreground font-black text-lg mb-1">Notifications Disabled</p>
-            <p className="text-muted-foreground text-sm mb-4">
-              To re-enable, go to your device settings and allow notifications for KOACH AI
-            </p>
-            <button
-              onClick={handleSettings}
-              className="w-full py-3 rounded-xl font-bold text-primary-foreground mb-2"
-              style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-              Open Device Settings
-            </button>
-            <button onClick={onDismiss} className="w-full py-3 rounded-xl font-semibold text-muted-foreground">
-              Got it
-            </button>
-          </div>
-        </motion.div>
+          <button onClick={onDismiss} className="mt-2 h-11 w-full text-sm font-semibold text-muted-foreground">
+            Got it
+          </button>
+        </div>
       </motion.div>
     );
   }
@@ -131,58 +115,41 @@ export default function PushPermissionPrompt({ onDismiss }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-end"
-      style={{ background: 'color-mix(in srgb, black 30%, transparent)' }}
+      className="fixed inset-0 z-[60] flex items-end bg-black/40"
       onClick={onDismiss}>
       <motion.div
-        initial={{ y: 400 }}
+        initial={{ y: '100%' }}
         animate={{ y: 0 }}
-        exit={{ y: 400 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.3 }}
         onClick={e => e.stopPropagation()}
-        className="w-full bg-card rounded-t-3xl p-6">
+        className="w-full rounded-t-2xl bg-card px-5 pt-6"
+        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        <div className="mx-auto max-w-md">
+          <p className="display text-[28px] leading-tight text-foreground">Hear from your coach when it matters.</p>
+          <p className="mt-2 text-[15px] text-muted-foreground">Three kinds of alerts, nothing else.</p>
 
-        {/* Icon */}
-        <div className="text-center mb-4">
-          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-            <Bell className="w-8 h-8 text-white" />
-          </div>
+          <ul className="my-5 divide-y divide-border rounded-xl bg-secondary px-4">
+            {[
+              'Your coach sends you a message',
+              'Your weekly check-in is due',
+              'You hit a goal or a new best',
+            ].map(text => (
+              <li key={text} className="py-3 text-[15px] text-foreground">{text}</li>
+            ))}
+          </ul>
+
+          <button
+            onClick={handleEnable}
+            disabled={step === 'processing'}
+            className="h-12 w-full rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50">
+            {step === 'processing' ? 'Turning on' : 'Turn on notifications'}
+          </button>
+
+          <button onClick={handleLater} className="mt-2 h-11 w-full text-sm font-semibold text-muted-foreground">
+            Not now
+          </button>
         </div>
-
-        {/* Headline */}
-        <h2 className="text-foreground font-black text-2xl text-center mb-2">
-          Stay on top of your coaching 🔔
-        </h2>
-        <p className="text-muted-foreground text-center text-sm mb-5">
-          Get instant updates and never miss important moments with your coach
-        </p>
-
-        {/* Benefits */}
-        <div className="space-y-3 mb-6">
-          {[
-            { emoji: '💬', text: 'Get notified when coach messages you' },
-            { emoji: '📋', text: 'Never miss a check-in reminder' },
-            { emoji: '🎉', text: 'Celebrate achievements instantly' },
-          ].map((benefit, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-accent border border-accent">
-              <span className="text-lg">{benefit.emoji}</span>
-              <p className="text-foreground font-semibold text-sm">{benefit.text}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <button
-          onClick={handleEnable}
-          disabled={step === 'processing'}
-          className="w-full py-4 rounded-2xl font-black text-primary-foreground text-base mb-2 transition-opacity disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-          {step === 'processing' ? 'Enabling...' : 'Enable Notifications'}
-        </button>
-
-        <button onClick={handleLater} className="w-full py-3 font-semibold text-muted-foreground text-sm">
-          Maybe Later
-        </button>
       </motion.div>
     </motion.div>
   );

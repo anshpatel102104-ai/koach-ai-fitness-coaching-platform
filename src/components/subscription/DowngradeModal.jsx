@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, AlertTriangle, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { TIERS, TIER_ORDER } from '@/lib/subscription';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -9,10 +10,10 @@ import { clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 
 
 const TIER_FEATURES = {
-  starter: ['Workout program builder', 'Basic nutrition plans', 'Scheduling & calendar', 'In-app messaging', 'Basic progress tracking', 'Email support'],
-  pro:     ['AI onboarding', 'Progress analytics & graphs', 'Check-in review system', 'AI check-in summaries & AI-drafted replies', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'Custom branding (logo)'],
-  elite:   ['Full AI assistant', 'Auto progression rules', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations'],
-  enterprise: ['API access', 'Custom integrations', 'Dedicated account manager', 'Team accounts', 'Custom contract & invoicing'],
+  starter: ['Workout program builder', 'Basic nutrition plans', 'Scheduling and calendar', 'In-app messaging', 'Basic progress tracking', 'Email support'],
+  pro:     ['AI onboarding', 'Progress analytics and graphs', 'Check-in review', 'AI check-in summaries and drafted replies', 'Adherence scoring', 'Voice and video messages', 'Client mobile dashboard', 'Custom branding (logo)'],
+  elite:   ['Full AI assistant', 'Auto progression rules', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations'],
+  enterprise: ['API access', 'Custom integrations', 'Dedicated account manager', 'Team accounts', 'Custom contract and invoicing'],
 };
 
 export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0, renewalDate, user, onClose, onUserUpdate }) {
@@ -27,7 +28,7 @@ export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0
   const fromIdx = TIER_ORDER.indexOf(fromTierKey);
   const toIdx = TIER_ORDER.indexOf(toTierKey);
   const losingFeatures = [
-    `Limits become: ${clientLimitLabel(toTierKey)}, ${aiLimitLabel(toTierKey)}`,
+    `Limits drop to ${clientLimitLabel(toTierKey).toLowerCase()}, ${aiLimitLabel(toTierKey)}`,
     ...TIER_ORDER.slice(toIdx + 1, fromIdx + 1).flatMap(k => TIER_FEATURES[k]),
   ];
 
@@ -58,107 +59,65 @@ export default function DowngradeModal({ fromTierKey, toTierKey, clientCount = 0
     setLoading(false);
     const updated = await me();
     if (onUserUpdate) onUserUpdate(updated);
-    toast.success('Downgrade cancelled — your plan is unchanged.');
+    toast.success('Downgrade cancelled. Your plan is unchanged.');
     onClose();
   };
 
   if (confirmed) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-sidebar p-8 text-center shadow-2xl">
-          <div className="w-12 h-12 rounded-full bg-warning/10 border border-warning/20 flex items-center justify-center mx-auto mb-4">
-            <Check className="w-6 h-6 text-warning" />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Downgrade Confirmed</h3>
-          <p className="text-muted-foreground text-sm mb-1">
-            Your plan will change to <span className="text-white font-semibold">{toTier.name}</span> on <span className="text-white">{effectiveDate}</span>.
+      <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>Downgrade booked</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            You move to <span className="font-semibold text-foreground">{toTier.name}</span> on <span className="text-foreground">{effectiveDate}</span>. {fromTier.name} features stay on until then.
           </p>
-          <p className="text-muted-foreground text-sm mb-6">You'll keep all {fromTier.name} features until then.</p>
-          <button
-            onClick={handleUndo}
-            disabled={loading}
-            className="text-sm text-primary hover:text-primary transition-colors underline"
-          >
-            {loading ? 'Undoing...' : 'Changed your mind? Undo downgrade'}
-          </button>
-          <div className="mt-6">
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white border border-white/10 hover:bg-[var(--kc-w-5)] transition-colors"
-            >
-              Close
-            </button>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+            <Button variant="link" className="sm:mr-auto" onClick={handleUndo} disabled={loading}>
+              {loading ? 'Undoing…' : 'Undo the downgrade'}
+            </Button>
+            <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-sidebar shadow-2xl">
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-lg font-bold text-white">Downgrade to {toTier.name}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <div>
+          <DialogTitle>Downgrade to {toTier.name}</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Takes effect {effectiveDate}. You keep {fromTier.name} until the end of this billing period.
+          </p>
         </div>
 
-        <div className="p-6 space-y-5">
-          {/* Client over-limit warning */}
-          {clientOverLimit && (
-            <div className="flex gap-3 bg-warning/10 border border-warning/30 rounded-xl p-4">
-              <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-warning">Client limit exceeded</p>
-                <p className="text-xs text-warning/80 mt-0.5">
-                  You have {clientCount} clients but {toTier.name} only allows {newClientLimit}. Your existing clients stay (nothing is deleted), but they become read-only and you can't add new clients until you're back under the limit.
-                </p>
-              </div>
-            </div>
-          )}
+        {clientOverLimit && (
+          <p className="text-sm text-foreground border-l-2 border-warning pl-3">
+            <span className="font-semibold">You have {clientCount} clients; {toTier.name} allows {newClientLimit}.</span>{' '}
+            Nobody is deleted, but existing clients go read-only and you can't add new ones until you're under the limit.
+          </p>
+        )}
 
-          {/* Effective date */}
-          <div className="bg-card/[0.03] border border-white/10 rounded-xl p-4">
-            <p className="text-xs text-muted-foreground">Effective date</p>
-            <p className="text-white font-semibold mt-0.5">{effectiveDate}</p>
-            <p className="text-xs text-muted-foreground mt-1">You keep all {fromTier.name} features until the end of your billing period.</p>
-          </div>
-
-          {/* Features being lost */}
-          <div>
-            <p className="text-sm font-semibold text-sidebar-foreground mb-3">Features you'll lose</p>
-            <div className="space-y-2">
-              {losingFeatures.map(f => (
-                <div key={f} className="flex items-center gap-2 bg-destructive/5 border border-destructive/20 rounded-lg px-3 py-2">
-                  <span className="text-destructive text-sm flex-shrink-0">❌</span>
-                  <span className="text-xs text-sidebar-foreground">{f}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="space-y-3 pt-2">
-            {/* Keep current — prominent */}
-            <button
-              onClick={onClose}
-              className="w-full py-3 rounded-xl text-sm font-bold text-primary-foreground transition-all"
-              style={{ background: 'linear-gradient(to right, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 20px color-mix(in srgb, var(--tc-ai) 25%, transparent)' }}
-            >
-              Keep {fromTier.name} Plan
-            </button>
-            {/* Confirm downgrade — less prominent */}
-            <button
-              onClick={handleDowngrade}
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl text-sm font-semibold border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Opening portal...' : `Continue to billing portal`}
-            </button>
-          </div>
+        <div>
+          <p className="text-[13px] text-muted-foreground mb-2">What you lose</p>
+          <ul className="space-y-1.5">
+            {losingFeatures.map(f => (
+              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground">
+                <span className="mt-[9px] h-px w-2.5 bg-muted-foreground flex-shrink-0" aria-hidden="true" />
+                {f}
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
-    </div>
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={handleDowngrade} disabled={loading}>
+            {loading ? 'Opening Stripe…' : 'Continue in Stripe'}
+          </Button>
+          <Button onClick={onClose}>Keep {fromTier.name}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -30,14 +30,12 @@ function CalorieAdjust({ selectedClients, onDone }) {
     onDone();
   };
   return (
-    <div className="p-3 bg-orange-500/8 border border-orange-500/20 rounded-xl space-y-2">
-      <p className="text-xs font-semibold text-orange-400">Adjust calories for {selectedClients.length} clients</p>
+    <div className="pt-1 space-y-2">
+      <p className="text-[13px] text-muted-foreground">Adjust daily calories for {selectedClients.length} clients. Each one gets a message about the change.</p>
       <div className="grid grid-cols-4 gap-2">
         {[[-250, '−250'], [-150, '−150'], [+150, '+150'], [+250, '+250']].map(([d, l]) => (
           <button key={d} onClick={() => adjust(d)} disabled={saving}
-            className={cn('py-2.5 rounded-lg text-xs font-bold border active:scale-95 transition-all',
-              d < 0 ? 'bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20'
-                : 'bg-success/10 border-success/20 text-success hover:bg-success/20')}>
+            className="h-10 rounded-md text-sm font-semibold border border-border bg-card text-foreground hover:bg-accent tabular-nums transition-colors disabled:opacity-50">
             {saving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : l}
           </button>
         ))}
@@ -62,12 +60,12 @@ function AssignProgram({ selectedClients, onDone }) {
     onDone();
   };
   return (
-    <div className="p-3 bg-primary/8 border border-primary/20 rounded-xl space-y-2">
-      <p className="text-xs font-semibold text-primary">Assign program to {selectedClients.length} clients</p>
+    <div className="pt-1 space-y-2">
+      <p className="text-[13px] text-muted-foreground">Assign one program to {selectedClients.length} clients.</p>
       <select
         value={programId}
         onChange={e => setProgramId(e.target.value)}
-        className="w-full text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        className="w-full h-10 text-sm bg-card border border-input rounded-md px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Select a program…</option>
         {programs.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
@@ -75,10 +73,10 @@ function AssignProgram({ selectedClients, onDone }) {
       <button
         onClick={assign}
         disabled={saving || !programId}
-        className="w-full py-2 rounded-lg text-xs font-bold bg-primary/20 border border-primary/30 text-primary hover:bg-primary/30 disabled:opacity-40 active:scale-95 transition-all flex items-center justify-center gap-2"
+        className="w-full h-10 rounded-md text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
       >
         {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Dumbbell className="w-3 h-3" />}
-        {saving ? 'Assigning…' : 'Assign Program'}
+        {saving ? 'Assigning' : 'Assign program'}
       </button>
     </div>
   );
@@ -87,7 +85,7 @@ function AssignProgram({ selectedClients, onDone }) {
 function AddTag({ selectedClients, onDone }) {
   const [saving, setSaving] = useState(false);
   const [tagVal, setTagVal] = useState('');
-  const QUICK_TAGS = ['VIP', 'Fat Loss', 'Muscle Gain', 'Hybrid Program', 'At Risk', 'New Client'];
+  const QUICK_TAGS = ['VIP', 'Fat Loss', 'Muscle gain', 'Hybrid Program', 'At Risk', 'New Client'];
   const applyTag = async (tag) => {
     const t = tag.trim().toLowerCase().replace(/\s+/g, '-');
     if (!t) return;
@@ -103,12 +101,12 @@ function AddTag({ selectedClients, onDone }) {
     onDone();
   };
   return (
-    <div className="p-3 bg-ai/8 border border-ai/20 rounded-xl space-y-2">
-      <p className="text-xs font-semibold text-ai">Add tag to {selectedClients.length} clients</p>
+    <div className="pt-1 space-y-2">
+      <p className="text-[13px] text-muted-foreground">Tag {selectedClients.length} clients.</p>
       <div className="flex flex-wrap gap-1">
         {QUICK_TAGS.map(t => (
           <button key={t} onClick={() => applyTag(t)} disabled={saving}
-            className="text-[10px] font-bold px-2 py-1 rounded-lg bg-ai/10 border border-ai/20 text-ai hover:bg-ai/20 transition-all">
+            className="text-[13px] font-medium px-2.5 h-8 rounded-md border border-border bg-card text-foreground hover:bg-accent transition-colors">
             #{t}
           </button>
         ))}
@@ -118,11 +116,11 @@ function AddTag({ selectedClients, onDone }) {
           value={tagVal}
           onChange={e => setTagVal(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && applyTag(tagVal)}
-          placeholder="Custom tag…"
-          className="flex-1 text-xs bg-card border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+          placeholder="Your own tag"
+          className="flex-1 h-9 text-sm bg-card border border-input rounded-md px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
         />
         <button onClick={() => applyTag(tagVal)} disabled={saving || !tagVal.trim()}
-          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-ai/20 border border-ai/30 text-ai disabled:opacity-40">
+          className="px-3 h-9 rounded-md text-sm font-semibold bg-primary text-primary-foreground disabled:opacity-40">
           Add
         </button>
       </div>
@@ -174,10 +172,10 @@ export default function BulkActionBar({ selectedIds, clients, allCheckIns, onCle
 
   return (
     <div className="fixed bottom-20 sm:bottom-6 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
-      <div className="bg-card border border-border rounded-2xl shadow-2xl shadow-black/20 w-full max-w-lg pointer-events-auto">
+      <div className="bg-card ring-1 ring-border rounded-xl w-full max-w-xl pointer-events-auto shadow-[0_8px_24px_rgb(0_0_0/0.12)]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-sm font-bold">{count} client{count !== 1 ? 's' : ''} selected</span>
-          <button onClick={onClear} className="w-7 h-7 rounded-lg hover:bg-secondary flex items-center justify-center transition-colors">
+          <span className="text-[15px] font-semibold text-foreground">{count} client{count !== 1 ? 's' : ''} selected</span>
+          <button onClick={onClear} aria-label="Clear selection" className="touch-compact w-8 h-8 rounded-md hover:bg-accent flex items-center justify-center transition-colors">
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -185,20 +183,22 @@ export default function BulkActionBar({ selectedIds, clients, allCheckIns, onCle
         <div className="p-3 space-y-2">
           <div className="grid grid-cols-5 gap-1.5">
             {[
-              { key: 'message', icon: MessageSquare, label: 'Message', color: 'text-primary bg-primary/10 border-primary/20 hover:bg-primary/20' },
-              { key: 'program', icon: Dumbbell, label: 'Program', color: 'text-primary bg-primary/10 border-primary/20 hover:bg-primary/20' },
-              { key: 'tag', icon: Tag, label: 'Tag', color: 'text-ai bg-ai/10 border-ai/20 hover:bg-ai/20' },
-              { key: 'calories', icon: Flame, label: 'Calories', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20 hover:bg-orange-500/20' },
-              { key: 'reviewed', icon: ClipboardCheck, label: 'Review', color: 'text-success bg-success/10 border-success/20 hover:bg-success/20' },
-            ].map(({ key, icon: Icon, label, color }) => (
+              { key: 'message', icon: MessageSquare, label: 'Message' },
+              { key: 'program', icon: Dumbbell, label: 'Program' },
+              { key: 'tag', icon: Tag, label: 'Tag' },
+              { key: 'calories', icon: Flame, label: 'Calories' },
+              { key: 'reviewed', icon: ClipboardCheck, label: 'Reviewed' },
+            ].map(({ key, icon: Icon, label }) => (
               <button
                 key={key}
                 onClick={key === 'reviewed' ? markReviewed : () => toggle(key)}
                 disabled={key === 'reviewed' && marking}
-                className={cn('flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-semibold transition-all active:scale-95', color, panel === key && 'ring-2 ring-primary/30')}
+                title={key === 'reviewed' ? 'Mark their latest check-in as reviewed' : undefined}
+                className={cn('flex flex-col items-center gap-1 py-2.5 rounded-lg border text-[13px] font-medium transition-colors',
+                  panel === key ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-border hover:bg-accent')}
               >
                 {key === 'reviewed' && marking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Icon className="w-4 h-4" />}
-                {key === 'reviewed' && marking ? '…' : label}
+                {key === 'reviewed' && marking ? 'Saving' : label}
               </button>
             ))}
           </div>
@@ -208,17 +208,17 @@ export default function BulkActionBar({ selectedIds, clients, allCheckIns, onCle
               <textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                placeholder={`Send a message to ${count} client${count !== 1 ? 's' : ''}...`}
+                placeholder={`One message, sent to each of the ${count} separately`}
                 rows={3}
-                className="w-full text-sm bg-secondary/40 border border-border rounded-xl p-3 resize-none placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full text-sm bg-card border border-input rounded-lg p-3 resize-none placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
               <button
                 onClick={sendMessage}
                 disabled={sending || !message.trim()}
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
               >
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
-                {sending ? 'Sending…' : `Send to ${count} Client${count !== 1 ? 's' : ''}`}
+                {sending ? 'Sending' : `Send to ${count} client${count !== 1 ? 's' : ''}`}
               </button>
             </div>
           )}

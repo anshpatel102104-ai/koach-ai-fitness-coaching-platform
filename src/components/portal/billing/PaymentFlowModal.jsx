@@ -1,163 +1,102 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, CheckCircle2, AlertCircle, Lock, ChevronRight } from 'lucide-react';
+import { CreditCard, Check, AlertCircle, Lock, Loader2, X } from 'lucide-react';
 import { portalDb } from '@/api/supabaseClient';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { FocusFooter } from '@/components/portal/PortalUI';
+import { fmtMoney as fmt } from './shared';
 
-const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function Secure() {
+  return (
+    <p className="mt-2 flex items-center justify-center gap-1.5 text-[13px] text-muted-foreground">
+      <Lock className="h-3.5 w-3.5" /> Payments are handled by Stripe
+    </p>
+  );
+}
 
 // Step 1 — Summary
-function PaymentSummary({ invoice, onNext, onClose }) {
-  const lineItems = invoice.line_items || [{ description: invoice.description || 'Coaching Services', qty: 1, price: invoice.amount }];
+function PaymentSummary({ invoice, onNext }) {
+  const lineItems = invoice.line_items || [{ description: invoice.description || 'Coaching services', qty: 1, price: invoice.amount }];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
-        <h2 className="text-white font-bold text-lg">Payment Summary</h2>
-        <button onClick={onClose} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <X className="w-4 h-4 text-white/60" />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 space-y-4">
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <div className="p-4 border-b border-white/10">
-            <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">Invoice {invoice.invoice_number}</p>
-          </div>
-          <div className="p-4 space-y-3">
+    <>
+      <div className="flex-1 overflow-y-auto px-5 pb-5">
+        <div className="rounded-xl shadow-[0_0_0_1px_rgb(var(--border))]">
+          <p className="border-b border-border px-4 py-3 text-[13px] text-muted-foreground">Invoice {invoice.invoice_number}</p>
+          <ul className="divide-y divide-border px-4">
             {lineItems.map((item, i) => (
-              <div key={i} className="flex justify-between items-center">
-                <p className="text-white text-sm">{item.description || 'Service'}</p>
-                <p className="text-white font-semibold text-sm">{fmt((item.price || 0) * (item.qty || 1))}</p>
-              </div>
+              <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span className="text-foreground">{item.description || 'Service'}</span>
+                <span className="font-semibold tabular-nums text-foreground">{fmt((item.price || 0) * (item.qty || 1))}</span>
+              </li>
             ))}
-          </div>
-          <div className="px-4 py-3 flex justify-between items-center" style={{ background: 'rgba(255,255,255,0.04)', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-            <p className="text-white font-bold">Total due</p>
-            <p className="text-white font-black text-xl">{fmt(invoice.amount)}</p>
+          </ul>
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <span className="text-[15px] font-semibold text-foreground">Total</span>
+            <span className="num text-[28px] text-foreground">{fmt(invoice.amount)}</span>
           </div>
         </div>
 
-        {/* Saved card option */}
-        <div>
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-2">Pay with</p>
-          <div className="p-4 rounded-2xl" style={{ background: 'rgb(var(--primary) / 0.1)', border: '1px solid rgb(var(--primary) / 0.25)' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-white text-sm font-semibold">●●●● 4242</p>
-                  <p className="text-white/40 text-xs">Visa · Default</p>
-                </div>
-              </div>
-              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-card" />
-              </div>
-            </div>
-          </div>
-          <button className="w-full mt-2 py-3 text-xs font-semibold text-white/40 flex items-center justify-center gap-1">
-            Use a different card <ChevronRight className="w-3 h-3" />
-          </button>
+        <p className="mt-5 text-[13px] text-muted-foreground">Pay with</p>
+        <div className="mt-2 flex items-center gap-3 rounded-lg px-4 py-3 shadow-[inset_0_0_0_2px_rgb(var(--foreground))]">
+          <CreditCard className="h-5 w-5 text-foreground" />
+          <span className="flex-1">
+            <span className="block text-[15px] font-semibold tabular-nums text-foreground">•••• 4242</span>
+            <span className="block text-[13px] text-muted-foreground">Visa, default</span>
+          </span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-3 w-3" strokeWidth={3} /></span>
         </div>
-      </div>
-
-      <div className="px-5 pb-8 pt-3">
-        <button onClick={onNext}
-          className="w-full py-4 rounded-2xl text-base font-black text-white"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 8px 24px rgb(var(--primary) / 0.35)' }}>
-          Continue — {fmt(invoice.amount)}
+        <button type="button" onClick={onNext} className="mt-3 text-sm font-semibold text-foreground underline underline-offset-4">
+          Use a different card
         </button>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <Lock className="w-3 h-3 text-white/30" />
-          <p className="text-white/30 text-xs">Secured by Stripe · PCI Compliant</p>
-        </div>
       </div>
-    </div>
+      <FocusFooter>
+        <Button variant="brand" size="lg" className="h-[52px] w-full text-base font-bold" onClick={onNext}>
+          Continue to pay {fmt(invoice.amount)}
+        </Button>
+        <Secure />
+      </FocusFooter>
+    </>
   );
 }
 
 // Step 2 — Card input
-function PaymentMethod({ invoice, onPay, onClose }) {
+function PaymentMethod({ invoice, onPay }) {
   const [card, setCard] = useState({ number: '', expiry: '', cvc: '', name: '', zip: '' });
   const [saveCard, setSaveCard] = useState(true);
   const isValid = card.name && card.number.length >= 16 && card.expiry && card.cvc.length >= 3;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
-        <h2 className="text-white font-bold text-lg">Payment Method</h2>
-        <button onClick={onClose} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <X className="w-4 h-4 text-white/60" />
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 space-y-3">
-        <div className="p-1 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="p-3 space-y-3">
-            <input
-              value={card.number}
-              onChange={e => setCard(c => ({ ...c, number: e.target.value.replace(/\D/g, '').slice(0, 16) }))}
-              placeholder="Card number"
-              className="w-full px-4 py-3.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-            <div className="flex gap-3">
-              <input
-                value={card.expiry}
-                onChange={e => setCard(c => ({ ...c, expiry: e.target.value }))}
-                placeholder="MM/YY"
-                className="flex-1 px-4 py-3.5 rounded-xl text-sm text-white outline-none"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-              />
-              <input
-                value={card.cvc}
-                onChange={e => setCard(c => ({ ...c, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-                placeholder="CVC"
-                className="flex-1 px-4 py-3.5 rounded-xl text-sm text-white outline-none"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-              />
-            </div>
-            <input
-              value={card.name}
-              onChange={e => setCard(c => ({ ...c, name: e.target.value }))}
-              placeholder="Name on card"
-              className="w-full px-4 py-3.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-            <input
-              value={card.zip}
-              onChange={e => setCard(c => ({ ...c, zip: e.target.value }))}
-              placeholder="Billing zip code"
-              className="w-full px-4 py-3.5 rounded-xl text-sm text-white outline-none"
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-          </div>
+    <>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-5 pb-5">
+        <Input value={card.number} inputMode="numeric"
+          onChange={e => setCard(c => ({ ...c, number: e.target.value.replace(/\D/g, '').slice(0, 16) }))}
+          placeholder="Card number" className="h-12 text-base" />
+        <div className="flex gap-2.5">
+          <Input value={card.expiry} onChange={e => setCard(c => ({ ...c, expiry: e.target.value }))} placeholder="MM/YY" className="h-12 text-base" />
+          <Input value={card.cvc} inputMode="numeric"
+            onChange={e => setCard(c => ({ ...c, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+            placeholder="CVC" className="h-12 text-base" />
         </div>
+        <Input value={card.name} onChange={e => setCard(c => ({ ...c, name: e.target.value }))} placeholder="Name on card" className="h-12 text-base" />
+        <Input value={card.zip} onChange={e => setCard(c => ({ ...c, zip: e.target.value }))} placeholder="Billing zip code" className="h-12 text-base" />
 
-        <div className="flex items-center justify-between p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div>
-            <p className="text-white text-sm font-semibold">Save for future payments</p>
-            <p className="text-white/30 text-xs mt-0.5">Pay faster next time</p>
-          </div>
-          <button onClick={() => setSaveCard(s => !s)}
-            className="w-11 h-6 rounded-full transition-all flex-shrink-0"
-            style={{ background: saveCard ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.1)' }}>
-            <div className="w-4.5 h-4.5 bg-card rounded-full transition-all mx-1 mt-[3px]" style={{ transform: saveCard ? 'translateX(18px)' : 'translateX(0)' }} />
-          </button>
-        </div>
+        <label className="flex items-center justify-between gap-3 pt-2">
+          <span>
+            <span className="block text-[15px] font-semibold text-foreground">Save for next time</span>
+            <span className="block text-[13px] text-muted-foreground">Skip typing it again</span>
+          </span>
+          <Switch checked={saveCard} onCheckedChange={setSaveCard} />
+        </label>
       </div>
-
-      <div className="px-5 pb-8 pt-3">
-        <button onClick={() => onPay(card)} disabled={!isValid}
-          className="w-full py-4 rounded-2xl text-base font-black text-white transition-all"
-          style={{ background: isValid ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' : 'rgba(255,255,255,0.06)', color: isValid ? 'rgb(var(--card))' : 'rgba(255,255,255,0.3)' }}>
+      <FocusFooter>
+        <Button variant="brand" size="lg" className="h-[52px] w-full text-base font-bold" onClick={() => onPay(card)} disabled={!isValid}>
           Pay {fmt(invoice.amount)}
-        </button>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <Lock className="w-3 h-3 text-white/30" />
-          <p className="text-white/30 text-xs">Secured by Stripe · PCI Compliant</p>
-        </div>
-      </div>
-    </div>
+        </Button>
+        <Secure />
+      </FocusFooter>
+    </>
   );
 }
 
@@ -165,50 +104,42 @@ function PaymentMethod({ invoice, onPay, onClose }) {
 function PaymentConfirmation({ invoice, status, error, user, onBack }) {
   if (status === 'processing') {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-5 pb-16">
-        <div className="w-16 h-16 border-4 border-primary/30 border-t-blue-500 rounded-full animate-spin mb-6" />
-        <p className="text-white font-bold text-xl">Processing payment...</p>
-        <p className="text-white/40 text-sm mt-2">Please don't close this screen</p>
+      <div className="flex flex-1 flex-col items-start justify-center px-5 pb-16">
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+        <h2 className="mt-4 text-[28px] text-foreground">Taking payment</h2>
+        <p className="mt-1 text-[15px] text-muted-foreground">Keep this screen open for a moment.</p>
       </div>
     );
   }
 
   if (status === 'success') {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center h-full px-5 pb-16 text-center">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.1 }}
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: 'rgb(var(--success) / 0.2)' }}>
-          <CheckCircle2 className="w-10 h-10 text-success" />
-        </motion.div>
-        <h2 className="text-white font-black text-2xl mb-2">Payment Successful! 🎉</h2>
-        <p className="text-success font-bold text-xl mb-1">{fmt(invoice.amount)}</p>
-        <p className="text-white/40 text-sm mb-1">{invoice.invoice_number}</p>
-        <p className="text-white/30 text-xs mb-8">Receipt sent to {user?.email}</p>
-        <button onClick={onBack}
-          className="w-full py-4 rounded-2xl text-base font-bold text-white"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-          Back to Billing
-        </button>
-      </motion.div>
+      <>
+        <div className="flex-1 px-5 pt-6">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success text-white"><Check className="h-7 w-7" strokeWidth={3} /></span>
+          <h2 className="mt-5 text-[32px] text-foreground">Paid</h2>
+          <p className="num mt-1 text-[28px] text-foreground">{fmt(invoice.amount)}</p>
+          <p className="mt-1 text-[15px] text-muted-foreground">{invoice.invoice_number}. Receipt sent to {user?.email}.</p>
+        </div>
+        <FocusFooter>
+          <Button size="lg" className="h-[52px] w-full text-base font-bold" onClick={onBack}>Back to billing</Button>
+        </FocusFooter>
+      </>
     );
   }
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center h-full px-5 pb-16 text-center">
-      <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: 'rgb(var(--destructive) / 0.15)' }}>
-        <AlertCircle className="w-10 h-10 text-destructive" />
+    <>
+      <div className="flex-1 px-5 pt-6">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive"><AlertCircle className="h-7 w-7" /></span>
+        <h2 className="mt-5 text-[32px] text-foreground">Payment didn't go through</h2>
+        <p className="mt-1 text-[15px] text-destructive">{error || 'Your card was declined.'}</p>
+        <p className="mt-1 text-[15px] text-muted-foreground">Check the card details or try another card.</p>
       </div>
-      <h2 className="text-white font-black text-2xl mb-2">Payment Failed</h2>
-      <p className="text-destructive text-sm mb-1">{error || 'Your card was declined'}</p>
-      <p className="text-white/30 text-xs mb-8">Please check your card details or contact your bank</p>
-      <button onClick={onBack}
-        className="w-full py-4 rounded-2xl text-base font-bold text-white mb-3"
-        style={{ background: 'rgba(255,255,255,0.08)' }}>
-        Try a Different Card
-      </button>
-    </motion.div>
+      <FocusFooter>
+        <Button size="lg" className="h-[52px] w-full text-base font-bold" onClick={onBack}>Try another card</Button>
+      </FocusFooter>
+    </>
   );
 }
 
@@ -237,44 +168,32 @@ export default function PaymentFlowModal({ invoice, client, user, onClose, onCom
     }
   };
 
+  const title = step === 'summary' ? 'Pay invoice' : step === 'method' ? 'Card details' : null;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end"
-      style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28 }}
-        className="w-full"
-        style={{ background: 'rgb(var(--sidebar))', borderRadius: '24px 24px 0 0', height: '90vh', paddingBottom: 'env(safe-area-inset-bottom)', display: 'flex', flexDirection: 'column' }}>
-
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50">
+      <div className="flex h-[90vh] w-full max-w-[480px] flex-col rounded-t-xl bg-card">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <h2 className="text-[22px] text-foreground">{title || ''}</h2>
+          {step !== 'processing' && (
+            <button type="button" onClick={onClose} aria-label="Close"
+              className="touch-compact inline-flex h-9 w-9 items-center justify-center rounded-lg bg-card text-foreground shadow-[0_0_0_1px_rgb(var(--border))] hover:bg-accent">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-
-        <div className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            {step === 'summary' && (
-              <motion.div key="summary" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full flex flex-col">
-                <PaymentSummary invoice={invoice} onNext={() => setStep('method')} onClose={onClose} />
-              </motion.div>
-            )}
-            {step === 'method' && (
-              <motion.div key="method" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="h-full flex flex-col">
-                <PaymentMethod invoice={invoice} onPay={handlePay} onClose={onClose} />
-              </motion.div>
-            )}
-            {(step === 'processing' || step === 'success' || step === 'error') && (
-              <motion.div key="result" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col">
-                <PaymentConfirmation
-                  invoice={invoice}
-                  status={step}
-                  error={error}
-                  user={user}
-                  onBack={() => { step === 'success' ? onComplete() : setStep('method'); }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
-    </motion.div>
+        {step === 'summary' && <PaymentSummary invoice={invoice} onNext={() => setStep('method')} onClose={onClose} />}
+        {step === 'method' && <PaymentMethod invoice={invoice} onPay={handlePay} onClose={onClose} />}
+        {(step === 'processing' || step === 'success' || step === 'error') && (
+          <PaymentConfirmation
+            invoice={invoice}
+            status={step}
+            error={error}
+            user={user}
+            onBack={() => { step === 'success' ? onComplete() : setStep('method'); }}
+          />
+        )}
+      </div>
+    </div>
   );
 }

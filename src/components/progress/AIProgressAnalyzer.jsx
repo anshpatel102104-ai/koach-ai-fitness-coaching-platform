@@ -1,12 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { db } from '@/api/supabaseClient';
 import { differenceInWeeks, differenceInDays, parseISO } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Sparkles, TrendingUp, AlertTriangle,
-  Target, Loader2, RefreshCw, ChevronDown, ChevronUp, Brain, BarChart2, Clock
-} from 'lucide-react';
+import { AlertTriangle, Loader2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Panel } from '@/components/kit';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 /* ── Compute local stats to feed the AI ── */
 function buildContext(client, checkIns, workoutSessions, program) {
@@ -73,122 +72,86 @@ function buildContext(client, checkIns, workoutSessions, program) {
 }
 
 
-/* ── Trend Badge ── */
-function TrendBadge({ type, text }) {
-  const config = {
-    positive: { bg: 'bg-success/10 border-success text-success', icon: TrendingUp, iconColor: 'text-success' },
-    negative: { bg: 'bg-destructive/10 border-destructive text-destructive', icon: AlertTriangle, iconColor: 'text-destructive' },
-    neutral: { bg: 'bg-accent border-primary text-primary', icon: BarChart2, iconColor: 'text-primary' },
-  }[type] || { bg: 'bg-muted border-border text-muted-foreground', icon: BarChart2, iconColor: 'text-muted-foreground' };
-  const Icon = config.icon;
+/* ── Trend line ── */
+function TrendLine({ type, text }) {
+  const dot = type === 'positive' ? 'bg-success' : type === 'negative' ? 'bg-destructive' : 'bg-muted-foreground';
   return (
-    <div className={cn('flex items-start gap-2 px-3 py-2 rounded-xl border text-xs leading-relaxed', config.bg)}>
-      <Icon className={cn('w-3.5 h-3.5 flex-shrink-0 mt-0.5', config.iconColor)} />
-      <span>{text}</span>
-    </div>
+    <li className="flex items-start gap-2.5 py-2">
+      <span className={cn('mt-[7px] h-2 w-2 rounded-full flex-shrink-0', dot)} />
+      <span className="text-[15px] text-foreground leading-snug">{text}</span>
+    </li>
   );
 }
 
-/* ── Readiness Badge ── */
-function ReadinessBadge({ readiness }) {
-  const config = {
-    progress: { label: '↑ Ready to Progress', bg: 'bg-success/10 text-success border-success' },
-    maintain: { label: '→ Maintain Current', bg: 'bg-accent text-primary border-primary' },
-    deload: { label: '↓ Recommend Deload', bg: 'bg-warning/10 text-warning border-warning' },
-    switch_program: { label: '⟳ Time for New Program', bg: 'bg-ai/10 text-ai border-ai' },
-  }[readiness] || { label: '— Unknown', bg: 'bg-muted text-muted-foreground border-border' };
-  return (
-    <span className={cn('text-xs font-bold px-3 py-1 rounded-full border', config.bg)}>{config.label}</span>
-  );
-}
+const READINESS = {
+  progress: { label: 'Ready to progress', variant: 'success' },
+  maintain: { label: 'Keep the current plan', variant: 'secondary' },
+  deload: { label: 'Deload next week', variant: 'warning' },
+  switch_program: { label: 'Time for a new program', variant: 'outline' },
+};
 
-/* ── Coach-facing full analysis panel ── */
-function CoachAnalysisPanel({ analysis, ctx }) {
-  const [showRecs, setShowRecs] = useState(false);
+const PACE = {
+  ahead: { label: 'Ahead of pace', variant: 'success' },
+  on_track: { label: 'On pace', variant: 'secondary' },
+  behind: { label: 'Behind pace', variant: 'warning' },
+};
+
+/* ── Coach-facing detail panels ── */
+function CoachAnalysisDetails({ analysis, ctx }) {
+  const [showRecs, setShowRecs] = useState(true);
+  const readiness = READINESS[analysis.readiness];
+  const pace = PACE[ctx.paceStatus];
   return (
     <div className="space-y-3">
-      {/* Summary */}
-      <div className="bg-card rounded-2xl border border-border p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Brain className="w-4 h-4 text-primary" />
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">AI Summary</p>
-        </div>
-        <p className="text-sm text-foreground leading-relaxed">{analysis.summary}</p>
-        {analysis.coaching_priority && (
-          <div className="mt-3 flex items-start gap-2 bg-primary/5 rounded-xl p-3">
-            <Target className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-            <p className="text-xs font-semibold text-primary">{analysis.coaching_priority}</p>
-          </div>
-        )}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Panel className="p-4 sm:p-5">
+          <p className="text-[13px] text-muted-foreground mb-2">Program readiness</p>
+          {readiness ? <Badge variant={readiness.variant}>{readiness.label}</Badge> : <p className="text-sm text-muted-foreground">Not enough signal yet</p>}
+          {analysis.readiness_reason && <p className="text-sm text-foreground/80 mt-2 leading-snug">{analysis.readiness_reason}</p>}
+        </Panel>
+        <Panel className="p-4 sm:p-5">
+          <p className="text-[13px] text-muted-foreground mb-2">Goal pace</p>
+          {pace ? <Badge variant={pace.variant}>{pace.label}</Badge> : <p className="text-sm text-muted-foreground">No goal weight set</p>}
+          {analysis.pace_analysis && <p className="text-sm text-foreground/80 mt-2 leading-snug">{analysis.pace_analysis}</p>}
+        </Panel>
       </div>
 
-      {/* Readiness + Pace */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Program Readiness</p>
-          {analysis.readiness && <ReadinessBadge readiness={analysis.readiness} />}
-          {analysis.readiness_reason && (
-            <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{analysis.readiness_reason}</p>
-          )}
-        </div>
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-2">Goal Pace</p>
-          <div className={cn('text-xs font-bold px-2.5 py-1 rounded-full inline-block',
-            ctx.paceStatus === 'ahead' ? 'bg-success/10 text-success' :
-            ctx.paceStatus === 'on_track' ? 'bg-accent text-primary' :
-            ctx.paceStatus === 'behind' ? 'bg-warning/10 text-warning' : 'bg-muted text-muted-foreground'
-          )}>
-            {ctx.paceStatus === 'ahead' ? '🟢 Ahead of Pace' :
-             ctx.paceStatus === 'on_track' ? '🔵 On Pace' :
-             ctx.paceStatus === 'behind' ? '🟡 Behind Pace' : '— No goal set'}
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-2 leading-snug">{analysis.pace_analysis}</p>
-        </div>
-      </div>
-
-      {/* Trends */}
       {analysis.trends?.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">Detected Trends</p>
-          <div className="space-y-2">
-            {analysis.trends.map((t, i) => <TrendBadge key={i} type={t.type} text={t.text} />)}
-          </div>
-        </div>
+        <Panel className="p-4 sm:p-5">
+          <p className="text-[13px] text-muted-foreground">Trends</p>
+          <ul className="divide-y divide-border">
+            {analysis.trends.map((t, i) => <TrendLine key={i} type={t.type} text={t.text} />)}
+          </ul>
+        </Panel>
       )}
 
-      {/* Warnings */}
       {(analysis.plateau_warning || analysis.churn_insight) && (
-        <div className="bg-warning/10 border border-warning rounded-2xl p-4 space-y-2">
-          <p className="text-xs font-bold text-warning uppercase tracking-wide flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" /> Alerts
+        <Panel className="p-4 sm:p-5 border-l-[3px] border-l-destructive rounded-l-md">
+          <p className="text-[13px] text-destructive font-medium flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5" /> Watch for
           </p>
-          {analysis.plateau_warning && <p className="text-xs text-warning">{analysis.plateau_warning}</p>}
-          {analysis.churn_insight && <p className="text-xs text-warning">{analysis.churn_insight}</p>}
-        </div>
+          {analysis.plateau_warning && <p className="text-[15px] text-foreground mt-1.5">{analysis.plateau_warning}</p>}
+          {analysis.churn_insight && <p className="text-[15px] text-foreground mt-1.5">{analysis.churn_insight}</p>}
+        </Panel>
       )}
 
-      {/* Recommendations */}
       {analysis.recommendations?.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border p-4">
-          <button className="flex items-center justify-between w-full" onClick={() => setShowRecs(s => !s)}>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Recommendations</p>
+        <Panel className="p-4 sm:p-5">
+          <button className="touch-compact flex items-center justify-between w-full" onClick={() => setShowRecs(s => !s)} aria-expanded={showRecs}>
+            <p className="text-[13px] text-muted-foreground">What to do next</p>
             {showRecs ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
           </button>
-          <AnimatePresence>
-            {showRecs && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                <div className="space-y-2 mt-3">
-                  {analysis.recommendations.map((r, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-foreground">
-                      <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center flex-shrink-0 text-[10px]">{i + 1}</span>
-                      {r}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          {showRecs && (
+            <ol className="mt-2 space-y-2">
+              {analysis.recommendations.map((r, i) => (
+                <li key={i} className="flex items-start gap-3 text-[15px] text-foreground leading-snug">
+                  <span className="num text-[15px] text-muted-foreground w-4 flex-shrink-0">{i + 1}</span>
+                  {r}
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
       )}
     </div>
   );
@@ -198,28 +161,20 @@ function CoachAnalysisPanel({ analysis, ctx }) {
 function ClientAnalysisPanel({ analysis }) {
   return (
     <div className="space-y-3">
-      {analysis.headline && (
-        <div className="text-center py-2">
-          <p className="text-white font-bold text-base">{analysis.headline}</p>
-        </div>
+      {analysis.headline && <p className="text-[17px] font-semibold">{analysis.headline}</p>}
+      <p className="text-[15px] text-ai-foreground/85 leading-relaxed">{analysis.summary}</p>
+      {analysis.insights?.length > 0 && (
+        <ul className="space-y-2">
+          {analysis.insights.map((ins, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-[15px] text-ai-foreground/85 leading-relaxed">
+              <span className="mt-[9px] h-1.5 w-1.5 rounded-full bg-ai-foreground/60 flex-shrink-0" />
+              {ins}
+            </li>
+          ))}
+        </ul>
       )}
-      <p className="text-white/70 text-sm leading-relaxed">{analysis.summary}</p>
-      {analysis.insights?.map((ins, i) => (
-        <div key={i} className="flex items-start gap-2.5 px-3 py-2 rounded-xl" style={{ background: 'color-mix(in srgb, white 6%, transparent)' }}>
-          <span className="text-base flex-shrink-0">{'💡🎯🏆✨'[i] || '⭐'}</span>
-          <p className="text-white/70 text-sm leading-relaxed">{ins}</p>
-        </div>
-      ))}
-      {analysis.prediction && (
-        <div className="px-3 py-3 rounded-xl" style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--tc-success) 15%, transparent), color-mix(in srgb, var(--tc-success) 10%, transparent))', border: '1px solid color-mix(in srgb, var(--tc-success) 25%, transparent)' }}>
-          <p className="text-success text-sm font-semibold">🎯 {analysis.prediction}</p>
-        </div>
-      )}
-      {analysis.tip && (
-        <div className="px-3 py-2.5 rounded-xl" style={{ background: 'color-mix(in srgb, var(--tc-primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-primary) 25%, transparent)' }}>
-          <p className="text-primary text-xs font-semibold">💡 This week: {analysis.tip}</p>
-        </div>
-      )}
+      {analysis.prediction && <p className="text-[15px] font-semibold">{analysis.prediction}</p>}
+      {analysis.tip && <p className="text-sm text-ai-foreground/75">This week: {analysis.tip}</p>}
     </div>
   );
 }
@@ -252,107 +207,100 @@ export default function AIProgressAnalyzer({
   // Client-facing wrapper
   if (isClientFacing) {
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--tc-ai) 12%, transparent), color-mix(in srgb, var(--tc-primary) 10%, transparent))', border: '1px solid color-mix(in srgb, var(--tc-ai) 20%, transparent)' }}>
+      <section className="rounded-xl bg-ai text-ai-foreground p-5">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-ai" />
-            <p className="text-white font-bold text-sm">AI Progress Insights</p>
-          </div>
+          <h3 className="text-[20px]">How it&apos;s going</h3>
           {generated && (
-            <button onClick={generate} disabled={loading} className="text-white/30 hover:text-white/60 transition-colors">
-              <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+            <button onClick={generate} disabled={loading} className="touch-compact text-ai-foreground/60 hover:text-ai-foreground transition-colors" aria-label="Refresh">
+              <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             </button>
           )}
         </div>
 
         {!hasEnoughData && (
-          <p className="text-white/30 text-xs text-center py-4">Submit at least 3 check-ins to unlock AI insights 📊</p>
+          <p className="text-sm text-ai-foreground/70">After your third check-in you&apos;ll get a short read on your progress here.</p>
         )}
 
         {hasEnoughData && !generated && !loading && (
-          <div className="text-center py-4">
-            <p className="text-white/30 text-xs mb-3">Get personalized AI insights based on your data</p>
-            <button onClick={generate} className="px-5 py-2 rounded-xl text-xs font-bold text-primary-foreground" style={{ background: 'linear-gradient(135deg, var(--tc-ai), var(--tc-primary))' }}>
-              ✨ Get My Insights
-            </button>
+          <div>
+            <p className="text-sm text-ai-foreground/70 mb-4">A short read on your weight, training and habits so far.</p>
+            <Button variant="outline" className="bg-card text-foreground border-transparent hover:bg-card/90" onClick={generate}>Read my progress</Button>
           </div>
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-4 justify-center">
-            <div className="w-4 h-4 border-2 border-ai/30 border-t-purple-400 rounded-full animate-spin" />
-            <p className="text-white/40 text-xs">Analyzing your progress...</p>
+          <div className="flex items-center gap-2 py-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <p className="text-sm text-ai-foreground/70">Reading your check-ins</p>
           </div>
         )}
 
         {analysis && !loading && <ClientAnalysisPanel analysis={analysis} />}
-      </div>
+      </section>
     );
   }
 
   // Coach-facing wrapper
   return (
-    <div className="bg-gradient-to-br from-accent/10 to-ai/10 border border-primary/20 rounded-2xl overflow-hidden">
-      <button
-        className="w-full flex items-center justify-between px-4 py-3"
-        onClick={() => setExpanded(e => !e)}
-      >
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-bold text-foreground">AI Progress Analyzer</p>
-            {analysis?.coaching_priority && (
-              <p className="text-[10px] text-primary truncate max-w-xs">{analysis.coaching_priority}</p>
+    <div className="space-y-3">
+      <section className="rounded-xl bg-ai text-ai-foreground">
+        <button
+          className="touch-compact w-full flex items-center justify-between gap-3 px-5 pt-5 pb-3 text-left"
+          onClick={() => setExpanded(e => !e)}
+          aria-expanded={expanded}
+        >
+          <h3 className="text-[22px]">What the AI sees</h3>
+          <span className="flex items-center gap-2 text-ai-foreground/60">
+            {generated && (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Run the analysis again"
+                onClick={e => { e.stopPropagation(); generate(); }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); generate(); } }}
+                className="p-1 rounded-md hover:text-ai-foreground"
+              >
+                <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+              </span>
+            )}
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </span>
+        </button>
+
+        {expanded && (
+          <div className="px-5 pb-5">
+            {!hasEnoughData && (
+              <p className="text-[15px] text-ai-foreground/80">Needs three check-ins before there&apos;s anything worth reading. {checkIns.length} so far.</p>
+            )}
+
+            {hasEnoughData && !generated && !loading && (
+              <>
+                <p className="text-[15px] text-ai-foreground/80 mb-4">Reads all {checkIns.length} check-ins and their workouts, then says what changed and what to do about it.</p>
+                <Button variant="outline" className="bg-card text-foreground border-transparent hover:bg-card/90" onClick={generate}>Analyze progress</Button>
+              </>
+            )}
+
+            {loading && (
+              <div className="flex items-center gap-2 py-1">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <p className="text-[15px] text-ai-foreground/80">Reading {checkIns.length} check-ins</p>
+              </div>
+            )}
+
+            {analysis && !loading && (
+              <>
+                <p className="text-[15px] leading-relaxed text-ai-foreground/90">{analysis.summary}</p>
+                {analysis.coaching_priority && (
+                  <p className="mt-3 text-[15px] font-semibold">Focus: {analysis.coaching_priority}</p>
+                )}
+                <p className="mt-3 text-[13px] text-ai-foreground/60">Based on {ctx.checkInCount} check-ins over {ctx.weeks} weeks.</p>
+              </>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {generated && (
-            <button onClick={e => { e.stopPropagation(); generate(); }} disabled={loading}
-              className="p-1 rounded-lg hover:bg-[var(--kc-w-50)] transition-colors text-muted-foreground">
-              <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
-            </button>
-          )}
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </div>
-      </button>
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-            <div className="px-4 pb-4 space-y-3">
-              {!hasEnoughData && (
-                <div className="text-center py-6">
-                  <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-semibold text-foreground">Not enough data yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">AI insights appear after 3+ check-ins (currently {checkIns.length})</p>
-                </div>
-              )}
-
-              {hasEnoughData && !generated && !loading && (
-                <div className="text-center py-4">
-                  <p className="text-xs text-muted-foreground mb-3">Generate an intelligent analysis of this client's full progress data</p>
-                  <button onClick={generate}
-                    className="flex items-center gap-2 mx-auto px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-                    <Sparkles className="w-4 h-4" /> Analyze Progress
-                  </button>
-                </div>
-              )}
-
-              {loading && (
-                <div className="flex items-center gap-2 py-6 justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Analyzing {checkIns.length} check-ins...</p>
-                </div>
-              )}
-
-              {analysis && !loading && <CoachAnalysisPanel analysis={analysis} ctx={ctx} />}
-            </div>
-          </motion.div>
         )}
-      </AnimatePresence>
+      </section>
+
+      {expanded && analysis && !loading && <CoachAnalysisDetails analysis={analysis} ctx={ctx} />}
     </div>
   );
 }

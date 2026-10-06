@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { format, subDays, parseISO, isSameDay } from 'date-fns';
 import { portalDb } from '@/api/supabaseClient';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Stat, InkPanel } from '@/components/kit';
 
 const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -41,62 +43,40 @@ export default function WeeklySnapshot({ recentLogs, checkIns, program }) {
   }, [doneCount]);
 
   return (
-    <div className="mx-5 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <p className="text-white font-bold text-sm mb-4">This Week</p>
+    <section className="panel p-4">
+      <h2 className="text-xl text-foreground">This week</h2>
 
-      {/* Day dots */}
-      <div className="flex gap-2 mb-4">
+      <div className="mt-3 grid grid-cols-7 gap-1.5">
         {days.map((day, i) => {
           const status = getDayStatus(day);
           const isToday = isSameDay(day, today);
           return (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-              <div className={cn('w-full aspect-square rounded-xl flex items-center justify-center',
-                status === 'done' ? '' : status === 'missed' ? '' : '')}
-                style={{
-                  background: status === 'done' ? 'rgb(var(--success) / 0.2)' : status === 'missed' ? 'rgb(var(--destructive) / 0.15)' : 'rgba(255,255,255,0.05)',
-                  border: isToday ? '1.5px solid rgb(var(--primary) / 0.6)' : '1px solid transparent',
-                }}>
-                {status === 'done' && <span className="text-success text-[10px]">✓</span>}
-                {status === 'missed' && <span className="text-destructive text-[10px]">✕</span>}
-                {status === 'upcoming' && <span className="text-white/20 text-[10px]">·</span>}
-              </div>
-              <p className={cn('text-[9px] font-semibold', isToday ? 'text-primary' : 'text-white/20')}>
-                {DAY_LABELS[i]}
-              </p>
+            <div key={i} className="flex flex-col items-center gap-1">
+              <span className={cn('flex h-8 w-full items-center justify-center rounded-md',
+                status === 'done' ? 'bg-success text-white' : status === 'missed' ? 'hatch-missed' : 'bg-secondary',
+                isToday && status !== 'done' && 'ring-2 ring-inset ring-brand')}>
+                {status === 'done' && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </span>
+              <span className={cn('text-[12px]', isToday ? 'font-bold text-foreground' : 'text-muted-foreground')}>{DAY_LABELS[i]}</span>
             </div>
           );
         })}
       </div>
 
-      {/* Stats row */}
-      <div className="flex gap-3 mb-3">
-        <div className="flex-1 bg-white/5 rounded-xl p-2.5 text-center">
-          <p className="text-white font-bold text-base">{adherence}%</p>
-          <p className="text-white/30 text-[10px]">Adherence</p>
-        </div>
-        {weightChange !== null && (
-          <div className="flex-1 bg-white/5 rounded-xl p-2.5 text-center">
-            <p className={cn('font-bold text-base', parseFloat(weightChange) < 0 ? 'text-success' : 'text-white')}>
-              {parseFloat(weightChange) > 0 ? '+' : ''}{weightChange} lbs
-            </p>
-            <p className="text-white/30 text-[10px]">Weight change</p>
-          </div>
-        )}
-        <div className="flex-1 bg-white/5 rounded-xl p-2.5 text-center">
-          <p className="text-white font-bold text-base">{doneCount}/7</p>
-          <p className="text-white/30 text-[10px]">Workouts</p>
-        </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3">
+        <Stat size="sm" label="On plan" value={`${adherence}%`} />
+        {weightChange !== null
+          ? <Stat size="sm" label="Weight" value={`${parseFloat(weightChange) > 0 ? '+' : ''}${weightChange}`} unit="lb" tone={parseFloat(weightChange) < 0 ? 'success' : undefined} />
+          : <span />}
+        <Stat size="sm" label="Workouts" value={`${doneCount}/7`} />
       </div>
 
-      {/* AI insight */}
       {(insight || loadingInsight) && (
-        <div className="bg-primary/10 border border-primary/20 rounded-xl px-3 py-2">
-          <p className="text-primary text-xs leading-relaxed">
-            {loadingInsight ? '...' : insight}
-          </p>
-        </div>
+        <InkPanel className="mt-3 p-4 sm:p-4">
+          <p className="text-[13px] text-ai-foreground/70">From your week</p>
+          <p className="mt-1 text-sm">{loadingInsight ? 'Reading your week' : insight}</p>
+        </InkPanel>
       )}
-    </div>
+    </section>
   );
 }

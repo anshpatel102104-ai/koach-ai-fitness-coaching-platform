@@ -33,7 +33,7 @@ export default function ProgressStatsRow({ data, metric }) {
     <div className="grid grid-cols-4 gap-3">
       {stats.map(s => (
         <div key={s.label} className="bg-card border border-border rounded-xl p-4">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">{s.label}</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-1">{s.label}</p>
           <div className="flex items-center gap-1.5">
             {s.Icon && <s.Icon className="w-4 h-4 flex-shrink-0" style={{ color: s.color }} />}
             <p className="text-xl font-bold text-foreground" style={s.color ? { color: s.color } : {}}>{s.value}</p>

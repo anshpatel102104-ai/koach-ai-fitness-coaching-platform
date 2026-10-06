@@ -1,54 +1,66 @@
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Panel, PanelHeader } from '@/components/kit';
+import { Switch } from '@/components/ui/switch';
+import { fieldClass, textareaClass } from '@/components/settings/SettingsLayout';
 
-export function BSSection({ icon: Icon, title, onReset, children }) {
+/**
+ * Business settings building blocks. Each section is one white panel; rows are
+ * label + help on the left, control on the right, separated by hairlines.
+ * `icon` is accepted for compatibility but no longer drawn — the section list
+ * on the left already carries it.
+ */
+// eslint-disable-next-line no-unused-vars
+export function BSSection({ icon, title, subtitle, onReset, children }) {
   return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--tc-accent), var(--tc-ai))' }}>
-            <Icon className="w-4 h-4 text-primary" />
-          </div>
-          <h2 className="font-bold text-foreground text-base">{title}</h2>
-        </div>
-        {onReset && (
-          <button onClick={onReset} className="text-xs text-muted-foreground hover:text-muted-foreground font-medium transition-colors">
-            Restore Defaults
+    <Panel>
+      <PanelHeader
+        title={title}
+        subtitle={subtitle}
+        className="pb-1"
+        right={onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="touch-compact text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Restore defaults
           </button>
         )}
-      </div>
-      <div className="p-6 space-y-5">{children}</div>
-    </div>
+      />
+      <div className="px-5 pb-3 sm:px-6">{children}</div>
+    </Panel>
+  );
+}
+
+/** Sentence-case group heading inside a section. Starts a new block. */
+export function BSGroup({ children }) {
+  return (
+    <p className="bs-group border-t border-border pb-0 pt-5 text-[13px] font-semibold text-muted-foreground first:border-t-0 first:pt-2">
+      {children}
+    </p>
   );
 }
 
 export function BSRow({ label, hint, children }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-6">
-      <div className="sm:w-56 flex-shrink-0 pt-0.5">
-        <p className="text-sm font-semibold text-foreground">{label}</p>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{hint}</p>}
+    <div className="flex flex-col gap-2.5 border-t border-border py-4 first:border-t-0 [.bs-group+&]:border-t-0 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+      <div className="min-w-0 sm:w-[42%] sm:max-w-[300px] sm:pt-2">
+        <p className="text-[15px] font-semibold text-foreground">{label}</p>
+        {hint && <p className="mt-0.5 text-sm leading-snug text-muted-foreground">{hint}</p>}
       </div>
-      <div className="flex-1">{children}</div>
+      <div className="w-full min-w-0 sm:max-w-[440px] sm:flex-1">{children}</div>
     </div>
   );
 }
 
 export function BSToggle({ value, onChange, label }) {
   return (
-    <button onClick={() => onChange(!value)}
-      className="flex items-center gap-2 group"
-      type="button">
-      <div className="relative w-10 h-5.5 rounded-full transition-all flex-shrink-0"
-        style={{
-          width: 40, height: 22,
-          background: value ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'var(--tc-border)',
-          transition: 'background 0.2s',
-        }}>
-        <div className="absolute top-0.5 rounded-full bg-card shadow transition-all"
-          style={{ width: 18, height: 18, left: value ? 20 : 2, transition: 'left 0.2s' }} />
-      </div>
-      {label && <span className="text-sm text-muted-foreground">{label}</span>}
-    </button>
+    <label className="inline-flex min-h-10 cursor-pointer items-center gap-2.5">
+      <Switch checked={!!value} onCheckedChange={v => onChange(v)} />
+      {label && <span className="text-sm text-foreground">{label}</span>}
+    </label>
   );
 }
 
@@ -56,14 +68,14 @@ export function BSSelect({ value, onChange, options, className = '' }) {
   return (
     <div className="relative">
       <select value={value || ''} onChange={e => onChange(e.target.value)}
-        className={`w-full px-3 py-2 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary appearance-none bg-card transition-colors ${className}`}>
+        className={cn(fieldClass, 'appearance-none pr-9', className)}>
         {options.map(o => (
           <option key={typeof o === 'string' ? o : o.value} value={typeof o === 'string' ? o : o.value}>
             {typeof o === 'string' ? o : o.label}
           </option>
         ))}
       </select>
-      <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
 }
@@ -72,7 +84,7 @@ export function BSInput({ value, onChange, placeholder, type = 'text', min, max,
   return (
     <input type={type} value={value ?? ''} onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       placeholder={placeholder} min={min} max={max}
-      className={`w-full px-3 py-2 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary transition-colors ${className}`} />
+      className={cn(fieldClass, type === 'number' && 'tabular-nums', className)} />
   );
 }
 
@@ -80,10 +92,24 @@ export function BSTextarea({ value, onChange, placeholder, rows = 3 }) {
   return (
     <textarea value={value || ''} onChange={e => onChange(e.target.value)}
       placeholder={placeholder} rows={rows}
-      className="w-full px-3 py-2.5 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary resize-none transition-colors" />
+      className={textareaClass} />
   );
 }
 
+/** Kept for compatibility; groups are now separated by BSGroup. */
 export function BSDivider() {
-  return <div className="border-t border-border" />;
+  return null;
+}
+
+/** Small secondary action used under lists ("Add stage", "Add session type"). */
+export function BSAddButton({ onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-input text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+    >
+      {children}
+    </button>
+  );
 }

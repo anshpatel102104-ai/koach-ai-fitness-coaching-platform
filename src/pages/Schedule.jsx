@@ -5,7 +5,9 @@ import {
   format, startOfWeek, addDays, addWeeks, addMonths,
   subWeeks, subMonths, subDays, startOfMonth, endOfMonth,
 } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Page, PageHeader } from '@/components/kit';
 import { toast } from 'sonner';
 
 import CalendarHeader from '../components/schedule/CalendarHeader';
@@ -21,15 +23,6 @@ import { sendZapierEvent } from '@/lib/zapier';
 import { createZoomMeeting } from '@/lib/zoom';
 import { getScheduledEvents } from '@/lib/calendly';
 
-const SESSION_TYPE_COLORS = {
-  check_in:  'bg-primary',
-  strategy:  'bg-sidebar',
-  assessment:'bg-warning',
-  video_call:'bg-ai',
-  in_person: 'bg-success',
-  custom:    'bg-muted-foreground',
-};
-
 export default function Schedule() {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const [view, setView] = useState(isMobile ? 'day' : 'week');
@@ -38,6 +31,7 @@ export default function Schedule() {
   const [editing, setEditing] = useState(null);
   const [showAvailability, setShowAvailability] = useState(false);
   const [savingSession, setSavingSession] = useState(false);
+  const [formDefaults, setFormDefaults] = useState(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -192,7 +186,7 @@ export default function Schedule() {
     const result = params.get('google');
     if (!result) return;
     if (result === 'connected') {
-      toast.success('Google Calendar connected!');
+      toast.success('Google Calendar connected');
       queryClient.invalidateQueries({ queryKey: ['coach-settings'] });
       queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] });
     } else {
@@ -226,7 +220,7 @@ export default function Schedule() {
             payload: { event: gcalEvent },
           });
           gcalEventId = res.data?.event?.id || '';
-          if (gcalEventId) toast.success('Session added to Google Calendar!');
+          if (gcalEventId) toast.success('Added to Google Calendar');
         }
       }
 
@@ -259,7 +253,7 @@ export default function Schedule() {
             await db.entities.Message.create({
               client_id: form.client_id,
               client_name: client.name,
-              content: `Hi ${client.name}! Your coaching session is booked 🎉\n\n📅 ${dateStr}\n⏰ ${timeStr}\n\n🔗 Join Zoom: ${zoomMeeting.join_url}${zoomMeeting.password ? `\n\nPassword: ${zoomMeeting.password}` : ''}\n\nSee you then!`,
+              content: `Hi ${client.name.split(' ')[0]}, your coaching session is booked for ${dateStr}${timeStr ? ` at ${timeStr}` : ''}.\n\nJoin on Zoom: ${zoomMeeting.join_url}${zoomMeeting.password ? `\nPassword: ${zoomMeeting.password}` : ''}\n\nSee you then.`,
               sender: 'coach',
             });
           }
@@ -270,7 +264,7 @@ export default function Schedule() {
             zoom_join_url: zoomMeeting.join_url,
             start_time: startISO,
           });
-          toast.success('Zoom meeting created & client notified!');
+          toast.success(`Zoom link sent to ${client?.name || 'the client'}`);
         } else {
           toast.error('Zoom: ' + (zoomMeeting.message || 'Failed to create meeting'));
         }
@@ -313,7 +307,7 @@ export default function Schedule() {
 
   const headerTitle = (() => {
     if (view === 'month') return format(currentDate, 'MMMM yyyy');
-    if (view === 'day') return format(currentDate, 'EEEE, MMMM d, yyyy');
+    if (view === 'day') return format(currentDate, 'EEE, MMM d, yyyy');
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
     const weekEnd = addDays(weekStart, 6);
     const sameMonth = format(weekStart, 'MM') === format(weekEnd, 'MM');
@@ -326,10 +320,31 @@ export default function Schedule() {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   })();
 
-  const openCreate = (date) => {
+  const openCreate = (date, extra = {}) => {
     setEditing(null);
+    setFormDefaults({
+      ...(date instanceof Date ? { date: format(date, 'yyyy-MM-dd') } : {}),
+      ...extra,
+    });
     setShowForm(true);
   };
+
+  // Deep links: /schedule?new=1 opens the booking dialog (topbar Create menu);
+  // /schedule?clientId=… opens it with that client picked.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const wantsNew = params.get('new') === '1';
+    const clientId = params.get('clientId');
+    if (!wantsNew && !clientId) return;
+    if (clientId && clients.length === 0) return; // wait for clients to load
+    const client = clientId ? clients.find(c => c.id === clientId) : null;
+    openCreate(null, client ? { client_id: client.id, client_name: client.name } : {});
+    params.delete('new');
+    params.delete('clientId');
+    const qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clients]);
 
   const openEdit = (session) => {
     if (session._isGoogleEvent) return; // can't edit pure google events here
@@ -337,26 +352,49 @@ export default function Schedule() {
     setShowForm(true);
   };
 
-  return (
-    <div className="p-3 sm:p-4 lg:p-6 max-w-screen-2xl mx-auto overflow-x-hidden">
-      {/* ── Header ── */}
-      <div className="bg-sidebar rounded-xl p-4 sm:p-5 mb-4">
-        <h1 className="text-lg sm:text-xl font-semibold text-white">Calendar</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }}>Schedule and manage coaching sessions</p>
-      </div>
+  // Header sentence: what the visible range holds, and what's next.
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  const liveSessions = sessions.filter(s => s.status !== 'cancelled');
+  const todayCount = liveSessions.filter(s => s.date === todayKey).length;
+  const weekStartKey = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+  const weekEndKey = format(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6), 'yyyy-MM-dd');
+  const weekCount = liveSessions.filter(s => s.date >= weekStartKey && s.date <= weekEndKey).length;
+  const nowKey = `${todayKey}T${format(new Date(), 'HH:mm')}`;
+  const next = liveSessions
+    .filter(s => s.status === 'scheduled' && `${s.date}T${s.time || '23:59'}` >= nowKey)
+    .sort((a, b) => `${a.date}T${a.time || ''}`.localeCompare(`${b.date}T${b.time || ''}`))[0];
+  const nextLabel = next
+    ? `Next: ${next.client_name || next.title}${next.date === todayKey ? '' : `, ${format(new Date(next.date + 'T12:00:00'), 'EEE')}`}${next.time ? ` at ${formatTime(next.time)}` : ''}.`
+    : 'Nothing else booked yet.';
+  const subtitle = `${todayCount === 0 ? 'No sessions today' : `${todayCount} session${todayCount === 1 ? '' : 's'} today`}, ${weekCount} this week. ${nextLabel}`;
 
-      {/* ── Google Calendar Banner ── */}
-      <div className="mb-4">
+  return (
+    <Page>
+      <PageHeader
+        title="Schedule"
+        subtitle={subtitle}
+        actions={(
+          <>
+            <Button variant="outline" onClick={() => setShowAvailability(true)}>
+              <Clock /> Availability
+            </Button>
+            <Button onClick={() => openCreate(view === 'day' ? currentDate : null)}>
+              <Plus /> Book a session
+            </Button>
+          </>
+        )}
+      />
+
+      {/* Integrations: quiet one-line notices */}
+      <div className="mb-4 space-y-2">
         <GoogleCalendarBanner
           connected={gcalConnected}
           onConnect={handleConnectGoogle}
           onDisconnect={handleDisconnectGoogle}
           syncing={gcalFetching}
         />
+        <CalendlyBookingPages />
       </div>
-
-      {/* ── Calendly Booking Pages ── */}
-      <CalendlyBookingPages />
 
       <CalendarHeader
         title={headerTitle}
@@ -369,40 +407,32 @@ export default function Schedule() {
         onAvailability={() => setShowAvailability(true)}
       />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={view}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18 }}
-        >
-          {view === 'month' ? (
-            <MonthView
-              currentDate={currentDate}
-              sessions={allEvents}
-              onDayClick={(day) => { setCurrentDate(day); setView('day'); }}
-              onEditSession={openEdit}
-              clients={clients}
-            />
-          ) : (
-            <TimeGrid
-              days={weekDays}
-              sessions={allEvents}
-              onEdit={openEdit}
-              onNewSession={openCreate}
-              clients={clients}
-              onUpdate={({ id, data }) => updateMutation.mutate({ id, data })}
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
+      {view === 'month' ? (
+        <MonthView
+          currentDate={currentDate}
+          sessions={allEvents}
+          onDayClick={(day) => { setCurrentDate(day); setView('day'); }}
+          onEditSession={openEdit}
+          clients={clients}
+        />
+      ) : (
+        <TimeGrid
+          days={weekDays}
+          sessions={allEvents}
+          onEdit={openEdit}
+          onNewSession={openCreate}
+          onDayClick={view === 'week' ? (day) => { setCurrentDate(day); setView('day'); } : undefined}
+          clients={clients}
+          onUpdate={({ id, data }) => updateMutation.mutate({ id, data })}
+        />
+      )}
 
       {/* Session Form */}
       <SessionFormDialog
         open={showForm}
         onOpenChange={setShowForm}
         editing={editing}
+        defaults={formDefaults}
         clients={clients}
         onSave={handleSave}
         onDelete={(id) => deleteMutation.mutate(id)}
@@ -414,6 +444,14 @@ export default function Schedule() {
       {showAvailability && (
         <AvailabilityDrawer coachId={user?.email} onClose={() => setShowAvailability(false)} />
       )}
-    </div>
+    </Page>
   );
+}
+
+function formatTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const hh = h % 12 || 12;
+  return m ? `${hh}:${String(m).padStart(2, '0')} ${suffix}` : `${hh} ${suffix}`;
 }

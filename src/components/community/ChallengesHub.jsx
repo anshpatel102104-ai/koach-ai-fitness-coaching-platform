@@ -1,248 +1,187 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import {
-  Trophy, Plus, Target, Flame, Dumbbell, Footprints, TrendingDown, Users, Calendar, Zap,
-  ChevronRight, Star, Clock
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageHeader, Panel, PanelHeader, Segmented, EmptyState, Initials } from '@/components/kit';
 import { format, differenceInDays, isAfter, isBefore, parseISO, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getUserTier } from '@/lib/subscription';
 
 // ── Challenge preset templates ────────────────────────────────────────────────
 const CHALLENGE_TEMPLATES = [
   {
     id: 'tpl_7day_workout',
     emoji: '💪',
-    title: '7-Day Workout Streak',
-    description: 'Complete a workout every day for 7 consecutive days. No days off — build that iron habit!',
+    title: '7-day workout streak',
+    description: 'A workout every day for seven days straight.',
     type: 'workouts',
     goal: 7,
     duration_days: 7,
-    color: 'var(--tc-primary)',
-    bg: 'var(--tc-accent)',
     difficulty: 'Beginner',
   },
   {
     id: 'tpl_30day_workout',
     emoji: '🏋️',
-    title: '30-Day Fitness Challenge',
-    description: 'Complete 20 workouts in 30 days. Quality over quantity — every session counts.',
+    title: '30-day training block',
+    description: '20 workouts in 30 days. Rest days allowed.',
     type: 'workouts',
     goal: 20,
     duration_days: 30,
-    color: 'var(--tc-ai)',
-    bg: 'var(--tc-ai)',
     difficulty: 'Intermediate',
   },
   {
     id: 'tpl_steps_10k',
     emoji: '👟',
-    title: '10K Steps Daily',
-    description: 'Hit 10,000 steps every single day for 2 weeks. Walk your way to better health.',
+    title: '10k steps a day',
+    description: '10,000 steps a day for two weeks.',
     type: 'steps',
     goal: 70000,
     duration_days: 14,
-    color: 'var(--tc-success)',
-    bg: 'var(--tc-success)',
     difficulty: 'Beginner',
   },
   {
     id: 'tpl_hydration',
     emoji: '💧',
-    title: 'Hydration Hero',
-    description: 'Drink 3 litres of water every day for 21 days. Flush the fat, fuel the gains.',
+    title: 'Hydration, 21 days',
+    description: 'Three litres of water a day for 21 days.',
     type: 'custom',
     goal: 21,
     duration_days: 21,
-    color: 'var(--tc-primary)',
-    bg: 'var(--kc-f0f9ff)',
     difficulty: 'Beginner',
   },
   {
     id: 'tpl_weight_loss',
     emoji: '⚖️',
-    title: 'Weight Loss Sprint',
-    description: 'Lose 5 lbs in 30 days through consistent training and nutrition. Track every weigh-in.',
+    title: 'Lose 5 lb in 30 days',
+    description: 'Lose 5 lb in 30 days. Weigh in every week.',
     type: 'weight_loss',
     goal: 5,
     duration_days: 30,
-    color: 'var(--tc-destructive)',
-    bg: 'var(--tc-destructive)',
     difficulty: 'Intermediate',
   },
   {
     id: 'tpl_streak_21',
     emoji: '🔥',
-    title: '21-Day Habit Streak',
-    description: 'Build an unstoppable habit over 21 days. Log your progress daily — no breaks.',
+    title: '21-day habit streak',
+    description: 'Log the habit every day for 21 days.',
     type: 'streak',
     goal: 21,
     duration_days: 21,
-    color: 'var(--tc-warning)',
-    bg: 'var(--tc-warning)',
     difficulty: 'Intermediate',
   },
   {
     id: 'tpl_sleep',
     emoji: '😴',
-    title: 'Sleep Champion',
-    description: 'Get 8+ hours of sleep every night for 14 days. Recovery is training too.',
+    title: 'Sleep 8 hours, 14 nights',
+    description: 'Eight hours of sleep a night for 14 nights.',
     type: 'custom',
     goal: 14,
     duration_days: 14,
-    color: 'var(--tc-primary)',
-    bg: 'var(--tc-accent)',
     difficulty: 'Beginner',
   },
   {
     id: 'tpl_nutrition',
     emoji: '🥗',
-    title: 'Clean Eating Month',
-    description: 'Hit your macro targets for 20 out of 30 days. Track every meal, earn every result.',
+    title: 'Macros on target, 30 days',
+    description: 'Hit macro targets on 20 of the next 30 days.',
     type: 'custom',
     goal: 20,
     duration_days: 30,
-    color: 'var(--tc-success)',
-    bg: 'var(--tc-success)',
     difficulty: 'Advanced',
   },
   {
     id: 'tpl_hiit_blast',
     emoji: '⚡',
-    title: 'HIIT Blast Week',
-    description: 'Complete 5 HIIT sessions in 7 days. Short, intense, and incredibly effective.',
+    title: 'HIIT week',
+    description: 'Five HIIT sessions in seven days.',
     type: 'workouts',
     goal: 5,
     duration_days: 7,
-    color: 'var(--tc-warning)',
-    bg: 'var(--tc-warning)',
     difficulty: 'Advanced',
   },
 ];
 
 const TYPE_CONFIG = {
-  steps:       { label: 'Steps',       icon: Footprints,   unit: 'steps' },
-  workouts:    { label: 'Workouts',    icon: Dumbbell,     unit: 'sessions' },
-  streak:      { label: 'Streak',      icon: Flame,        unit: 'days' },
-  weight_loss: { label: 'Weight Loss', icon: TrendingDown, unit: 'lbs' },
-  custom:      { label: 'Custom',      icon: Target,       unit: 'units' },
+  steps:       { label: 'Steps',       unit: 'steps' },
+  workouts:    { label: 'Workouts',    unit: 'sessions' },
+  streak:      { label: 'Streak',      unit: 'days' },
+  weight_loss: { label: 'Weight loss', unit: 'lb' },
+  custom:      { label: 'Custom',      unit: 'units' },
 };
 
-const DIFFICULTY_CONFIG = {
-  Beginner:     { color: 'var(--tc-success)', bg: 'var(--tc-success)' },
-  Intermediate: { color: 'var(--tc-warning)', bg: 'var(--tc-warning)' },
-  Advanced:     { color: 'var(--tc-destructive)', bg: 'var(--tc-destructive)' },
-};
+const fieldClass = 'w-full h-10 rounded-md border border-input bg-card px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
-// ── Template card ─────────────────────────────────────────────────────────────
-function TemplateCard({ tpl, onUse }) {
-  const diff = DIFFICULTY_CONFIG[tpl.difficulty] || DIFFICULTY_CONFIG.Beginner;
+// ── Template row ──────────────────────────────────────────────────────────────
+function TemplateCard({ tpl, onUse, canUse }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-4 hover:border-primary/40 hover:shadow-sm transition-all group">
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ background: tpl.bg }}>
-            {tpl.emoji}
-          </div>
-          <div>
-            <p className="font-semibold text-sm text-foreground">{tpl.title}</p>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: diff.bg, color: diff.color }}>
-              {tpl.difficulty}
-            </span>
-          </div>
-        </div>
+    <li className="flex flex-col sm:flex-row sm:items-center gap-3 py-4">
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-semibold text-foreground">{tpl.title}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{tpl.description}</p>
+        <p className="text-[13px] text-muted-foreground mt-1">
+          {tpl.difficulty} · goal {tpl.goal.toLocaleString()} {TYPE_CONFIG[tpl.type]?.unit} · {tpl.duration_days} days
+        </p>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">{tpl.description}</p>
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-3">
-        <span className="flex items-center gap-1"><Target className="w-3 h-3" /> Goal: {tpl.goal.toLocaleString()} {TYPE_CONFIG[tpl.type]?.unit}</span>
-        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {tpl.duration_days} days</span>
-      </div>
-      <button onClick={() => onUse(tpl)}
-        className="w-full py-2 rounded-lg text-xs font-bold text-white transition-all group-hover:shadow-md"
-        style={{ background: tpl.color }}>
-        Use This Template →
-      </button>
-    </div>
+      {canUse && <Button size="sm" variant="outline" className="flex-shrink-0 self-start sm:self-center" onClick={() => onUse(tpl)}>Use</Button>}
+    </li>
   );
 }
 
-// ── Live challenge card ───────────────────────────────────────────────────────
+// ── Live challenge row ────────────────────────────────────────────────────────
 function LiveChallengeCard({ challenge, isCoach, clients, groups, onToggle, onDelete }) {
   const isActive = challenge.is_active && challenge.end_date && isAfter(parseISO(challenge.end_date), new Date());
   const daysLeft = challenge.end_date ? differenceInDays(parseISO(challenge.end_date), new Date()) : null;
   const cfg = TYPE_CONFIG[challenge.type] || TYPE_CONFIG.custom;
   const participants = challenge.participants || [];
-
-  // Resolve participant names
   const participantClients = clients.filter(c => participants.includes(c.id));
-
-  // Resolve group name
   const challengeGroup = groups.find(g => g.id === challenge.group_id);
 
+  let status = 'Off';
+  if (isActive && daysLeft !== null) status = daysLeft <= 0 ? 'Ends today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left`;
+  else if (challenge.is_active) status = 'Finished';
+
+  const meta = [
+    `Goal ${challenge.goal?.toLocaleString() ?? '—'} ${cfg.unit}`,
+    challenge.end_date ? `ends ${format(parseISO(challenge.end_date), 'MMM d')}` : null,
+    challengeGroup ? `in ${challengeGroup.name}` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className={cn('bg-card border rounded-xl p-4 space-y-3', isActive ? 'border-border' : 'border-border opacity-60')}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ background: 'var(--tc-muted)' }}>
-            {challenge.emoji || '🏆'}
+    <li className="py-4 md:grid md:grid-cols-[1fr_220px_120px] md:gap-6 md:items-start">
+      <div className={cn('min-w-0', !isActive && 'opacity-70')}>
+        <p className="text-[15px] font-semibold text-foreground">{challenge.title}</p>
+        {challenge.description && <p className="text-sm text-muted-foreground mt-0.5">{challenge.description}</p>}
+        <p className="text-[13px] text-muted-foreground mt-1">{cfg.label} · {meta}</p>
+        {isCoach && (
+          <div className="flex items-center gap-4 mt-2.5">
+            <button onClick={() => onToggle(challenge)} className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+              {challenge.is_active ? 'Turn off' : 'Turn on'}
+            </button>
+            <button onClick={() => { if (confirm('Delete this challenge?')) onDelete(challenge.id); }} className="text-sm font-semibold text-destructive underline underline-offset-4 decoration-1 hover:decoration-2">
+              Delete
+            </button>
           </div>
-          <div>
-            <p className="font-semibold text-sm text-foreground">{challenge.title}</p>
-            <p className="text-[10px] text-muted-foreground">{cfg.label} challenge</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {isActive && daysLeft !== null && (
-            <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full border',
-              daysLeft <= 2 ? 'bg-destructive/10 border-destructive text-destructive' : 'bg-success/10 border-success text-success')}>
-              {daysLeft <= 0 ? 'Ended today' : `${daysLeft}d left`}
-            </span>
-          )}
-          {!isActive && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">Inactive</span>}
-        </div>
+        )}
       </div>
-
-      {challenge.description && <p className="text-xs text-muted-foreground">{challenge.description}</p>}
-
-      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-        <span className="flex items-center gap-1"><Target className="w-3 h-3" /> {challenge.goal?.toLocaleString()} {cfg.unit}</span>
-        {challenge.end_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(parseISO(challenge.end_date), 'MMM d')}</span>}
-        {participants.length > 0 && <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {participants.length} participants</span>}
-        {challengeGroup && <span className="flex items-center gap-1 text-ai font-semibold">#{challengeGroup.name}</span>}
+      <div className="mt-3 md:mt-0">
+        {participantClients.length > 0 ? (
+          <>
+            <div className="flex -space-x-1">
+              {participantClients.slice(0, 6).map(c => <Initials key={c.id} name={c.name || ''} size={28} className="ring-2 ring-card" />)}
+            </div>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              {participants.length} taking part{participantClients.length > 6 ? `, including ${participantClients.slice(0, 2).map(c => c.name?.split(' ')[0]).join(' and ')}` : ''}
+            </p>
+          </>
+        ) : (
+          <p className="text-[13px] text-muted-foreground">{participants.length ? `${participants.length} taking part` : 'Nobody added yet'}</p>
+        )}
       </div>
-
-      {/* Participants preview */}
-      {participantClients.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {participantClients.slice(0, 5).map(c => (
-            <span key={c.id} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-muted text-foreground">
-              {c.name?.split(' ')[0]}
-            </span>
-          ))}
-          {participantClients.length > 5 && (
-            <span className="text-[10px] text-muted-foreground">+{participantClients.length - 5} more</span>
-          )}
-        </div>
-      )}
-
-      {isCoach && (
-        <div className="flex items-center gap-2 pt-2 border-t border-muted">
-          <button onClick={() => onToggle(challenge)}
-            className="text-[10px] font-semibold px-3 py-1 rounded-lg border border-border text-foreground hover:border-foreground transition-colors">
-            {challenge.is_active ? 'Deactivate' : 'Activate'}
-          </button>
-          <button onClick={() => { if (confirm('Delete this challenge?')) onDelete(challenge.id); }}
-            className="text-[10px] font-semibold px-3 py-1 rounded-lg border border-destructive text-destructive hover:bg-destructive/10 transition-colors">
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
+      <p className={cn('text-sm font-semibold mt-2 md:mt-0 md:text-right', isActive && daysLeft !== null && daysLeft <= 2 ? 'text-warning' : isActive ? 'text-foreground' : 'text-muted-foreground')}>
+        {status}
+      </p>
+    </li>
   );
 }
 
@@ -308,98 +247,94 @@ function CreateChallengeModal({ open, onClose, prefill, clients, groups, onCreat
     <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground font-bold flex items-center gap-2">
-            <span>{form.emoji}</span> {prefill ? 'Customize Challenge' : 'Create Challenge'}
-          </DialogTitle>
+          <DialogTitle>{prefill ? 'Start this challenge' : 'New challenge'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-1">
           {/* Title + Emoji */}
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Challenge Name *</label>
+            <label className="text-sm font-medium text-foreground block mb-1.5">Name</label>
             <div className="flex gap-2">
               <input type="text" maxLength={2} value={form.emoji}
                 onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))}
-                className="w-12 border border-border rounded-lg px-2 py-2 text-center text-base outline-none focus:ring-2 focus:ring-primary" />
+                className="w-12 h-10 rounded-md border border-input bg-card px-2 text-center text-base outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Icon" />
               <input required value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Challenge title…"
-                className="flex-1 border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                placeholder="Seven workouts in seven days"
+                className={cn(fieldClass, 'flex-1')} />
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Description</label>
+            <label className="text-sm font-medium text-foreground block mb-1.5">What they need to do</label>
             <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Describe what clients need to do…"
+              placeholder="Log a workout every day this week"
               rows={2}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary resize-none" />
+              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none" />
           </div>
 
           {/* Type + Goal */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">Type</label>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Type</label>
               <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-card">
+                className={fieldClass}>
                 {Object.entries(TYPE_CONFIG).map(([k, v]) => (
                   <option key={k} value={k}>{v.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">
+              <label className="text-sm font-medium text-foreground block mb-1.5">
                 Goal ({TYPE_CONFIG[form.type]?.unit})
               </label>
               <input required type="number" value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}
-                placeholder="e.g. 7"
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                placeholder="7"
+                className={fieldClass} />
             </div>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">Start Date</label>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Starts</label>
               <input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                className={fieldClass} />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground block mb-1">End Date *</label>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Ends</label>
               <input required type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
+                className={fieldClass} />
             </div>
           </div>
 
           {/* Participants */}
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-2">Who Participates?</label>
+            <label className="text-sm font-medium text-foreground block mb-2">Who takes part</label>
             <div className="flex gap-2 mb-3">
-              {[{ key: 'clients', label: 'Select Clients' }, { key: 'group', label: 'Community Group' }].map(opt => (
+              {[{ key: 'clients', label: 'Pick clients' }, { key: 'group', label: 'A whole group' }].map(opt => (
                 <button key={opt.key} type="button"
                   onClick={() => setForm(f => ({ ...f, participant_mode: opt.key }))}
-                  className={cn('flex-1 py-2 text-xs font-bold rounded-lg border-2 transition-all',
+                  className={cn('flex-1 h-10 text-sm font-semibold rounded-md border transition-colors',
                     form.participant_mode === opt.key
-                      ? 'border-primary bg-accent/10 text-primary'
-                      : 'border-border text-muted-foreground')}>
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input bg-card text-foreground hover:bg-accent')}>
                   {opt.label}
                 </button>
               ))}
             </div>
 
             {form.participant_mode === 'clients' && (
-              <div className="border border-border rounded-xl p-3 max-h-40 overflow-y-auto space-y-1">
-                {clients.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No clients found</p>}
+              <div className="border border-border rounded-lg max-h-48 overflow-y-auto divide-y divide-border">
+                {clients.length === 0 && <p className="text-sm text-muted-foreground px-3 py-3">No clients yet.</p>}
                 {clients.map(c => (
-                  <label key={c.id} className={cn('flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-colors',
-                    form.participants.includes(c.id) ? 'bg-accent/10' : 'hover:bg-background')}>
+                  <label key={c.id} className={cn('flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors',
+                    form.participants.includes(c.id) ? 'bg-accent' : 'hover:bg-accent/50')}>
                     <input type="checkbox" checked={form.participants.includes(c.id)}
                       onChange={() => toggleClient(c.id)}
-                      className="accent-[var(--tc-primary)] w-3.5 h-3.5" />
-                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground flex-shrink-0">
-                      {c.name?.[0]?.toUpperCase()}
-                    </div>
-                    <span className="text-xs font-semibold text-foreground">{c.name}</span>
+                      className="accent-[rgb(var(--primary))] w-4 h-4" />
+                    <Initials name={c.name || ''} size={28} />
+                    <span className="text-sm font-medium text-foreground">{c.name}</span>
                   </label>
                 ))}
               </div>
@@ -407,8 +342,8 @@ function CreateChallengeModal({ open, onClose, prefill, clients, groups, onCreat
 
             {form.participant_mode === 'group' && (
               <select value={form.group_id} onChange={e => setForm(f => ({ ...f, group_id: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-card">
-                <option value="">— Select a community group —</option>
+                className={fieldClass}>
+                <option value="">Choose a group</option>
                 {groups.map(g => (
                   <option key={g.id} value={g.id}>{g.name} ({(g.member_ids || []).length} members)</option>
                 ))}
@@ -416,15 +351,9 @@ function CreateChallengeModal({ open, onClose, prefill, clients, groups, onCreat
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 border border-border text-sm font-semibold text-foreground rounded-lg hover:bg-background transition-colors">
-              Cancel
-            </button>
-            <button type="submit"
-              className="px-5 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg hover:bg-primary transition-colors">
-              Launch Challenge 🚀
-            </button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Start challenge</Button>
           </div>
         </form>
       </DialogContent>
@@ -434,14 +363,12 @@ function CreateChallengeModal({ open, onClose, prefill, clients, groups, onCreat
 
 // ── MAIN COMPONENT ────────────────────────────────────────────────────────────
 export default function ChallengesHub({ isCoach, user }) {
-  const [view, setView] = useState('templates'); // 'templates' | 'active'
+  const [view, setView] = useState('active'); // 'templates' | 'active'
   const [showCreate, setShowCreate] = useState(false);
   const [prefillTemplate, setPrefillTemplate] = useState(null);
   const [filterDifficulty, setFilterDifficulty] = useState('All');
   const qc = useQueryClient();
 
-  const tier = getUserTier(user);
-  const tierName = tier?.name || 'Starter';
 
   const { data: challenges = [] } = useQuery({
     queryKey: ['challenges-hub'],
@@ -496,145 +423,79 @@ export default function ChallengesHub({ isCoach, user }) {
     ? CHALLENGE_TEMPLATES
     : CHALLENGE_TEMPLATES.filter(t => t.difficulty === filterDifficulty);
 
+  const listPanel = (items, emptyTitle, emptyBody, emptyAction) => (
+    <Panel>
+      {items.length === 0 ? (
+        <EmptyState title={emptyTitle} body={emptyBody} action={emptyAction} />
+      ) : (
+        <>
+          <div className="hidden md:grid grid-cols-[1fr_220px_120px] gap-6 px-6 py-3 border-b border-border text-[13px] text-muted-foreground">
+            <span>Challenge</span><span>Taking part</span><span className="text-right">Status</span>
+          </div>
+          <ul className="divide-y divide-border px-5 sm:px-6">
+            {items.map(c => (
+              <LiveChallengeCard key={c.id} challenge={c} isCoach={isCoach}
+                clients={clients} groups={groups}
+                onToggle={(ch) => updateMutation.mutate({ id: ch.id, data: { is_active: !ch.is_active } })}
+                onDelete={(id) => deleteMutation.mutate(id)} />
+            ))}
+          </ul>
+        </>
+      )}
+    </Panel>
+  );
+
   return (
     <div className="space-y-5">
-      {/* Header card */}
-      <div className="rounded-xl p-5 text-primary-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-        style={{ background: 'linear-gradient(135deg, var(--tc-foreground) 0%, var(--tc-primary) 100%)' }}>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-5 h-5 text-warning" />
-            <h2 className="text-lg font-bold text-white">Challenges</h2>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--kc-w-10)] text-white/80 border border-white/10">
-              {tierName}
-            </span>
-          </div>
-          <p className="text-sm text-white/60">Create fitness challenges for your clients using preset templates</p>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-1 text-xs text-warning font-semibold">
-              <Zap className="w-3.5 h-3.5" /> {active.length} active
-            </span>
-            <span className="text-xs text-white/40">·</span>
-            <span className="text-xs text-white/50">{past.length} completed</span>
-          </div>
-        </div>
-        {isCoach && (
-          <div className="flex gap-2">
-            <button onClick={handleCreateBlank}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[var(--kc-w-10)] hover:bg-[var(--kc-w-20)] text-white text-sm font-semibold rounded-lg transition-colors border border-white/10">
-              <Plus className="w-4 h-4" /> Custom
-            </button>
-            <button onClick={() => setView('templates')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-warning text-foreground text-sm font-bold rounded-lg hover:bg-warning transition-colors">
-              <Star className="w-4 h-4" /> From Template
-            </button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Challenges"
+        subtitle={active.length
+          ? `${active.length} running, ${past.length} finished. Challenges show on each client's app and in their group.`
+          : `Nothing running right now. Start one from a template or write your own.`}
+        actions={isCoach ? (
+          <>
+            <Button variant="outline" onClick={() => setView('templates')}>Templates</Button>
+            <Button onClick={handleCreateBlank}><Plus /> New challenge</Button>
+          </>
+        ) : null}
+      />
 
-      {/* View toggle */}
-      <div className="flex gap-1 bg-muted border border-border rounded-xl p-1 w-fit">
-        {[
-          { key: 'templates', label: '✨ Templates', count: null },
-          { key: 'active', label: '🔥 Active', count: active.length },
-          { key: 'past', label: '📜 Past', count: past.length },
-        ].map(tab => (
-          <button key={tab.key} onClick={() => setView(tab.key)}
-            className={cn('flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              view === tab.key ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}>
-            {tab.label}
-            {tab.count !== null && tab.count > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground ml-1">{tab.count}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        value={view}
+        onChange={setView}
+        options={[
+          { value: 'active', label: 'Running', count: active.length },
+          { value: 'templates', label: 'Templates' },
+          { value: 'past', label: 'Past', count: past.length },
+        ]}
+      />
 
-      {/* Templates view */}
       {view === 'templates' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {filteredTemplates.length} Ready-Made Challenges
-            </p>
-            <div className="flex gap-1.5">
-              {DIFFICULTIES.map(d => (
-                <button key={d} onClick={() => setFilterDifficulty(d)}
-                  className={cn('text-xs font-semibold px-3 py-1 rounded-full border transition-all',
-                    filterDifficulty === d
-                      ? 'bg-sidebar text-white border-foreground'
-                      : 'border-border text-muted-foreground hover:border-foreground')}>
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <Panel>
+          <PanelHeader
+            title="Templates"
+            subtitle={isCoach ? 'Pick one, adjust the dates and who takes part, then start it.' : 'Challenges are started by your coach. Check Running to see what is on now.'}
+            right={<Segmented size="sm" value={filterDifficulty} onChange={setFilterDifficulty} options={DIFFICULTIES.map(d => ({ value: d, label: d }))} />}
+            className="flex-col sm:flex-row"
+          />
+          <ul className="divide-y divide-border px-5 sm:px-6 pb-1">
             {filteredTemplates.map(tpl => (
-              <TemplateCard key={tpl.id} tpl={tpl}
-                onUse={isCoach ? handleUseTemplate : () => {}} />
+              <TemplateCard key={tpl.id} tpl={tpl} canUse={isCoach} onUse={handleUseTemplate} />
             ))}
-          </div>
-
-          {!isCoach && (
-            <div className="bg-accent border border-accent rounded-xl p-4 text-center">
-              <p className="text-sm text-primary font-semibold">Challenges are launched by your coach</p>
-              <p className="text-xs text-primary mt-1">Check Active Challenges to see what's running right now</p>
-            </div>
-          )}
-        </div>
+          </ul>
+        </Panel>
       )}
 
-      {/* Active challenges */}
-      {view === 'active' && (
-        <div className="space-y-4">
-          {active.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-border rounded-xl bg-background">
-              <Trophy className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm font-semibold text-foreground">No active challenges</p>
-              {isCoach && (
-                <button onClick={() => setView('templates')}
-                  className="mt-3 text-xs font-bold text-primary hover:underline flex items-center gap-1 mx-auto">
-                  Browse Templates <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {active.map(c => (
-                <LiveChallengeCard key={c.id} challenge={c} isCoach={isCoach}
-                  clients={clients} groups={groups}
-                  onToggle={(ch) => updateMutation.mutate({ id: ch.id, data: { is_active: !ch.is_active } })}
-                  onDelete={(id) => deleteMutation.mutate(id)} />
-              ))}
-            </div>
-          )}
-        </div>
+      {view === 'active' && listPanel(
+        active,
+        'No challenges running',
+        isCoach ? 'A two-week step or workout challenge is a simple way to get people moving.' : undefined,
+        isCoach ? <Button variant="outline" onClick={() => setView('templates')}>Browse templates</Button> : null,
       )}
 
-      {/* Past challenges */}
-      {view === 'past' && (
-        <div className="space-y-4">
-          {past.length === 0 ? (
-            <div className="text-center py-16 border border-dashed border-border rounded-xl bg-background">
-              <Clock className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-              <p className="text-sm font-semibold text-foreground">No past challenges yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {past.map(c => (
-                <LiveChallengeCard key={c.id} challenge={c} isCoach={isCoach}
-                  clients={clients} groups={groups}
-                  onToggle={(ch) => updateMutation.mutate({ id: ch.id, data: { is_active: !ch.is_active } })}
-                  onDelete={(id) => deleteMutation.mutate(id)} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {view === 'past' && listPanel(past, 'No past challenges yet', 'Finished and switched-off challenges land here.')}
 
-      {/* Create Modal */}
       <CreateChallengeModal
         open={showCreate}
         onClose={() => { setShowCreate(false); setPrefillTemplate(null); }}

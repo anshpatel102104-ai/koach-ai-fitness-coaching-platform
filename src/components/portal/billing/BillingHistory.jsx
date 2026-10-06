@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Download, CheckCircle2, XCircle, Clock, RefreshCw } from 'lucide-react';
-import { format, parseISO, subDays, isAfter } from 'date-fns';
+import { subDays, isAfter } from 'date-fns';
+import { Segmented } from '@/components/kit';
+import { Pill } from '@/components/portal/PortalUI';
+import { fmtMoney as fmt, fmtDate } from './shared';
 
-const STATUS_ICONS = {
-  paid: { Icon: CheckCircle2, color: 'rgb(var(--success))' },
-  failed: { Icon: XCircle, color: 'rgb(var(--destructive))' },
-  pending: { Icon: Clock, color: 'rgb(var(--warning))' },
-  refunded: { Icon: RefreshCw, color: 'rgb(var(--muted-foreground))' },
+const STATUS = {
+  paid: { tone: 'success', label: 'Paid' },
+  failed: { tone: 'danger', label: 'Failed' },
+  pending: { tone: 'warning', label: 'Pending' },
+  refunded: { tone: 'neutral', label: 'Refunded' },
 };
-
-const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDate = (d) => { try { return format(parseISO(d), 'MMM d, yyyy'); } catch { return d || '—'; } };
 
 export default function BillingHistory({ payments, invoices }) {
   const [filter, setFilter] = useState('all');
@@ -39,10 +38,10 @@ export default function BillingHistory({ payments, invoices }) {
   const all = [...paidInvoiceEntries, ...paymentEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const FILTERS = [
-    { key: 'all', label: 'All' },
-    { key: 'paid', label: 'Paid' },
-    { key: 'failed', label: 'Failed' },
-    { key: 'last30', label: 'Last 30 days' },
+    { value: 'all', label: 'All' },
+    { value: 'paid', label: 'Paid' },
+    { value: 'failed', label: 'Failed' },
+    { value: 'last30', label: 'Last 30 days' },
   ];
 
   const filtered = all.filter(entry => {
@@ -53,53 +52,38 @@ export default function BillingHistory({ payments, invoices }) {
   });
 
   return (
-    <div>
-      {/* Filter pills */}
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
-        {FILTERS.map(f => (
-          <button key={f.key} onClick={() => setFilter(f.key)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              background: filter === f.key ? 'rgb(var(--primary) / 0.2)' : 'rgba(255,255,255,0.05)',
-              color: filter === f.key ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.35)',
-              border: `1px solid ${filter === f.key ? 'rgb(var(--primary) / 0.3)' : 'transparent'}`,
-            }}>
-            {f.label}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-3">
+      <Segmented size="sm" className="w-full" value={filter} onChange={setFilter} options={FILTERS} />
 
       {filtered.length === 0 ? (
-        <div className="py-12 text-center">
-          <p className="text-white/30 text-sm">No payment history</p>
-        </div>
+        <section className="panel px-4 py-5">
+          <p className="text-[15px] font-semibold text-foreground">No payments here</p>
+          <p className="mt-1 text-sm text-muted-foreground">Try another filter.</p>
+        </section>
       ) : (
-        <div className="space-y-2">
-          {filtered.map(entry => {
-            const cfg = STATUS_ICONS[entry.status] || STATUS_ICONS.pending;
-            return (
-              <div key={entry.id} className="flex items-center gap-3 p-3.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${cfg.color}15` }}>
-                  <cfg.Icon className="w-4 h-4" style={{ color: cfg.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold truncate">{entry.description}</p>
-                  <p className="text-white/30 text-xs mt-0.5">{fmtDate(entry.date)} · {entry.method}</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-white font-bold text-sm" style={{ color: entry.status === 'failed' ? 'rgb(var(--destructive))' : entry.status === 'refunded' ? 'rgb(var(--muted-foreground))' : 'rgb(var(--card))' }}>
-                    {entry.status === 'refunded' ? '-' : ''}{fmt(entry.amount)}
-                  </p>
-                  {entry.status === 'paid' && (
-                    <button className="text-[10px] text-primary mt-0.5 flex items-center gap-1">
-                      <Download className="w-2.5 h-2.5" /> Receipt
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <section className="panel px-4 py-1">
+          <ul className="divide-y divide-border">
+            {filtered.map(entry => {
+              const cfg = STATUS[entry.status] || STATUS.pending;
+              return (
+                <li key={entry.id} className="flex items-center gap-3 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-foreground">{entry.description}</span>
+                    <span className="block text-[13px] text-muted-foreground">{fmtDate(entry.date)}, {entry.method}</span>
+                  </span>
+                  <span className="text-right">
+                    <span className={`block text-[15px] font-semibold tabular-nums ${entry.status === 'failed' ? 'text-destructive' : 'text-foreground'}`}>
+                      {entry.status === 'refunded' ? '−' : ''}{fmt(entry.amount)}
+                    </span>
+                    {entry.status === 'paid'
+                      ? <button type="button" className="text-[13px] font-semibold text-foreground underline underline-offset-4">Receipt</button>
+                      : <Pill tone={cfg.tone} className="text-[12px]">{cfg.label}</Pill>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );

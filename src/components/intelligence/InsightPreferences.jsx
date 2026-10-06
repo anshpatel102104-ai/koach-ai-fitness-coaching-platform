@@ -1,28 +1,16 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { Panel, PanelHeader } from '@/components/kit';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 
 const INSIGHT_TYPES = [
-  { type: 'performance', label: 'Performance Insights', desc: 'Weight pace, strength gains, workout consistency', emoji: '📈' },
-  { type: 'risk', label: 'Risk Alerts', desc: 'Burnout signals, plateaus, churn risk, weekend drops', emoji: '⚠️' },
-  { type: 'opportunity', label: 'Opportunities', desc: 'Program switches, upsell moments, lead follow-ups', emoji: '💡' },
-  { type: 'celebration', label: 'Celebration Insights', desc: 'Milestones, PRs, streak achievements', emoji: '🎉' },
+  { type: 'risk', label: 'Risk', desc: 'Burnout signs, plateaus, clients going quiet, weekend drop-offs' },
+  { type: 'performance', label: 'Progress', desc: 'Weight pace, strength gains, workout consistency' },
+  { type: 'opportunity', label: 'Opportunities', desc: 'Program switches, renewal moments, leads to follow up' },
+  { type: 'celebration', label: 'Worth celebrating', desc: 'Milestones, PRs, long streaks' },
 ];
-
-function Toggle({ value, onChange }) {
-  return (
-    <button onClick={() => onChange(!value)}
-      className="relative w-10 h-5.5 rounded-full transition-colors flex-shrink-0"
-      style={{
-        background: value ? 'var(--tc-primary)' : 'var(--tc-border)',
-        height: 22,
-        width: 40,
-      }}>
-      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-card shadow transition-all"
-        style={{ left: value ? 22 : 2 }} />
-    </button>
-  );
-}
 
 export default function InsightPreferences({ onClose }) {
   const getDisabled = () => {
@@ -46,32 +34,34 @@ export default function InsightPreferences({ onClose }) {
     localStorage.removeItem('koach_not_relevant_types');
     localStorage.removeItem('koach_dismissed_insights');
     setDisabled(new Set());
-    toast.success('Insight preferences reset');
+    toast.success('Preferences reset. Dismissed notes will come back.');
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-foreground">Insight Preferences</h2>
-        <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground"><X className="w-4 h-4" /></button>
-      </div>
-      <p className="text-xs text-muted-foreground">Choose which types of insights you want to see. Hidden types won't appear in your feed.</p>
-      <div className="space-y-2">
-        {INSIGHT_TYPES.map(({ type, label, desc, emoji }) => (
-          <div key={type} className="flex items-center gap-3 p-4 rounded-xl border border-border bg-muted">
-            <span className="text-xl">{emoji}</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{label}</p>
-              <p className="text-[11px] text-muted-foreground">{desc}</p>
+    <Panel>
+      <PanelHeader
+        title="Preferences"
+        subtitle="Choose which kinds of notes you want. Hidden kinds stay out of Today and this page."
+        right={
+          <button onClick={onClose} className="touch-compact rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Close preferences">
+            <X className="h-4 w-4" />
+          </button>
+        }
+      />
+      <ul>
+        {INSIGHT_TYPES.map(({ type, label, desc }) => (
+          <li key={type} className="flex items-center gap-4 border-t border-border px-5 py-4 sm:px-6">
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-foreground">{label}</p>
+              <p className="text-sm text-muted-foreground">{desc}</p>
             </div>
-            <Toggle value={!disabled.has(type)} onChange={() => toggle(type)} />
-          </div>
+            <Switch checked={!disabled.has(type)} onCheckedChange={() => toggle(type)} aria-label={`Show ${label.toLowerCase()} notes`} />
+          </li>
         ))}
+      </ul>
+      <div className="border-t border-border px-5 py-4 sm:px-6">
+        <Button variant="outline" onClick={handleReset}>Reset preferences and dismissed notes</Button>
       </div>
-      <button onClick={handleReset}
-        className="w-full py-2.5 rounded-xl text-sm font-semibold border border-border text-muted-foreground hover:bg-muted transition-all">
-        Reset All Preferences & Dismissed Cards
-      </button>
-    </div>
+    </Panel>
   );
 }

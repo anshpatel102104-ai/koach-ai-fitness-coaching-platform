@@ -18,9 +18,9 @@ export default function NotifsMessages({ s, set }) {
   const upd = (key, val) => set('messages', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Messages" emoji="💬"
+    <NSection title="Messages"
       onReset={() => set('messages', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Messages')}>
+      onTest={() => toast.success('Test notification sent for messages')}>
 
       <NRow enabled={d.new_message.enabled} onToggle={v => upd('new_message', { enabled: v })}
         title="New message from client"

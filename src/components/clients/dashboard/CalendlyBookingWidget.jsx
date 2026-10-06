@@ -60,7 +60,7 @@ export default function CalendlyBookingWidget({ client }) {
       await db.entities.Message.create({
         client_id: client.id,
         client_name: client.name,
-        content: `Hi ${client.name}! Here's your personal booking link to schedule our next session:\n\n🗓 ${bookingUrl}\n\nThis link is just for you — pick a time that works!`,
+        content: `Hi ${client.name}! Here's your personal booking link to schedule our next session:\n\n${bookingUrl}\n\nThis link is just for you — pick a time that works`,
         sender: 'coach',
       });
       toast.success(`Booking link sent to ${client.name}!`);
@@ -77,22 +77,22 @@ export default function CalendlyBookingWidget({ client }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-6 h-6 rounded-lg bg-[var(--kc-006bff)]/10 flex items-center justify-center flex-shrink-0">
-          <Calendar className="w-3.5 h-3.5 text-[var(--kc-006bff)]" />
+        <div className="w-6 h-6 rounded-lg bg-[var(--tc-brand)]/10 flex items-center justify-center flex-shrink-0">
+          <Calendar className="w-3.5 h-3.5 text-[var(--tc-brand)]" />
         </div>
-        <p className="text-sm font-semibold text-foreground">Calendly Booking</p>
+        <p className="text-sm font-semibold text-foreground">Calendly booking</p>
       </div>
 
       {/* Session info */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div className="p-2.5 bg-background rounded-lg">
-          <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Last Session</p>
+          <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Last session</p>
           <p className="text-xs font-semibold text-foreground">
             {lastBooking ? format(new Date(lastBooking.start_time), 'MMM d') : 'None'}
           </p>
         </div>
         <div className="p-2.5 bg-background rounded-lg">
-          <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Next Session</p>
+          <p className="text-[11px] text-muted-foreground font-medium mb-0.5">Next session</p>
           <p className="text-xs font-semibold text-foreground">
             {nextBooking ? format(new Date(nextBooking.start_time), 'MMM d, h:mm a') : 'Not booked'}
           </p>
@@ -125,15 +125,15 @@ export default function CalendlyBookingWidget({ client }) {
             onClick={() => { setShowSelector(true); setSelectedEventUri(eventTypes[0]?.uri || ''); }}
             disabled={etLoading || eventTypes.length === 0}
           >
-            <Send className="w-3 h-3 mr-1.5" /> Send Booking Link
+            <Send className="w-3 h-3 mr-1.5" /> Send booking link
           </Button>
         ) : (
           <>
             <Button size="sm" variant="outline" className="text-xs h-8"
               onClick={() => setShowSelector(false)}>Cancel</Button>
-            <Button size="sm" className="flex-1 bg-[var(--kc-006bff)] hover:bg-[var(--kc-0057d0)] text-xs h-8"
+            <Button size="sm" className="flex-1 bg-[var(--tc-brand)] hover:bg-[var(--tc-brand)] text-xs h-8"
               onClick={handleSend} disabled={sending}>
-              {sending ? <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Sending...</> : 'Send Link'}
+              {sending ? <><Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> Sending...</> : 'Send link'}
             </Button>
           </>
         )}

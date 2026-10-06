@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Trash2, ChevronDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,57 +48,50 @@ export default function ManualDayBuilder({ day, onUpdate, onRemove }) {
   };
 
   return (
-    <Collapsible open={expanded} onOpenChange={setExpanded} className="border rounded-lg">
-      <CollapsibleTrigger className="w-full">
-        <div className="flex items-center justify-between p-4 hover:bg-accent transition-colors">
-          <div className="flex items-center gap-3 flex-1">
-            <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-            <div className="text-left">
-              <p className="font-semibold">{day.day_name}</p>
-              <p className="text-xs text-muted-foreground">{day.exercises?.length || 0} exercises</p>
+    <Collapsible open={expanded} onOpenChange={setExpanded} className="panel overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <CollapsibleTrigger className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <ChevronDown className={`h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-semibold text-foreground">{day.day_name}</span>
+            <span className="block text-[13px] text-muted-foreground">{day.exercises?.length || 0} exercises</span>
+          </span>
+        </CollapsibleTrigger>
+        <button
+          onClick={onRemove}
+          className="touch-compact flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          aria-label={`Delete ${day.day_name}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <CollapsibleContent className="space-y-2 border-t border-border p-3">
+        {day.exercises?.map((ex, idx) => (
+          <div key={idx} className="flex items-start justify-between rounded-lg bg-secondary px-3 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-semibold text-foreground">{ex.name}</p>
+              <p className="text-[15px] font-bold tabular-nums text-foreground">
+                {ex.sets} × {ex.reps}
+                <span className="ml-2 text-[13px] font-normal text-muted-foreground">{ex.rest_seconds}s rest</span>
+              </p>
             </div>
+            <button
+              onClick={() => handleRemoveExercise(idx)}
+              className="touch-compact ml-2 flex-shrink-0 rounded p-1 text-muted-foreground hover:text-destructive"
+              aria-label={`Remove ${ex.name}`}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <Trash2 className="w-4 h-4 text-destructive" />
-          </Button>
-        </div>
-      </CollapsibleTrigger>
+        ))}
 
-      <CollapsibleContent className="border-t p-4 space-y-3">
-        {/* Exercises List */}
-        <div className="space-y-2">
-          {day.exercises?.map((ex, idx) => (
-            <div key={idx} className="flex items-start justify-between p-2 bg-secondary rounded">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">{ex.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {ex.sets}x{ex.reps} • {ex.rest_seconds}s rest
-                </p>
-              </div>
-              <button
-                onClick={() => handleRemoveExercise(idx)}
-                className="flex-shrink-0 ml-2 hover:text-destructive transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Add Exercise Form */}
         {showExerciseForm ? (
-          <div className="space-y-3 p-3 bg-accent rounded border">
+          <div className="space-y-3 rounded-lg border border-border p-3">
             <div>
-              <Label className="text-xs">Exercise</Label>
+              <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Exercise</Label>
               <Select value={selectedExercise} onValueChange={setSelectedExercise}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select exercise" /></SelectTrigger>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Pick from your library" /></SelectTrigger>
                 <SelectContent>
                   {exercises.map(ex => (
                     <SelectItem key={ex.id} value={ex.id}>{ex.name}</SelectItem>
@@ -108,63 +101,33 @@ export default function ManualDayBuilder({ day, onUpdate, onRemove }) {
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <Label className="text-xs">Sets</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={exerciseForm.sets}
-                  onChange={e => setExerciseForm(f => ({ ...f, sets: parseInt(e.target.value) }))}
-                  className="h-8 text-xs"
-                />
+                <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Sets</Label>
+                <Input type="number" min="1" value={exerciseForm.sets}
+                  onChange={e => setExerciseForm(f => ({ ...f, sets: parseInt(e.target.value) }))} className="h-9" />
               </div>
               <div>
-                <Label className="text-xs">Reps</Label>
-                <Input
-                  value={exerciseForm.reps}
-                  onChange={e => setExerciseForm(f => ({ ...f, reps: e.target.value }))}
-                  className="h-8 text-xs"
-                  placeholder="e.g. 8-10"
-                />
+                <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Reps</Label>
+                <Input value={exerciseForm.reps} placeholder="8-10"
+                  onChange={e => setExerciseForm(f => ({ ...f, reps: e.target.value }))} className="h-9" />
               </div>
               <div>
-                <Label className="text-xs">Rest (s)</Label>
-                <Input
-                  type="number"
-                  value={exerciseForm.rest_seconds}
-                  onChange={e => setExerciseForm(f => ({ ...f, rest_seconds: parseInt(e.target.value) }))}
-                  className="h-8 text-xs"
-                />
+                <Label className="mb-1.5 block text-[13px] font-normal text-muted-foreground">Rest (s)</Label>
+                <Input type="number" value={exerciseForm.rest_seconds}
+                  onChange={e => setExerciseForm(f => ({ ...f, rest_seconds: parseInt(e.target.value) }))} className="h-9" />
               </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleAddExercise}
-                disabled={!selectedExercise}
-                className="text-xs"
-              >
-                Add Exercise
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowExerciseForm(false)}
-                className="text-xs"
-              >
-                Cancel
-              </Button>
+              <Button size="sm" onClick={handleAddExercise} disabled={!selectedExercise}>Add</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowExerciseForm(false)}>Cancel</Button>
             </div>
           </div>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
+          <button
             onClick={() => setShowExerciseForm(true)}
-            className="w-full gap-1 text-xs"
+            className="h-11 w-full rounded-lg border border-dashed border-input text-sm font-semibold text-foreground transition-colors hover:bg-accent"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Exercise
-          </Button>
+            Add exercise
+          </button>
         )}
       </CollapsibleContent>
     </Collapsible>

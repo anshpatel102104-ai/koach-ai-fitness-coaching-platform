@@ -90,7 +90,7 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-lg text-xs">
+      <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs">
         <p className="font-semibold text-foreground mb-1">{label}</p>
         {payload.map((p, i) => (
           <p key={i} style={{ color: p.color }}>{p.name}: {p.value} lbs</p>
@@ -104,17 +104,17 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
       {/* Hero stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {[
-          { label: 'Starting Weight', value: startWeight ? `${startWeight} lbs` : '—' },
-          { label: 'Current Weight', value: currentWeight ? `${currentWeight} lbs` : '—', blue: true },
-          { label: 'Goal Weight', value: goalWeight ? `${goalWeight} lbs` : '—', green: true },
-          { label: 'Total Change', value: totalChange !== null ? `${totalChange > 0 ? '+' : ''}${totalChange} lbs` : '—', color: totalChange < 0 ? 'text-success' : totalChange > 0 ? 'text-destructive' : '' },
-          { label: 'Weeks Active', value: weeksActive || '—' },
+          { label: 'Starting weight', value: startWeight ? `${startWeight} lbs` : '—' },
+          { label: 'Current weight', value: currentWeight ? `${currentWeight} lbs` : '—', blue: true },
+          { label: 'Goal weight', value: goalWeight ? `${goalWeight} lbs` : '—', green: true },
+          { label: 'Total change', value: totalChange !== null ? `${totalChange > 0 ? '+' : ''}${totalChange} lbs` : '—', color: totalChange < 0 ? 'text-success' : totalChange > 0 ? 'text-destructive' : '' },
+          { label: 'Weeks active', value: weeksActive || '—' },
           { label: 'Check-ins', value: checkIns.length },
           { label: 'Workouts', value: sessions.length },
         ].map(({ label, value, blue, green, color }) => (
           <div key={label} className="bg-background rounded-xl p-3 border border-border">
             <p className={cn('text-base font-bold', blue ? 'text-primary' : green ? 'text-success' : color || 'text-foreground')}>{value}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{label}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
           </div>
         ))}
       </div>
@@ -123,7 +123,7 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Weight Progress</h3>
+            <h3 className="text-[18px] text-foreground">Weight progress</h3>
             {goalWeight && <p className="text-xs text-muted-foreground">Goal: {goalWeight} lbs</p>}
           </div>
           <div className="flex gap-1">
@@ -143,12 +143,6 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
         ) : (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="wGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--tc-primary)" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="var(--tc-primary)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--tc-muted)" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false}
@@ -159,7 +153,7 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
                   label={{ value: `Goal ${goalWeight}`, position: 'right', fontSize: 10, fill: 'var(--tc-success)' }} />
               )}
               <Area type="monotone" dataKey="value" name="Weight" stroke="var(--tc-primary)" strokeWidth={2.5}
-                fill="url(#wGrad)" dot={{ r: 3, fill: 'var(--tc-primary)', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls />
+                fill="none" dot={{ r: 3, fill: 'var(--tc-primary)', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls />
               <Line type="monotone" dataKey="ma" name="Trend" stroke="var(--tc-ai)" strokeWidth={1.5}
                 strokeDasharray="4 2" dot={false} connectNulls />
             </AreaChart>
@@ -170,16 +164,16 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
       {/* Progress Score Breakdown */}
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-foreground">Progress Score Breakdown</h3>
-          <div className={cn('text-2xl font-bold', score >= 70 ? 'text-success' : score >= 50 ? 'text-orange-500' : 'text-destructive')}>
+          <h3 className="text-[18px] text-foreground">Progress score breakdown</h3>
+          <div className={cn('text-2xl font-bold', score >= 70 ? 'text-success' : score >= 50 ? 'text-warning' : 'text-destructive')}>
             {score}<span className="text-xs font-normal text-muted-foreground ml-1">/100</span>
           </div>
         </div>
         <div className="space-y-3">
           {[
-            { label: 'Weight Progress', value: scoreBreakdown.weight, color: 'var(--tc-success)' },
-            { label: 'Training Compliance', value: scoreBreakdown.training, color: 'var(--tc-primary)' },
-            { label: 'Nutrition Compliance', value: scoreBreakdown.nutrition, color: 'var(--tc-warning)' },
+            { label: 'Weight progress', value: scoreBreakdown.weight, color: 'var(--tc-success)' },
+            { label: 'Training compliance', value: scoreBreakdown.training, color: 'var(--tc-primary)' },
+            { label: 'Nutrition compliance', value: scoreBreakdown.nutrition, color: 'var(--tc-warning)' },
             { label: 'Check-in Consistency', value: scoreBreakdown.consistency, color: 'var(--tc-ai)' },
           ].map(({ label, value, color }) => (
             <div key={label}>
@@ -203,19 +197,19 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
         </button>
         <button onClick={() => setShowNoteModal(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-background transition-colors">
-          <NotebookPen className="w-3.5 h-3.5" /> Add Progress Note
+          <NotebookPen className="w-3.5 h-3.5" /> Add progress note
         </button>
         <button
-          onClick={() => toast.success('Progress report generation coming soon!')}
+          onClick={() => toast.success('Progress report generation coming soon')}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-background transition-colors">
-          <FileText className="w-3.5 h-3.5" /> Generate Report
+          <FileText className="w-3.5 h-3.5" /> Generate report
         </button>
         <button
           onClick={() => {
-            db.functions.invoke('sendEmailNotification', { to: client.email, subject: '🎉 You\'re crushing it!', html: `Hi ${client.name}! Your coach wants to celebrate your progress. Keep up the amazing work! 💪` }).then(() => toast.success('Celebration message sent!')).catch(() => toast.error('Could not send message'));
+            db.functions.invoke('sendEmailNotification', { to: client.email, subject: 'Your progress so far', html: `Hi ${client.name}, your coach wanted to say well done on your progress. Keep going.` }).then(() => toast.success('Celebration message sent')).catch(() => toast.error('Could not send message'));
           }}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold border border-success bg-success/10 text-success hover:bg-success/10 transition-colors">
-          <Trophy className="w-3.5 h-3.5" /> Celebrate Win
+          <Trophy className="w-3.5 h-3.5" /> Celebrate win
         </button>
       </div>
 
@@ -235,8 +229,8 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
       {/* Add Note Modal */}
       {showNoteModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-card rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="font-semibold text-foreground">Add Progress Note</h3>
+          <div className="bg-card rounded-xl w-full max-w-md p-6 space-y-4">
+            <h3 className="font-semibold text-foreground">Add progress note</h3>
             <div>
               <label className="block text-xs text-muted-foreground mb-1">Date</label>
               <input type="date" value={noteDate} onChange={e => setNoteDate(e.target.value)}
@@ -253,7 +247,7 @@ export default function ProgressOverviewTab({ client, checkIns, sessions, score,
               <button onClick={() => noteMutation.mutate({ client_id: client.id, client_name: client.name, date: noteDate, internal_notes: noteText })}
                 disabled={!noteText.trim() || noteMutation.isPending}
                 className="px-4 py-2 text-xs rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-50">
-                {noteMutation.isPending ? 'Saving...' : 'Save Note'}
+                {noteMutation.isPending ? 'Saving...' : 'Save note'}
               </button>
             </div>
           </div>

@@ -23,9 +23,9 @@ export default function NotifsPayments({ s, set }) {
   const upd = (key, val) => set('payments', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Payments & Business" emoji="💳"
+    <NSection title="Payments and business"
       onReset={() => set('payments', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Payments')}>
+      onTest={() => toast.success('Test notification sent for payments')}>
 
       <NRow enabled={d.payment_received.enabled} onToggle={v => upd('payment_received', { enabled: v })}
         title="Payment received"

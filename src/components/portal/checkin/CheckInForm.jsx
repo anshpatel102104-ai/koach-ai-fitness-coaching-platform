@@ -90,7 +90,9 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
           onResponseChange={handleResponseChange}
           onExit={handleExit}
           onReview={handleReview}
+          onStep={setCurrentQuestion}
           currentQ={currentQuestion}
+          lastCheckIn={lastCheckIn}
         />
       )}
       {view === 'review' && (
@@ -102,6 +104,8 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
           onSubmit={handleSubmit}
           submitting={submitting}
           lastCheckIn={lastCheckIn}
+          onEditQuestion={(i) => { setCurrentQuestion(i); setView('form'); }}
+          onExit={handleExit}
         />
       )}
       {view === 'success' && (

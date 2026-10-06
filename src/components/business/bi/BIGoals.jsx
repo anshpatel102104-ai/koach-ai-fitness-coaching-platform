@@ -1,43 +1,34 @@
 import React, { useState, useMemo } from 'react';
-import { Target, Edit2, Check, X, Trophy } from 'lucide-react';
+import { Panel } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Meter, money } from '@/components/business/ui';
 import { parseISO, startOfMonth } from 'date-fns';
 
 const GOAL_PRESETS = [
-  { key: 'mrr', label: 'Monthly Revenue Target', unit: '$', defaultVal: 5000 },
-  { key: 'new_clients', label: 'New Clients This Month', unit: '', defaultVal: 3 },
-  { key: 'retention', label: 'Retention Rate Target', unit: '%', defaultVal: 90 },
+  { key: 'mrr', label: 'Monthly revenue', unit: '$', defaultVal: 5000 },
+  { key: 'new_clients', label: 'New clients this month', unit: '', defaultVal: 3 },
+  { key: 'retention', label: 'Retention', unit: '%', defaultVal: 90 },
 ];
 
-function GoalCard({ goal, current, unit, onEdit }) {
+function GoalRow({ preset, goal, current, unit, onEdit }) {
   const pct = Math.min(100, goal.target > 0 ? Math.round((current / goal.target) * 100) : 0);
   const achieved = pct >= 100;
-  const color = achieved ? 'var(--tc-success)' : pct >= 70 ? 'var(--tc-warning)' : 'var(--tc-primary)';
+  const fmt = (v) => (unit === '$' ? money(v) : `${v}${unit}`);
 
   return (
-    <div className={`p-3.5 rounded-xl border relative ${achieved ? 'border-success bg-success/10' : 'border-border bg-muted'}`}>
-      {achieved && (
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-success rounded-full flex items-center justify-center shadow-sm">
-          <Trophy className="w-3 h-3 text-white" />
-        </div>
-      )}
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold text-foreground">{goal.label}</p>
-        <button onClick={onEdit} className="p-1 hover:bg-muted rounded-lg transition-colors">
-          <Edit2 className="w-3 h-3 text-muted-foreground" />
+    <div className="py-3 border-b border-border last:border-b-0">
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <p className="text-sm text-foreground">{preset.label}</p>
+        <button onClick={onEdit} className="touch-compact text-[13px] font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+          Edit
         </button>
       </div>
-      <div className="flex items-end justify-between mb-2">
-        <p className="text-lg font-bold" style={{ color }}>
-          {unit === '$' ? `$${current.toLocaleString()}` : `${current}${unit}`}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          / {unit === '$' ? `$${goal.target.toLocaleString()}` : `${goal.target}${unit}`}
-        </p>
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="num text-[24px] leading-none text-foreground">{fmt(current)}</span>
+        <span className="text-[13px] text-muted-foreground">of {fmt(goal.target)}{achieved ? ', reached' : ''}</span>
       </div>
-      <div className="w-full h-2 bg-border rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
-      </div>
-      <p className="text-[10px] text-muted-foreground mt-1.5">{pct}% to goal{achieved ? ' 🎉' : ''}</p>
+      <Meter value={pct} tone={achieved ? 'success' : 'ink'} />
     </div>
   );
 }
@@ -79,33 +70,27 @@ export default function BIGoals({ clients, checkIns }) {
   };
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-          <Target className="w-4 h-4 text-primary" /> Business Goals
-        </h3>
-      </div>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Goals</h2>
+      <p className="text-sm text-muted-foreground mt-1">Targets you set. Saved on this device.</p>
 
       {editing && (
-        <div className="mb-4 p-3 bg-accent border border-primary rounded-xl">
-          <p className="text-xs font-semibold text-primary mb-2">{GOAL_PRESETS.find(g => g.key === editing)?.label}</p>
+        <div className="mt-4 rounded-lg bg-secondary p-3">
+          <p className="text-[13px] text-muted-foreground mb-2">New target for {GOAL_PRESETS.find(g => g.key === editing)?.label.toLowerCase()}</p>
           <div className="flex gap-2">
-            <input type="number" value={tempVal} onChange={e => setTempVal(e.target.value)}
-              className="flex-1 text-sm border border-primary rounded-lg px-3 py-1.5 outline-none focus:ring-2 focus:ring-primary" />
-            <button onClick={saveEdit} className="w-8 h-8 bg-success text-white rounded-lg flex items-center justify-center hover:bg-success">
-              <Check className="w-4 h-4" />
-            </button>
-            <button onClick={() => setEditing(null)} className="w-8 h-8 bg-border text-muted-foreground rounded-lg flex items-center justify-center hover:bg-border">
-              <X className="w-4 h-4" />
-            </button>
+            <Input type="number" value={tempVal} onChange={e => setTempVal(e.target.value)} className="flex-1 h-9 bg-card" autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') setEditing(null); }} />
+            <Button size="sm" className="h-9" onClick={saveEdit}>Save</Button>
+            <Button size="sm" variant="outline" className="h-9" onClick={() => setEditing(null)}>Cancel</Button>
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="mt-2">
         {GOAL_PRESETS.map(preset => (
-          <GoalCard
+          <GoalRow
             key={preset.key}
+            preset={preset}
             goal={goals[preset.key] || { label: preset.label, target: preset.defaultVal }}
             current={currentValues[preset.key] || 0}
             unit={preset.unit}
@@ -113,8 +98,6 @@ export default function BIGoals({ clients, checkIns }) {
           />
         ))}
       </div>
-
-      <p className="text-[10px] text-muted-foreground text-center mt-3">Click ✏️ on any goal to set your target</p>
-    </div>
+    </Panel>
   );
 }

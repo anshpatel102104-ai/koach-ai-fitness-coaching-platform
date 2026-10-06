@@ -7,16 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, CheckCircle2, Clock, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Plus } from 'lucide-react';
+import { Panel, PanelHeader, Stat, EmptyState } from '@/components/kit';
 
-const STATUS_STYLE = {
-  paid: 'bg-success/10 text-success',
-  pending: 'bg-warning/10 text-warning',
-  failed: 'bg-destructive/10 text-destructive',
-  refunded: 'bg-muted text-muted-foreground',
-};
-const STATUS_ICON = { paid: CheckCircle2, pending: Clock, failed: XCircle, refunded: XCircle };
+const STATUS_BADGE = { paid: 'success', pending: 'warning', failed: 'destructive', refunded: 'secondary' };
+const TYPE_LABEL = { monthly: 'Monthly', one_time: 'One-time', upsell: 'Upsell' };
 
 export default function PaymentTracker({ clients }) {
   const [showForm, setShowForm] = useState(false);
@@ -48,57 +43,52 @@ export default function PaymentTracker({ clients }) {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Payment Tracker</h2>
-          <div className="flex items-center gap-4 mt-2">
-            <span className="text-xs text-success font-medium">${totalPaid.toLocaleString()} collected</span>
-            <span className="text-xs text-warning font-medium">${totalPending.toLocaleString()} pending</span>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
-          <Plus className="w-3.5 h-3.5 mr-1" /> Add Payment
-        </Button>
+    <Panel>
+      <PanelHeader
+        title="Payments"
+        subtitle="Manual payments you track outside Stripe. The last 50 are shown."
+        right={<Button size="sm" onClick={() => setShowForm(true)}><Plus /> Add payment</Button>}
+      />
+      <div className="grid grid-cols-2 gap-6 px-5 sm:px-6 pb-5 border-b border-border">
+        <Stat label="Collected" value={`$${totalPaid.toLocaleString()}`} />
+        <Stat label="Pending" value={`$${totalPending.toLocaleString()}`} tone={totalPending > 0 ? 'warning' : undefined} />
       </div>
 
-      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-        {payments.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No payments recorded yet</p>
-        ) : payments.map(p => {
-          const Icon = STATUS_ICON[p.status] || Clock;
-          return (
-            <div key={p.id} className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
-              <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0", STATUS_STYLE[p.status])}>
-                <Icon className="w-4 h-4" />
-              </div>
+      {payments.length === 0 ? (
+        <EmptyState title="No payments recorded yet" body="Add one when a client pays you by bank transfer, cash or another app." />
+      ) : (
+        <ul className="divide-y divide-border px-5 sm:px-6 max-h-[480px] overflow-y-auto">
+          {payments.map(p => (
+            <li key={p.id} className="flex items-center gap-3 py-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{p.client_name || 'Unknown'}</p>
-                <p className="text-xs text-muted-foreground">{p.description || p.type} {p.due_date ? `· Due ${p.due_date}` : ''}</p>
+                <p className="text-[15px] font-semibold text-foreground truncate">{p.client_name || 'Unknown client'}</p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {p.description || TYPE_LABEL[p.type] || p.type}{p.due_date ? `, due ${p.due_date}` : ''}
+                </p>
               </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-sm font-bold">${(p.amount || 0).toLocaleString()}</p>
-                <div className="flex items-center gap-1 justify-end">
-                  <Badge className={cn("text-[10px]", STATUS_STYLE[p.status])}>{p.status}</Badge>
-                  {p.status === 'pending' && (
-                    <Button size="sm" variant="ghost" className="h-5 text-[10px] text-success px-1"
-                      onClick={() => updateMutation.mutate({ id: p.id, data: { status: 'paid', paid_date: new Date().toISOString().split('T')[0] } })}>
-                      Mark Paid
-                    </Button>
-                  )}
-                </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {p.status === 'pending' && (
+                  <button
+                    className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2"
+                    onClick={() => updateMutation.mutate({ id: p.id, data: { status: 'paid', paid_date: new Date().toISOString().split('T')[0] } })}
+                  >
+                    Mark paid
+                  </button>
+                )}
+                <Badge variant={STATUS_BADGE[p.status] || 'secondary'} className="capitalize">{p.status}</Badge>
+                <span className="num text-lg w-20 text-right">${(p.amount || 0).toLocaleString()}</span>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="font-heading">Add Payment</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add payment</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             <div>
-              <Label>Client *</Label>
+              <Label>Client</Label>
               <Select value={form.client_id} onValueChange={v => setForm({...form, client_id: v})}>
                 <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
                 <SelectContent>
@@ -109,7 +99,7 @@ export default function PaymentTracker({ clients }) {
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Amount ($) *</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required /></div>
+              <div><Label>Amount ($)</Label><Input type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required /></div>
               <div>
                 <Label>Type</Label>
                 <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
@@ -134,15 +124,15 @@ export default function PaymentTracker({ clients }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Due Date</Label><Input type="date" value={form.due_date} onChange={e => setForm({...form, due_date: e.target.value})} /></div>
+              <div><Label>Due date</Label><Input type="date" value={form.due_date} onChange={e => setForm({...form, due_date: e.target.value})} /></div>
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
-              <Button type="submit">Add Payment</Button>
+              <Button type="submit">Add payment</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-    </div>
+    </Panel>
   );
 }

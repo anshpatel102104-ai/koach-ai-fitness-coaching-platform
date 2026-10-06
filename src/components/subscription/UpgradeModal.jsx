@@ -1,26 +1,21 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Segmented } from '@/components/kit';
 import { Button } from '@/components/ui/button';
 import { TIERS, TIER_ORDER, FEATURE_INFO, getUserTier } from '@/lib/subscription';
-import { Check, X, Zap, ArrowRight, Sparkles, TrendingUp, Trophy, ShoppingBag,
-  ClipboardList, DollarSign, Globe, Smartphone, Users, Palette, Code } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
 import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 
-const ICON_MAP = {
-  TrendingUp, Trophy, ShoppingBag, ClipboardList, DollarSign, Globe,
-  Smartphone, Users, Sparkles, Palette, Code, Zap,
-};
-
 // Key selling points shown per tier in the comparison table
 const TIER_SELLING_POINTS = {
   starter: [clientLimitLabel('starter'), aiLimitLabel('starter'), 'Workout programs', 'Nutrition plans', 'Scheduling', 'Text messaging'],
-  pro:     [clientLimitLabel('pro'), aiLimitLabel('pro'), 'AI onboarding', 'Progress analytics', 'Check-in reviews', 'AI check-in summaries & replies', 'Adherence scoring', 'Analytics graphs', 'Voice & video messages', 'Client mobile dashboard'],
-  elite:   [clientLimitLabel('elite'), aiLimitLabel('elite'), 'Full AI assistant', 'AI calorie & progression', 'Auto progression rules', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module'],
-  enterprise: [clientLimitLabel('enterprise'), aiLimitLabel('enterprise'), 'Team AI access', 'Multi-coach team accounts', 'Advanced analytics (LTV, churn)', 'Stripe & Sheets integrations', 'API access', 'Priority support'],
+  pro:     [clientLimitLabel('pro'), aiLimitLabel('pro'), 'AI onboarding', 'Progress analytics', 'Check-in reviews', 'AI check-in summaries and replies', 'Adherence scoring', 'Analytics graphs', 'Voice and video messages', 'Client mobile dashboard'],
+  elite:   [clientLimitLabel('elite'), aiLimitLabel('elite'), 'Full AI assistant', 'AI calorie and progression', 'Auto progression rules', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community module'],
+  enterprise: [clientLimitLabel('enterprise'), aiLimitLabel('enterprise'), 'Team AI access', 'Multi-coach team accounts', 'Advanced analytics (LTV, churn)', 'Stripe and Sheets integrations', 'API access', 'Priority support'],
 };
 
 export default function UpgradeModal({ open, onClose, featureKey, user, onUserUpdate }) {
@@ -32,7 +27,6 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
   const minTierKey = featureInfo.minTier || 'pro';
   const userTier = getUserTier(user);
   const currentTierIndex = TIER_ORDER.indexOf(userTier.key);
-  const FeatureIcon = ICON_MAP[featureInfo.icon] || Zap;
 
   const getPrice = (tier) => {
     const p = PLAN_PRICES[tier.key];
@@ -67,7 +61,7 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
         if (onUserUpdate) onUserUpdate(updated);
         const tier = TIERS[tierKey];
         const isUpgrade = TIER_ORDER.indexOf(tierKey) > currentTierIndex;
-        toast.success(`${isUpgrade ? '🚀 Upgraded' : 'Switched'} to ${tier.name}!`, {
+        toast.success(`${isUpgrade ? 'Upgraded' : 'Switched'} to ${tier.name}`, {
           description: 'Your plan change is now active.',
         });
         onClose();
@@ -85,114 +79,84 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
   // Recommended = 'elite' if user is pro or above, otherwise 'pro'
   const recommendedKey = currentTierIndex >= TIER_ORDER.indexOf('pro') ? 'elite' : 'pro';
 
+  const minTier = TIERS[minTierKey] || TIERS.pro;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden border-border" style={{ background: 'var(--tc-card)' }}>
+      <DialogContent className="sm:max-w-5xl p-0 sm:p-0 sm:gap-0 overflow-hidden">
         {/* Header */}
-        <div className="relative p-6 pb-4 overflow-hidden border-b border-border">
-          <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-foreground hover:text-foreground transition-colors z-10">
-            <X className="w-4 h-4" />
-          </button>
-          <div className="relative z-10 flex items-center gap-4">
-            {featureKey && (
-              <div className="w-10 h-10 rounded-xl bg-primary/15 ring-1 ring-primary/30 flex items-center justify-center flex-shrink-0 glow-sm">
-                <FeatureIcon className="w-5 h-5 text-primary" />
-              </div>
-            )}
-            <div className="flex-1">
-              <h2 className="text-xl font-heading font-bold">
-                {featureInfo.name ? `Unlock ${featureInfo.name}` : 'Choose your plan'}
-              </h2>
-              {featureInfo.description && (
-                <p className="text-sm text-muted-foreground mt-0.5">{featureInfo.description}</p>
-              )}
-            </div>
-            {/* Billing toggle */}
-            <div className="flex items-center gap-1 bg-muted border border-border rounded-lg p-1 text-xs font-semibold">
-              <button
-                onClick={() => setBilling('monthly')}
-                className={cn('px-3 py-1.5 rounded-md transition-all', billing === 'monthly' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:text-foreground')}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBilling('yearly')}
-                className={cn('px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5', billing === 'yearly' ? 'bg-card text-foreground shadow-sm' : 'text-foreground hover:text-foreground')}
-              >
-                Yearly
-                <span className="text-[10px] font-bold text-accent bg-accent/10 px-1.5 py-0.5 rounded-full">-20%</span>
-              </button>
-            </div>
+        <div className="px-6 pt-6 pb-4 border-b border-border flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pr-12">
+          <div className="min-w-0">
+            <DialogTitle className="text-[26px]">
+              {featureInfo.name ? `${featureInfo.name} is on ${minTier.name}` : 'Choose your plan'}
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+              {featureInfo.description || `You're on ${userTier.name}. Every plan bills through Stripe and can be changed any time.`}
+            </p>
           </div>
+          <Segmented
+            size="sm"
+            value={billing}
+            onChange={setBilling}
+            options={[{ value: 'monthly', label: 'Monthly' }, { value: 'yearly', label: 'Yearly, save 20%' }]}
+          />
         </div>
 
         {/* Plans comparison grid */}
         <div className="p-6 overflow-x-auto">
-          <div className="grid grid-cols-4 gap-3 min-w-[640px]">
+          <div className="grid grid-cols-4 gap-3 min-w-[680px]">
             {TIER_ORDER.map(tierKey => {
               const tier = TIERS[tierKey];
               const isCurrent = userTier.key === tierKey;
               const isRecommended = tierKey === recommendedKey && !isCurrent;
               const tierIndex = TIER_ORDER.indexOf(tierKey);
               const isUpgrade = tierIndex > currentTierIndex;
-              const isDowngrade = tierIndex < currentTierIndex;
               const price = getPrice(tier);
 
               return (
                 <div key={tierKey} className={cn(
-                  'relative rounded-xl border flex flex-col transition-all',
-                  isCurrent      ? 'border-primary/40 bg-primary/5 ring-1 ring-primary/20' :
-                  isRecommended  ? 'border-accent/40 bg-accent/5 ring-1 ring-accent/20' :
-                                   'border-border bg-muted hover:border-border'
+                  'rounded-xl flex flex-col',
+                  isCurrent ? 'bg-primary text-primary-foreground' : 'bg-card shadow-[0_0_0_1px_rgb(var(--border))]'
                 )}>
-                  {isRecommended && (
-                    <div className="absolute -top-2.5 inset-x-0 flex justify-center">
-                      <span className="text-[9px] font-bold uppercase tracking-widest bg-accent text-accent-foreground px-3 py-0.5 rounded-full">
-                        Recommended
+                  <div className={cn('p-4 pb-3 border-b', isCurrent ? 'border-primary-foreground/15' : 'border-border')}>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="text-xl">{tier.name}</h3>
+                      <span className={cn('text-xs', isCurrent ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                        {isCurrent ? 'Your plan' : isRecommended ? 'Suggested' : ''}
                       </span>
                     </div>
-                  )}
-                  {isCurrent && (
-                    <div className="absolute -top-2.5 inset-x-0 flex justify-center">
-                      <span className="text-[9px] font-bold uppercase tracking-widest bg-primary text-primary-foreground px-3 py-0.5 rounded-full">
-                        Current Plan
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="p-4 pb-3 border-b border-border">
-                    <p className={cn('font-heading font-bold text-sm mb-1', tier.color)}>{tier.name}</p>
-                    <div className="flex items-end gap-1">
-                      <span className="stat-number text-2xl font-heading font-bold">${price}</span>
-                      <span className="text-xs text-foreground mb-0.5">/mo</span>
-                    </div>
+                    <p className="mt-2">
+                      <span className="num text-[30px] leading-none">${price}</span>
+                      <span className={cn('text-xs', isCurrent ? 'text-primary-foreground/70' : 'text-muted-foreground')}> / month</span>
+                    </p>
                     {billing === 'yearly' && (
-                      <p className="text-[10px] text-accent mt-0.5">Save ${PLAN_PRICES[tier.key].annualSave}/yr</p>
+                      <p className={cn('text-xs mt-1', isCurrent ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Saves ${PLAN_PRICES[tier.key].annualSave} a year</p>
                     )}
                   </div>
 
-                  <div className="p-4 flex-1 space-y-1.5">
+                  <ul className="p-4 flex-1 space-y-1.5">
                     {TIER_SELLING_POINTS[tierKey].map(point => (
-                      <div key={point} className="flex items-start gap-1.5">
-                        <Check className="w-3 h-3 text-accent flex-shrink-0 mt-0.5" />
-                        <span className="text-[11px] text-foreground leading-tight">{point}</span>
-                      </div>
+                      <li key={point} className="flex items-start gap-2">
+                        <Check className={cn('w-3.5 h-3.5 flex-shrink-0 mt-[2px]', isCurrent ? 'text-primary-foreground/70' : 'text-muted-foreground')} />
+                        <span className={cn('text-[13px] leading-snug', isCurrent ? 'text-primary-foreground/90' : 'text-foreground/85')}>{point}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
 
-                  <div className="p-4 pt-3">
-                    <Button
-                      size="sm"
-                      className="w-full text-xs"
-                      variant={isCurrent ? 'secondary' : isRecommended ? 'default' : 'outline'}
-                      disabled={isCurrent || saving === tierKey}
-                      onClick={() => handleSelectTier(tierKey)}
-                    >
-                      {saving === tierKey ? 'Switching...' :
-                       isCurrent ? 'Current Plan' :
-                       isUpgrade ? <><span>Upgrade to {tier.name}</span> <ArrowRight className="w-3 h-3" /></> :
-                       `Switch to ${tier.name}`}
-                    </Button>
+                  <div className="p-4 pt-2">
+                    {isCurrent ? (
+                      <p className="h-8 flex items-center justify-center text-[13px] font-semibold text-primary-foreground/70">Current plan</p>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="w-full"
+                        variant={isUpgrade ? 'default' : 'outline'}
+                        disabled={saving === tierKey}
+                        onClick={() => handleSelectTier(tierKey)}
+                      >
+                        {saving === tierKey ? 'Switching…' : isUpgrade ? `Upgrade to ${tier.name}` : `Switch to ${tier.name}`}
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
@@ -200,8 +164,8 @@ export default function UpgradeModal({ open, onClose, featureKey, user, onUserUp
           </div>
         </div>
 
-        <p className="text-center text-xs text-foreground pb-5">
-          Secure checkout via Stripe · No setup fees · Cancel anytime
+        <p className="text-[13px] text-muted-foreground px-6 pb-6">
+          Checkout through Stripe. No setup fees. Cancel any time.
         </p>
       </DialogContent>
     </Dialog>

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check, Download, Upload } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Download, Upload, Users, BookOpen, Dumbbell, CalendarClock, TrendingUp, Palette, Archive } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SettingsShell, SettingsPanel, SettingsRow, SaveButton } from '@/components/settings/SettingsLayout';
 import BSCoachingPrefs from '@/components/business-settings/BSCoachingPrefs';
 import BSOnboarding from '@/components/business-settings/BSOnboarding';
 import BSProgramNutrition from '@/components/business-settings/BSProgramNutrition';
@@ -16,7 +16,7 @@ const EMPTY = {
   checkin_frequency: 'weekly', checkin_due_day: 1, checkin_reminder_hours: 24,
   auto_assign_checkin_form: false, auto_assign_program: false, auto_assign_meal_plan: false,
   welcome_message_enabled: true,
-  welcome_message: "Welcome! I'm so excited to start this journey with you. Check out your program and don't hesitate to message me with any questions 💪",
+  welcome_message: "Welcome. Your program is ready in the app. Message me with any question, big or small.",
   max_clients_unlimited: true, max_clients: 50, waitlist_enabled: false, capacity_alerts: true,
   default_tags: [], auto_tag_at_risk_pct: 60, auto_tag_high_performer_pct: 90, auto_tag_new_client_days: 30,
   onboarding_items: [], onboarding_deadline_days: 7, onboarding_remind_days: 3, onboarding_notify_coach: true,
@@ -30,7 +30,7 @@ const EMPTY = {
   allow_session_requests: true, session_types: [], booking_notice_hours: 24, max_sessions_per_month: 0, session_buffer_minutes: 0,
   pipeline_stages: [], auto_move_pipeline_enabled: false, auto_move_pipeline_days: 7,
   followup_reminder_enabled: true, followup_reminder_days: 3,
-  brand_color: 'var(--tc-primary)', logo_url: '', email_signature: '', reply_to_email: '',
+  brand_color: '#0A5CFF', logo_url: '', email_signature: '', reply_to_email: '',
 };
 
 export default function BusinessSettings() {
@@ -41,6 +41,7 @@ export default function BusinessSettings() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [section, setSection] = useState('coaching');
 
   const { data: user } = useQuery({ queryKey: ['me'], queryFn: () => me() });
 
@@ -128,74 +129,57 @@ export default function BusinessSettings() {
 
   const sharedProps = { s, set };
 
+  const NAV = [{
+    items: [
+      { id: 'coaching', label: 'Coaching', icon: Users },
+      { id: 'onboarding', label: 'Onboarding', icon: BookOpen },
+      { id: 'programs', label: 'Programs and nutrition', icon: Dumbbell },
+      { id: 'scheduling', label: 'Scheduling', icon: CalendarClock },
+      { id: 'leads', label: 'Leads and sales', icon: TrendingUp },
+      { id: 'branding', label: 'Branding', icon: Palette },
+      { id: 'backup', label: 'Backup and restore', icon: Archive },
+    ],
+  }];
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-border transition-colors">
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-foreground">Business Settings</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Configure how your coaching business operates</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <AnimatePresence>
-            {savedAt && !isDirty && (
-              <motion.p initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                className="text-xs text-success font-semibold flex items-center gap-1">
-                <Check className="w-3 h-3" /> Saved ✓
-              </motion.p>
-            )}
-          </AnimatePresence>
-          <button onClick={save} disabled={saving}
-            className="px-5 py-2.5 rounded-xl font-bold text-primary-foreground text-sm flex items-center gap-2 disabled:opacity-60 transition-opacity"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-            Save Changes
-          </button>
-        </div>
+    <SettingsShell
+      backTo="/settings"
+      title="Business settings"
+      subtitle="How your coaching business runs, from the first check-in to the email signature. Changes save every 30 seconds."
+      nav={NAV}
+      active={section}
+      onSelect={setSection}
+      actions={<SaveButton onClick={save} saving={saving} saved={!!savedAt} dirty={isDirty} />}
+    >
+      {section === 'coaching' && <BSCoachingPrefs {...sharedProps} forms={forms} programs={programs} mealPlans={mealPlans} />}
+      {section === 'onboarding' && <BSOnboarding {...sharedProps} forms={forms} />}
+      {section === 'programs' && <BSProgramNutrition {...sharedProps} />}
+      {section === 'scheduling' && <BSScheduling {...sharedProps} />}
+      {section === 'leads' && <BSLeadSales {...sharedProps} />}
+      {section === 'branding' && <BSBranding {...sharedProps} />}
+      {section === 'backup' && (
+        <SettingsPanel title="Backup and restore" subtitle="Keep a copy of these settings, or load them from a file.">
+          <SettingsRow label="Export" help="Downloads every business setting as a JSON file.">
+            <div className="flex sm:justify-end">
+              <Button variant="outline" onClick={exportSettings}><Download /> Export settings</Button>
+            </div>
+          </SettingsRow>
+          <SettingsRow label="Import" help="Loads a backup into the form. Nothing is saved until you press Save.">
+            <div className="flex sm:justify-end">
+              <Button asChild variant="outline">
+                <label className="cursor-pointer">
+                  <Upload /> Import a file
+                  <input type="file" accept=".json" className="hidden" onChange={importSettings} />
+                </label>
+              </Button>
+            </div>
+          </SettingsRow>
+        </SettingsPanel>
+      )}
+
+      <div className="flex justify-end">
+        <SaveButton onClick={save} saving={saving} saved={!!savedAt} dirty={isDirty} label="Save all changes" />
       </div>
-
-      {/* Sections */}
-      <div className="space-y-6">
-        <BSCoachingPrefs {...sharedProps} forms={forms} programs={programs} mealPlans={mealPlans} />
-        <BSOnboarding {...sharedProps} forms={forms} />
-        <BSProgramNutrition {...sharedProps} />
-        <BSScheduling {...sharedProps} />
-        <BSLeadSales {...sharedProps} />
-        <BSBranding {...sharedProps} />
-
-        {/* Export/Import */}
-        <div className="bg-card rounded-2xl border border-border p-5 flex items-center justify-between shadow-sm">
-          <div>
-            <p className="font-bold text-foreground text-sm">Backup & Restore</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Export your settings as JSON or import from a backup</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={exportSettings}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground bg-muted border border-border hover:bg-border transition-colors">
-              <Download className="w-4 h-4" /> Export
-            </button>
-            <label className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-muted-foreground bg-muted border border-border hover:bg-border transition-colors cursor-pointer">
-              <Upload className="w-4 h-4" /> Import
-              <input type="file" accept=".json" className="hidden" onChange={importSettings} />
-            </label>
-          </div>
-        </div>
-
-        {/* Bottom save */}
-        <div className="flex justify-end pb-8">
-          <button onClick={save} disabled={saving}
-            className="px-8 py-3 rounded-xl font-bold text-primary-foreground flex items-center gap-2 disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-            Save All Changes
-          </button>
-        </div>
-      </div>
-    </div>
+    </SettingsShell>
   );
 }

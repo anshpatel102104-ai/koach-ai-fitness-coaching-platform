@@ -12,32 +12,32 @@ import ProgressMeasurementsTab from '@/components/progress/tabs/ProgressMeasurem
 import ProgressPhotosTab from '@/components/progress/tabs/ProgressPhotosTab';
 import ProgressPerformanceTab from '@/components/progress/tabs/ProgressPerformanceTab';
 import {
-  Scale, Activity, Ruler, Camera, Zap, Sparkles, ChevronRight,
+  Scale, Activity, Ruler, Camera, Gauge, ScanText, ChevronRight,
 } from 'lucide-react';
 
 // ── Metric categories — extensible list. Add more here later. ──
 const CATEGORIES = [
   {
     key: 'body_weight',
-    label: 'Body Weight',
+    label: 'Body weight',
     icon: Scale,
     description: 'Weight log & trend chart',
   },
   {
     key: 'body_metrics',
-    label: 'Body Metrics',
+    label: 'Body metrics',
     icon: Ruler,
     description: 'Height, sex, DOB, weight targets',
   },
   {
     key: 'overview',
-    label: 'Progress Overview',
+    label: 'Progress overview',
     icon: Activity,
     description: 'Goal progress & score summary',
   },
   {
     key: 'body_stats',
-    label: 'Body Stats',
+    label: 'Body stats',
     icon: Scale,
     description: 'Check-in weight history',
   },
@@ -56,13 +56,13 @@ const CATEGORIES = [
   {
     key: 'performance',
     label: 'Performance',
-    icon: Zap,
+    icon: Gauge,
     description: 'Workout performance data',
   },
   {
     key: 'ai',
-    label: 'AI Analysis',
-    icon: Sparkles,
+    label: 'AI analysis',
+    icon: ScanText,
     description: 'AI-generated progress insights',
   },
 ];
@@ -121,7 +121,7 @@ export default function MetricsTab({ client, onClientUpdated }) {
       {/* ── LEFT: Category list (Trainerize-style) ── */}
       <div className="w-[220px] flex-shrink-0 bg-card border-r border-border overflow-y-auto">
         <div className="px-4 py-3 border-b border-border">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Metrics</p>
+          <p className="text-xs font-semibold text-muted-foreground">Metrics</p>
         </div>
         <div className="py-2">
           {CATEGORIES.map(cat => {
@@ -146,7 +146,7 @@ export default function MetricsTab({ client, onClientUpdated }) {
                   <p className={cn('text-[13px] font-semibold leading-tight', isActive ? 'text-primary' : 'text-foreground')}>
                     {cat.label}
                   </p>
-                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">{cat.description}</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5 truncate">{cat.description}</p>
                 </div>
                 <ChevronRight className={cn('w-3.5 h-3.5 flex-shrink-0', isActive ? 'text-primary' : 'text-border')} />
               </button>

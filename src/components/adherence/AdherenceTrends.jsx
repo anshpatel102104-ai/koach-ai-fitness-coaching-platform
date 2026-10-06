@@ -5,9 +5,12 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { averageAdherenceScore } from '@/lib/adherence';
+import { Panel, PanelHeader, Segmented } from '@/components/kit';
 
 const CHART_TABS = ['Overall', 'Workout', 'Nutrition'];
-const COLORS = ['var(--tc-primary)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--tc-ai)', 'var(--tc-destructive)', 'var(--kc-06b6d4)', 'var(--kc-ec4899)', 'var(--kc-84cc16)'];
+const INK = 'rgb(var(--foreground))';
+const GREY = 'rgb(var(--muted-foreground))';
+const BRAND = 'rgb(var(--brand))';
 
 function buildWeeklyData(clients, cisByClient, key, rangeWeeks) {
   const weeks = [];
@@ -42,18 +45,17 @@ function buildWeeklyData(clients, cisByClient, key, rangeWeeks) {
 
 const CustomTooltip = ({ active, payload, label, clients }) => {
   if (!active || !payload?.length) return null;
+  const rows = [...payload].filter(p => p.value !== null && p.value !== undefined).sort((a, b) => (a.dataKey === 'team_avg' ? -1 : b.dataKey === 'team_avg' ? 1 : b.value - a.value));
   return (
-    <div className="bg-card border border-border rounded-xl px-3 py-2.5 shadow-xl text-xs min-w-[140px]">
-      <p className="font-bold text-foreground mb-2">{label}</p>
-      {payload.map((p, i) => {
-        const clientName = p.dataKey === 'team_avg' ? 'Team Avg' : clients.find(c => c.id === p.dataKey)?.name || p.dataKey;
+    <div className="min-w-[160px] rounded-lg bg-card px-3 py-2.5 text-[13px] shadow-[0_0_0_1px_rgb(var(--border))]">
+      <p className="mb-1.5 font-semibold text-foreground">Week of {label}</p>
+      {rows.map((p, i) => {
+        const isTeam = p.dataKey === 'team_avg';
+        const clientName = isTeam ? 'Roster average' : clients.find(c => c.id === p.dataKey)?.name || p.dataKey;
         return (
-          <div key={i} className="flex items-center justify-between gap-3 mb-0.5">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
-              <span className="text-foreground">{clientName}</span>
-            </div>
-            <span className="font-bold" style={{ color: p.color }}>{p.value !== null ? `${p.value}%` : '—'}</span>
+          <div key={i} className="flex items-center justify-between gap-4 py-0.5">
+            <span className={cn(isTeam ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{clientName}</span>
+            <span className="font-semibold tabular-nums text-foreground">{p.value}%</span>
           </div>
         );
       })}
@@ -64,6 +66,7 @@ const CustomTooltip = ({ active, payload, label, clients }) => {
 export default function AdherenceTrends({ clients, checkIns, rangeWeeks }) {
   const [tab, setTab] = useState('Overall');
   const [hiddenClients, setHiddenClients] = useState(new Set());
+  const [focusId, setFocusId] = useState(null);
 
   const cisByClient = useMemo(() => {
     const map = {};
@@ -121,98 +124,86 @@ export default function AdherenceTrends({ clients, checkIns, rangeWeeks }) {
 
   const visibleClients = clients.slice(0, 8);
 
+  const Highlight = ({ label, entry, value, tone }) => (
+    <div className="min-w-0 px-5 py-4 sm:px-6">
+      <p className="text-[13px] text-muted-foreground">{label}</p>
+      {entry ? (
+        <>
+          <p className="mt-1 truncate text-[15px] font-semibold text-foreground">{entry.client.name}</p>
+          <p className={cn('num text-[22px]', tone)}>{value}</p>
+        </>
+      ) : <p className="mt-1 text-sm text-muted-foreground">Not enough data</p>}
+    </div>
+  );
+
   return (
-    <div className="bg-card border border-border rounded-xl overflow-hidden">
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 px-4 py-3 border-b border-border">
-        <p className="text-sm font-semibold text-foreground mr-3">Adherence Trends</p>
-        {CHART_TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={cn('px-3 py-1 rounded-lg text-xs font-semibold transition-all',
-              tab === t ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-border')}>
-            {t}
-          </button>
-        ))}
+    <Panel>
+      <PanelHeader
+        title="Trends"
+        subtitle="Roster average in ink. Pick a client to compare them against it."
+        right={<Segmented size="sm" value={tab} onChange={setTab} options={CHART_TABS.map(t => ({ value: t, label: t === 'Workout' ? 'Training' : t }))} className="hidden sm:inline-flex" />}
+      />
+      <div className="px-5 sm:hidden">
+        <Segmented size="sm" value={tab} onChange={setTab} options={CHART_TABS.map(t => ({ value: t, label: t === 'Workout' ? 'Training' : t }))} />
       </div>
 
-      <div className="p-4">
-        {/* Client legend toggles */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <div className="flex items-center gap-1.5 mr-2">
-            <div className="w-8 h-0.5 bg-sidebar" style={{ borderTop: '2px dashed var(--tc-foreground)' }} />
-            <span className="text-[10px] text-muted-foreground font-medium">Team Avg</span>
-          </div>
-          {visibleClients.map((c, i) => (
-            <button key={c.id} onClick={() => toggleClient(c.id)}
-              className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all',
-                hiddenClients.has(c.id) ? 'opacity-40 line-through' : '')}>
-              <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-              {c.name}
-            </button>
-          ))}
+      <div className="px-5 pb-2 pt-3 sm:px-6">
+        {/* Client toggles: click a name to highlight it, double-click to hide it */}
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {visibleClients.map(c => {
+            const hidden = hiddenClients.has(c.id);
+            const focused = focusId === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setFocusId(f => (f === c.id ? null : c.id))}
+                onDoubleClick={() => toggleClient(c.id)}
+                title="Click to highlight, double-click to hide"
+                className={cn(
+                  'touch-compact inline-flex h-7 items-center rounded-md px-2.5 text-[13px] font-medium transition-colors',
+                  focused ? 'bg-brand text-brand-foreground' : 'bg-secondary text-foreground hover:bg-accent',
+                  hidden && 'opacity-40 line-through'
+                )}
+              >
+                {c.name}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Chart */}
         {chartData.length < 2 ? (
-          <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-            Not enough data — log more check-ins to see trends.
+          <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
+            Trends appear once there are two weeks of check-ins.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--tc-muted)" vertical={false} />
-              <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} domain={[0, 100]} />
+            <LineChart data={chartData} margin={{ top: 4, right: 16, left: -12, bottom: 0 }}>
+              <CartesianGrid stroke="rgb(var(--border))" vertical={false} />
+              <XAxis dataKey="week" tick={{ fontSize: 11, fill: GREY }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: GREY }} axisLine={false} tickLine={false} domain={[0, 100]} />
               <Tooltip content={<CustomTooltip clients={visibleClients} />} />
-              {/* Team avg dashed */}
-              <Line type="monotone" dataKey="team_avg" stroke="var(--tc-foreground)" strokeWidth={2} strokeDasharray="6 3"
-                dot={false} connectNulls name="Team Avg" />
-              {/* Per-client lines */}
-              {visibleClients.map((c, i) => (
+              {visibleClients.map(c => (
                 !hiddenClients.has(c.id) && (
-                  <Line key={c.id} type="monotone" dataKey={c.id} stroke={COLORS[i % COLORS.length]}
-                    strokeWidth={1.5} dot={{ r: 2.5, fill: COLORS[i % COLORS.length], strokeWidth: 0 }}
+                  <Line key={c.id} type="monotone" dataKey={c.id}
+                    stroke={focusId === c.id ? BRAND : GREY}
+                    strokeOpacity={focusId && focusId !== c.id ? 0.2 : focusId === c.id ? 1 : 0.35}
+                    strokeWidth={focusId === c.id ? 2.5 : 1.25}
+                    dot={focusId === c.id ? { r: 3, fill: BRAND, strokeWidth: 0 } : false}
                     activeDot={{ r: 4 }} connectNulls />
                 )
               ))}
+              <Line type="monotone" dataKey="team_avg" stroke={INK} strokeWidth={2.5}
+                dot={false} connectNulls name="Roster average" />
             </LineChart>
           </ResponsiveContainer>
         )}
-
-        {/* Summary pills */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-          {summary.best && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-success/10 border border-success">
-              <span className="text-success text-lg">🏆</span>
-              <div className="min-w-0">
-                <p className="text-[10px] text-success font-semibold uppercase tracking-wide">Best This Period</p>
-                <p className="text-xs font-bold text-success truncate">{summary.best.client.name}</p>
-                <p className="text-[10px] text-success">{summary.best.val}% adherence</p>
-              </div>
-            </div>
-          )}
-          {summary.mostImproved && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-accent border border-accent">
-              <span className="text-primary text-lg">📈</span>
-              <div className="min-w-0">
-                <p className="text-[10px] text-primary font-semibold uppercase tracking-wide">Most Improved</p>
-                <p className="text-xs font-bold text-primary truncate">{summary.mostImproved.client.name}</p>
-                <p className="text-[10px] text-primary">+{summary.mostImproved.improvement}% vs last period</p>
-              </div>
-            </div>
-          )}
-          {summary.needsAttention && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 border border-destructive">
-              <span className="text-destructive text-lg">⚠️</span>
-              <div className="min-w-0">
-                <p className="text-[10px] text-destructive font-semibold uppercase tracking-wide">Needs Attention</p>
-                <p className="text-xs font-bold text-destructive truncate">{summary.needsAttention.client.name}</p>
-                <p className="text-[10px] text-destructive">{summary.needsAttention.val}% adherence</p>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 divide-y divide-border border-t border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <Highlight label="Best this period" entry={summary.best} value={summary.best ? `${summary.best.val}%` : ''} tone="text-foreground" />
+        <Highlight label="Most improved" entry={summary.mostImproved} value={summary.mostImproved ? `${summary.mostImproved.improvement >= 0 ? '+' : ''}${summary.mostImproved.improvement} pts` : ''} tone="text-success" />
+        <Highlight label="Needs attention" entry={summary.needsAttention} value={summary.needsAttention ? `${summary.needsAttention.val}%` : ''} tone="text-destructive" />
+      </div>
+    </Panel>
   );
 }

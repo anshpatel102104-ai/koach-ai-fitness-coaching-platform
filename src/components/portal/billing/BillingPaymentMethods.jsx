@@ -1,61 +1,46 @@
 import React, { useState } from 'react';
-import { CreditCard, Star, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Lock } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Pill } from '@/components/portal/PortalUI';
 
+// Card network brand colours (third-party brand marks).
 const CARD_BRANDS = {
   visa: { color: '#1A1F71', label: 'Visa' },
   mastercard: { color: '#EB001B', label: 'MC' },
   amex: { color: '#2E77BC', label: 'Amex' },
-  default: { color: 'rgb(var(--foreground))', label: '●●●●' },
+  default: { color: null, label: 'Card' },
 };
 
-function MockCard({ card, isDefault, onSetDefault, onRemove }) {
+function MockCard({ card, isDefault, onSetDefault, onRemove, confirming }) {
   const brand = CARD_BRANDS[card.brand?.toLowerCase()] || CARD_BRANDS.default;
   const expiry = new Date(card.exp_year, card.exp_month - 1);
   const daysToExpiry = differenceInDays(expiry, new Date());
   const expiringSoon = daysToExpiry <= 60 && daysToExpiry > 0;
 
   return (
-    <div className="p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${isDefault ? 'rgb(var(--primary) / 0.3)' : 'rgba(255,255,255,0.08)'}` }}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-black" style={{ background: brand.color }}>
-            {brand.label}
-          </div>
-          <div>
-            <p className="text-white text-sm font-semibold">●●●● {card.last4}</p>
-            <p className="text-white/40 text-xs">Expires {card.exp_month}/{card.exp_year}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {isDefault && <Star className="w-4 h-4 text-warning fill-warning" />}
-          {expiringSoon && <AlertTriangle className="w-4 h-4 text-orange-400" />}
-        </div>
+    <li className="py-3">
+      <div className="flex items-center gap-3">
+        <span className="flex h-7 w-10 flex-shrink-0 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground"
+          style={brand.color ? { background: brand.color, color: '#fff' } : undefined}>
+          {brand.label}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold tabular-nums text-foreground">•••• {card.last4}</span>
+          <span className={`block text-[13px] ${expiringSoon ? 'text-warning' : 'text-muted-foreground'}`}>
+            {expiringSoon ? `Expires in ${daysToExpiry} days. Update it soon.` : `Expires ${card.exp_month}/${card.exp_year}`}
+          </span>
+        </span>
+        {isDefault && <Pill>Default</Pill>}
       </div>
-      {expiringSoon && (
-        <p className="text-orange-400 text-[10px] font-semibold mt-2">⚠ Expiring in {daysToExpiry} days — update soon</p>
-      )}
-      <div className="flex gap-2 mt-3">
-        {!isDefault && (
-          <button onClick={() => onSetDefault(card.id)}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold"
-            style={{ background: 'rgb(var(--primary) / 0.15)', color: 'rgb(var(--primary))', border: '1px solid rgb(var(--primary) / 0.25)' }}>
-            Set as default
-          </button>
-        )}
-        {isDefault && (
-          <div className="flex-1 py-2 rounded-xl text-xs font-semibold text-center"
-            style={{ background: 'rgb(var(--primary) / 0.1)', color: 'rgb(var(--primary))' }}>
-            ★ Default card
-          </div>
-        )}
-        <button onClick={() => onRemove(card.id)}
-          className="w-10 h-[34px] rounded-xl flex items-center justify-center"
-          style={{ background: 'rgb(var(--destructive) / 0.1)', border: '1px solid rgb(var(--destructive) / 0.2)' }}>
-          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-        </button>
+      <div className="mt-2 flex gap-2 pl-[52px]">
+        {!isDefault && <Button size="sm" variant="outline" onClick={() => onSetDefault(card.id)}>Make default</Button>}
+        <Button size="sm" variant="outline" className={confirming ? 'border-destructive text-destructive' : ''} onClick={() => onRemove(card.id)}>
+          <Trash2 /> {confirming ? 'Tap again to remove' : 'Remove'}
+        </Button>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -80,53 +65,47 @@ export default function BillingPaymentMethods({ client }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Saved Cards</p>
+      <section className="panel px-4 pt-4 pb-1">
+        <h2 className="text-xl text-foreground">Saved cards</h2>
+        {cards.length === 0 ? (
+          <p className="py-3 text-sm text-muted-foreground">No saved cards.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {cards.map(card => (
+              <MockCard
+                key={card.id}
+                card={card}
+                isDefault={defaultCard === card.id}
+                onSetDefault={setDefaultCard}
+                onRemove={handleRemove}
+                confirming={removeConfirm === card.id}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
 
-      {cards.length === 0 ? (
-        <div className="py-8 text-center rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <CreditCard className="w-8 h-8 text-white/20 mx-auto mb-2" />
-          <p className="text-white/40 text-sm">No saved payment methods</p>
-        </div>
+      {!showAdd ? (
+        <Button variant="outline" size="lg" className="w-full border-dashed" onClick={() => setShowAdd(true)}>
+          <Plus /> Add a card
+        </Button>
       ) : (
-        cards.map(card => (
-          <MockCard
-            key={card.id}
-            card={card}
-            isDefault={defaultCard === card.id}
-            onSetDefault={setDefaultCard}
-            onRemove={handleRemove}
-          />
-        ))
-      )}
-
-      {removeConfirm && (
-        <p className="text-destructive text-xs text-center animate-pulse">Tap remove again to confirm deletion</p>
-      )}
-
-      <button onClick={() => setShowAdd(s => !s)}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all"
-        style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', border: '2px dashed rgba(255,255,255,0.12)' }}>
-        <Plus className="w-4 h-4" />
-        Add New Card
-      </button>
-
-      {showAdd && (
-        <div className="p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <p className="text-white/60 text-xs text-center mb-3">🔒 Secured by Stripe — PCI compliant</p>
-          <div className="space-y-3">
-            <input placeholder="Card number" className="w-full px-4 py-3 rounded-xl text-sm text-white bg-white/10 border border-white/10 outline-none focus:border-primary/50" />
-            <div className="flex gap-3">
-              <input placeholder="MM/YY" className="flex-1 px-4 py-3 rounded-xl text-sm text-white bg-white/10 border border-white/10 outline-none focus:border-primary/50" />
-              <input placeholder="CVC" className="flex-1 px-4 py-3 rounded-xl text-sm text-white bg-white/10 border border-white/10 outline-none focus:border-primary/50" />
+        <section className="panel p-4">
+          <h2 className="text-lg text-foreground">New card</h2>
+          <div className="mt-3 space-y-2.5">
+            <Input placeholder="Card number" className="h-11 text-base" />
+            <div className="flex gap-2.5">
+              <Input placeholder="MM/YY" className="h-11 text-base" />
+              <Input placeholder="CVC" className="h-11 text-base" />
             </div>
-            <input placeholder="Name on card" className="w-full px-4 py-3 rounded-xl text-sm text-white bg-white/10 border border-white/10 outline-none focus:border-primary/50" />
+            <Input placeholder="Name on card" className="h-11 text-base" />
           </div>
-          <button onClick={() => setShowAdd(false)}
-            className="w-full mt-3 py-3 rounded-xl text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-            Add Card
-          </button>
-        </div>
+          <div className="mt-3 flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowAdd(false)}>Cancel</Button>
+            <Button className="flex-1" onClick={() => setShowAdd(false)}>Add card</Button>
+          </div>
+          <p className="mt-3 flex items-center gap-1.5 text-[13px] text-muted-foreground"><Lock className="h-3.5 w-3.5" /> Card details are handled by Stripe.</p>
+        </section>
       )}
     </div>
   );

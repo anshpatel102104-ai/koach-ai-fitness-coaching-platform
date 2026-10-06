@@ -1,52 +1,60 @@
 import React from 'react';
-import { Crown } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
+import { Panel, PanelHeader, Initials, TextLink } from '@/components/kit';
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-
-export default function AdherenceLeaderboard({ clients, checkIns }) {
+/**
+ * Clients ranked by adherence, as a plain list: rank, name, streak, badges,
+ * score. No medals — the number says it.
+ */
+export default function AdherenceLeaderboard({ clients, checkIns, badges = [], limit = 8, onSelect }) {
+  const [showAll, setShowAll] = React.useState(false);
   const cisByClient = {};
   for (const ci of checkIns) (cisByClient[ci.client_id] = cisByClient[ci.client_id] || []).push(ci);
 
   const ranked = clients
     .map(c => {
       const cis = (cisByClient[c.id] || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-      return { client: c, score: averageAdherenceScore(cis), streak: calculateStreak(cis) };
+      return {
+        client: c,
+        score: averageAdherenceScore(cis),
+        streak: calculateStreak(cis),
+        badgeCount: badges.filter(b => b.client_id === c.id).length,
+      };
     })
     .filter(x => x.score !== null)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+    .sort((a, b) => b.score - a.score);
 
   if (!ranked.length) return null;
+  const shown = showAll ? ranked : ranked.slice(0, limit);
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Crown className="w-4 h-4 text-warning" />
-          <h3 className="text-sm font-bold text-foreground">Top Performers This Period</h3>
+    <Panel>
+      <PanelHeader title="Ranking" subtitle="Average of the last 4 check-ins." />
+      <ol className="px-5 pb-2 sm:px-6">
+        {shown.map(({ client, score, streak, badgeCount }, i) => {
+          const Row = onSelect ? 'button' : 'div';
+          return (
+            <li key={client.id} className="border-t border-border first:border-t-0">
+              <Row onClick={onSelect ? () => onSelect(client) : undefined} className="flex w-full items-center gap-3 py-3 text-left">
+                <span className="num w-5 flex-shrink-0 text-[17px] text-muted-foreground">{i + 1}</span>
+                <Initials name={client.name} size={32} tone={score < 50 ? 'alert' : 'default'} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-foreground">{client.name}</span>
+                  <span className="block text-[13px] text-muted-foreground">
+                    {streak}-week streak{badgeCount > 0 && ` · ${badgeCount} badge${badgeCount === 1 ? '' : 's'}`}
+                  </span>
+                </span>
+                <span className="num text-[20px] text-foreground">{score}%</span>
+              </Row>
+            </li>
+          );
+        })}
+      </ol>
+      {ranked.length > limit && (
+        <div className="border-t border-border px-5 py-3 sm:px-6">
+          <TextLink onClick={() => setShowAll(s => !s)}>{showAll ? 'Show fewer' : `Show all ${ranked.length}`}</TextLink>
         </div>
-      </div>
-      <div className="flex gap-3">
-        {ranked.map(({ client, score, streak }, i) => (
-          <div key={client.id} className={cn(
-            'flex-1 flex flex-col items-center gap-2 p-3 rounded-xl text-center border',
-            i === 0 ? 'bg-gradient-to-b from-warning/10 to-warning/10 border-warning' : 'bg-background border-border'
-          )}>
-            <span className="text-2xl">{MEDALS[i]}</span>
-            <div className={cn('w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm',
-              i === 0 ? 'bg-gradient-to-br from-warning to-orange-500' : 'bg-gradient-to-br from-primary to-ai')}>
-              {client.name?.[0]?.toUpperCase()}
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-foreground truncate max-w-[80px]">{client.name}</p>
-              <p className={cn('text-xl font-black', i === 0 ? 'text-warning' : 'text-primary')}>{score}%</p>
-              <p className="text-[10px] text-muted-foreground">{streak >= 7 ? '🔥' : ''} {streak}w streak</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+      )}
+    </Panel>
   );
 }

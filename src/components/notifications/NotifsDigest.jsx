@@ -32,13 +32,9 @@ function MultiCheckGrid({ values = [], onChange, options }) {
       {options.map(o => (
         <label key={o.value} className="flex items-center gap-3 cursor-pointer">
           <div onClick={() => toggle(o.value)}
-            className="w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition-all cursor-pointer"
-            style={{
-              background: values.includes(o.value) ? 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' : 'white',
-              borderColor: values.includes(o.value) ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)',
-            }}>
+            className={`w-4 h-4 rounded-[4px] flex-shrink-0 border flex items-center justify-center transition-colors cursor-pointer ${values.includes(o.value) ? 'bg-primary border-primary' : 'bg-card border-input'}`}>
             {values.includes(o.value) && (
-              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg className="w-2.5 h-2.5 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             )}
@@ -55,31 +51,30 @@ export default function NotifsDigest({ s, setField }) {
   const weeklyIncludes = s.weekly_digest_includes?.length ? s.weekly_digest_includes : DEFAULT_WEEKLY_INCLUDES;
 
   return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{ boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)' }}>
-      <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/60">
-        <span className="text-base">📧</span>
-        <h2 className="font-bold text-foreground text-sm">Email Digest Settings</h2>
+    <section className="panel overflow-hidden">
+      <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-border">
+        <h2 className="text-[20px] text-foreground">Email digests</h2>
       </div>
-      <div className="p-6 space-y-6">
+      <div className="p-5 sm:p-6 space-y-6">
         {/* Daily Digest */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-bold text-foreground">Daily Digest</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Morning summary delivered to your email</p>
+              <p className="text-[15px] font-semibold text-foreground">Daily digest</p>
+              <p className="text-sm text-muted-foreground mt-0.5">A short summary in your inbox each morning</p>
             </div>
             <NToggle value={s.daily_digest_enabled !== false} onChange={v => setField('daily_digest_enabled', v)} />
           </div>
           {s.daily_digest_enabled !== false && (
-            <div className="ml-0 space-y-3 p-4 rounded-xl bg-muted border border-border">
+            <div className="ml-0 space-y-3 p-4 rounded-lg bg-secondary">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground font-medium w-20 flex-shrink-0">Delivery time</span>
                 <input type="time" value={s.daily_digest_time || '07:00'}
                   onChange={e => setField('daily_digest_time', e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary font-semibold text-foreground" />
+                  className="h-8 px-2 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring font-medium text-foreground" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Include in digest</p>
+                <p className="text-[13px] text-muted-foreground mb-1">Include</p>
                 <MultiCheckGrid values={dailyIncludes} onChange={v => setField('daily_digest_includes', v)} options={DAILY_OPTIONS} />
               </div>
             </div>
@@ -92,13 +87,13 @@ export default function NotifsDigest({ s, setField }) {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-bold text-foreground">Weekly Digest</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Your weekly business & client overview</p>
+              <p className="text-[15px] font-semibold text-foreground">Weekly digest</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Your business and clients, once a week</p>
             </div>
             <NToggle value={s.weekly_digest_enabled !== false} onChange={v => setField('weekly_digest_enabled', v)} />
           </div>
           {s.weekly_digest_enabled !== false && (
-            <div className="space-y-3 p-4 rounded-xl bg-muted border border-border">
+            <div className="space-y-3 p-4 rounded-lg bg-secondary">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-sm text-muted-foreground font-medium flex-shrink-0">Send on</span>
                 <div className="relative">
@@ -111,16 +106,16 @@ export default function NotifsDigest({ s, setField }) {
                 <span className="text-sm text-muted-foreground font-medium flex-shrink-0">at</span>
                 <input type="time" value={s.weekly_digest_time || '08:00'}
                   onChange={e => setField('weekly_digest_time', e.target.value)}
-                  className="px-2 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:border-primary font-semibold text-foreground" />
+                  className="h-8 px-2 rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring font-medium text-foreground" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Include in digest</p>
+                <p className="text-[13px] text-muted-foreground mb-1">Include</p>
                 <MultiCheckGrid values={weeklyIncludes} onChange={v => setField('weekly_digest_includes', v)} options={WEEKLY_OPTIONS} />
               </div>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

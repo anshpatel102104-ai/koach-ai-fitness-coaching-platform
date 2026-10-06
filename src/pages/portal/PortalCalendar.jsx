@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   addMonths, subMonths, isSameDay, isSameMonth, isToday, parseISO,
@@ -9,22 +9,25 @@ import {
 } from 'date-fns';
 import {
   ChevronLeft, ChevronRight, Camera, ClipboardList, Phone,
-  Target, Zap, Dumbbell, Salad, X, Calendar, CheckCircle2, Scale, Loader2
+  Target, Repeat, Dumbbell, Apple, Check, Scale, Loader2
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Stat } from '@/components/kit';
+import { PortalScreen, PortalHeader, IconButton, Sheet } from '@/components/portal/PortalUI';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 // ── Event type config ───────────────────────────────────
 const EVENT_TYPES = {
-  checkin:        { label: 'Check-in',        color: 'rgb(var(--primary))', bg: 'rgb(var(--accent))', icon: ClipboardList, emoji: '📋' },
-  photo:          { label: 'Photos',           color: 'rgb(var(--ai))', bg: 'rgb(var(--ai))', icon: Camera,        emoji: '📸' },
-  call:           { label: 'Coach Call',       color: 'rgb(var(--success))', bg: 'rgb(var(--success))', icon: Phone,         emoji: '📞' },
-  goal:           { label: 'Goal',             color: 'rgb(var(--warning))', bg: 'rgb(var(--warning))', icon: Target,        emoji: '🎯' },
-  habit:          { label: 'Habit',            color: '#EC4899', bg: '#FDF2F8', icon: Zap,           emoji: '⚡' },
-  workout:        { label: 'Workout',          color: 'rgb(var(--primary))', bg: '#F0F9FF', icon: Dumbbell,      emoji: '💪' },
-  nutrition:      { label: 'Nutrition',        color: 'rgb(var(--success))', bg: 'rgb(var(--success))', icon: Salad,         emoji: '🥗' },
-  weighin:        { label: 'Weigh-in',         color: 'rgb(var(--primary))', bg: '#F0F9FF', icon: Scale,         emoji: '⚖️' },
-  weighin_pending:{ label: 'Log Weight',       color: 'rgb(var(--warning))', bg: 'rgb(var(--warning))', icon: Scale,         emoji: '⚖️' },
+  checkin:        { label: 'Check-in',   icon: ClipboardList },
+  photo:          { label: 'Photos',     icon: Camera },
+  call:           { label: 'Coach call', icon: Phone },
+  goal:           { label: 'Goal',       icon: Target },
+  habit:          { label: 'Habit',      icon: Repeat },
+  workout:        { label: 'Workout',    icon: Dumbbell },
+  nutrition:      { label: 'Nutrition',  icon: Apple },
+  weighin:        { label: 'Weigh-in',   icon: Scale },
+  weighin_pending:{ label: 'Log weight', icon: Scale },
 };
 
 // ── Build calendar events from real data ────────────────
@@ -38,8 +41,8 @@ function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions) {
       id: `ci-${ci.id}`,
       date: ci.date,
       type: 'checkin',
-      title: 'Weekly Check-in',
-      subtitle: ci.review_status === 'reviewed' ? 'Reviewed ✓' : 'Submitted',
+      title: 'Weekly check-in',
+      subtitle: ci.review_status === 'reviewed' ? 'Reviewed by your coach' : 'Sent',
       done: !!ci.coach_responded || ci.review_status === 'reviewed',
     });
   });
@@ -51,7 +54,7 @@ function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions) {
       id: `sess-${s.id}`,
       date: s.date,
       type: 'call',
-      title: s.title || 'Coach Session',
+      title: s.title || 'Coach session',
       subtitle: s.time || '',
       done: s.status === 'completed',
     });
@@ -65,7 +68,7 @@ function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions) {
       date: g.due_date,
       type: 'goal',
       title: g.name,
-      subtitle: g.status === 'completed' ? 'Completed ✓' : `Target: ${g.target_value || ''} ${g.unit || ''}`.trim(),
+      subtitle: g.status === 'completed' ? 'Done' : `Target ${g.target_value || ''} ${g.unit || ''}`.trim(),
       done: g.status === 'completed',
     });
   });
@@ -79,8 +82,8 @@ function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions) {
       weighInId: w.id,
       date: w.date,
       type: isPending ? 'weighin_pending' : 'weighin',
-      title: isPending ? 'Log Your Weight' : 'Weight Logged',
-      subtitle: isPending ? (w.note || 'Tap to enter your weight') : `${w.weight} lbs`,
+      title: isPending ? 'Log your weight' : 'Weight logged',
+      subtitle: isPending ? (w.note || 'Tap to enter your weight') : `${w.weight} lb`,
       done: !isPending,
       isPending,
     });
@@ -108,49 +111,38 @@ function DayCell({ day, currentMonth, events, onSelect, selected }) {
   const isCurrentMonth = isSameMonth(day, currentMonth);
   const isSelectedDay = selected && isSameDay(day, selected);
   const isTodayDate = isToday(day);
-
-  const dotColors = [...new Set(dayEvents.map(e => EVENT_TYPES[e.type]?.color))].slice(0, 3);
+  const hasPending = dayEvents.some(e => e.isPending);
 
   return (
-    <motion.button
-      whileTap={{ scale: 0.92 }}
+    <button
+      type="button"
       onClick={() => onSelect(day)}
+      aria-pressed={!!isSelectedDay}
+      aria-label={`${format(day, 'EEEE, MMMM d')}${dayEvents.length ? `, ${dayEvents.length} event${dayEvents.length === 1 ? '' : 's'}` : ''}`}
       className={cn(
-        'flex flex-col items-center justify-start pt-1.5 pb-1 rounded-xl transition-all relative',
-        isSelectedDay && 'ring-2 ring-primary',
-        !isCurrentMonth && 'opacity-30',
+        'touch-compact flex min-h-[48px] flex-col items-center justify-start rounded-lg !px-0 !pt-1.5 !pb-1 transition-colors',
+        isSelectedDay ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+        !isCurrentMonth && !isSelectedDay && 'opacity-35',
       )}
-      style={{
-        background: isSelectedDay
-          ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))'
-          : isTodayDate
-          ? 'rgb(var(--accent))'
-          : 'transparent',
-        minHeight: 52,
-      }}
     >
       <span className={cn(
-        'text-xs font-bold mb-1',
-        isSelectedDay ? 'text-white' : isTodayDate ? 'rgb(var(--primary))' : isCurrentMonth ? 'rgb(var(--foreground))' : 'rgb(var(--muted-foreground))'
-      )}
-        style={{ color: isSelectedDay ? 'rgb(var(--card))' : isTodayDate ? 'rgb(var(--primary))' : undefined }}
-      >
+        'num text-[17px]',
+        !isSelectedDay && isTodayDate && 'text-brand',
+      )}>
         {format(day, 'd')}
       </span>
-      {/* Dot indicators */}
-      {dotColors.length > 0 && (
-        <div className="flex gap-0.5 mt-0.5">
-          {dotColors.map((c, i) => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{ background: isSelectedDay ? 'rgba(255,255,255,0.8)' : c }} />
-          ))}
-        </div>
-      )}
-    </motion.button>
+      <span className="mt-1 flex h-1.5 gap-0.5">
+        {dayEvents.slice(0, 3).map((e, i) => (
+          <span key={i} className={cn('h-1.5 w-1.5 rounded-full',
+            isSelectedDay ? 'bg-primary-foreground/80' : e.isPending ? 'bg-brand' : 'bg-foreground/60')} />
+        ))}
+      </span>
+      {hasPending && <span className="sr-only">Weight to log</span>}
+    </button>
   );
 }
 
-// ── Log Weight Modal ────────────────────────────────────
+// ── Log weight sheet ────────────────────────────────────
 function LogWeightModal({ weighInId, date, coachNote, onClose, onSaved }) {
   const [weight, setWeight] = useState('');
   const [saving, setSaving] = useState(false);
@@ -159,92 +151,70 @@ function LogWeightModal({ weighInId, date, coachNote, onClose, onSaved }) {
     if (!weight || parseFloat(weight) <= 0) return;
     setSaving(true);
     await portalDb.entities.WeighIn.update(weighInId, { weight: parseFloat(weight) });
-    toast.success('Weight logged!');
+    toast.success('Weight logged');
     onSaved();
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40" />
-      <motion.div
-        initial={{ y: 80, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 80, opacity: 0 }}
-        className="relative bg-card rounded-3xl w-full max-w-sm p-6"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-black text-foreground text-lg">Log Your Weight</h3>
-            <p className="text-muted-foreground text-xs">{format(parseISO(date), 'EEE, MMMM d')}</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center bg-muted">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
+    <Sheet open onClose={onClose} title="Log your weight"
+      footer={(
+        <Button size="lg" className="h-[52px] w-full text-base font-bold" onClick={save}
+          disabled={saving || !weight || parseFloat(weight) <= 0}>
+          {saving && <Loader2 className="animate-spin" />}
+          {saving ? 'Saving' : 'Save weight'}
+        </Button>
+      )}>
+      <p className="text-[15px] text-muted-foreground">{format(parseISO(date), 'EEEE, MMMM d')}</p>
+      {coachNote && (
+        <div className="mt-3 rounded-lg bg-secondary px-4 py-3 text-[15px] text-foreground">
+          <span className="font-bold">Coach note:</span> {coachNote}
         </div>
-
-        {coachNote && (
-          <div className="mb-4 px-3 py-2 rounded-xl bg-accent border border-accent">
-            <p className="text-xs text-primary font-semibold">📋 Coach note: {coachNote}</p>
-          </div>
-        )}
-
-        <div className="mb-5">
-          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide block mb-2">Weight (lbs)</label>
-          <input
-            type="number"
-            step="0.1"
-            autoFocus
-            placeholder="e.g. 175.5"
-            value={weight}
-            onChange={e => setWeight(e.target.value)}
-            className="w-full text-2xl font-black text-center border-2 border-border rounded-2xl px-4 py-4 outline-none focus:border-primary"
-          />
-        </div>
-
-        <button
-          onClick={save}
-          disabled={saving || !weight || parseFloat(weight) <= 0}
-          className="w-full py-3.5 rounded-2xl text-sm font-black text-white flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary)))' }}
-        >
-          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-          {saving ? 'Saving…' : 'Save Weight ⚖️'}
-        </button>
-      </motion.div>
-    </div>
+      )}
+      <div className="mt-4 flex items-end gap-2">
+        <input
+          type="number"
+          step="0.1"
+          inputMode="decimal"
+          autoFocus
+          placeholder="0"
+          aria-label="Weight in lb"
+          value={weight}
+          onChange={e => setWeight(e.target.value)}
+          className="num h-20 w-44 rounded-xl border-2 border-foreground bg-card text-center text-[44px] text-foreground focus:outline-none"
+        />
+        <span className="pb-3 text-lg font-semibold text-muted-foreground">lb</span>
+      </div>
+    </Sheet>
   );
 }
 
-// ── Event pill ──────────────────────────────────────────
+// ── Event row ───────────────────────────────────────────
 function EventPill({ event, onLogWeight }) {
   const cfg = EVENT_TYPES[event.type] || EVENT_TYPES.checkin;
+  const Icon = cfg.icon;
+  const Comp = event.isPending && onLogWeight ? 'button' : 'div';
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn('flex items-center gap-3 p-3 rounded-2xl', event.isPending && 'cursor-pointer active:scale-95 transition-transform')}
-      style={{ background: cfg.bg, border: `1px solid ${cfg.color}22` }}
+    <Comp
+      type={Comp === 'button' ? 'button' : undefined}
+      className="flex w-full items-center gap-3 py-3 text-left"
       onClick={event.isPending && onLogWeight ? () => onLogWeight(event) : undefined}
     >
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: cfg.color + '22' }}>
-        <span className="text-base">{cfg.emoji}</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-foreground truncate">{event.title}</p>
-        {event.subtitle ? <p className="text-xs text-muted-foreground truncate">{event.subtitle}</p> : null}
-      </div>
-      {event.isPending ? (
-        <span className="text-[10px] font-black px-2 py-1 rounded-full text-white flex-shrink-0"
-          style={{ background: cfg.color }}>
-          + Log
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold text-foreground">{event.title}</span>
+        <span className="block truncate text-[13px] text-muted-foreground">
+          {cfg.label}{event.subtitle ? `, ${event.subtitle}` : ''}
         </span>
+      </span>
+      {event.isPending ? (
+        <span className="flex-shrink-0 text-sm font-semibold text-foreground underline underline-offset-4">Log</span>
       ) : event.done ? (
-        <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: cfg.color }} />
+        <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-success text-white"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>
       ) : null}
-    </motion.div>
+    </Comp>
   );
 }
 
@@ -253,30 +223,16 @@ function UpcomingRow({ event }) {
   const cfg = EVENT_TYPES[event.type] || EVENT_TYPES.checkin;
   const date = parseISO(event.date);
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
-        style={{ background: cfg.bg }}>
-        {cfg.emoji}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
-        <p className="text-[11px] text-muted-foreground">{format(date, 'EEE, MMM d')}</p>
-      </div>
-      <span className="text-[10px] font-bold px-2 py-1 rounded-full"
-        style={{ background: cfg.bg, color: cfg.color }}>
-        {cfg.label}
+    <li className="flex items-center gap-3 py-3">
+      <span className="w-11 flex-shrink-0 text-center">
+        <span className="block text-[12px] text-muted-foreground">{format(date, 'EEE')}</span>
+        <span className="num block text-[22px] text-foreground">{format(date, 'd')}</span>
       </span>
-    </div>
-  );
-}
-
-// ── Legend pill ─────────────────────────────────────────
-function LegendPill({ type, cfg }) {
-  return (
-    <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold"
-      style={{ background: cfg.bg, color: cfg.color }}>
-      {cfg.emoji} {cfg.label}
-    </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold text-foreground">{event.title}</span>
+        <span className="block text-[13px] text-muted-foreground">{cfg.label}, {format(date, 'MMM d')}</span>
+      </span>
+    </li>
   );
 }
 
@@ -286,6 +242,7 @@ export default function PortalCalendar({ user }) {
   const [selectedDay, setSelectedDay] = useState(new Date());
   const [logWeightEvent, setLogWeightEvent] = useState(null);
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch client
   const { data: clients = [] } = useQuery({
@@ -348,145 +305,93 @@ export default function PortalCalendar({ user }) {
   }, [events]);
 
   const DAY_HEADERS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const monthCount = (type) => events.filter(e => e.type === type && isSameMonth(parseISO(e.date), currentMonth)).length;
 
   return (
-    <div className="pb-32" style={{ background: 'rgb(var(--muted))', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="bg-card px-5 pt-14 pb-4" style={{ boxShadow: '0 1px 0 rgb(var(--muted))' }}>
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-widest">My Schedule</p>
-            <h1 className="text-foreground font-black text-2xl leading-tight">Calendar</h1>
+    <PortalScreen>
+      <PortalHeader
+        title="Schedule"
+        subtitle="Workouts, calls, check-ins and weigh-ins by day."
+        onBack={() => navigate(-1)}
+      />
+
+      <div className="space-y-3">
+        {/* Calendar */}
+        <section className="panel">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <IconButton label="Previous month" onClick={() => setCurrentMonth(m => subMonths(m, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </IconButton>
+            <h2 className="text-xl text-foreground">{format(currentMonth, 'MMMM yyyy')}</h2>
+            <IconButton label="Next month" onClick={() => setCurrentMonth(m => addMonths(m, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </IconButton>
           </div>
-          <Calendar className="w-7 h-7 text-primary" />
-        </div>
-      </div>
 
-      {/* Calendar card */}
-      <div className="mx-4 mt-4 bg-card rounded-3xl overflow-hidden"
-        style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.07)', border: '1px solid rgb(var(--muted))' }}>
-
-        {/* Month nav */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <motion.button whileTap={{ scale: 0.88 }}
-            onClick={() => setCurrentMonth(m => subMonths(m, 1))}
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgb(var(--muted))', border: '1px solid rgb(var(--border))' }}>
-            <ChevronLeft className="w-4 h-4 text-muted-foreground" />
-          </motion.button>
-          <p className="font-black text-foreground text-base">{format(currentMonth, 'MMMM yyyy')}</p>
-          <motion.button whileTap={{ scale: 0.88 }}
-            onClick={() => setCurrentMonth(m => addMonths(m, 1))}
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgb(var(--muted))', border: '1px solid rgb(var(--border))' }}>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </motion.button>
-        </div>
-
-        {/* Day headers */}
-        <div className="grid grid-cols-7 px-3 pt-2 pb-1">
-          {DAY_HEADERS.map(d => (
-            <div key={d} className="text-center text-[10px] font-bold text-muted-foreground py-1">{d}</div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-0.5 px-3 pb-3">
-          {calDays.map(day => (
-            <DayCell
-              key={day.toISOString()}
-              day={day}
-              currentMonth={currentMonth}
-              events={events}
-              onSelect={setSelectedDay}
-              selected={selectedDay}
-            />
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div className="px-4 pb-4 flex gap-1.5 flex-wrap">
-          {Object.entries(EVENT_TYPES).slice(0, 5).map(([key, cfg]) => (
-            <LegendPill key={key} type={key} cfg={cfg} />
-          ))}
-        </div>
-      </div>
-
-      {/* Selected day events */}
-      <div className="mx-4 mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-bold text-foreground text-sm">
-            {isToday(selectedDay) ? "Today" : format(selectedDay, 'EEE, MMMM d')}
-          </p>
-          <span className="text-[11px] text-muted-foreground font-semibold">
-            {selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {selectedEvents.length === 0 ? (
-          <div className="bg-card rounded-2xl p-6 text-center"
-            style={{ border: '1px solid rgb(var(--muted))', boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
-            <p className="text-3xl mb-2">📅</p>
-            <p className="text-muted-foreground text-sm font-semibold">Nothing scheduled</p>
-            <p className="text-border text-xs mt-1">Rest up or stay ahead of your goals</p>
+          <div className="grid grid-cols-7 px-3 pt-1">
+            {DAY_HEADERS.map(d => (
+              <div key={d} className="py-1 text-center text-[12px] text-muted-foreground">{d}</div>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-2">
-            <AnimatePresence mode="popLayout">
+
+          <div className="grid grid-cols-7 gap-0.5 px-3 pb-3">
+            {calDays.map(day => (
+              <DayCell
+                key={day.toISOString()}
+                day={day}
+                currentMonth={currentMonth}
+                events={events}
+                onSelect={setSelectedDay}
+                selected={selectedDay}
+              />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 border-t border-border px-4 py-3">
+            <Stat size="sm" label="Workouts" value={monthCount('workout')} />
+            <Stat size="sm" label="Calls" value={monthCount('call')} />
+            <Stat size="sm" label="Check-ins" value={monthCount('checkin')} />
+          </div>
+        </section>
+
+        {/* Selected day */}
+        <section className="panel px-4 pt-4 pb-1">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-xl text-foreground">{isToday(selectedDay) ? 'Today' : format(selectedDay, 'EEEE, MMMM d')}</h2>
+            <span className="text-[13px] text-muted-foreground">{selectedEvents.length} item{selectedEvents.length !== 1 ? 's' : ''}</span>
+          </div>
+          {selectedEvents.length === 0 ? (
+            <p className="py-3 text-sm text-muted-foreground">Nothing scheduled.</p>
+          ) : (
+            <div className="divide-y divide-border">
               {selectedEvents.map(event => (
                 <EventPill key={event.id} event={event} onLogWeight={setLogWeightEvent} />
               ))}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* Log Weight Modal */}
-        <AnimatePresence>
-          {logWeightEvent && (
-            <LogWeightModal
-              weighInId={logWeightEvent.weighInId}
-              date={logWeightEvent.date}
-              coachNote={logWeightEvent.subtitle !== 'Tap to enter your weight' ? logWeightEvent.subtitle : null}
-              onClose={() => setLogWeightEvent(null)}
-              onSaved={() => qc.invalidateQueries({ queryKey: ['portal-cal-weighins', myClient?.id] })}
-            />
+            </div>
           )}
-        </AnimatePresence>
+        </section>
+
+        {/* Upcoming */}
+        {upcomingEvents.length > 0 && (
+          <section className="panel px-4 pt-4 pb-1">
+            <h2 className="text-xl text-foreground">Coming up</h2>
+            <ul className="divide-y divide-border">
+              {upcomingEvents.map(event => <UpcomingRow key={event.id} event={event} />)}
+            </ul>
+          </section>
+        )}
       </div>
 
-      {/* Upcoming section */}
-      {upcomingEvents.length > 0 && (
-        <div className="mx-4 mt-5">
-          <p className="font-bold text-foreground text-sm mb-3">Coming Up</p>
-          <div className="bg-card rounded-2xl px-4 py-1"
-            style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgb(var(--muted))' }}>
-            {upcomingEvents.map(event => (
-              <UpcomingRow key={event.id} event={event} />
-            ))}
-          </div>
-        </div>
+      {/* Log weight sheet */}
+      {logWeightEvent && (
+        <LogWeightModal
+          weighInId={logWeightEvent.weighInId}
+          date={logWeightEvent.date}
+          coachNote={logWeightEvent.subtitle !== 'Tap to enter your weight' ? logWeightEvent.subtitle : null}
+          onClose={() => setLogWeightEvent(null)}
+          onSaved={() => qc.invalidateQueries({ queryKey: ['portal-cal-weighins', myClient?.id] })}
+        />
       )}
-
-      {/* Monthly summary */}
-      <div className="mx-4 mt-4 mb-4">
-        <div className="bg-card rounded-2xl p-4"
-          style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgb(var(--muted))' }}>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-3">This Month</p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'Workouts', count: events.filter(e => e.type === 'workout' && isSameMonth(parseISO(e.date), currentMonth)).length, emoji: '💪', color: 'rgb(var(--primary))' },
-              { label: 'Sessions', count: events.filter(e => e.type === 'call' && isSameMonth(parseISO(e.date), currentMonth)).length, emoji: '📞', color: 'rgb(var(--success))' },
-              { label: 'Check-ins', count: events.filter(e => e.type === 'checkin' && isSameMonth(parseISO(e.date), currentMonth)).length, emoji: '📋', color: 'rgb(var(--primary))' },
-            ].map(stat => (
-              <div key={stat.label} className="text-center p-3 rounded-xl" style={{ background: 'rgb(var(--muted))' }}>
-                <p className="text-xl mb-0.5">{stat.emoji}</p>
-                <p className="font-black text-lg" style={{ color: stat.color }}>{stat.count}</p>
-                <p className="text-muted-foreground text-[10px] font-semibold">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    </PortalScreen>
   );
 }

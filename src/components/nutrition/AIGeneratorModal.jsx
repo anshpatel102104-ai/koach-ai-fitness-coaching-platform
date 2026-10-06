@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getMealImageUrl } from '@/lib/foodImages';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, ChevronLeft, ChevronRight, RotateCcw, Check, Flame, Zap, Leaf,
+  ChevronLeft, ChevronRight, RotateCcw, Check, Flame, Activity, Leaf,
   Dumbbell, Scale, UtensilsCrossed, Pill, FileText, ChevronDown, Copy, ClipboardCheck,
   UserPlus,
 } from 'lucide-react';
@@ -17,14 +16,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import AiUsageMeter from '@/components/subscription/AiUsageMeter';
+import { Segmented } from '@/components/kit';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const GOALS = [
-  { id: 'fat_loss',    emoji: '🔥', icon: Flame,    label: 'Fat Loss',    desc: 'Caloric deficit with high protein' },
-  { id: 'muscle_gain', emoji: '💪', icon: Dumbbell, label: 'Muscle Gain', desc: 'Caloric surplus, strength focus' },
-  { id: 'recomp',      emoji: '⚖️', icon: Scale,    label: 'Recomposition',desc: 'Lose fat, gain muscle simultaneously' },
-  { id: 'performance', emoji: '⚡', icon: Zap,      label: 'Performance', desc: 'Fuel for training and recovery' },
-  { id: 'maintenance', emoji: '🌿', icon: Leaf,     label: 'Maintenance', desc: 'Balanced macros, sustainable eating' },
+  { id: 'fat_loss',    icon: Flame,    label: 'Fat Loss',    desc: 'Caloric deficit with high protein' },
+  { id: 'muscle_gain', icon: Dumbbell, label: 'Muscle Gain', desc: 'Caloric surplus, strength focus' },
+  { id: 'recomp',      icon: Scale,    label: 'Recomposition',desc: 'Lose fat, gain muscle simultaneously' },
+  { id: 'performance', icon: Activity,      label: 'Performance', desc: 'Fuel for training and recovery' },
+  { id: 'maintenance', icon: Leaf,     label: 'Maintenance', desc: 'Balanced macros, sustainable eating' },
 ];
 
 const GOAL_SUBTYPES = {
@@ -36,21 +36,21 @@ const GOAL_SUBTYPES = {
 };
 
 const BODY_TYPES = [
-  { id: 'ectomorph', emoji: '🏃', label: 'Ectomorph',    desc: 'Lean, fast metabolism, hard to gain' },
-  { id: 'mesomorph', emoji: '💪', label: 'Mesomorph',    desc: 'Athletic, gains/loses easily' },
-  { id: 'endomorph', emoji: '🏋️', label: 'Endomorph',   desc: 'Slower metabolism, gains fat easily' },
-  { id: 'ecto_meso', emoji: '🤸', label: 'Ecto-Meso',   desc: 'Naturally lean but can build muscle' },
-  { id: 'endo_meso', emoji: '🏊', label: 'Endo-Meso',   desc: 'Athletic but tends to hold fat' },
+  { id: 'ectomorph', label: 'Ectomorph',    desc: 'Lean, fast metabolism, hard to gain' },
+  { id: 'mesomorph', label: 'Mesomorph',    desc: 'Athletic, gains/loses easily' },
+  { id: 'endomorph', label: 'Endomorph',   desc: 'Slower metabolism, gains fat easily' },
+  { id: 'ecto_meso', label: 'Ecto-Meso',   desc: 'Naturally lean but can build muscle' },
+  { id: 'endo_meso', label: 'Endo-Meso',   desc: 'Athletic but tends to hold fat' },
 ];
 
 const OCCUPATION_TYPES = [
-  { value: 'desk_job',      label: '🖥️ Desk Job / Office' },
-  { value: 'active_job',    label: '🚶 Active Job (standing/walking)' },
-  { value: 'physical_labor',label: '🔨 Physical Labor / Trades' },
-  { value: 'shift_worker',  label: '🌙 Shift Worker (irregular hours)' },
-  { value: 'stay_home',     label: '🏠 Stay at Home Parent' },
-  { value: 'student',       label: '📚 Student' },
-  { value: 'athlete',       label: '🏅 Athlete / Full Time Training' },
+  { value: 'desk_job',      label: 'Desk Job / Office' },
+  { value: 'active_job',    label: 'Active Job (standing/walking)' },
+  { value: 'physical_labor',label: 'Physical Labor / Trades' },
+  { value: 'shift_worker',  label: 'Shift Worker (irregular hours)' },
+  { value: 'stay_home',     label: 'Stay at Home Parent' },
+  { value: 'student',       label: 'Student' },
+  { value: 'athlete',       label: 'Athlete / Full Time Training' },
 ];
 
 const TRAINING_TIMES = ['Early Morning (before 8am)', 'Morning (8-11am)', 'Midday (11am-2pm)', 'Afternoon (2-5pm)', 'Evening (5-8pm)', 'Late Night (after 8pm)'];
@@ -71,9 +71,9 @@ const CULTURAL_PREF_VALUES = {
 };
 const TIMELINES = ['4 weeks', '8 weeks', '12 weeks', '6 months', 'Ongoing'];
 const HUNGER_LEVELS = [
-  { value: 'always_hungry', label: '🔥 Always Hungry' },
-  { value: 'normal',        label: '😊 Normal' },
-  { value: 'low_appetite',  label: '🙂 Low Appetite' },
+  { value: 'always_hungry', label: 'Always Hungry' },
+  { value: 'normal',        label: 'Normal' },
+  { value: 'low_appetite',  label: 'Low Appetite' },
 ];
 const TRAVEL_FREQ = ['Never', 'Occasionally', 'Frequently', 'Always Traveling'];
 const EATING_OUT_FREQ = ['Never', '1-2x week', '3-4x week', 'Daily'];
@@ -92,16 +92,16 @@ const ALLERGIES = ['Gluten Free', 'Dairy Free', 'Nut Free', 'Egg Free', 'Soy Fre
 const SUPPLEMENTS = ['Whey Protein', 'Creatine', 'Pre-Workout', 'BCAAs', 'Fish Oil', 'Vitamin D', 'Magnesium', 'Multivitamin', 'Caffeine', 'Collagen', 'None'];
 
 const SUPPLEMENT_DEFAULTS = {
-  'Whey Protein':  { dosage: '25-30g per serving, post-workout',            timing: 'Post-Workout', emoji: '🥛' },
-  'Creatine':      { dosage: '5g daily, any time',                           timing: 'Morning',      emoji: '💪' },
-  'Pre-Workout':   { dosage: '1 scoop, 20-30 min before training',           timing: 'Pre-Workout',  emoji: '⚡' },
-  'BCAAs':         { dosage: '5-10g during or post-workout',                 timing: 'Post-Workout', emoji: '🔋' },
-  'Fish Oil':      { dosage: '1-2g EPA/DHA daily, with meals',               timing: 'With Meals',   emoji: '🐟' },
-  'Vitamin D':     { dosage: '2000-5000 IU daily, with fat-containing meal', timing: 'With Meals',   emoji: '☀️' },
-  'Magnesium':     { dosage: '300-400mg daily, before bed',                  timing: 'Before Bed',   emoji: '😴' },
-  'Multivitamin':  { dosage: '1 serving daily, with breakfast',              timing: 'Morning',      emoji: '💊' },
-  'Caffeine':      { dosage: '100-200mg, 30-45 min pre-workout',             timing: 'Pre-Workout',  emoji: '☕' },
-  'Collagen':      { dosage: '10-15g daily, with vitamin C source',          timing: 'Morning',      emoji: '✨' },
+  'Whey Protein':  { dosage: '25-30g per serving, post-workout',            timing: 'Post-Workout' },
+  'Creatine':      { dosage: '5g daily, any time',                           timing: 'Morning' },
+  'Pre-Workout':   { dosage: '1 scoop, 20-30 min before training',           timing: 'Pre-Workout' },
+  'BCAAs':         { dosage: '5-10g during or post-workout',                 timing: 'Post-Workout' },
+  'Fish Oil':      { dosage: '1-2g EPA/DHA daily, with meals',               timing: 'With Meals' },
+  'Vitamin D':     { dosage: '2000-5000 IU daily, with fat-containing meal', timing: 'With Meals' },
+  'Magnesium':     { dosage: '300-400mg daily, before bed',                  timing: 'Before Bed' },
+  'Multivitamin':  { dosage: '1 serving daily, with breakfast',              timing: 'Morning' },
+  'Caffeine':      { dosage: '100-200mg, 30-45 min pre-workout',             timing: 'Pre-Workout' },
+  'Collagen':      { dosage: '10-15g daily, with vitamin C source',          timing: 'Morning' },
 };
 
 const SUPPLEMENT_GOAL_REASONS = {
@@ -156,28 +156,28 @@ const SUPPLEMENT_GOAL_REASONS = {
 };
 
 const MEAL_COMPLEXITY = [
-  { id: 'very_basic', emoji: '🥫', label: 'Very Basic',  desc: 'Simple whole foods, minimal cooking', color: 'gray' },
-  { id: 'simple',     emoji: '🍳', label: 'Simple',      desc: 'Easy recipes, 15 min or less',        color: 'gray' },
-  { id: 'moderate',   emoji: '🥘', label: 'Moderate',    desc: 'Balanced home cooking',                color: 'blue', popular: true },
-  { id: 'upscale',    emoji: '👨‍🍳', label: 'Upscale',    desc: 'Restaurant-quality meals',            color: 'amber' },
-  { id: 'gourmet',    emoji: '⭐', label: 'Gourmet',     desc: 'Complex recipes, premium ingredients', color: 'purple' },
+  { id: 'very_basic', label: 'Very Basic',  desc: 'Simple whole foods, minimal cooking', color: 'gray' },
+  { id: 'simple',     label: 'Simple',      desc: 'Easy recipes, 15 min or less',        color: 'gray' },
+  { id: 'moderate',   label: 'Moderate',    desc: 'Balanced home cooking',                color: 'blue', popular: true },
+  { id: 'upscale',    label: 'Upscale',    desc: 'Restaurant-quality meals',            color: 'amber' },
+  { id: 'gourmet',    label: 'Gourmet',     desc: 'Complex recipes, premium ingredients', color: 'gray' },
 ];
 
 const CONDIMENTS = [
-  { id: 'hot_sauce',       emoji: '🌶️', label: 'Hot Sauce',        kcal: '0–5 kcal' },
-  { id: 'lemon_lime',      emoji: '🍋', label: 'Lemon/Lime',        kcal: '5 kcal' },
-  { id: 'fresh_herbs',     emoji: '🌿', label: 'Fresh Herbs',        kcal: '0 kcal' },
-  { id: 'garlic_onion',    emoji: '🧄', label: 'Garlic & Onion',    kcal: '10 kcal' },
-  { id: 'mustard',         emoji: '🥣', label: 'Mustard',            kcal: '5 kcal' },
-  { id: 'soy_sauce',       emoji: '🍶', label: 'Soy Sauce',          kcal: '10 kcal' },
-  { id: 'salsa',           emoji: '🫙', label: 'Salsa',              kcal: '15 kcal' },
-  { id: 'sf_bbq',          emoji: '🥫', label: 'Sugar-Free BBQ',    kcal: '15 kcal' },
-  { id: 'spice_blends',    emoji: '🧂', label: 'Spice Blends',       kcal: '0 kcal' },
-  { id: 'balsamic',        emoji: '🍯', label: 'Balsamic Glaze',     kcal: '20 kcal' },
-  { id: 'greek_yogurt',    emoji: '🥛', label: 'Greek Yogurt Sauce', kcal: '20 kcal' },
-  { id: 'olive_spray',     emoji: '🫒', label: 'Olive Oil Spray',    kcal: '10 kcal' },
+  { id: 'hot_sauce',       label: 'Hot Sauce',        kcal: '0–5 kcal' },
+  { id: 'lemon_lime',      label: 'Lemon/Lime',        kcal: '5 kcal' },
+  { id: 'fresh_herbs',     label: 'Fresh Herbs',        kcal: '0 kcal' },
+  { id: 'garlic_onion',    label: 'Garlic & Onion',    kcal: '10 kcal' },
+  { id: 'mustard',         label: 'Mustard',            kcal: '5 kcal' },
+  { id: 'soy_sauce',       label: 'Soy Sauce',          kcal: '10 kcal' },
+  { id: 'salsa',           label: 'Salsa',              kcal: '15 kcal' },
+  { id: 'sf_bbq',          label: 'Sugar-Free BBQ',    kcal: '15 kcal' },
+  { id: 'spice_blends',    label: 'Spice Blends',       kcal: '0 kcal' },
+  { id: 'balsamic',        label: 'Balsamic Glaze',     kcal: '20 kcal' },
+  { id: 'greek_yogurt',    label: 'Greek Yogurt Sauce', kcal: '20 kcal' },
+  { id: 'olive_spray',     label: 'Olive Oil Spray',    kcal: '10 kcal' },
 ];
-const LOADING_MESSAGES = ['Analyzing client profile...', 'Calculating TDEE & BMR...', 'Applying body type adjustments...', 'Building training day meals...', 'Building rest day meals...', '🤖 AI nutritionist at work...', 'Timing meals around training schedule...', 'Adding culturally relevant foods...', 'Generating Option B & C swaps...', 'Writing coach notes...', 'Finalizing your plan...'];
+const LOADING_MESSAGES = ['Analyzing client profile', 'Calculating TDEE & BMR', 'Applying body type adjustments', 'Building training day meals', 'Building rest day meals', 'Drafting meals', 'Timing meals around training schedule', 'Adding culturally relevant foods', 'Generating Option B & C swaps', 'Writing coach notes', 'Finalizing your plan'];
 
 const INITIAL_DETAILS = {
   weight: '', weightUnit: 'lbs',
@@ -310,8 +310,8 @@ function PillToggle({ options, value, onChange, multi = false }) {
           type="button"
           onClick={() => handleClick(opt)}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-            isActive(opt) ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground'
+            'px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+            isActive(opt) ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
           )}
         >
           {opt}
@@ -326,7 +326,7 @@ function UnitToggle({ options, value, onChange }) {
     <div className="flex border border-input rounded-lg overflow-hidden text-xs font-semibold h-9 shrink-0">
       {options.map(u => (
         <button key={u} type="button" onClick={() => onChange(u)}
-          className={cn('px-3 transition-colors', value === u ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary')}
+          className={cn('px-3 transition-colors', value === u ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent')}
         >
           {u}
         </button>
@@ -340,7 +340,7 @@ function YesNoToggle({ value, onChange }) {
     <div className="flex border border-input rounded-lg overflow-hidden text-xs font-semibold h-8 w-20 shrink-0">
       {[true, false].map(v => (
         <button key={String(v)} type="button" onClick={() => onChange(v)}
-          className={cn('flex-1 transition-colors', value === v ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary')}
+          className={cn('flex-1 transition-colors', value === v ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent')}
         >
           {v ? 'Yes' : 'No'}
         </button>
@@ -357,13 +357,11 @@ function AccordionSection({ icon: Icon, title, complete, children, defaultOpen =
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2.5 px-4 py-3 bg-card hover:bg-secondary/30 transition-colors text-left"
+        className="w-full flex items-center gap-2.5 px-4 py-3 bg-card hover:bg-accent/60 transition-colors text-left"
       >
-        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', complete ? 'bg-success/10' : 'bg-secondary')}>
-          {complete ? <Check className="w-3.5 h-3.5 text-success" /> : <Icon className="w-3.5 h-3.5 text-muted-foreground" />}
-        </div>
-        <span className="text-sm font-bold flex-1">{title}</span>
-        {complete && <span className="text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">Done</span>}
+        {complete ? <Check className="w-4 h-4 text-success shrink-0" /> : <Icon className="w-4 h-4 text-muted-foreground shrink-0" />}
+        <span className="text-sm font-semibold flex-1">{title}</span>
+        {complete && <span className="text-[13px] text-muted-foreground">Done</span>}
         <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
       <AnimatePresence initial={false}>
@@ -375,7 +373,7 @@ function AccordionSection({ icon: Icon, title, complete, children, defaultOpen =
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-4 py-4 border-t border-border space-y-4 bg-background">
+            <div className="px-4 py-4 border-t border-border space-y-4 bg-card">
               {children}
             </div>
           </motion.div>
@@ -390,16 +388,16 @@ function StepDots({ current, total }) {
   return (
     <div className="flex items-center justify-center gap-2 mb-6">
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className={cn('rounded-full transition-all duration-300', i === current ? 'w-6 h-2 bg-primary' : 'w-2 h-2 bg-border')} />
+        <div key={i} className={cn('rounded-full transition-all duration-300', i === current ? 'w-6 h-1.5 bg-foreground' : i < current ? 'w-2 h-1.5 bg-foreground/40' : 'w-2 h-1.5 bg-input')} />
       ))}
     </div>
   );
 }
 
 const slideVariants = {
-  enter:  (dir) => ({ x: dir > 0 ? 40 : -40, opacity: 0 }),
+  enter:  (dir) => ({ x: dir > 0 ? 16 : -16, opacity: 0 }),
   center: { x: 0, opacity: 1 },
-  exit:   (dir) => ({ x: dir > 0 ? -40 : 40, opacity: 0 }),
+  exit:   (dir) => ({ x: dir > 0 ? -16 : 16, opacity: 0 }),
 };
 
 // ── Weight Loss Rate Selector ─────────────────────────────────────────────────
@@ -413,38 +411,26 @@ function WeightLossRateSelector({ value, onChange }) {
             type="button"
             onClick={() => onChange(rate.value)}
             className={cn(
-              'relative flex flex-col items-start px-3 py-2 rounded-xl border-2 text-left transition-all text-xs',
+              'relative flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors text-xs',
               value === rate.value
-                ? rate.color === 'green'  ? 'border-success bg-success/10'
-                : rate.color === 'blue'   ? 'border-primary bg-accent'
-                : rate.color === 'amber'  ? 'border-warning bg-warning/10'
-                : 'border-destructive bg-destructive/10'
-                : 'border-border bg-background hover:border-muted-foreground/40'
+                ? 'border-foreground bg-accent'
+                : 'border-input bg-card hover:bg-accent'
             )}
           >
             <div className="flex items-center gap-1.5">
-              <span className={cn('font-bold', value === rate.value
-                ? rate.color === 'green'  ? 'text-success'
-                : rate.color === 'blue'   ? 'text-primary'
-                : rate.color === 'amber'  ? 'text-warning'
-                : 'text-destructive'
-                : 'text-foreground'
-              )}>
+              <span className={cn('font-semibold tabular-nums', rate.warning ? 'text-destructive' : 'text-foreground')}>
                 {rate.label}
               </span>
-              {rate.warning && <span className="text-xs">⚠️</span>}
             </div>
-            <span className="text-[10px] text-muted-foreground mt-0.5">{rate.desc}</span>
+            <span className="text-xs text-muted-foreground mt-0.5">{rate.desc}</span>
             {rate.recommended && (
-              <span className="absolute -top-2 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">
-                Recommended
-              </span>
+              <span className="text-[13px] text-foreground mt-0.5">Recommended</span>
             )}
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-muted-foreground bg-secondary/50 px-2.5 py-1.5 rounded-lg">
-        1 lb of fat = ~3,500 calories. Higher deficits risk muscle loss.
+      <p className="text-[13px] text-muted-foreground">
+        A pound of fat is about 3,500 calories. Bigger deficits risk losing muscle.
       </p>
     </div>
   );
@@ -457,20 +443,19 @@ function Step1Goal({ goal, setGoal, details, setDetails }) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold font-heading mb-1">What's the goal?</h2>
-      <p className="text-sm text-muted-foreground mb-4">Select the primary objective for this plan</p>
+      <h2 className="text-2xl mb-1">What's the goal?</h2>
+      <p className="text-sm text-muted-foreground mb-4">Pick the main outcome. It sets the calorie target.</p>
       <div className="grid grid-cols-2 gap-2.5 mb-4">
         {GOALS.map(g => (
           <button key={g.id} onClick={() => { setGoal(g.id); u('goalSubtype', GOAL_SUBTYPES[g.id]?.[0] || ''); }}
-            className={cn('flex flex-col items-start gap-1.5 p-3.5 rounded-2xl border-2 text-left transition-all duration-150 hover:shadow-md',
-              goal === g.id ? 'border-primary bg-accent/60' : 'border-border bg-card hover:border-primary/40')}
+            className={cn('flex flex-col items-start gap-1 p-3.5 rounded-lg border text-left transition-colors',
+              goal === g.id ? 'border-foreground bg-accent' : 'border-input bg-card hover:bg-accent')}
           >
             <div className="flex items-center justify-between w-full">
-              <span className="text-xl">{g.emoji}</span>
-              {goal === g.id && <span className="w-4 h-4 rounded-full bg-primary flex items-center justify-center"><Check className="w-2.5 h-2.5 text-white" /></span>}
+              <p className="text-sm font-semibold text-foreground">{g.label}</p>
+              {goal === g.id && <Check className="w-4 h-4 text-foreground" />}
             </div>
-            <p className="text-sm font-bold text-foreground">{g.label}</p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">{g.desc}</p>
+            <p className="text-[13px] text-muted-foreground leading-snug">{g.desc}</p>
           </button>
         ))}
       </div>
@@ -478,12 +463,12 @@ function Step1Goal({ goal, setGoal, details, setDetails }) {
       {/* Goal subtype */}
       {goal && subtypes.length > 1 && (
         <div>
-          <p className="text-xs font-bold text-muted-foreground mb-2">Approach</p>
+          <p className="text-[13px] text-muted-foreground mb-2">Approach</p>
           <div className="flex flex-wrap gap-1.5">
             {subtypes.map(s => (
               <button key={s} onClick={() => u('goalSubtype', s)}
-                className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                  details.goalSubtype === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                className={cn('px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                  details.goalSubtype === s ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
                 )}>
                 {s}
               </button>
@@ -494,12 +479,12 @@ function Step1Goal({ goal, setGoal, details, setDetails }) {
 
       {/* Timeline */}
       <div className="mt-3">
-        <p className="text-xs font-bold text-muted-foreground mb-2">Timeline</p>
+        <p className="text-[13px] text-muted-foreground mb-2">Timeline</p>
         <div className="flex flex-wrap gap-1.5">
           {TIMELINES.map(t => (
             <button key={t} onClick={() => u('timeline', t)}
-              className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                details.timeline === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+              className={cn('px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                details.timeline === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
               )}>
               {t}
             </button>
@@ -526,11 +511,11 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
 
   return (
     <div>
-      <h2 className="text-xl font-bold font-heading mb-1">Tell us about your client</h2>
-      <p className="text-sm text-muted-foreground mb-2">We'll use this to calculate precise macros</p>
+      <h2 className="text-2xl mb-1">Tell us about your client</h2>
+      <p className="text-sm text-muted-foreground mb-2">The more you fill in, the closer the first draft. Only weight is required.</p>
       <div className="flex items-center gap-2 mb-4">
         <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-          <motion.div className="h-full bg-primary rounded-full" animate={{ width: `${(completedCount / 6) * 100}%` }} transition={{ duration: 0.3 }} />
+          <div className="h-full bg-foreground rounded-full transition-[width] duration-300" style={{ width: `${Math.min(100, (completedCount / 8) * 100)}%` }} />
         </div>
         <span className="text-xs font-semibold text-muted-foreground shrink-0">{completedCount} of 8 sections</span>
       </div>
@@ -614,15 +599,15 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
           <div className="grid grid-cols-1 gap-2">
             {BODY_TYPES.map(bt => (
               <button key={bt.id} type="button" onClick={() => u('bodyType', bt.id)}
-                className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 text-left transition-all',
-                  details.bodyType === bt.id ? 'border-primary bg-accent/50' : 'border-border hover:border-primary/30'
+                className={cn('flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors',
+                  details.bodyType === bt.id ? 'border-foreground bg-accent' : 'border-input bg-card hover:bg-accent'
                 )}>
-                <span className="text-lg">{bt.emoji}</span>
+                
                 <div>
-                  <p className="text-sm font-bold">{bt.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{bt.desc}</p>
+                  <p className="text-sm font-semibold">{bt.label}</p>
+                  <p className="text-[13px] text-muted-foreground">{bt.desc}</p>
                 </div>
-                {details.bodyType === bt.id && <Check className="w-4 h-4 text-primary ml-auto" />}
+                {details.bodyType === bt.id && <Check className="w-4 h-4 text-foreground ml-auto" />}
               </button>
             ))}
           </div>
@@ -648,8 +633,8 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
             <div className="flex flex-wrap gap-1.5">
               {TRAINING_TIMES.map(t => (
                 <button key={t} type="button" onClick={() => u('trainingTime', t)}
-                  className={cn('px-2.5 py-1 rounded-full text-xs font-semibold border transition-all',
-                    details.trainingTime === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                  className={cn('px-2.5 py-1 rounded-md text-[13px] font-medium border transition-colors',
+                    details.trainingTime === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
                   )}>{t}</button>
               ))}
             </div>
@@ -716,8 +701,8 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
             <div className="flex flex-wrap gap-1.5">
               {COOKING_TIMES.map(c => (
                 <button key={c.value} type="button" onClick={() => u('cookingTimePerDay', c.value)}
-                  className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                    details.cookingTimePerDay === c.value ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                  className={cn('px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                    details.cookingTimePerDay === c.value ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
                   )}>{c.label}</button>
               ))}
             </div>
@@ -765,33 +750,21 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
             <div className="flex flex-wrap gap-2">
               {MEAL_COMPLEXITY.map(opt => {
                 const active = details.mealComplexity === opt.id;
-                const borderColor =
-                  opt.color === 'blue'   ? (active ? 'border-primary bg-accent'     : 'border-border hover:border-primary') :
-                  opt.color === 'amber'  ? (active ? 'border-warning bg-warning/10'   : 'border-border hover:border-warning') :
-                  opt.color === 'purple' ? (active ? 'border-ai bg-ai/10' : 'border-border hover:border-ai') :
-                                          (active ? 'border-border bg-muted'     : 'border-border hover:border-border');
-                const labelColor =
-                  active
-                    ? opt.color === 'blue'   ? 'text-primary'
-                    : opt.color === 'amber'  ? 'text-warning'
-                    : opt.color === 'purple' ? 'text-ai'
-                    : 'text-foreground'
-                    : 'text-foreground';
+                const borderColor = active ? 'border-foreground bg-accent' : 'border-input bg-card hover:bg-accent';
+                const labelColor = 'text-foreground';
                 return (
                   <button
                     key={opt.id}
                     type="button"
                     onClick={() => u('mealComplexity', opt.id)}
-                    className={`relative flex flex-col items-start px-3 py-2 rounded-xl border-2 text-left transition-all text-xs ${borderColor}`}
+                    className={`relative flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors text-xs ${borderColor}`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>{opt.emoji}</span>
-                      <span className={`font-bold ${labelColor}`}>{opt.label}</span>
-                      {opt.popular && (
-                        <span className="absolute -top-2 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground">Popular</span>
-                      )}
+                      
+                      <span className={`font-semibold ${labelColor}`}>{opt.label}</span>
+                      {opt.popular && <span className="text-muted-foreground">· most used</span>}
                     </div>
-                    <span className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</span>
+                    <span className="text-xs text-muted-foreground mt-0.5">{opt.desc}</span>
                   </button>
                 );
               })}
@@ -801,7 +774,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
           {/* Sauces & Seasonings */}
           <div>
             <Label className="text-xs font-semibold mb-0.5 block">Sauces & Seasonings</Label>
-            <p className="text-[10px] text-muted-foreground mb-2">Low calorie options to keep meals flavorful</p>
+            <p className="text-xs text-muted-foreground mb-2">Low calorie options to keep meals flavorful</p>
             <div className="flex flex-wrap gap-1.5">
               {CONDIMENTS.map(c => {
                 const active = details.condiments.includes(c.id);
@@ -810,19 +783,19 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
                     key={c.id}
                     type="button"
                     onClick={() => u('condiments', active ? details.condiments.filter(x => x !== c.id) : [...details.condiments, c.id])}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full border text-xs font-semibold transition-all ${
-                      active ? 'border-primary bg-accent text-primary' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md border text-[13px] font-medium transition-colors ${
+                      active ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card text-foreground hover:bg-accent'
                     }`}
                   >
-                    <span>{c.emoji}</span>
+                    
                     <span>{c.label}</span>
-                    <span className={`text-[10px] font-normal ${active ? 'text-primary/70' : 'text-muted-foreground'}`}>{c.kcal}</span>
+                    <span className={`text-xs font-normal ${active ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{c.kcal}</span>
                   </button>
                 );
               })}
             </div>
-            <p className="text-[10px] text-muted-foreground mt-2 bg-secondary/50 px-2.5 py-1.5 rounded-lg">
-              These add flavor without significantly impacting your macros
+            <p className="text-[13px] text-muted-foreground mt-2">
+              These add flavour without moving the macros much.
             </p>
           </div>
         </AccordionSection>
@@ -839,7 +812,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
             </Select>
           </div>
           <div>
-            <Label className="text-xs font-semibold mb-1.5 block">Allergies / Restrictions <span className="text-destructive font-bold text-[10px]">CRITICAL</span></Label>
+            <Label className="text-xs font-semibold mb-1.5 block">Allergies / Restrictions <span className="text-destructive font-bold text-xs">CRITICAL</span></Label>
             <PillToggle options={ALLERGIES} value={details.allergies} onChange={v => u('allergies', v)} multi />
           </div>
           <div>
@@ -855,8 +828,8 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
             <div className="flex flex-wrap gap-1.5">
               {CULTURAL_PREFS.map(c => (
                 <button key={c} type="button" onClick={() => u('culturalPreference', c)}
-                  className={cn('px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                    details.culturalPreference === c ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                  className={cn('px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                    details.culturalPreference === c ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
                   )}>{c}</button>
               ))}
             </div>
@@ -874,7 +847,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
           <div className="flex items-center justify-between">
             <div>
               <Label className="text-xs font-semibold block">Fast Food Options Needed?</Label>
-              <p className="text-[10px] text-muted-foreground">AI adds exact restaurant orders as alternatives</p>
+              <p className="text-xs text-muted-foreground">AI adds exact restaurant orders as alternatives</p>
             </div>
             <YesNoToggle value={details.fastFoodNeeded} onChange={v => u('fastFoodNeeded', v)} />
           </div>
@@ -884,7 +857,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
         </AccordionSection>
 
         {/* Section — Digestion & Health */}
-        <AccordionSection icon={Zap} title="Digestion & Hunger" complete={false}>
+        <AccordionSection icon={Activity} title="Digestion & Hunger" complete={false}>
           <div>
             <Label className="text-xs font-semibold mb-1.5 block">Hunger Level</Label>
             <div className="flex gap-2">
@@ -931,11 +904,11 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
                     }
                   }}
                   className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-foreground'
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                    active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
                   )}
                 >
-                  <span>{SUPPLEMENT_DEFAULTS[s]?.emoji || '💊'}</span>
+                  
                   {s}
                 </button>
               );
@@ -944,8 +917,8 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
               type="button"
               onClick={() => { u('supplements', []); u('supplementDosages', {}); }}
               className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                details.supplements.length === 0 ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:border-primary/40'
+                'px-3 py-1.5 rounded-md text-[13px] font-medium border transition-colors',
+                details.supplements.length === 0 ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'
               )}
             >
               None
@@ -960,10 +933,10 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
                   <div key={s} className="rounded-xl border border-border bg-card p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{def.emoji || '💊'}</span>
+                        
                         <span className="text-sm font-bold text-foreground">{s}</span>
                         {def.timing && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-ai/10 text-ai">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-foreground">
                             {def.timing}
                           </span>
                         )}
@@ -972,7 +945,8 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
                         type="button"
                         onClick={() => u('supplements', details.supplements.filter(x => x !== s))}
                         className="text-muted-foreground hover:text-destructive text-xs"
-                      >×</button>
+                        aria-label={`Remove ${s}`}
+                      >Remove</button>
                     </div>
                     <input
                       type="text"
@@ -989,7 +963,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
         </AccordionSection>
 
         {/* Section — Macro Approach */}
-        <AccordionSection icon={Zap} title="Macro Split" complete={macroApproach === 'custom'}>
+        <AccordionSection icon={Activity} title="Macro Split" complete={macroApproach === 'custom'}>
           <p className="text-xs text-muted-foreground -mt-1 mb-3">
             Control how protein, carbs, and fat are distributed within the calculated calorie target.
           </p>
@@ -1014,7 +988,7 @@ function Step2Details({ details, setDetails, goal, macroApproach, setMacroApproa
           </div>
 
           {macroApproach === 'auto' && (
-            <p className="text-[11px] text-muted-foreground bg-secondary/50 px-3 py-2 rounded-lg">
+            <p className="text-[13px] text-muted-foreground">
               The AI will choose the optimal macro split based on the client's goal, body type, and diet style.
             </p>
           )}
@@ -1102,40 +1076,26 @@ function Step3Generating({ onDone, macroPayload }) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
-        <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center">
-          <span className="text-2xl">❌</span>
-        </div>
         <div>
-          <h2 className="text-lg font-bold text-foreground mb-1">Generation Failed</h2>
+          <h2 className="text-2xl text-foreground mb-1">The draft didn't finish</h2>
           <p className="text-sm text-muted-foreground max-w-sm">{error}</p>
         </div>
         <Button variant="outline" onClick={() => { setError(null); doneRef.current = false; apiCalledRef.current = false; onDone({ plan: null, meals: [] }); }}>
-          ← Go Back & Try Again
+          Go back and try again
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center py-10 gap-6">
-      <motion.div animate={{ scale: [1, 1.15, 1], opacity: [0.8, 1, 0.8] }} transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-ai flex items-center justify-center shadow-lg"
-      >
-        <Sparkles className="w-8 h-8 text-white" />
-      </motion.div>
-      <div className="text-center">
-        <h2 className="text-xl font-bold font-heading mb-1">Building your plan...</h2>
-        <AnimatePresence mode="wait">
-          <motion.p key={msgIndex} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.3 }} className="text-sm text-muted-foreground">
-            {LOADING_MESSAGES[msgIndex]}
-          </motion.p>
-        </AnimatePresence>
-      </div>
-      <div className="w-full max-w-xs">
-        <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <motion.div className="h-full bg-gradient-to-r from-primary to-ai rounded-full" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
+    <div className="py-6">
+      <div className="rounded-xl bg-ai text-ai-foreground p-6">
+        <h2 className="text-2xl mb-1">Drafting the plan</h2>
+        <p className="text-sm text-ai-foreground/75" aria-live="polite">{LOADING_MESSAGES[msgIndex]}</p>
+        <div className="mt-5 h-1.5 bg-ai-foreground/15 rounded-full overflow-hidden">
+          <div className="h-full bg-ai-foreground rounded-full transition-[width] duration-300" style={{ width: `${progress}%` }} />
         </div>
-        <p className="text-xs text-muted-foreground text-right mt-1">{Math.round(progress)}%</p>
+        <p className="text-[13px] text-ai-foreground/60 mt-2 tabular-nums">{Math.round(progress)}%. This usually takes under a minute.</p>
       </div>
     </div>
   );
@@ -1146,25 +1106,22 @@ function MealCard({ meal }) {
   const [open, setOpen] = useState(false);
   const isPre  = meal.type === 'pre_workout'  || meal.name?.toLowerCase().includes('pre-workout');
   const isPost = meal.type === 'post_workout' || meal.name?.toLowerCase().includes('post-workout');
-  const bg = isPre ? 'bg-warning/10 border-warning' : isPost ? 'bg-accent border-primary' : 'bg-card border-border';
-  const emoji = isPre ? '⚡' : isPost ? '💪' : '🍽️';
+  const bg = 'bg-card border-border';
+  const slot = isPre ? 'Pre-workout' : isPost ? 'Post-workout' : null;
 
   return (
     <div className={cn('rounded-xl border overflow-hidden', bg)}>
-      <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 p-3 text-left hover:bg-black/5 transition-colors">
-        <span className="text-lg">{emoji}</span>
+      <button type="button" onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-3 p-3 text-left hover:bg-accent/60 transition-colors">
+        <span className="num text-lg w-14 shrink-0 text-foreground">{meal.time || ''}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-foreground">{meal.name}</span>
-            {meal.time && <span className="text-[10px] text-muted-foreground font-medium">{meal.time}</span>}
-            {meal.prepTime && <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full text-muted-foreground">⏱ {meal.prepTime}</span>}
+            <span className="text-sm font-semibold text-foreground">{meal.name}</span>
+            {slot && <span className="text-xs text-muted-foreground">{slot}</span>}
+            {meal.prepTime && <span className="text-xs text-muted-foreground">Prep {meal.prepTime}</span>}
           </div>
-          <div className="flex gap-2 mt-1 flex-wrap">
-            <span className="text-[10px] font-bold text-orange-600">{meal.calories} kcal</span>
-            <span className="text-[10px] font-semibold text-destructive">P {meal.protein}g</span>
-            <span className="text-[10px] font-semibold text-warning">C {meal.carbs}g</span>
-            <span className="text-[10px] font-semibold text-primary">F {meal.fats}g</span>
-          </div>
+          <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">
+            <span className="font-semibold text-foreground">{meal.calories} kcal</span> · {meal.protein} g protein · {meal.carbs} g carbs · {meal.fats} g fat
+          </p>
         </div>
         <ChevronDown className={cn('w-4 h-4 text-muted-foreground shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
@@ -1173,46 +1130,34 @@ function MealCard({ meal }) {
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
             <div className="px-3 pb-3 space-y-2 border-t border-border/50">
-              <img
-                src={getMealImageUrl(meal.name, meal.foods)}
-                alt={meal.name}
-                loading="lazy"
-                className="w-full h-24 object-cover rounded-xl mt-2"
-                onError={e => { e.target.style.display = 'none'; }}
-              />
               {/* Foods */}
               {meal.why_this_meal && (
-                <p className="text-[11px] text-primary bg-accent px-2.5 py-1.5 rounded-lg mt-1 italic">💡 {meal.why_this_meal}</p>
+                <p className="text-xs text-muted-foreground mt-2"><span className="font-semibold text-foreground">Why this meal. </span>{meal.why_this_meal}</p>
               )}
 
               {meal.foods?.map((food, i) => (
                 <div key={i} className="flex items-start gap-2 pt-2">
-                  <span className="text-base mt-0.5">🥗</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-xs font-semibold text-foreground">{food.name}</span>
-                      <span className="text-[10px] text-orange-600 font-bold shrink-0">{food.calories} kcal</span>
+                      <span className="text-xs text-foreground font-semibold shrink-0 tabular-nums">{food.calories} kcal</span>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-0.5">
                       {food.amount_grams ? (
-                        <span className="text-[10px] text-muted-foreground">{food.amount_grams}g {food.amount_household ? `(${food.amount_household})` : ''}</span>
+                        <span className="text-xs text-muted-foreground">{food.amount_grams}g {food.amount_household ? `(${food.amount_household})` : ''}</span>
                       ) : (
-                        <span className="text-[10px] text-muted-foreground">{food.amount_household || food.amount}</span>
+                        <span className="text-xs text-muted-foreground">{food.amount_household || food.amount}</span>
                       )}
-                      {food.prep_method && <span className="text-[10px] text-ai italic">{food.prep_method}</span>}
+                      {food.prep_method && <span className="text-xs text-muted-foreground">{food.prep_method}</span>}
                     </div>
-                    <div className="flex gap-2 mt-0.5">
-                      <span className="text-[10px] text-destructive">P {food.protein}g</span>
-                      <span className="text-[10px] text-warning">C {food.carbs}g</span>
-                      <span className="text-[10px] text-primary">F {food.fats}g</span>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">{food.protein} g P · {food.carbs} g C · {food.fats} g F</p>
                   </div>
                 </div>
               ))}
               {/* Instructions */}
               {meal.instructions && (
                 <div className="mt-2 p-2 bg-secondary/40 rounded-lg">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-0.5">How to prepare</p>
+                  <p className="text-xs font-semibold text-muted-foreground mb-0.5">How to prepare</p>
                   <p className="text-xs text-foreground">{meal.instructions}</p>
                 </div>
               )}
@@ -1220,15 +1165,15 @@ function MealCard({ meal }) {
               {(meal.option_b || meal.option_c) && (
                 <div className="mt-2 space-y-1">
                   {meal.option_b && (
-                    <div className="px-2.5 py-1.5 rounded-lg bg-success/10 border border-success">
-                      <span className="text-[10px] font-bold text-success">Option B (Quick): </span>
-                      <span className="text-[10px] text-foreground">{meal.option_b}</span>
+                    <div className="px-2.5 py-1.5 rounded-lg bg-secondary">
+                      <span className="text-xs font-semibold text-foreground">Quick option: </span>
+                      <span className="text-xs text-foreground">{meal.option_b}</span>
                     </div>
                   )}
                   {meal.option_c && (
-                    <div className="px-2.5 py-1.5 rounded-lg bg-orange-50 border border-orange-100">
-                      <span className="text-[10px] font-bold text-orange-700">Option C (Out/Fast Food): </span>
-                      <span className="text-[10px] text-foreground">{meal.option_c}</span>
+                    <div className="px-2.5 py-1.5 rounded-lg bg-secondary">
+                      <span className="text-xs font-semibold text-foreground">Eating out: </span>
+                      <span className="text-xs text-foreground">{meal.option_c}</span>
                     </div>
                   )}
                 </div>
@@ -1269,86 +1214,79 @@ function Step4Result({ result }) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  const Section = ({ title, children }) => (
+    <section className="rounded-xl border border-border bg-card p-4 space-y-2">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      {children}
+    </section>
+  );
+
   return (
     <div className="pr-1 space-y-4">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold font-heading mb-1">Your AI Plan is Ready ✨</h2>
-          <p className="text-sm text-muted-foreground">Review the detailed meal plan below</p>
+          <h2 className="text-2xl mb-1">Review the draft</h2>
+          <p className="text-sm text-muted-foreground">Drafted by AI from the details you entered. Edit anything before it goes to a client.</p>
         </div>
-        <button type="button" onClick={copyPlan} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-lg hover:bg-secondary">
-          {copied ? <ClipboardCheck className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied!' : 'Copy'}
-        </button>
+        <Button type="button" variant="outline" size="sm" onClick={copyPlan}>
+          {copied ? <ClipboardCheck /> : <Copy />}
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
       </div>
 
-      {/* Summary card */}
-      <div className="bg-gradient-to-br from-accent to-ai/10 border border-accent rounded-2xl p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xl">{goalMeta?.emoji}</span>
-          <span className="text-sm font-bold px-3 py-1 rounded-full bg-card border border-primary/20 text-primary shadow-sm">{goalMeta?.label}</span>
-          {result.diet && <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-card border border-border text-muted-foreground">{result.diet}</span>}
-          <span className="text-xs text-muted-foreground ml-auto">{actLabel}</span>
-        </div>
-        <div className="text-center">
-          <p className="text-4xl font-extrabold text-foreground tracking-tight">{result.calories}</p>
-          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide mt-0.5">calories / day · ~{perMealCal} kcal per meal</p>
-          {result.goal === 'fat_loss' && result.weightLossRate && (
-            <p className="text-[11px] text-primary font-semibold mt-1">
-              Target: lose {result.weightLossRate} lb/week · {result.dailyDeficit} kcal/day deficit
-            </p>
-          )}
-          {result.deficitCapped && (
-            <p className="text-[11px] text-warning font-semibold mt-0.5 bg-warning/10 px-3 py-1 rounded-full inline-block">
-              ⚠️ Deficit capped to protect minimum healthy intake
-            </p>
-          )}
-          <div className="flex justify-center gap-3 mt-2">
-            <span className="text-[11px] text-muted-foreground bg-[var(--kc-w-70)] px-2 py-0.5 rounded-full border border-border">BMR: {result.bmr} kcal</span>
-            <span className="text-[11px] text-muted-foreground bg-[var(--kc-w-70)] px-2 py-0.5 rounded-full border border-border">TDEE: {result.tdee} kcal</span>
+      {/* Summary: ink panel, numbers first */}
+      <div className="rounded-xl bg-ai text-ai-foreground p-5 space-y-4">
+        <p className="text-sm text-ai-foreground/75">
+          {[goalMeta?.label, result.diet, actLabel].filter(Boolean).join(' · ')}
+        </p>
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+          <div>
+            <p className="num text-[44px] leading-none">{result.calories?.toLocaleString?.() ?? result.calories}</p>
+            <p className="text-sm text-ai-foreground/75 mt-1">calories a day, about {perMealCal} a meal</p>
           </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
           {[
-            { label: 'Protein', value: result.protein, color: 'text-destructive' },
-            { label: 'Carbs',   value: result.carbs,   color: 'text-warning' },
-            { label: 'Fats',    value: result.fats,    color: 'text-primary' },
+            { label: 'protein', value: result.protein },
+            { label: 'carbs',   value: result.carbs },
+            { label: 'fat',     value: result.fats },
           ].map(m => (
-            <div key={m.label} className="bg-card rounded-xl p-2.5 text-center shadow-sm">
-              <p className={cn('text-xl font-extrabold', m.color)}>{m.value}<span className="text-xs font-semibold text-muted-foreground">g</span></p>
-              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">{m.label}</p>
+            <div key={m.label}>
+              <p className="num text-[26px] leading-none">{m.value} g</p>
+              <p className="text-sm text-ai-foreground/75 mt-1">{m.label}</p>
             </div>
           ))}
         </div>
+        <p className="text-[13px] text-ai-foreground/60 tabular-nums">
+          BMR {result.bmr} kcal · maintenance {result.tdee} kcal
+          {result.goal === 'fat_loss' && result.weightLossRate ? ` · aiming for ${result.weightLossRate} lb a week, ${result.dailyDeficit} kcal a day under` : ''}
+        </p>
+        {result.deficitCapped && (
+          <p className="text-[13px] text-ai-foreground">The deficit was capped so intake doesn't drop below a safe minimum.</p>
+        )}
       </div>
 
       {/* Training / Rest Day tabs */}
       {result.rest_day_meals?.length > 0 && (
-        <div className="flex gap-1 bg-secondary rounded-lg p-0.5">
-          {[['training', '🏋️ Training Day'], ['rest', '😴 Rest Day']].map(([id, label]) => (
-            <button key={id} onClick={() => setDayTab(id)}
-              className={cn('flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors',
-                dayTab === id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              )}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          size="sm"
+          value={dayTab}
+          onChange={setDayTab}
+          options={[{ value: 'training', label: 'Training day' }, { value: 'rest', label: 'Rest day' }]}
+        />
       )}
 
       {/* Meal cards */}
       {displayMeals.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-            {dayTab === 'training' ? '🏋️ Training Day' : '😴 Rest Day'} — {displayMeals.length} meals
+          <p className="text-[13px] text-muted-foreground">
+            {dayTab === 'training' ? 'Training day' : 'Rest day'}, {displayMeals.length} meals
           </p>
           {displayMeals.map((meal, i) => <MealCard key={i} meal={meal} />)}
         </div>
       ) : (
-        <div className="text-xs text-muted-foreground text-center py-4">No meal data available</div>
+        <p className="text-sm text-muted-foreground py-4">No meals came back for this day.</p>
       )}
 
-      {/* Supplement Protocol — Morning & Night stacks */}
+      {/* Supplement protocol */}
       {(() => {
         const sups = (result.supplements || []).filter(s => s !== 'None');
         const hasTiming = sups.some(s => typeof s === 'object' && s.timing);
@@ -1359,21 +1297,17 @@ function Step4Result({ result }) {
           ? sups.filter(s => typeof s === 'object' && ['Night','night','Before Bed'].includes(s.timing))
           : [];
 
-        const renderRow = (s, badge, badgeColor) => {
+        const renderRow = (s, badge) => {
           const name = typeof s === 'object' ? s.name : s;
           const dosage = typeof s === 'object' ? (s.dosage || s.dose || '') : (SUPPLEMENT_DEFAULTS[s]?.dosage || '');
           const purpose = typeof s === 'object' ? (s.purpose || s.why || '') : ((SUPPLEMENT_GOAL_REASONS[result.goal] || {})[s] || '');
           return (
-            <div key={name} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border">
-              <span className="text-lg shrink-0 mt-0.5">💊</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold text-foreground">{name}</span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>
-                </div>
-                {dosage && <p className="text-xs text-foreground font-medium mt-0.5">{dosage}</p>}
-                {purpose && <p className="text-[11px] text-muted-foreground mt-0.5 italic">{purpose}</p>}
+            <div key={name} className="py-2.5 border-b border-border last:border-b-0">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm font-semibold text-foreground">{name}</span>
+                <span className="text-sm text-foreground/80 text-right">{[dosage, badge.toLowerCase()].filter(Boolean).join(', ')}</span>
               </div>
+              {purpose && <p className="text-[13px] text-muted-foreground mt-0.5">{purpose}</p>}
             </div>
           );
         };
@@ -1381,131 +1315,96 @@ function Step4Result({ result }) {
         if (morning.length === 0 && night.length === 0 && sups.length === 0) return null;
 
         return (
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">💊 Supplement Protocol</p>
-            {morning.length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold text-warning uppercase tracking-wide mb-2">☀️ Morning Stack</p>
-                <div className="space-y-2">{morning.map(s => renderRow(s, 'Morning', 'bg-warning/10 text-warning'))}</div>
-              </div>
-            )}
-            {night.length > 0 && (
-              <div>
-                <p className="text-[11px] font-bold text-primary uppercase tracking-wide mb-2 mt-3">🌙 Night Stack</p>
-                <div className="space-y-2">{night.map(s => renderRow(s, 'Before Bed', 'bg-accent text-primary'))}</div>
-              </div>
-            )}
-            {!hasTiming && sups.length > 0 && (
-              <div className="space-y-2">{sups.map(s => renderRow(s, 'Daily', 'bg-ai/10 text-ai'))}</div>
-            )}
-            <p className="text-[11px] text-warning bg-warning/10 rounded-xl px-3 py-2">
-              ⚠️ General recommendations. Coach may adjust based on your specific needs.
-            </p>
-          </div>
+          <Section title="Supplements">
+            {morning.length > 0 && <div>{morning.map(s => renderRow(s, 'Morning'))}</div>}
+            {night.length > 0 && <div>{night.map(s => renderRow(s, 'Before bed'))}</div>}
+            {!hasTiming && sups.length > 0 && <div>{sups.map(s => renderRow(s, 'Daily'))}</div>}
+            <p className="text-[13px] text-muted-foreground">General starting doses. Adjust for the client.</p>
+          </Section>
         );
       })()}
 
-      {/* Hydration protocol */}
+      {/* Hydration */}
       {result.hydration && (
-        <div className="bg-accent border border-accent rounded-2xl p-4 space-y-2">
-          <p className="text-xs font-bold text-primary uppercase tracking-wide">💧 Hydration Protocol</p>
-          <p className="text-sm font-bold text-primary">Daily Target: {result.hydration.daily_oz} oz / ~{Math.round(result.hydration.daily_oz * 0.0296)} L</p>
-          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-            {[['Morning', result.hydration.morning], ['Pre-Workout', result.hydration.pre_workout], ['During', result.hydration.during_workout], ['Post-Workout', result.hydration.post_workout]].map(([label, val]) => val && (
-              <div key={label} className="bg-card rounded-lg px-2.5 py-1.5 border border-accent">
-                <p className="font-bold text-primary">{label}</p>
-                <p className="text-primary">{val}</p>
+        <Section title={`Water: ${result.hydration.daily_oz} oz a day (about ${Math.round(result.hydration.daily_oz * 0.0296)} L)`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+            {[['Morning', result.hydration.morning], ['Pre-workout', result.hydration.pre_workout], ['During training', result.hydration.during_workout], ['Post-workout', result.hydration.post_workout]].map(([label, val]) => val && (
+              <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-b border-border text-sm">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="text-foreground text-right">{val}</span>
               </div>
             ))}
           </div>
           {result.hydration.electrolytes && (
-            <p className="text-[11px] text-primary">⚡ {result.hydration.electrolytes}</p>
+            <p className="text-[13px] text-muted-foreground">{result.hydration.electrolytes}</p>
           )}
-        </div>
+        </Section>
       )}
 
       {/* Macro flexibility rules */}
       {result.macro_flexibility?.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">🔄 Macro Flexibility Rules</p>
-          <div className="space-y-1.5">
-            {result.macro_flexibility.map((rule, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs">
-                <span className="text-primary font-bold shrink-0">→</span>
-                <span className="text-foreground">{rule}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Section title="Flex rules">
+          <ul className="list-disc pl-4 space-y-1 text-sm text-foreground">
+            {result.macro_flexibility.map((rule, i) => <li key={i}>{rule}</li>)}
+          </ul>
+        </Section>
       )}
 
       {/* Coach notes */}
       {result.coach_notes && (
-        <div className="bg-warning/10 border border-warning rounded-2xl p-4 space-y-3">
-          <p className="text-xs font-bold text-warning uppercase tracking-wide">📋 Coach Notes</p>
-          {result.coach_notes.why_these_calories && (
-            <div><p className="text-[11px] font-bold text-warning">Why these calories</p><p className="text-xs text-foreground">{result.coach_notes.why_these_calories}</p></div>
-          )}
-          {result.coach_notes.key_priorities && (
-            <div><p className="text-[11px] font-bold text-warning">Key priorities</p><p className="text-xs text-foreground">{result.coach_notes.key_priorities}</p></div>
-          )}
-          {result.coach_notes.first_2_weeks && (
-            <div><p className="text-[11px] font-bold text-warning">First 2 weeks</p><p className="text-xs text-foreground">{result.coach_notes.first_2_weeks}</p></div>
-          )}
-          {result.coach_notes.body_type_advice && (
-            <div><p className="text-[11px] font-bold text-warning">Body type advice</p><p className="text-xs text-foreground">{result.coach_notes.body_type_advice}</p></div>
-          )}
-        </div>
+        <Section title="Notes for you">
+          {[
+            ['Why these calories', result.coach_notes.why_these_calories],
+            ['Priorities', result.coach_notes.key_priorities],
+            ['First two weeks', result.coach_notes.first_2_weeks],
+            ['Body type', result.coach_notes.body_type_advice],
+          ].filter(([, v]) => v).map(([label, v]) => (
+            <div key={label}>
+              <p className="text-[13px] text-muted-foreground">{label}</p>
+              <p className="text-sm text-foreground">{v}</p>
+            </div>
+          ))}
+        </Section>
       )}
 
       {/* Client notes */}
       {result.client_notes && (
-        <div className="bg-success/10 border border-success rounded-2xl p-4">
-          <p className="text-xs font-bold text-success uppercase tracking-wide mb-2">💬 Client Summary</p>
-          <p className="text-xs text-foreground leading-relaxed">{result.client_notes}</p>
-        </div>
+        <Section title="What the client will read">
+          <p className="text-sm text-foreground leading-relaxed">{result.client_notes}</p>
+        </Section>
       )}
 
       {/* Shopping list */}
       {result.shopping_list?.length > 0 && (
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">🛒 Shopping List</p>
-          <div className="grid grid-cols-2 gap-1">
-            {result.shopping_list.map((item, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                <span className="text-foreground">{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <Section title={`Shopping list, ${result.shopping_list.length} items`}>
+          <p className="text-sm text-foreground">{result.shopping_list.join(', ')}</p>
+        </Section>
       )}
 
       {/* Weekly overview */}
       {result.weekly_overview && (
-        <div className="bg-secondary/40 border border-border rounded-2xl p-4">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">📅 Weekly Overview</p>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-card rounded-xl p-2 border border-border">
-              <p className="text-sm font-bold text-foreground">{result.weekly_overview.training_days || result.trainingDays || 4}</p>
-              <p className="text-[10px] text-muted-foreground">Training Days</p>
+        <Section title="The week">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="num text-2xl text-foreground">{result.weekly_overview.training_days || result.trainingDays || 4}</p>
+              <p className="text-[13px] text-muted-foreground">training days</p>
             </div>
-            <div className="bg-card rounded-xl p-2 border border-border">
-              <p className="text-sm font-bold text-foreground">{result.weekly_overview.avg_daily_calories || result.calories}</p>
-              <p className="text-[10px] text-muted-foreground">Avg Daily Cal</p>
+            <div>
+              <p className="num text-2xl text-foreground">{result.weekly_overview.avg_daily_calories || result.calories}</p>
+              <p className="text-[13px] text-muted-foreground">average calories</p>
             </div>
-            <div className="bg-card rounded-xl p-2 border border-border">
-              <p className="text-sm font-bold text-foreground">${result.weekly_overview.estimated_weekly_cost_usd || '—'}</p>
-              <p className="text-[10px] text-muted-foreground">Est. Weekly Cost</p>
+            <div>
+              <p className="num text-2xl text-foreground">${result.weekly_overview.estimated_weekly_cost_usd || '—'}</p>
+              <p className="text-[13px] text-muted-foreground">groceries a week</p>
             </div>
           </div>
-        </div>
+        </Section>
       )}
 
       {result.allergies?.length > 0 && (
-        <div className="text-xs text-muted-foreground bg-secondary/40 rounded-xl px-3 py-2">
-          ⚠️ Plan excludes: {result.allergies.join(', ')}
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Excluded for allergies: <span className="text-foreground">{result.allergies.join(', ')}</span>
+        </p>
       )}
 
     </div>
@@ -1763,14 +1662,14 @@ export default function AIGeneratorModal({ open, onOpenChange, onApply }) {
         style={{ display: 'flex', flexDirection: 'column', height: '90vh', maxHeight: '90vh' }}
       >
         {/* Fixed header — step dots */}
-        <div className="px-8 pt-6 pb-3 shrink-0 border-b border-border/50">
+        <div className="px-5 sm:px-8 pt-6 pb-3 shrink-0 border-b border-border">
           <StepDots current={step} total={5} />
         </div>
 
         {/* Scrollable content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="px-8 py-5">
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="px-5 sm:px-8 py-5">
           <AnimatePresence custom={dir} mode="wait">
-            <motion.div key={step} custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: 'easeInOut' }}>
+            <motion.div key={step} custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.15, ease: 'easeOut' }}>
               {step === 0 && <Step1Goal goal={goal} setGoal={setGoal} details={details} setDetails={setDetails} />}
               {step === 1 && (() => {
                 const _wKg = details.weightUnit === 'lbs' ? parseFloat(details.weight) / 2.2046 : parseFloat(details.weight);
@@ -1807,27 +1706,24 @@ export default function AIGeneratorModal({ open, onOpenChange, onApply }) {
 
         {/* Fixed footer */}
         {showFooter && (
-          <div className="shrink-0 border-t border-border bg-secondary/30 px-8 py-4">
+          <div className="shrink-0 border-t border-border bg-card px-5 sm:px-8 py-4">
             {step === 3 ? (
               /* Result step — Regenerate + Save & Assign + quick-use */
               <div className="flex flex-col gap-2.5">
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => go(2)} className="gap-1.5 shrink-0">
-                    <RotateCcw className="w-3.5 h-3.5" /> Regenerate
+                    <RotateCcw /> Regenerate
                   </Button>
-                  <Button
-                    onClick={goToAssign}
-                    className="flex-1 gap-2 bg-gradient-to-r from-primary to-ai hover:from-primary hover:to-ai border-0 text-white font-bold"
-                  >
-                    <UserPlus className="w-4 h-4" /> Save & Assign
+                  <Button onClick={goToAssign} className="flex-1">
+                    <UserPlus /> Save and assign
                   </Button>
                 </div>
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center"
+                  className="text-[13px] font-semibold text-foreground underline underline-offset-4 self-center"
                 >
-                  or just open in plan editor →
+                  Open in the plan editor instead
                 </button>
               </div>
             ) : (
@@ -1848,18 +1744,18 @@ export default function AIGeneratorModal({ open, onOpenChange, onApply }) {
                     size="sm"
                     disabled={!canNext()}
                     onClick={handleStartGenerating}
-                    className="flex-1 gap-2 bg-gradient-to-r from-primary to-ai hover:from-primary hover:to-ai border-0 text-white font-bold"
+                    className="flex-1"
                   >
-                    <Sparkles className="w-4 h-4" /> Generate Plan ✨
+                    Draft the plan
                   </Button>
                 ) : (
                   <Button
                     size="sm"
                     disabled={!canNext()}
                     onClick={() => go(step + 1)}
-                    className="flex-1 sm:flex-none gap-1.5 bg-gradient-to-r from-primary to-ai hover:from-primary hover:to-ai border-0 text-white font-bold"
+                    className="flex-1 sm:flex-none"
                   >
-                    Next <ChevronRight className="w-4 h-4" />
+                    Next <ChevronRight />
                   </Button>
                 )}
               </div>

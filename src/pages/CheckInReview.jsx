@@ -1,21 +1,32 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { differenceInDays, parseISO, format } from 'date-fns';
-import { ClipboardList, Search, X, Plus, Bell, Send, MessageSquare } from 'lucide-react';
+import { differenceInDays, parseISO } from 'date-fns';
+import { Search, X, MoreHorizontal, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { checkInScore } from '@/lib/adherence';
-import { Input } from '@/components/ui/input';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { TextLink, EmptyState, Panel } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import CheckInStatsRow from '@/components/checkin/CheckInStatsRow';
 import CheckInReviewRow from '@/components/checkin/CheckInReviewRow';
 import CheckInEnhancedDrawer from '@/components/checkin/CheckInEnhancedDrawer';
+import CheckInAnalyticsSidebar from '@/components/checkin/CheckInAnalyticsSidebar';
 import FormBuilderTab from '@/components/checkin/FormBuilderTab';
+import { previousCheckIn } from '@/components/checkin/reviewParts';
+
+const REMINDER_TEXT = 'Hey, quick reminder to send in your weekly check-in when you get a minute.';
 
 /* ── helpers ── */
 function isPending(ci) {
   return !ci.coach_responded && ci.review_status !== 'reviewed';
+}
+function isReviewed(ci) {
+  return ci.coach_responded || ci.review_status === 'reviewed';
 }
 function isFlagged(ci) {
   if (ci.review_status === 'flagged') return true;
@@ -27,29 +38,27 @@ function isFlagged(ci) {
   if (ci.mood === 'stressed' || ci.mood === 'tired') return true;
   return false;
 }
-function isOverdue(ci) { return differenceInDays(new Date(), parseISO(ci.date)) > 14; }
 
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'pending', label: 'Pending' },
   { key: 'flagged', label: 'Flagged' },
   { key: 'reviewed', label: 'Reviewed' },
-  { key: 'missed', label: 'Missed' },
-];
-
-const MAIN_TABS = [
-  { key: 'pending_review', label: 'Pending Review' },
-  { key: 'form_builder', label: 'Form Builder' },
+  { key: 'missed', label: 'Overdue' },
 ];
 
 export default function CheckInReview() {
-  const [mainTab, setMainTab] = useState('pending_review');
+  // 'review' | 'overview' | 'forms'  (was: pending_review | form_builder tabs)
+  const [mainTab, setMainTab] = useState('review');
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [drawerCheckIn, setDrawerCheckIn] = useState(null);
-  const [drawerIndex, setDrawerIndex] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
+  const [mobileView, setMobileView] = useState('list'); // list | detail
+  const [queueDone, setQueueDone] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  const paramClientId = useMemo(() => new URLSearchParams(window.location.search).get('clientId'), []);
 
   // Real-time subscription
   useEffect(() => {
@@ -108,9 +117,16 @@ export default function CheckInReview() {
   const counts = useMemo(() => ({
     pending: latestPerClient.filter(isPending).length,
     flagged: latestPerClient.filter(isFlagged).length,
-    reviewed: latestPerClient.filter(ci => ci.coach_responded || ci.review_status === 'reviewed').length,
+    reviewed: latestPerClient.filter(isReviewed).length,
     missed: missedClients.length,
   }), [latestPerClient, missedClients]);
+
+  // Progress line: this week's check-ins (falls back to everything if none this week)
+  const progress = useMemo(() => {
+    const recent = latestPerClient.filter(ci => differenceInDays(new Date(), parseISO(ci.date)) <= 7);
+    const pool = recent.length ? recent : latestPerClient;
+    return { done: pool.filter(isReviewed).length, total: pool.length, thisWeek: recent.length > 0 };
+  }, [latestPerClient]);
 
   const visible = useMemo(() => {
     let list = latestPerClient;
@@ -120,9 +136,13 @@ export default function CheckInReview() {
     }
     if (filter === 'pending') list = list.filter(isPending);
     if (filter === 'flagged') list = list.filter(isFlagged);
-    if (filter === 'reviewed') list = list.filter(ci => ci.coach_responded || ci.review_status === 'reviewed');
+    if (filter === 'reviewed') list = list.filter(isReviewed);
     if (filter === 'missed') return [];
     return [...list].sort((a, b) => {
+      // Waiting first, then flagged, then newest.
+      const aw = isPending(a) ? 1 : 0;
+      const bw = isPending(b) ? 1 : 0;
+      if (bw !== aw) return bw - aw;
       const aFlag = isFlagged(a) ? 1 : 0;
       const bFlag = isFlagged(b) ? 1 : 0;
       if (bFlag !== aFlag) return bFlag - aFlag;
@@ -130,195 +150,242 @@ export default function CheckInReview() {
     });
   }, [latestPerClient, filter, search, clientMap]);
 
-  const openDrawer = (ci, idx) => {
-    setDrawerCheckIn(ci);
-    setDrawerIndex(idx);
+  // Default selection: ?clientId= deep link, else the first item in the queue.
+  useEffect(() => {
+    if (queueDone) return;
+    if (selectedId && latestPerClient.some(ci => ci.id === selectedId)) return;
+    if (paramClientId) {
+      const target = latestPerClient.find(ci => ci.client_id === paramClientId);
+      if (target) { setSelectedId(target.id); setMobileView('detail'); return; }
+    }
+    if (visible[0]) setSelectedId(visible[0].id);
+  }, [visible, latestPerClient, selectedId, paramClientId, queueDone]);
+
+  const selected = latestPerClient.find(ci => ci.id === selectedId) || null;
+  const selectedIndex = Math.max(0, visible.findIndex(ci => ci.id === selectedId));
+
+  const openDrawer = (ci) => {
+    setSelectedId(ci.id);
+    setQueueDone(false);
+    setMainTab('review');
+    setMobileView('detail');
   };
 
   const navigateDrawer = (newIdx) => {
     if (newIdx >= 0 && newIdx < visible.length) {
-      setDrawerCheckIn(visible[newIdx]);
-      setDrawerIndex(newIdx);
+      setSelectedId(visible[newIdx].id);
     }
   };
 
-  return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto overflow-x-hidden">
+  // After send or skip: move to the next check-in that still needs a reply.
+  const openNext = () => {
+    const idx = visible.findIndex(ci => ci.id === selectedId);
+    const after = [...visible.slice(idx + 1), ...visible.slice(0, Math.max(idx, 0))];
+    const next = after.find(isPending) || visible[idx + 1];
+    if (next) setSelectedId(next.id);
+    else { setSelectedId(null); setQueueDone(true); setMobileView('list'); }
+  };
 
-      {/* ── Header ── */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl px-5 py-4"
-        style={{ background: 'var(--tc-sidebar)' }}>
-        <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">Check-ins</h1>
-          <p className="text-xs sm:text-sm mt-0.5 text-white/50">
-            {format(new Date(), 'EEE, MMM d')} · {latestPerClient.length} total · {counts.pending} pending review
-          </p>
+  const sendBulkReminder = () => navigate(`/messages?message=${encodeURIComponent(REMINDER_TEXT)}`);
+
+  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  /* ── Queue column ── */
+  const queue = (
+    <aside className={cn(
+      'bg-card flex-col lg:w-[320px] xl:w-[340px] lg:flex-shrink-0 lg:border-r lg:border-border lg:h-full min-h-[calc(100dvh-56px-64px)] lg:min-h-0',
+      mobileView === 'detail' && mainTab === 'review' ? 'hidden lg:flex' : 'flex'
+    )}>
+      <div className="px-5 pt-6 pb-4 flex-shrink-0">
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="text-[32px] lg:text-[36px] leading-none text-foreground">Check-ins</h1>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 -mr-2" aria-label="Check-in options">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem onClick={() => { setMainTab('review'); setMobileView('list'); }}>Review queue</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setMainTab('overview'); setMobileView('detail'); }}>Overview and trends</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setMainTab('forms'); setMobileView('detail'); }}>Check-in forms</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={sendBulkReminder}>Send everyone a reminder</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors"
-            style={{ background: 'color-mix(in srgb, white 10%, transparent)', color: 'var(--tc-sidebar-accent-foreground)', borderColor: 'color-mix(in srgb, white 20%, transparent)' }}
-            onClick={() => navigate(`/messages?message=${encodeURIComponent("Hey! Just a reminder to submit your weekly check-in 📋")}`)}
-          >
-            <Bell className="w-3.5 h-3.5" /> Send Bulk Reminder
-          </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold text-primary-foreground transition-colors"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}
-            onClick={() => setMainTab('form_builder')}
-          >
-            <Plus className="w-3.5 h-3.5" /> New Check-in Form
-          </button>
+        <p className="text-[15px] text-muted-foreground mt-2">
+          {progress.total === 0 ? 'Nothing in yet' : `${progress.done} of ${progress.total} reviewed${progress.thisWeek ? '' : ' so far'}`}
+        </p>
+        <div className="mt-2.5 h-[3px] rounded-full bg-secondary overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full bg-primary transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
-      </div>
 
-      {/* ── Stat Cards ── */}
-      <CheckInStatsRow checkIns={checkIns} clients={clients} latestPerClient={latestPerClient} />
+        <div className="mt-4 flex gap-4 overflow-x-auto scrollbar-hide border-b border-border" role="tablist">
+          {FILTERS.map(f => {
+            const n = f.key === 'all' || f.key === 'reviewed' ? null : counts[f.key];
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  'touch-compact -mb-px whitespace-nowrap border-b-2 pb-2 text-[13px] font-medium transition-colors',
+                  active ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {f.label}
+                {n ? <span className={cn('ml-1 tabular-nums', f.key === 'missed' && 'text-destructive')}>{n}</span> : null}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* ── Main Tabs ── */}
-      <div className="flex gap-1 mb-6 bg-muted rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-hide">
-        {MAIN_TABS.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setMainTab(tab.key)}
-            className={cn(
-              'px-5 py-2 rounded-lg text-sm font-semibold transition-all',
-              mainTab === tab.key
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {tab.label}
-            {tab.key === 'pending_review' && counts.pending > 0 && (
-              <span className={cn(
-                'ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                mainTab === tab.key ? 'bg-orange-100 text-orange-600' : 'bg-border text-muted-foreground'
-              )}>{counts.pending}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Pending Review Tab ── */}
-      {mainTab === 'pending_review' && (
-        <div>
-          {/* Filter bar */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-5">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-              {FILTERS.map(f => (
-                <button key={f.key} onClick={() => setFilter(f.key)}
-                  className={cn(
-                    'flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                    filter === f.key
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-card border border-border text-foreground hover:border-muted-foreground'
-                  )}>
-                  {f.label}
-                  {f.key !== 'all' && counts[f.key] > 0 && (
-                    <span className={cn('ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                      filter === f.key ? 'bg-[var(--kc-w-20)] text-white' : 'bg-muted')}>
-                      {counts[f.key]}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
-              {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-4 h-4 text-muted-foreground" /></button>}
-            </div>
-          </div>
-
-          {/* Check-in list */}
-          {isLoading ? (
-            <div className="flex justify-center py-20">
-              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-            </div>
-          ) : filter === 'missed' ? (
-            /* Missed clients list */
-            missedClients.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-                <ClipboardList className="w-12 h-12 opacity-30" />
-                <p className="text-sm font-medium">All active clients checked in this week 🎉</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground mb-3">{missedClients.length} client{missedClients.length !== 1 ? 's' : ''} haven't submitted this week</p>
-                {missedClients.map(({ client, lastCI, daysAgo }) => (
-                  <div key={client.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 shadow-sm">
-                    <div className="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center text-warning font-bold text-sm flex-shrink-0">
-                      {client.name?.[0]?.toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{client.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {daysAgo !== null ? `Last check-in ${daysAgo}d ago` : 'No check-ins yet'}
-                      </p>
-                    </div>
-                    <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full border',
-                      daysAgo === null || daysAgo > 21 ? 'bg-destructive/10 text-destructive border-destructive' : 'bg-warning/10 text-warning border-warning')}>
-                      {daysAgo !== null ? `${daysAgo}d` : 'Never'}
-                    </span>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => navigate(`/messages?clientId=${client.id}&message=${encodeURIComponent("Hey! Just a reminder to submit your weekly check-in 📋")}`)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors min-h-[36px]">
-                        <Send className="w-3 h-3" /> <span className="hidden sm:inline">Remind</span>
-                      </button>
-                      <button
-                        onClick={() => navigate(`/messages?clientId=${client.id}`)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-muted border border-border text-foreground hover:bg-border transition-colors min-h-[36px]">
-                        <MessageSquare className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          ) : visible.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
-              <ClipboardList className="w-12 h-12 opacity-30" />
-              <p className="text-sm font-medium">
-                {filter === 'pending' ? 'All caught up! No pending check-ins 🎉' :
-                 filter === 'flagged' ? 'No flagged check-ins' :
-                 filter === 'reviewed' ? 'No reviewed check-ins yet' :
-                 search ? 'No clients found' : 'No check-ins submitted yet'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {visible.map((ci, i) => (
-                <CheckInReviewRow
-                  key={ci.id}
-                  checkIn={ci}
-                  client={clientMap[ci.client_id]}
-                  onReview={() => openDrawer(ci, i)}
-                />
-              ))}
-            </div>
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search clients"
+            className="h-10 w-full rounded-lg bg-secondary pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
           )}
         </div>
-      )}
+      </div>
 
-      {/* ── Form Builder Tab ── */}
-      {mainTab === 'form_builder' && (
-        <FormBuilderTab clients={clients} />
-      )}
+      <div className="flex-1 overflow-y-auto border-t border-border">
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-full animate-spin" />
+          </div>
+        ) : filter === 'missed' ? (
+          missedClients.length === 0 ? (
+            <EmptyState title="Everyone checked in this week." body="No active client is more than 7 days late." />
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border">
+                <p className="text-sm text-destructive">{missedClients.length} haven't checked in this week</p>
+                <TextLink onClick={sendBulkReminder}>Remind all</TextLink>
+              </div>
+              {missedClients.map(({ client, daysAgo }) => (
+                <div key={client.id} className="flex items-center gap-3 px-5 py-3.5 border-b border-border">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-semibold text-foreground truncate">{client.name}</p>
+                    <p className={cn('text-[13px]', daysAgo === null || daysAgo > 21 ? 'text-destructive' : 'text-muted-foreground')}>
+                      {daysAgo !== null ? `Last check-in ${daysAgo} days ago` : 'No check-ins yet'}
+                    </p>
+                  </div>
+                  <TextLink
+                    onClick={() => navigate(`/messages?clientId=${client.id}&message=${encodeURIComponent(REMINDER_TEXT)}`)}
+                  >
+                    Remind
+                  </TextLink>
+                  <TextLink onClick={() => navigate(`/messages?clientId=${client.id}`)} className="text-muted-foreground">
+                    Message
+                  </TextLink>
+                </div>
+              ))}
+            </>
+          )
+        ) : visible.length === 0 ? (
+          <EmptyState
+            title={
+              filter === 'pending' ? 'All caught up.' :
+              filter === 'flagged' ? 'Nothing flagged.' :
+              filter === 'reviewed' ? 'Nothing reviewed yet.' :
+              search ? 'No clients match that search.' : 'No check-ins yet.'
+            }
+            body={
+              filter === 'pending' ? 'Every check-in has a reply.' :
+              !search && filter === 'all' ? 'They show up here as soon as a client submits one.' : undefined
+            }
+          />
+        ) : (
+          visible.map((ci) => (
+            <CheckInReviewRow
+              key={ci.id}
+              checkIn={ci}
+              client={clientMap[ci.client_id]}
+              prev={previousCheckIn(ci, cisByClient[ci.client_id] || [])}
+              selected={mainTab === 'review' && ci.id === selectedId}
+              onReview={() => openDrawer(ci)}
+            />
+          ))
+        )}
+      </div>
+    </aside>
+  );
 
-      {/* ── Enhanced Review Drawer ── */}
-      {drawerCheckIn && (
-        <CheckInEnhancedDrawer
-          checkIn={drawerCheckIn}
-          client={clientMap[drawerCheckIn.client_id]}
-          allCheckIns={cisByClient[drawerCheckIn.client_id] || []}
-          currentIndex={drawerIndex}
-          total={visible.length}
-          onNavigate={navigateDrawer}
-          open={!!drawerCheckIn}
-          onOpenChange={(v) => { if (!v) setDrawerCheckIn(null); }}
-        />
-      )}
+  /* ── Secondary views (overview, forms) ── */
+  const secondaryHeader = (title, subtitle) => (
+    <div className="mb-6">
+      <button
+        onClick={() => { setMainTab('review'); setMobileView('list'); }}
+        className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" /> Back to the queue
+      </button>
+      <h1 className="text-[32px] sm:text-[38px] leading-none text-foreground">{title}</h1>
+      {subtitle && <p className="text-[15px] text-muted-foreground mt-1.5">{subtitle}</p>}
+    </div>
+  );
+
+  return (
+    <div className="lg:flex lg:h-[calc(100dvh-76px)] lg:overflow-hidden">
+      {queue}
+
+      <section className={cn(
+        'flex-1 min-w-0 lg:h-full lg:overflow-y-auto',
+        mobileView === 'list' && mainTab === 'review' ? 'hidden lg:block' : 'block'
+      )}>
+        {mainTab === 'review' && (
+          selected ? (
+            <CheckInEnhancedDrawer
+              checkIn={selected}
+              client={clientMap[selected.client_id]}
+              allCheckIns={cisByClient[selected.client_id] || []}
+              currentIndex={selectedIndex}
+              total={visible.length}
+              onNavigate={navigateDrawer}
+              onDone={openNext}
+              overdueCount={counts.missed}
+              open
+              onOpenChange={(v) => { if (!v) setMobileView('list'); }}
+            />
+          ) : (
+            <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+              <Panel>
+                <EmptyState
+                  title={progress.total && progress.done === progress.total ? `That's everyone. ${progress.done} of ${progress.total} reviewed.` : 'Pick a check-in from the queue.'}
+                  body={counts.missed ? `${counts.missed} client${counts.missed !== 1 ? 's are' : ' is'} overdue. A quick nudge usually does it.` : undefined}
+                  action={counts.missed ? <Button variant="outline" onClick={() => setFilter('missed')}>See who's overdue</Button> : undefined}
+                />
+              </Panel>
+            </div>
+          )
+        )}
+
+        {mainTab === 'overview' && (
+          <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8 space-y-4">
+            {secondaryHeader('Overview', 'How check-ins are going across your roster.')}
+            <CheckInStatsRow checkIns={checkIns} clients={clients} latestPerClient={latestPerClient} />
+            <CheckInAnalyticsSidebar checkIns={checkIns} clients={clients} latestPerClient={latestPerClient} clientMap={clientMap} />
+          </div>
+        )}
+
+        {mainTab === 'forms' && (
+          <div className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {secondaryHeader('Check-in forms', 'The questions clients answer each week.')}
+            <FormBuilderTab clients={clients} />
+          </div>
+        )}
+      </section>
     </div>
   );
 }

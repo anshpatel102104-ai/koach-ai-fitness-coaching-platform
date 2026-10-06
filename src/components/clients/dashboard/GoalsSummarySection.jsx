@@ -4,9 +4,10 @@ import { db } from '@/api/supabaseClient';
 import { Plus, Target, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import GoalFormModal from './goals/GoalFormModal';
+import { Button } from '@/components/ui/button';
 
 // ── Mini progress bar ──────────────────────────────────────
-function Bar({ pct, color = 'var(--tc-primary)' }) {
+function Bar({ pct, color = 'var(--tc-foreground)' }) {
   const p = Math.max(0, Math.min(100, pct || 0));
   return (
     <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
@@ -41,13 +42,13 @@ function GoalItem({ goal, onEdit, onDelete, onToggle }) {
   }
 
   return (
-    <div className={`bg-card rounded-xl border shadow-sm p-3.5 transition-all ${isComplete ? 'opacity-60 border-border' : 'border-border hover:border-accent'}`}>
+    <div className={`rounded-lg border p-3.5 transition-colors ${isComplete ? 'opacity-60 border-border' : 'border-border hover:bg-accent/50'}`}>
       <div className="flex items-start gap-3">
         {/* Complete toggle */}
         <button onClick={() => onToggle(goal)} className="mt-0.5 flex-shrink-0">
           {isComplete
             ? <CheckCircle2 className="w-4 h-4 text-success" />
-            : <Target className="w-4 h-4 text-primary" />}
+            : <Target className="w-4 h-4 text-muted-foreground" />}
         </button>
 
         <div className="flex-1 min-w-0">
@@ -69,28 +70,28 @@ function GoalItem({ goal, onEdit, onDelete, onToggle }) {
 
           {progress !== null && (
             <div className="space-y-1">
-              <Bar pct={progress} color={isComplete ? 'var(--tc-success)' : 'var(--tc-primary)'} />
-              <p className="text-[10px] text-muted-foreground">{progressLabel}</p>
+              <Bar pct={progress} color={isComplete ? 'var(--tc-success)' : 'var(--tc-foreground)'} />
+              <p className="text-[11px] text-muted-foreground">{progressLabel}</p>
             </div>
           )}
 
           {goal.goal_type === 'nutrition' && goal.protein_target && (
             <div className="grid grid-cols-3 gap-1 mt-2">
               {[
-                { label: 'Protein', cur: goal.protein_current, tgt: goal.protein_target, color: 'var(--tc-primary)' },
-                { label: 'Carbs',   cur: goal.carbs_current,   tgt: goal.carbs_target,   color: 'var(--tc-warning)' },
-                { label: 'Fat',     cur: goal.fat_current,     tgt: goal.fat_target,     color: 'var(--tc-success)' },
+                { label: 'Protein', cur: goal.protein_current, tgt: goal.protein_target, color: 'var(--tc-foreground)' },
+                { label: 'Carbs',   cur: goal.carbs_current,   tgt: goal.carbs_target,   color: 'var(--tc-muted-foreground)' },
+                { label: 'Fat',     cur: goal.fat_current,     tgt: goal.fat_target,     color: 'var(--tc-border)' },
               ].map(m => (
                 <div key={m.label}>
                   <Bar pct={m.tgt ? Math.round(((m.cur ?? 0) / m.tgt) * 100) : 0} color={m.color} />
-                  <p className="text-[9px] text-muted-foreground mt-0.5">{m.label} {m.cur ?? 0}/{m.tgt ?? 0}g</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{m.label} {m.cur ?? 0}/{m.tgt ?? 0}g</p>
                 </div>
               ))}
             </div>
           )}
 
           {goal.notes && (
-            <p className="text-[10px] text-muted-foreground mt-1 italic">{goal.notes}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 italic">{goal.notes}</p>
           )}
         </div>
       </div>
@@ -130,7 +131,7 @@ export default function GoalsSummarySection({ client }) {
   const handleToggle = async (g) => {
     const next = g.status === 'completed' ? 'active' : 'completed';
     await db.entities.Goal.update(g.id, { status: next });
-    toast.success(next === 'completed' ? 'Goal completed!' : 'Goal reactivated');
+    toast.success(next === 'completed' ? 'Goal completed' : 'Goal reactivated');
     refresh();
   };
 
@@ -139,24 +140,16 @@ export default function GoalsSummarySection({ client }) {
 
   return (
     <>
-      <div className="bg-card rounded-xl border border-border shadow-sm p-4">
+      <div className="panel p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-0.5 h-3.5 rounded-full bg-primary" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Goals</p>
-            {goals.length > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent text-primary">
-                {active.length} active
-              </span>
-            )}
+          <div className="flex items-baseline gap-2">
+            <h3 className="text-[20px] text-foreground">Goals</h3>
+            {goals.length > 0 && <span className="text-[13px] text-muted-foreground">{active.length} active</span>}
           </div>
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary px-2.5 py-1.5 rounded-lg bg-accent hover:bg-accent transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Goal
-          </button>
+          <Button variant="outline" size="sm" onClick={handleAdd}>
+            <Plus className="w-3.5 h-3.5" /> Add goal
+          </Button>
         </div>
 
         {/* Loading */}
@@ -164,10 +157,7 @@ export default function GoalsSummarySection({ client }) {
 
         {/* Empty state */}
         {!isLoading && goals.length === 0 && (
-          <div className="text-center py-5">
-            <Target className="w-7 h-7 text-border mx-auto mb-2" />
-            <p className="text-xs text-muted-foreground">No goals yet — <button onClick={handleAdd} className="text-primary font-semibold hover:underline">add one</button></p>
-          </div>
+          <p className="text-sm text-muted-foreground py-2">No goals yet. <button onClick={handleAdd} className="font-semibold text-foreground underline underline-offset-4">Add one</button></p>
         )}
 
         {/* Active goals */}
@@ -182,9 +172,7 @@ export default function GoalsSummarySection({ client }) {
         {/* Completed */}
         {completed.length > 0 && (
           <div className="mt-3 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-border flex items-center gap-1.5">
-              <span className="w-0.5 h-3 rounded-full bg-success inline-block" />Completed
-            </p>
+            <p className="text-[13px] text-muted-foreground">Completed</p>
             {completed.map(g => (
               <GoalItem key={g.id} goal={g} onEdit={handleEdit} onDelete={handleDelete} onToggle={handleToggle} />
             ))}

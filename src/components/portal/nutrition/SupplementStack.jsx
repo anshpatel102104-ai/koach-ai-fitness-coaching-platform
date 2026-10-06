@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Pill } from 'lucide-react';
+import React from 'react';
+import { DisclosureCard } from '@/components/portal/PortalUI';
 
 const DEFAULT_MORNING = [
   { name: 'Multivitamin',           dose: '1 serving with breakfast',    why: 'Fills micronutrient gaps from reduced food intake' },
@@ -34,65 +33,35 @@ function normalizeSupplements(raw) {
   };
 }
 
-function StackSection({ title, emoji, items, badgeColor }) {
+function StackSection({ title, items }) {
   return (
-    <div className="mb-3">
-      <p className={`text-xs font-bold uppercase tracking-wide mb-2`}>
-        {emoji} {title}
-      </p>
-      {items.map(item => (
-        <div key={item.name} className="flex items-start gap-3 py-2.5 border-b border-border last:border-0">
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Pill className="w-3.5 h-3.5 text-muted-foreground" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-foreground font-bold text-sm">{item.name}</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}`}>{title.split(' ')[0]}</span>
+    <div className="mb-3 last:mb-0">
+      <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+      <ul className="mt-1 divide-y divide-border">
+        {items.map(item => (
+          <li key={item.name} className="py-2.5">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-sm font-semibold text-foreground">{item.name}</span>
+              <span className="text-right text-[13px] text-muted-foreground">{item.dose}</span>
             </div>
-            <p className="text-muted-foreground text-xs mt-0.5">{item.dose}</p>
-            <p className="text-muted-foreground text-xs mt-0.5 italic">{item.why}</p>
-          </div>
-        </div>
-      ))}
+            {item.why && <p className="mt-0.5 text-[13px] text-muted-foreground">{item.why}</p>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
 export default function SupplementStack({ customSupplements }) {
-  const [open, setOpen] = useState(false);
   const { morning, night } = normalizeSupplements(customSupplements);
 
   return (
-    <div className="mx-4 mb-3 bg-card rounded-[18px] overflow-hidden"
-      style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgb(var(--muted))' }}>
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full px-4 py-4 flex items-center gap-3 active:bg-muted transition-colors">
-        <span className="text-xl">💊</span>
-        <div className="flex-1 text-left">
-          <p className="text-foreground font-bold text-sm">Supplement Stack</p>
-          <p className="text-muted-foreground text-xs mt-0.5">Morning & night protocol</p>
-        </div>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-4 h-4 text-border" />
-        </motion.div>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-            className="border-t border-border px-4 pb-4 overflow-hidden">
-
-            <p className="text-[11px] text-warning bg-warning/10 rounded-xl px-3 py-2 mt-3 mb-4">
-              ⚠️ These are general recommendations. Your coach may adjust these based on your specific needs.
-            </p>
-
-            <StackSection title="Morning Stack" emoji="☀️" items={morning} badgeColor="bg-warning/10 text-warning" />
-            <StackSection title="Night Stack"   emoji="🌙" items={night}   badgeColor="bg-accent text-primary" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <DisclosureCard title="Supplements" sub={`${morning.length} in the morning, ${night.length} at night`}>
+      <p className="mb-3 rounded-lg bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
+        General guidance. Your coach may change these for you.
+      </p>
+      <StackSection title="Morning" items={morning} />
+      <StackSection title="Night" items={night} />
+    </DisclosureCard>
   );
 }

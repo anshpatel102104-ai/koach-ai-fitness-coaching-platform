@@ -1,83 +1,74 @@
-import React, { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { db } from '@/api/supabaseClient';
+import { format, subMonths, startOfMonth, isSameMonth } from 'date-fns';
+import { Panel, PanelHeader } from '@/components/kit';
 
-// Demo data
-const EARNINGS_DATA = [
-  { date: 'May 1', earnings: 200 },
-  { date: 'May 5', earnings: 450 },
-  { date: 'May 10', earnings: 380 },
-  { date: 'May 15', earnings: 620 },
-  { date: 'May 20', earnings: 750 },
-  { date: 'May 25', earnings: 920 },
-];
-
-const FUNNEL_DATA = [
-  { stage: 'Clicks', value: 2450, color: 'var(--tc-primary)' },
-  { stage: 'Signups', value: 1820, color: 'var(--tc-ai)' },
-  { stage: 'Trials', value: 945, color: 'var(--tc-warning)' },
-  { stage: 'Paid', value: 672, color: 'var(--tc-success)' },
-  { stage: 'Active (30d)', value: 518, color: 'var(--kc-06b6d4)' },
-];
-
+// Built from the affiliate's real numbers: profile totals for the funnel and
+// commission rows (one per referred coach) for sign-ups per month.
 export default function AffiliatePerformanceChart({ profile }) {
-  const [timeRange, setTimeRange] = useState('30d');
+  const { data: referrals = [] } = useQuery({
+    queryKey: ['affiliate-commissions', profile.coach_id],
+    queryFn: () => db.entities.AffiliateCommission.filter({ affiliate_id: profile.coach_id }, '-signup_date'),
+  });
+
+  const months = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const m = startOfMonth(subMonths(now, 5 - i));
+      const rows = referrals.filter(r => r.signup_date && isSameMonth(new Date(r.signup_date), m));
+      return { label: format(m, 'MMM'), signups: rows.length, value: rows.reduce((s, r) => s + (r.monthly_commission || 0), 0), current: i === 5 };
+    });
+  }, [referrals]);
+  const max = Math.max(1, ...months.map(m => m.signups));
+
+  const funnel = [
+    { stage: 'Clicks', value: profile.total_clicks || 0 },
+    { stage: 'Sign-ups', value: profile.total_signups || 0 },
+    { stage: 'Paying now', value: profile.active_referrals || 0 },
+  ];
+  const top = Math.max(1, funnel[0].value);
 
   return (
-    <div className="space-y-6">
-      {/* Earnings chart */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-foreground">Earnings Over Time</h3>
-          <div className="flex gap-2">
-            {['7d', '30d', '90d', '1y', 'all'].map(r => (
-              <button key={r} onClick={() => setTimeRange(r)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  timeRange === r
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-border'
-                }`}>
-                {r === '7d' ? '7D' : r === '30d' ? '30D' : r === '90d' ? '90D' : r === '1y' ? '1Y' : 'All'}
-              </button>
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+      <Panel className="lg:col-span-3">
+        <PanelHeader title="Sign-ups by month" subtitle="Coaches who joined through your link, last six months." />
+        <div className="px-5 sm:px-6 pb-6">
+          <div className="flex items-end gap-3 h-44">
+            {months.map(m => (
+              <div key={m.label} className="flex-1 flex flex-col items-center justify-end h-full gap-2">
+                <span className="num text-base text-foreground">{m.signups}</span>
+                <div className={m.current ? 'w-full max-w-[40px] rounded-[4px] bg-brand' : 'w-full max-w-[40px] rounded-[4px] bg-primary'} style={{ height: `${Math.max(m.signups ? 6 : 2, (m.signups / max) * 100)}%`, opacity: m.signups ? 1 : 0.15 }} />
+              </div>
             ))}
           </div>
+          <div className="flex gap-3 mt-2">
+            {months.map(m => <span key={m.label} className="flex-1 text-center text-[13px] text-muted-foreground">{m.label}</span>)}
+          </div>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={EARNINGS_DATA}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--tc-border)" />
-            <XAxis dataKey="date" stroke="var(--tc-muted-foreground)" />
-            <YAxis stroke="var(--tc-muted-foreground)" />
-            <Tooltip contentStyle={{ background: 'var(--tc-foreground)', border: 'none', borderRadius: 8 }} labelStyle={{ color: 'var(--tc-background)' }} />
-            <Line type="monotone" dataKey="earnings" stroke="var(--tc-primary)" strokeWidth={3} dot={{ fill: 'var(--tc-primary)', r: 5 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      </Panel>
 
-      {/* Funnel */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-6">Conversion Funnel</h3>
-        <div className="space-y-4">
-          {FUNNEL_DATA.map((item, i) => {
-            const pct = (item.value / FUNNEL_DATA[0].value) * 100;
-            const nextPct = i < FUNNEL_DATA.length - 1 ? (FUNNEL_DATA[i + 1].value / item.value) * 100 : 100;
-            return (
-              <div key={item.stage}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-foreground">{item.stage}</p>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">{item.value.toLocaleString()}</p>
-                    {i < FUNNEL_DATA.length - 1 && (
-                      <p className="text-xs text-muted-foreground">{nextPct.toFixed(0)}% conversion</p>
-                    )}
-                  </div>
-                </div>
-                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: item.color }} />
-                </div>
+      <Panel className="lg:col-span-2">
+        <PanelHeader title="From click to paying" />
+        <ul className="px-5 sm:px-6 pb-6 space-y-4">
+          {funnel.map((f, i) => (
+            <li key={f.stage}>
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-semibold text-foreground">{f.stage}</span>
+                <span>
+                  <span className="num text-lg">{f.value.toLocaleString()}</span>
+                  {i > 0 && funnel[i - 1].value > 0 && (
+                    <span className="text-[13px] text-muted-foreground ml-2">{Math.round((f.value / funnel[i - 1].value) * 100)}%</span>
+                  )}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div className="h-2 mt-1.5 rounded-full bg-secondary overflow-hidden">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${(f.value / top) * 100}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Panel>
     </div>
   );
 }

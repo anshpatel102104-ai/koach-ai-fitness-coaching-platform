@@ -1,26 +1,26 @@
 /**
  * AI Message Assistant — core context builder & generation engine
- * Used by ComposeBar, BroadcastModal, CheckInResponseGenerator
+ * Used by BroadcastModal and AIFollowUpChip
  */
 import { db } from '@/api/supabaseClient';
 import { differenceInDays, format } from 'date-fns';
 
 export const TONES = [
-  { key: 'auto',          label: 'Auto (match client)',  emoji: '✨' },
-  { key: 'motivational',  label: 'Motivational',         emoji: '🔥' },
-  { key: 'empathetic',    label: 'Empathetic',           emoji: '💙' },
-  { key: 'direct',        label: 'Direct',               emoji: '🎯' },
-  { key: 'casual',        label: 'Casual',               emoji: '😊' },
-  { key: 'professional',  label: 'Professional',         emoji: '💼' },
+  { key: 'auto',          label: 'Match the client' },
+  { key: 'motivational',  label: 'Motivational' },
+  { key: 'empathetic',    label: 'Empathetic' },
+  { key: 'direct',        label: 'Direct' },
+  { key: 'casual',        label: 'Casual' },
+  { key: 'professional',  label: 'Professional' },
 ];
 
 export const TONE_LABELS = {
-  motivational: 'Motivational 🔥',
-  empathetic:   'Empathetic 💙',
-  direct:       'Direct 🎯',
-  casual:       'Casual 😊',
-  professional: 'Professional 💼',
-  auto:         'Smart Match ✨',
+  motivational: 'Motivational',
+  empathetic:   'Empathetic',
+  direct:       'Direct',
+  casual:       'Casual',
+  professional: 'Professional',
+  auto:         'Matched to client',
 };
 
 /**

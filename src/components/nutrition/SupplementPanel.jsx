@@ -8,9 +8,9 @@ const TIMING_OPTIONS = ['Morning', 'Pre-Workout', 'Post-Workout', 'With Meals', 
 const PURPOSE_OPTIONS = ['General Health', 'Fat Loss', 'Muscle / Recovery', 'Energy', 'Sleep', 'Immunity', 'Hormonal'];
 
 const CATEGORY_CONFIG = {
-  supplement: { label: 'Supplements', color: 'bg-accent text-primary border-accent' },
-  vitamin:    { label: 'Vitamins',     color: 'bg-warning/10 text-warning border-warning' },
-  mineral:    { label: 'Minerals',     color: 'bg-success/10 text-success border-success' },
+  supplement: { label: 'Supplements', color: 'bg-secondary text-foreground border-border' },
+  vitamin:    { label: 'Vitamins',     color: 'bg-secondary text-foreground border-border' },
+  mineral:    { label: 'Minerals',     color: 'bg-secondary text-foreground border-border' },
 };
 
 const QUICK_ADDS = [
@@ -108,9 +108,9 @@ export default function SupplementPanel({ value = [], onChange }) {
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">💊 Supplements & Vitamins</span>
+          <span className="text-sm font-semibold text-foreground">Supplements and vitamins</span>
           {totalCount > 0 && (
-            <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-medium">
               {totalCount} assigned
             </span>
           )}
@@ -151,7 +151,7 @@ export default function SupplementPanel({ value = [], onChange }) {
           {totalCount > 0 && (
             <div className="px-4 pb-4 space-y-3">
               {/* Column headers */}
-              <div className="grid grid-cols-12 gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide px-0 pt-1">
+              <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground px-0 pt-1">
                 <div className="col-span-3">Name</div>
                 <div className="col-span-2">Dosage</div>
                 <div className="col-span-3">Timing</div>
@@ -163,7 +163,7 @@ export default function SupplementPanel({ value = [], onChange }) {
                 const config = CATEGORY_CONFIG[cat];
                 return (
                   <div key={cat}>
-                    <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-block mb-1', config.color)}>
+                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full border inline-block mb-1', config.color)}>
                       {config.label}
                     </span>
                     {items.map(item => (

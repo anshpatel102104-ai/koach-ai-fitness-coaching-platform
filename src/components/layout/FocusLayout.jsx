@@ -11,25 +11,24 @@ export default function FocusLayout() {
 
   return (
     <SubscriptionContext.Provider value={{ user, setUser, openUpgradeModal: setUpgradeFeature }}>
-      <div className="min-h-screen bg-muted">
+      <div className="min-h-screen bg-background">
         {/* Minimal top bar */}
-        <header className="fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-card border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-[10px] text-white">▶</span>
-            </div>
-            <span className="text-sm font-bold font-heading text-foreground">Run My Day</span>
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 sm:px-6 bg-sidebar">
+          <div className="flex items-center gap-4">
+            <img src="/koach-logo-white.png" alt="KOACH AI" className="h-6 w-auto" />
+            <span className="hidden sm:block h-5 w-px bg-white/15" />
+            <span className="hidden sm:block text-[15px] font-semibold text-white">Run my day</span>
           </div>
           <Link
             to="/"
-            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted"
+            className="flex items-center gap-1.5 text-sm font-semibold text-white/70 hover:text-white transition-colors px-3 h-9 rounded-lg hover:bg-white/10"
           >
-            <X className="w-3.5 h-3.5" /> Exit
+            <X className="w-4 h-4" /> Exit
           </Link>
         </header>
 
         {/* Page content pushed below header */}
-        <main className="pt-12 min-h-screen">
+        <main className="pt-14 min-h-screen">
           <Outlet />
         </main>
       </div>

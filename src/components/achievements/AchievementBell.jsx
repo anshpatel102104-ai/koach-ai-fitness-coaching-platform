@@ -5,6 +5,7 @@ import { Bell } from 'lucide-react';
 import { BADGE_CONFIG, TIER_STYLES } from '@/lib/badges';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { Initials, CountBadge } from '@/components/kit';
 
 export default function AchievementBell() {
   const [open, setOpen] = useState(false);
@@ -33,49 +34,37 @@ export default function AchievementBell() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
-        className="relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-[var(--kc-w-10)]"
+        aria-label={hasNew ? `${recentBadges.length} new milestones` : 'Milestones'}
+        className="touch-compact relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        <Bell size={16} className={hasNew ? 'text-[var(--kc-ffd700)]' : 'text-muted-foreground'} />
-        {hasNew && (
-          <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-destructive border border-[var(--kc-0a0a0a)]" />
-        )}
+        <Bell size={16} />
+        {hasNew && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-brand ring-2 ring-card" />}
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 top-10 z-50 rounded-2xl overflow-hidden shadow-2xl"
-          style={{
-            background: 'var(--kc-161820)',
-            border: '1px solid color-mix(in srgb, white 8%, transparent)',
-            minWidth: 280,
-            maxWidth: 320,
-          }}
-        >
-          <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
-            <p className="text-xs font-bold text-white uppercase tracking-wider">Recent Achievements</p>
-            {hasNew && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--kc-ffd700)]/20 text-[var(--kc-ffd700)]">
-                {recentBadges.length} new
-              </span>
-            )}
+        <div className="absolute right-0 top-10 z-50 w-[300px] overflow-hidden rounded-xl border border-border bg-popover shadow-md">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-[15px] font-semibold text-foreground">Milestones, last 24 hours</p>
+            {hasNew && <CountBadge count={recentBadges.length} />}
           </div>
 
           <div className="max-h-72 overflow-y-auto">
             {recentBadges.length === 0 ? (
-              <p className="text-xs text-[var(--tc-muted-foreground)] text-center py-6">No achievements in last 24h</p>
+              <p className="px-4 py-5 text-sm text-muted-foreground">No new milestones today.</p>
             ) : recentBadges.map(b => {
               const cfg = BADGE_CONFIG[b.badge_key];
               const tier = cfg ? TIER_STYLES[cfg.tier] : null;
               if (!cfg || !tier) return null;
               return (
-                <div key={b.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 hover:bg-[var(--kc-w-5)] transition-colors">
-                  <span className="text-xl leading-none">{cfg.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white leading-tight">{b.client_name || 'Client'}</p>
-                    <p className="text-[11px] truncate" style={{ color: tier.accent }}>{cfg.label}</p>
+                <div key={b.id} className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0">
+                  <Initials name={b.client_name || 'Client'} size={30} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold leading-tight text-foreground">{b.client_name || 'Client'}</p>
+                    <p className="truncate text-[13px] text-muted-foreground">{cfg.label}</p>
                   </div>
-                  <p className="text-[9px] text-[var(--tc-muted-foreground)] flex-shrink-0">
+                  <p className="flex-shrink-0 text-[12px] text-muted-foreground">
                     {formatDistanceToNow(new Date(b.created_date || b.earned_date), { addSuffix: true })}
                   </p>
                 </div>
@@ -83,13 +72,9 @@ export default function AchievementBell() {
             })}
           </div>
 
-          <div className="px-4 py-2.5 border-t border-white/8">
-            <Link
-              to="/adherence"
-              onClick={() => setOpen(false)}
-              className="text-xs font-bold text-primary hover:text-primary transition-colors"
-            >
-              View all achievements →
+          <div className="border-t border-border px-4 py-2.5">
+            <Link to="/adherence" onClick={() => setOpen(false)} className="text-sm font-semibold text-foreground underline underline-offset-4">
+              See all milestones
             </Link>
           </div>
         </div>

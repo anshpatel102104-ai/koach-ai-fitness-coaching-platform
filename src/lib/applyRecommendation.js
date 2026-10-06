@@ -22,13 +22,13 @@ export async function applyRecommendation(rec, checkIn, client) {
         is_read: false,
       }),
     ]);
-    return `Calories set to ${newCals} kcal ✓`;
+    return `Calories set to ${newCals} kcal`;
   }
 
   if (rec.action === 'adjust_cardio') {
     const msg = rec.actionData.direction === 'up'
-      ? 'Cardio increased — add 1 extra session or +20 min this week.'
-      : 'Cardio reduced — drop 1 session or −15 min this week.';
+      ? 'Cardio is going up this week: add one extra session or 20 more minutes.'
+      : 'Cardio is coming down this week: drop one session or 15 minutes.';
     await Promise.all([
       db.entities.CheckIn.update(checkIn.id, {
         coach_notes: (checkIn.coach_notes ? checkIn.coach_notes + '\n' : '') + '[Cardio] ' + msg,
@@ -43,7 +43,7 @@ export async function applyRecommendation(rec, checkIn, client) {
         is_read: false,
       }),
     ]);
-    return `Cardio ${rec.actionData.direction === 'up' ? 'increased' : 'reduced'} ✓`;
+    return `Cardio ${rec.actionData.direction === 'up' ? 'increased' : 'reduced'}`;
   }
 
   if (rec.action === 'message') {
@@ -55,15 +55,15 @@ export async function applyRecommendation(rec, checkIn, client) {
       tag: rec.actionData.tag || 'general',
       is_read: false,
     });
-    return 'Message sent ✓';
+    return 'Message sent';
   }
 
   if (rec.action === 'maintain') {
     await db.entities.CheckIn.update(checkIn.id, { coach_responded: true });
-    return 'Marked as reviewed ✓';
+    return 'Marked as reviewed';
   }
 
-  return 'Done ✓';
+  return 'Done';
 }
 
 /**

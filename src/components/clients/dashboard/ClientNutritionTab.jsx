@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Download, AlertCircle } from 'lucide-react';
+import { ExternalLink, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Stat, ComplianceStrip, complianceState } from '@/components/kit';
 import { startOfWeek, endOfWeek, subWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SignedLink, SignedIframe } from '@/components/shared/SignedImage';
@@ -10,50 +12,16 @@ function weekNutritionCompliance(checkIns, weekStart, weekEnd) {
     const d = new Date(ci.date);
     return d >= weekStart && d <= weekEnd;
   });
-  if (!inRange.length) return 0;
-  return Math.round(inRange.reduce((s, ci) => s + (ci.compliance_nutrition ?? 0), 0) / inRange.length);
-}
-
-function Ring({ pct = 0, label, size = 72, active = false }) {
-  const r = (size - 10) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = Math.max(0, Math.min(pct / 100, 1)) * circ;
-  const activeColor = 'var(--tc-primary)';
-  const inactiveColor = 'var(--tc-muted-foreground)';
-
-  return (
-    <div className={cn('flex flex-col items-center gap-1.5', active && 'scale-105')}>
-      <div className="relative rounded-full">
-        <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--tc-border)" strokeWidth={active ? 7 : 5} />
-          <circle
-            cx={size / 2} cy={size / 2} r={r}
-            fill="none"
-            stroke={pct > 0 ? (active ? activeColor : inactiveColor) : 'var(--tc-border)'}
-            strokeWidth={active ? 7 : 5}
-            strokeDasharray={`${dash} ${circ}`}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={cn('font-bold tabular-nums leading-none', active ? 'text-sm' : 'text-xs')}
-            style={{ color: active ? activeColor : 'var(--tc-muted-foreground)' }}>
-            {pct}%
-          </span>
-        </div>
-      </div>
-      <p className="text-[10px] font-semibold leading-tight" style={{ color: active ? 'var(--tc-foreground)' : 'var(--tc-muted-foreground)' }}>
-        {label}
-      </p>
-    </div>
-  );
+  const vals = inRange.map(ci => ci.compliance_nutrition).filter(v => v != null);
+  if (!vals.length) return null;
+  return Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
 }
 
 function PDFViewer({ pdfUrl, fileName }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm text-foreground">Plan Document</h3>
+        <h3 className="font-semibold text-sm text-foreground">Plan document</h3>
         <SignedLink
           href={pdfUrl}
           download={fileName || 'nutrition-plan.pdf'}
@@ -66,7 +34,7 @@ function PDFViewer({ pdfUrl, fileName }) {
       <div className="rounded-xl border border-border overflow-hidden bg-card" style={{ height: '600px' }}>
         <SignedIframe
           src={pdfUrl}
-          title="Nutrition Plan PDF"
+          title="Nutrition plan PDF"
           className="w-full h-full"
           style={{ border: 'none' }}
         />
@@ -80,7 +48,7 @@ function MealSection({ title, meals = [] }) {
 
   return (
     <div className="border-t border-border pt-4">
-      <h4 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--tc-muted-foreground)' }}>
+      <h4 className="text-[13px] text-muted-foreground mb-2">
         {title}
       </h4>
       <div className="space-y-2">
@@ -91,14 +59,14 @@ function MealSection({ title, meals = [] }) {
               <ul className="text-xs text-muted-foreground space-y-0.5 ml-2">
                 {meal.foods.map((food, j) => (
                   <li key={j} className="flex items-start gap-1.5">
-                    <span className="mt-0.5 text-[10px]">•</span>
+                    <span className="mt-0.5 text-[11px]">•</span>
                     <span>{food.name} {food.quantity && `(${food.quantity}${food.unit || ''})`}</span>
                   </li>
                 ))}
               </ul>
             )}
             {meal.calories && (
-              <p className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border">
+              <p className="text-[11px] text-muted-foreground mt-2 pt-2 border-t border-border">
                 ≈ {meal.calories} kcal
               </p>
             )}
@@ -114,9 +82,10 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
   const now = new Date();
   const weeks = useMemo(() => [
-    { label: '2 Wks Ago', start: startOfWeek(subWeeks(now, 2)), end: endOfWeek(subWeeks(now, 2)) },
-    { label: '1 Wk Ago', start: startOfWeek(subWeeks(now, 1)), end: endOfWeek(subWeeks(now, 1)) },
-    { label: 'This Week', start: startOfWeek(now), end: endOfWeek(now), active: true },
+    { label: '3 weeks ago', start: startOfWeek(subWeeks(now, 3)), end: endOfWeek(subWeeks(now, 3)) },
+    { label: '2 weeks ago', start: startOfWeek(subWeeks(now, 2)), end: endOfWeek(subWeeks(now, 2)) },
+    { label: 'Last week', start: startOfWeek(subWeeks(now, 1)), end: endOfWeek(subWeeks(now, 1)) },
+    { label: 'This week', start: startOfWeek(now), end: endOfWeek(now), active: true },
   ], []);
 
   const recentCompliance = useMemo(() => {
@@ -128,42 +97,28 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
-          <div className="w-12 h-12 rounded-xl bg-warning/10 border border-warning flex items-center justify-center mx-auto mb-3">
-            <AlertCircle className="w-6 h-6 text-warning" />
-          </div>
-          <p className="font-semibold text-foreground mb-1">No Nutrition Plan Assigned</p>
+          <p className="font-semibold text-foreground mb-1">No nutrition plan assigned</p>
           <p className="text-xs text-muted-foreground mb-4">This client doesn't have a meal plan yet.</p>
-          <button
-            onClick={() => navigate('/nutrition')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-primary-foreground transition-all"
-            style={{ background: 'var(--tc-primary)' }}
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Create Plan
-          </button>
+          <Button onClick={() => navigate('/nutrition')}>Create a meal plan</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6 space-y-5 bg-muted">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 space-y-4">
       {/* Header with title and plan type */}
       <div>
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-foreground">{nutritionPlan.title}</h2>
+            <h2 className="text-[24px] text-foreground">{nutritionPlan.title}</h2>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                style={{
-                  background: nutritionPlan.plan_type === 'pdf' ? 'var(--tc-ai)' : 'var(--tc-accent)',
-                  color: nutritionPlan.plan_type === 'pdf' ? 'var(--tc-ai)' : 'var(--tc-primary)',
-                }}>
-                {nutritionPlan.plan_type === 'pdf' ? '📄 PDF Plan' : '🍽️ Structured Plan'}
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary text-foreground">
+                {nutritionPlan.plan_type === 'pdf' ? 'PDF plan' : 'Structured plan'}
               </span>
               {nutritionPlan.tracking_mode && (
                 <span className="text-xs text-muted-foreground px-2.5 py-1 rounded-full bg-card border border-border">
-                  {nutritionPlan.tracking_mode === 'macros' ? '📊 Macro Tracking' : '✓ Habit Mode'}
+                  {nutritionPlan.tracking_mode === 'macros' ? 'Macro tracking' : 'Habit mode'}
                 </span>
               )}
             </div>
@@ -186,59 +141,38 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
       {/* Daily Macro Targets */}
       {nutritionPlan.plan_type === 'structured' && (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--tc-muted-foreground)' }}>
-            Daily Targets
-          </h3>
+        <div className="panel p-4 sm:p-5">
+          <h3 className="text-[18px] text-foreground mb-3">Daily targets</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Calories', value: nutritionPlan.calories, unit: 'kcal', icon: '🔥', color: 'var(--kc-ea580c)' },
-              { label: 'Protein', value: nutritionPlan.protein_g, unit: 'g', icon: '💪', color: 'var(--tc-primary)' },
-              { label: 'Carbs', value: nutritionPlan.carbs_g, unit: 'g', icon: '🌾', color: 'var(--tc-warning)' },
-              { label: 'Fats', value: nutritionPlan.fats_g, unit: 'g', icon: '🥑', color: 'var(--tc-destructive)' },
-            ].map(({ label, value, unit, icon, color }) => (
-              <div key={label} className="rounded-lg p-3 bg-gradient-to-br from-card to-muted border border-border">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">{icon}</span>
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>
-                    {label}
-                  </p>
-                </div>
-                <p className="text-base font-bold text-foreground">{value || '—'}</p>
-                <p className="text-[10px] text-muted-foreground">{unit}</p>
-              </div>
+              { label: 'Calories', value: nutritionPlan.calories, unit: 'kcal' },
+              { label: 'Protein', value: nutritionPlan.protein_g, unit: 'g' },
+              { label: 'Carbs', value: nutritionPlan.carbs_g, unit: 'g' },
+              { label: 'Fats', value: nutritionPlan.fats_g, unit: 'g' },
+            ].map(({ label, value, unit }) => (
+              <Stat key={label} label={label} value={value ? Number(value).toLocaleString('en-US') : '\u2014'} unit={value ? unit : undefined} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Compliance Trends */}
-      <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--tc-muted-foreground)' }}>
-            Adherence
-          </h3>
-          {recentCompliance !== null && (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{
-                background: recentCompliance >= 75 ? 'var(--tc-success)' : recentCompliance >= 50 ? 'var(--tc-warning)' : 'var(--tc-destructive)',
-                color: recentCompliance >= 75 ? 'var(--tc-success)' : recentCompliance >= 50 ? 'var(--tc-warning)' : 'var(--tc-destructive)',
-              }}>
-              {recentCompliance}% Avg
-            </span>
-          )}
+      {/* Compliance trend */}
+      <div className="panel p-4 sm:p-5">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-[18px] text-foreground">Nutrition compliance</h3>
+          {recentCompliance !== null && <span className="text-[13px] text-muted-foreground">{recentCompliance}% over the last 4 check-ins</span>}
         </div>
-        <div className="flex items-end justify-around gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {weeks.map((w, i) => {
             const pct = weekNutritionCompliance(checkIns, w.start, w.end);
             return (
-              <Ring
-                key={i}
-                pct={pct}
-                label={w.label}
-                active={!!w.active}
-                size={w.active ? 82 : 68}
-              />
+              <div key={i} className="min-w-0">
+                <p className={cn('text-[13px]', w.active ? 'text-foreground font-medium' : 'text-muted-foreground')}>{w.label}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <ComplianceStrip weeks={[pct === null ? 'none' : complianceState(pct)]} size="sm" />
+                  <span className="num text-[20px] text-foreground">{pct === null ? '\u2014' : `${pct}%`}</span>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -246,15 +180,13 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
       {/* Meal Plan Overview (Structured Plans) */}
       {nutritionPlan.plan_type === 'structured' && (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--tc-muted-foreground)' }}>
-            Meal Plan
-          </h3>
+        <div className="panel p-4 sm:p-5">
+          <h3 className="text-[18px] text-foreground mb-3">Meals</h3>
           {nutritionPlan.meals && nutritionPlan.meals.length > 0 ? (
             <div className="space-y-4">
-              <MealSection title="Training Days" meals={nutritionPlan.meals} />
+              <MealSection title="Training days" meals={nutritionPlan.meals} />
               {nutritionPlan.rest_day_meals && nutritionPlan.rest_day_meals.length > 0 && (
-                <MealSection title="Rest Days" meals={nutritionPlan.rest_day_meals} />
+                <MealSection title="Rest days" meals={nutritionPlan.rest_day_meals} />
               )}
             </div>
           ) : (
@@ -268,10 +200,8 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Hydration */}
           {nutritionPlan.hydration && (
-            <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--tc-primary)' }}>
-                💧 Hydration Protocol
-              </h3>
+            <div className="panel p-4 sm:p-5">
+              <h3 className="text-[18px] text-foreground mb-2">Hydration protocol</h3>
               <div className="text-xs text-foreground space-y-1.5">
                 {typeof nutritionPlan.hydration === 'string' ? (
                   <p>{nutritionPlan.hydration}</p>
@@ -284,7 +214,7 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
                       <p><span className="font-semibold">Pre-Workout:</span> {nutritionPlan.hydration.pre_workout}</p>
                     )}
                     {nutritionPlan.hydration.intra_workout && (
-                      <p><span className="font-semibold">During Workout:</span> {nutritionPlan.hydration.intra_workout}</p>
+                      <p><span className="font-semibold">During workout:</span> {nutritionPlan.hydration.intra_workout}</p>
                     )}
                     {nutritionPlan.hydration.post_workout && (
                       <p><span className="font-semibold">Post-Workout:</span> {nutritionPlan.hydration.post_workout}</p>
@@ -297,16 +227,14 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
           {/* Supplements */}
           {nutritionPlan.supplements && nutritionPlan.supplements.length > 0 && (
-            <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--tc-ai)' }}>
-                💊 Supplements
-              </h3>
+            <div className="panel p-4 sm:p-5">
+              <h3 className="text-[18px] text-foreground mb-2">Supplements</h3>
               <ul className="space-y-2">
                 {nutritionPlan.supplements.map((s, i) => (
                   <li key={i} className="text-xs">
                     <p className="font-semibold text-foreground">{s.name}</p>
-                    {s.dosage && <p className="text-muted-foreground text-[10px]">{s.dosage}</p>}
-                    {s.timing && <p className="text-muted-foreground text-[10px]">{s.timing}</p>}
+                    {s.dosage && <p className="text-muted-foreground text-[11px]">{s.dosage}</p>}
+                    {s.timing && <p className="text-muted-foreground text-[11px]">{s.timing}</p>}
                   </li>
                 ))}
               </ul>
@@ -317,14 +245,11 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
       {/* Shopping List */}
       {nutritionPlan.shopping_list && nutritionPlan.shopping_list.length > 0 && (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--tc-muted-foreground)' }}>
-            🛒 Shopping List
-          </h3>
+        <div className="panel p-4 sm:p-5">
+          <h3 className="text-[18px] text-foreground mb-2">Shopping list</h3>
           <ul className="grid grid-cols-2 gap-2">
             {nutritionPlan.shopping_list.map((item, i) => (
               <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                <span className="text-[10px] mt-0.5">✓</span>
                 <span>{item}</span>
               </li>
             ))}
@@ -334,14 +259,12 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
       {/* Coach Notes */}
       {nutritionPlan.coach_notes && (
-        <div className="bg-accent border border-accent rounded-xl p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--tc-primary)' }}>
-            📝 Coach Notes
-          </h3>
+        <div className="panel p-4">
+          <h3 className="text-[18px] text-foreground mb-2">Coach notes</h3>
           {typeof nutritionPlan.coach_notes === 'string' ? (
-            <p className="text-xs text-primary">{nutritionPlan.coach_notes}</p>
+            <p className="text-sm text-foreground/80">{nutritionPlan.coach_notes}</p>
           ) : (
-            <div className="text-xs text-primary space-y-1.5">
+            <div className="text-sm text-foreground/80 space-y-1.5">
               {Object.entries(nutritionPlan.coach_notes).map(([key, value]) => (
                 <p key={key}><span className="font-semibold capitalize">{key.replace(/_/g, ' ')}:</span> {value}</p>
               ))}
@@ -352,18 +275,16 @@ export default function ClientNutritionTab({ client, nutritionPlan, checkIns = [
 
       {/* PDF Viewer (for PDF plans) */}
       {nutritionPlan.plan_type === 'pdf' && nutritionPlan.pdf_file_url && (
-        <div className="bg-card rounded-xl border border-border shadow-sm p-4">
+        <div className="panel p-4 sm:p-5">
           <PDFViewer pdfUrl={nutritionPlan.pdf_file_url} fileName={`${nutritionPlan.title}.pdf`} />
         </div>
       )}
 
       {/* Summary for PDF plans */}
       {nutritionPlan.plan_type === 'pdf' && nutritionPlan.client_notes && (
-        <div className="bg-warning/10 border border-warning rounded-xl p-4">
-          <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--tc-warning)' }}>
-            📋 Plan Summary
-          </h3>
-          <p className="text-xs text-warning leading-relaxed">{nutritionPlan.client_notes}</p>
+        <div className="panel p-4">
+          <h3 className="text-[18px] text-foreground mb-2">Plan summary</h3>
+          <p className="text-sm text-foreground/80 leading-relaxed">{nutritionPlan.client_notes}</p>
         </div>
       )}
     </div>

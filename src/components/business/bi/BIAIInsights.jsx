@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Loader2, TrendingUp, Users, DollarSign, Clock, Target, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { InkPanel } from '@/components/kit';
+import { Button } from '@/components/ui/button';
 import { db } from '@/api/supabaseClient';
 import { differenceInDays, parseISO, startOfMonth } from 'date-fns';
 
-const INSIGHT_ICONS = { revenue: DollarSign, retention: Users, pricing: TrendingUp, efficiency: Clock, growth: Target };
-const INSIGHT_COLORS = { revenue: 'var(--tc-primary)', retention: 'var(--tc-ai)', pricing: 'var(--tc-warning)', efficiency: 'var(--kc-06b6d4)', growth: 'var(--tc-success)' };
 
 export default function BIAIInsights({ clients, checkIns, leads, payments }) {
   const [insights, setInsights] = useState(null);
@@ -51,67 +51,53 @@ export default function BIAIInsights({ clients, checkIns, leads, payments }) {
     setLoading(false);
   };
 
+  const basis = `Based on ${activeClients.length} active clients, ${checkIns.length} check-ins and ${leads.length} leads.`;
+
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> AI Business Insights
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">AI-generated recommendations based on your data</p>
-        </div>
-        <button onClick={generateInsights} disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground rounded-xl text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60">
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          {insights ? 'Refresh' : 'Generate Insights'}
-        </button>
-      </div>
-
-      {loading && (
-        <div className="py-8 flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm">Analyzing your business data…</p>
+    <InkPanel
+      title="What the AI sees in the business"
+      footer={(
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={generateInsights}
+            disabled={loading}
+            className="bg-ai-foreground text-ai hover:bg-ai-foreground/90"
+          >
+            {loading && <Loader2 className="animate-spin" />}
+            {loading ? 'Reading your numbers…' : insights ? 'Run it again' : 'Read my numbers'}
+          </Button>
+          <span className="text-[13px] text-ai-foreground/60">{basis}</span>
         </div>
       )}
-
-      {!loading && !insights && (
-        <div className="py-8 text-center">
-          <Sparkles className="w-10 h-10 text-border mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground font-medium">Generate AI-powered insights</p>
-          <p className="text-xs text-muted-foreground mt-1">Click "Generate Insights" to get personalized recommendations</p>
-        </div>
+    >
+      {!insights && !loading && (
+        <p>
+          {atRiskClients.length || staleLeads.length
+            ? `${atRiskClients.length} client${atRiskClients.length === 1 ? ' is' : 's are'} at risk and ${staleLeads.length} lead${staleLeads.length === 1 ? ' has' : 's have'} waited two weeks or more. Ask for a read on where the money is.`
+            : 'Ask for a read on revenue, retention and pricing. You get a few specific suggestions, not a report.'}
+        </p>
       )}
+
+      {loading && <p className="text-ai-foreground/70">Looking at revenue, retention, pipeline and check-ins.</p>}
 
       {!loading && insights && (
-        <div className="space-y-3">
-          {insights.map((ins, i) => {
-            const Icon = INSIGHT_ICONS[ins.category] || TrendingUp;
-            const color = INSIGHT_COLORS[ins.category] || 'var(--tc-muted-foreground)';
-            return (
-              <div key={i} className="p-3.5 rounded-xl border" style={{ borderColor: `${color}20`, background: `${color}05` }}>
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: `${color}15` }}>
-                    <Icon className="w-3.5 h-3.5" style={{ color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md" style={{ background: `${color}15`, color }}>
-                        {ins.category}
-                      </span>
-                      {ins.impact && <span className="text-[9px] text-muted-foreground">{ins.impact}</span>}
-                    </div>
-                    <p className="text-xs font-bold text-foreground mb-1">{ins.headline}</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{ins.body}</p>
-                    {ins.action && (
-                      <p className="text-xs font-semibold mt-2" style={{ color }}>→ {ins.action}</p>
-                    )}
-                  </div>
-                </div>
+        insights.length === 0 ? (
+          <p>Nothing stands out right now.</p>
+        ) : (
+          <div className="divide-y divide-ai-foreground/10">
+            {insights.map((ins, i) => (
+              <div key={i} className="py-4 first:pt-0 last:pb-0">
+                <p className="text-[15px] font-semibold text-ai-foreground">{ins.headline}</p>
+                <p className="mt-1 text-ai-foreground/85">{ins.body}</p>
+                {ins.action && <p className="mt-2 text-[15px] text-ai-foreground">Next: {ins.action}</p>}
+                <p className="mt-2 text-[13px] text-ai-foreground/55 capitalize">
+                  {ins.category}{ins.impact ? ` · ${ins.impact}` : ''}
+                </p>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )
       )}
-    </div>
+    </InkPanel>
   );
 }

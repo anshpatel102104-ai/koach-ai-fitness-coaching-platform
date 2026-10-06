@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { Panel, PanelHeader, Stat, EmptyState } from '@/components/kit';
+
+const sourceName = (s) => {
+  if (!s) return 'Direct';
+  const v = String(s).trim();
+  return v.charAt(0).toUpperCase() + v.slice(1);
+};
 
 export default function MarketingAnalytics({ coachId }) {
-  const [timeRange, setTimeRange] = useState('30d');
-
   const { data: links = [] } = useQuery({
     queryKey: ['marketing-links', coachId],
     queryFn: () => db.entities.MarketingLink.filter({ coach_id: coachId }),
@@ -18,150 +22,83 @@ export default function MarketingAnalytics({ coachId }) {
     enabled: !!coachId,
   });
 
-  // Demo data
-  const trafficData = [
-    { source: 'Instagram', clicks: 450, signups: 45 },
-    { source: 'Email', clicks: 320, signups: 48 },
-    { source: 'YouTube', clicks: 280, signups: 42 },
-    { source: 'Direct', clicks: 150, signups: 30 },
-    { source: 'Other', clicks: 100, signups: 15 },
-  ];
-
-  const sourceColors = {
-    Instagram: 'var(--kc-e1306c)',
-    Email: 'var(--kc-0078ff)',
-    YouTube: 'var(--kc-ff0000)',
-    Direct: 'var(--kc-999999)',
-    Other: 'var(--kc-cccccc)',
-  };
-
-  const funnelData = [
-    { stage: 'Visits', value: 1300 },
-    { stage: 'Clicks', value: 1100 },
-    { stage: 'Signups', value: 180 },
-    { stage: 'Trial', value: 120 },
-    { stage: 'Paid', value: 85 },
-  ];
-
   const totalClicks = links.reduce((sum, l) => sum + (l.clicks || 0), 0);
   const totalConversions = links.reduce((sum, l) => sum + (l.conversions || 0), 0);
   const conversionRate = totalClicks > 0 ? ((totalConversions / totalClicks) * 100).toFixed(1) : 0;
   const campaignRevenue = campaigns.reduce((sum, c) => sum + (c.revenue || 0), 0);
 
+  // Clicks and conversions by utm_source, from the coach's real links.
+  const bySource = Object.values(links.reduce((acc, l) => {
+    const key = sourceName(l.utm_source);
+    acc[key] = acc[key] || { source: key, clicks: 0, conversions: 0 };
+    acc[key].clicks += l.clicks || 0;
+    acc[key].conversions += l.conversions || 0;
+    return acc;
+  }, {})).sort((a, b) => b.clicks - a.clicks);
+  const maxClicks = Math.max(1, ...bySource.map(s => s.clicks));
+
   return (
-    <div className="space-y-6">
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Clicks', value: totalClicks, color: 'var(--tc-primary)' },
-          { label: 'Conversions', value: totalConversions, color: 'var(--tc-success)' },
-          { label: 'Conversion Rate', value: `${conversionRate}%`, color: 'var(--tc-warning)' },
-          { label: 'Campaign Revenue', value: `$${campaignRevenue.toFixed(2)}`, color: 'var(--tc-ai)' },
-        ].map((kpi, i) => (
-          <div key={i} className="p-4 rounded-lg bg-card border border-border">
-            <p className="text-xs text-muted-foreground font-bold">{kpi.label}</p>
-            <p className="text-2xl font-black mt-2" style={{ color: kpi.color }}>
-              {kpi.value}
-            </p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-5">
+      <Panel className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden bg-border [&>*]:bg-card [&>*]:px-5 [&>*]:py-4 sm:[&>*]:px-6">
+        <Stat label="Clicks" value={totalClicks.toLocaleString()} sub="all tracked links" />
+        <Stat label="Conversions" value={totalConversions.toLocaleString()} />
+        <Stat label="Conversion rate" value={`${conversionRate}%`} />
+        <Stat label="Campaign revenue" value={`$${campaignRevenue.toFixed(2)}`} />
+      </Panel>
 
-      {/* Traffic Sources */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-card rounded-2xl border border-border p-6">
-          <h3 className="font-bold text-foreground mb-4">Traffic by Source</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={trafficData} dataKey="clicks" cx="50%" cy="50%" outerRadius={100}>
-                {trafficData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={sourceColors[entry.source]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <Panel>
+          <PanelHeader title="By source" subtitle="Grouped by the source you set on each link." />
+          {bySource.length === 0 ? (
+            <EmptyState title="No traffic yet" body="Create a tracked link and share it to see where people come from." />
+          ) : (
+            <ul className="px-5 sm:px-6 pb-5 space-y-3">
+              {bySource.map(s => {
+                const rate = s.clicks > 0 ? ((s.conversions / s.clicks) * 100).toFixed(1) : '0.0';
+                return (
+                  <li key={s.source}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-semibold text-foreground">{s.source}</span>
+                      <span className="text-[13px] text-muted-foreground">{s.conversions} of {s.clicks.toLocaleString()} converted, {rate}%</span>
+                    </div>
+                    <div className="h-2 mt-1.5 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.round((s.clicks / maxClicks) * 100)}%` }} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
 
-        <div className="bg-card rounded-2xl border border-border p-6">
-          <h3 className="font-bold text-foreground mb-4">Conversion by Source</h3>
-          <div className="space-y-3">
-            {trafficData.map((source, i) => {
-              const rate = ((source.signups / source.clicks) * 100).toFixed(1);
-              return (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="w-3 h-3 rounded-full" style={{ background: sourceColors[source.source] }} />
-                    <span className="text-sm font-semibold text-foreground">{source.source}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-foreground">{rate}%</p>
-                    <p className="text-xs text-muted-foreground">{source.signups} of {source.clicks}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Conversion Funnel */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Conversion Funnel</h3>
-        <div className="space-y-4">
-          {funnelData.map((item, i) => {
-            const pct = (item.value / funnelData[0].value) * 100;
-            const nextPct = i < funnelData.length - 1 ? (funnelData[i + 1].value / item.value) * 100 : 100;
-            return (
-              <div key={i}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-foreground">{item.stage}</p>
-                  <div className="text-right">
-                    <p className="font-bold text-foreground">{item.value.toLocaleString()}</p>
-                    {i < funnelData.length - 1 && (
-                      <p className="text-xs text-muted-foreground">{nextPct.toFixed(0)}% conversion</p>
-                    )}
-                  </div>
-                </div>
-                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                  <div className="h-full rounded-full transition-all bg-primary" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Top Links */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Top Performing Links</h3>
-        {links.length > 0 ? (
-          <div className="overflow-x-auto">
+        <Panel>
+          <PanelHeader title="Top links" />
+          {links.length > 0 ? (
             <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="text-left py-2 px-2 font-bold text-foreground">Name</th>
-                  <th className="text-right py-2 px-2 font-bold text-foreground">Clicks</th>
-                  <th className="text-right py-2 px-2 font-bold text-foreground">Rate</th>
+              <thead className="border-y border-border">
+                <tr className="text-[13px] text-muted-foreground">
+                  <th className="text-left font-medium py-2.5 pl-5 sm:pl-6 pr-3">Link</th>
+                  <th className="text-right font-medium py-2.5 px-3">Clicks</th>
+                  <th className="text-right font-medium py-2.5 pr-5 sm:pr-6 pl-3">Rate</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {[...links].sort((a, b) => (b.clicks || 0) - (a.clicks || 0)).slice(0, 5).map((link) => {
                   const rate = link.clicks > 0 ? ((link.conversions || 0) / link.clicks * 100).toFixed(1) : 0;
                   return (
-                    <tr key={link.id} className="border-b border-border hover:bg-muted">
-                      <td className="py-2 px-2 text-foreground font-semibold">{link.link_name}</td>
-                      <td className="py-2 px-2 text-right text-foreground">{link.clicks || 0}</td>
-                      <td className="py-2 px-2 text-right text-foreground font-bold">{rate}%</td>
+                    <tr key={link.id}>
+                      <td className="py-3 pl-5 sm:pl-6 pr-3 font-semibold text-foreground">{link.link_name}</td>
+                      <td className="py-3 px-3 text-right"><span className="num text-base">{link.clicks || 0}</span></td>
+                      <td className="py-3 pr-5 sm:pr-6 pl-3 text-right"><span className="num text-base">{rate}%</span></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">No links yet</p>
-        )}
+          ) : (
+            <EmptyState title="No links yet" body="Your best-performing links will be listed here." />
+          )}
+        </Panel>
       </div>
     </div>
   );

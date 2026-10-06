@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { useTeamRole } from '@/lib/useTeamRole';
-import { ShieldAlert } from 'lucide-react';
 import { getUserTier, getLimit } from '@/lib/subscription';
 import { Button } from '@/components/ui/button';
-import { Zap, Users, Dumbbell, Salad, AlertTriangle,
-  ExternalLink, RefreshCw, Calendar, CreditCard, CheckCircle2, XCircle,
-  Clock, Lock, RotateCcw, MessageCircle, ChevronDown, LogOut
-} from 'lucide-react';
+import { ExternalLink, RefreshCw, ChevronDown, LogOut } from 'lucide-react';
+import { Page, PageHeader, Panel, PanelHeader } from '@/components/kit';
+import { StatusDot, Meter } from '@/components/business/ui';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -20,28 +18,20 @@ import AiUsageMeter from '@/components/subscription/AiUsageMeter';
 import CancellationModal from '@/components/subscription/CancellationModal';
 
 const BILLING_STATUS_CONFIG = {
-  none:       { label: 'No plan',     cls: 'bg-[var(--kc-w-5)] text-muted-foreground border-white/10', icon: XCircle },
-  active:     { label: 'Active',      cls: 'bg-success/10 text-success border-success/30', icon: CheckCircle2 },
-  trialing:   { label: 'Trial',       cls: 'bg-primary/10 text-primary border-primary/30',          icon: Clock },
-  past_due:   { label: 'Past Due',    cls: 'bg-warning/10 text-warning border-warning/30',       icon: AlertTriangle },
-  unpaid:     { label: 'Unpaid',      cls: 'bg-destructive/10 text-destructive border-destructive/30',             icon: XCircle },
-  incomplete: { label: 'Incomplete',  cls: 'bg-warning/10 text-warning border-warning/30',       icon: Clock },
-  canceled:   { label: 'Canceled',    cls: 'bg-[var(--kc-w-5)] text-muted-foreground border-white/10',               icon: XCircle },
+  none:       { label: 'No plan',    tone: 'muted' },
+  active:     { label: 'Active',     tone: 'success' },
+  trialing:   { label: 'Trial',      tone: 'muted' },
+  past_due:   { label: 'Past due',   tone: 'danger' },
+  unpaid:     { label: 'Unpaid',     tone: 'danger' },
+  incomplete: { label: 'Incomplete', tone: 'warning' },
+  canceled:   { label: 'Canceled',   tone: 'muted' },
 };
 
-
-const TRUST_ITEMS = [
-  { icon: Lock, text: 'Payments securely processed by Stripe' },
-  { icon: RotateCcw, text: 'Upgrade or downgrade anytime' },
-  { icon: XCircle, text: 'Cancel anytime — no long-term contracts' },
-  { icon: MessageCircle, text: 'Questions? Chat with us' },
-];
-
 const FAQS = [
-  { q: 'Can I change plans later?', a: 'Yes! You can upgrade or downgrade your plan at any time from the subscription page. Upgrades take effect immediately (prorated), and downgrades apply at the end of your billing period.' },
+  { q: 'Can I change plans later?', a: 'Yes. You can upgrade or downgrade your plan at any time from the subscription page. Upgrades take effect immediately (prorated), and downgrades apply at the end of your billing period.' },
   { q: 'What happens to my clients if I downgrade?', a: 'Your existing clients remain in the system. However, if you exceed the client limit of your new plan, you won\'t be able to add new clients until you\'re back under the limit. Existing client data is never deleted.' },
   { q: 'Is there a free trial?', a: 'New subscriptions start with a 30-day free trial on any plan. A card is required to start it, and you can cancel before the trial ends to avoid being charged.' },
-  { q: 'Do my clients pay separately?', a: 'No — your clients use KOACH AI for free as part of your subscription. You pay one flat monthly or annual rate that covers you and all your clients.' },
+  { q: 'Do my clients pay separately?', a: 'No. Your clients use KOACH AI free as part of your subscription. You pay one flat monthly or annual rate that covers you and all your clients.' },
   { q: 'What payment methods do you accept?', a: 'We accept all major credit and debit cards (Visa, Mastercard, Amex, Discover) via Stripe. Annual plans can also be invoiced for Enterprise customers.' },
   { q: 'Can I add more coaches to my account?', a: 'Team accounts with multiple coaches are available on the Enterprise plan. Contact our sales team to discuss pricing for your coaching organization.' },
 ];
@@ -49,36 +39,29 @@ const FAQS = [
 function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-white/10 last:border-0">
+    <div className="border-b border-border last:border-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-4 text-left group"
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-4 py-4 text-left"
       >
-        <span className="text-sm font-semibold text-sidebar-foreground group-hover:text-white transition-colors">{q}</span>
-        <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform duration-200 flex-shrink-0 ml-4', open && 'rotate-180')} />
+        <span className="text-[15px] font-semibold text-foreground">{q}</span>
+        <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform duration-200 flex-shrink-0', open && 'rotate-180')} />
       </button>
-      {open && (
-        <p className="text-sm text-muted-foreground pb-4 leading-relaxed">{a}</p>
-      )}
+      {open && <p className="text-sm text-muted-foreground pb-4 leading-relaxed max-w-3xl">{a}</p>}
     </div>
   );
 }
 
 function CoachBillingBlock() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: 'var(--tc-sidebar)' }}>
-      <div className="max-w-sm w-full text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-          style={{ background: 'color-mix(in srgb, var(--tc-destructive) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-destructive) 25%, transparent)' }}>
-          <ShieldAlert className="w-7 h-7 text-destructive" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">Billing is owner-only</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Only the team owner can view or change the subscription plan. Contact your team owner if you need to make billing changes.
-        </p>
-      </div>
-    </div>
+    <Page>
+      <PageHeader title="Plan and billing" subtitle="Only the team owner can see or change the plan." />
+      <Panel className="px-5 py-6 sm:px-6 max-w-xl">
+        <p className="text-[15px] font-semibold text-foreground">Billing is owner-only</p>
+        <p className="text-sm text-muted-foreground mt-1">Ask your team owner if something needs changing.</p>
+      </Panel>
+    </Page>
   );
 }
 
@@ -95,7 +78,7 @@ export default function Subscription({ gated = false, accessReason = undefined }
     const params = new URLSearchParams(window.location.search);
     if (params.get('success') || params.get('checkout')) {
       setTimeout(() => {
-        me().then(u => { setUser(u); toast.success('Subscription updated!'); });
+        me().then(u => { setUser(u); toast.success('Subscription updated'); });
       }, 2000);
     }
   }, []);
@@ -111,7 +94,6 @@ export default function Subscription({ gated = false, accessReason = undefined }
   const billingStatus = user?.billing_status || 'none';
   const access = billingAccess(user);
   const billingCfg = BILLING_STATUS_CONFIG[billingStatus] || BILLING_STATUS_CONFIG.none;
-  const BillingIcon = billingCfg.icon;
   const isPastDue = ['past_due', 'unpaid', 'incomplete'].includes(billingStatus);
   const isCanceled = billingStatus === 'canceled';
   const hasPlan = !!user?.stripe_subscription_id && ['trialing', 'active', 'past_due'].includes(billingStatus);
@@ -130,9 +112,9 @@ export default function Subscription({ gated = false, accessReason = undefined }
   else if (!hasPlan && access.reason === 'trial') dateLine = `Free trial ends ${trialEnd}`;
 
   const usages = [
-    { key: 'max_clients', label: 'Clients', icon: Users, current: clients.length },
-    { key: 'max_programs', label: 'Programs', icon: Dumbbell, current: programs.length },
-    { key: 'max_nutrition_plans', label: 'Nutrition Plans', icon: Salad, current: nutritionPlans.length },
+    { key: 'max_clients', label: 'Clients', current: clients.length },
+    { key: 'max_programs', label: 'Programs', current: programs.length },
+    { key: 'max_nutrition_plans', label: 'Nutrition plans', current: nutritionPlans.length },
   ];
 
   const handleOpenPortal = async () => {
@@ -153,201 +135,160 @@ export default function Subscription({ gated = false, accessReason = undefined }
 
   const GATED_MESSAGE = {
     past_due_expired: 'Your payment failed and the 3-day grace period has ended. Update your payment method to restore access.',
-    trial_expired: 'Your free trial has ended. Subscribe to keep using KOACH AI — your clients and data are safe.',
-    canceled: 'Your subscription has ended. Subscribe again to pick up right where you left off — your clients and data are safe.',
+    trial_expired: 'Your free trial has ended. Pick a plan to keep going. Your clients and data are safe.',
+    canceled: 'Your subscription has ended. Subscribe again to pick up where you left off. Your clients and data are safe.',
     unpaid: 'Your subscription is unpaid. Update your payment method to restore access.',
     incomplete: 'Your subscription setup was not completed. Choose a plan to finish subscribing.',
   };
 
+  const planName = hasPlan
+    ? `${userTier.name}, billed ${isYearly ? 'yearly' : 'monthly'}`
+    : access.reason === 'trial' ? `${userTier.name}, free trial` : access.hasAccess ? `${userTier.name}, complimentary` : 'No active plan';
+  const statusLabel = access.reason === 'trial' ? 'Free trial' : (access.reason === 'comped' || access.reason === 'admin') ? 'Full access' : billingCfg.label;
+  const subtitle = hasPlan
+    ? `${planName}.${dateLine ? ` ${dateLine}.` : ''}`
+    : gated ? 'Pick a plan to keep coaching. Every plan starts with a 30-day free trial.' : `${planName}.${dateLine ? ` ${dateLine}.` : ''} Every plan starts with a 30-day free trial.`;
+
   return (
-    <div className="min-h-screen" style={{ background: 'var(--tc-sidebar)' }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-12">
-
-        {/* No access: explain why and what to do (never a blank/error page) */}
-        {gated && (
-          <div className="mb-8 rounded-2xl border border-primary/30 bg-primary/10 p-5 flex flex-wrap items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">Subscribe to continue</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {GATED_MESSAGE[accessReason] || 'Choose a plan to start your 30-day free trial and unlock KOACH AI.'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {isPastDue && user?.stripe_customer_id && (
-                <Button size="sm" onClick={handleOpenPortal} disabled={openingPortal}>
-                  {openingPortal ? 'Opening...' : 'Fix payment'}
-                </Button>
-              )}
-              <Button size="sm" variant="ghost" onClick={() => logout()} className="text-muted-foreground hover:text-white">
-                <LogOut className="w-3.5 h-3.5 mr-1.5" /> Sign out
+    <Page>
+      {/* No access: explain why and what to do (never a blank/error page) */}
+      {gated && (
+        <Panel className="mb-5 px-5 py-4 sm:px-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-foreground">Subscribe to continue</p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {GATED_MESSAGE[accessReason] || 'Choose a plan to start your 30-day free trial.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isPastDue && user?.stripe_customer_id && (
+              <Button size="sm" onClick={handleOpenPortal} disabled={openingPortal}>
+                {openingPortal ? 'Opening…' : 'Fix payment'}
               </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Alert Banners */}
-        {isPastDue && !gated && access.reason !== 'grace' && (
-          <div className="mb-6 flex items-start gap-4 bg-warning/10 border border-warning/30 rounded-2xl p-4">
-            <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-warning">Payment Issue — Action Required</p>
-              <p className="text-xs text-warning/70 mt-0.5">Your last payment failed. Fix your payment within 3 days to keep your access.</p>
-            </div>
-            <Button size="sm" className="bg-warning hover:bg-warning text-black font-semibold flex-shrink-0" onClick={handleOpenPortal}>
-              Fix Payment
+            )}
+            <Button size="sm" variant="ghost" onClick={() => logout()}>
+              <LogOut /> Sign out
             </Button>
           </div>
-        )}
-        {cancelAtEnd && !isCanceled && (
-          <div className="mb-6 flex items-start gap-4 bg-[var(--kc-w-5)] border border-white/10 rounded-2xl p-4">
-            <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-white">Subscription Ending</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Your {userTier.name} plan cancels on {periodEnd || 'the renewal date'}. You keep access until then.</p>
-            </div>
-            <Button size="sm" variant="outline" onClick={handleOpenPortal} className="flex-shrink-0 border-white/20 text-white hover:bg-[var(--kc-w-10)]">Reactivate</Button>
-          </div>
-        )}
+        </Panel>
+      )}
 
-        {/* Page Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Button variant="ghost" size="sm" onClick={refreshUser} className="text-muted-foreground hover:text-sidebar-foreground text-xs">
-              <RefreshCw className="w-3 h-3 mr-1" /> Refresh
-            </Button>
+      {/* Payment failure: the one red rule on this page */}
+      {isPastDue && !gated && access.reason !== 'grace' && (
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-card border-l-[3px] border-destructive px-4 py-3 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+          <p className="flex-1 min-w-[220px] text-sm">
+            <span className="font-semibold text-destructive">Your last payment failed.</span>{' '}
+            <span className="text-muted-foreground">Fix it within 3 days to keep access.</span>
+          </p>
+          <Button size="sm" onClick={handleOpenPortal}>Fix payment</Button>
+        </div>
+      )}
+      {cancelAtEnd && !isCanceled && (
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-card px-4 py-3 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+          <p className="flex-1 min-w-[220px] text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{userTier.name} ends on {periodEnd || 'the renewal date'}.</span> You keep access until then.
+          </p>
+          <Button size="sm" variant="outline" onClick={handleOpenPortal}>Keep my plan</Button>
+        </div>
+      )}
+
+      <PageHeader
+        title={hasPlan ? 'Plan and billing' : 'Choose a plan'}
+        subtitle={subtitle}
+        actions={(
+          <>
+            <Button variant="ghost" onClick={refreshUser}><RefreshCw /> Refresh</Button>
+            {user?.stripe_customer_id && (
+              <Button variant="outline" onClick={handleOpenPortal} disabled={openingPortal}>
+                <ExternalLink /> {openingPortal ? 'Opening…' : 'Manage billing'}
+              </Button>
+            )}
+          </>
+        )}
+      />
+
+      {/* Billing summary + usage */}
+      <Panel className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] mb-8 overflow-hidden">
+        <div className="px-5 py-5 sm:px-6 sm:py-6 border-b lg:border-b-0 lg:border-r border-border">
+          <p className="text-[13px] text-muted-foreground">Current plan</p>
+          <h2 className="text-[28px] text-foreground mt-0.5">{hasPlan || access.hasAccess ? userTier.name : 'None'}</h2>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+            <StatusDot tone={access.reason === 'trial' || access.reason === 'comped' || access.reason === 'admin' ? 'muted' : billingCfg.tone}>{statusLabel}</StatusDot>
+            {dateLine && <span className="text-sm text-muted-foreground">{dateLine}</span>}
           </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">{hasPlan ? 'Billing & Plan' : 'Choose Your Plan'}</h1>
-          <p className="text-muted-foreground text-lg">Scale your coaching business with the right tools</p>
+          {hasPlan && planPrice && (
+            <p className="mt-4">
+              <span className="num text-[36px] leading-none text-foreground">{formatMoney(isYearly ? planPrice.yearly : planPrice.monthly)}</span>
+              <span className="text-sm text-muted-foreground"> / {isYearly ? 'year' : 'month'}</span>
+            </p>
+          )}
         </div>
 
-        {/* Billing summary: plan, interval, renewal / trial end / cancellation, Manage billing */}
-        <div className="bg-card/[0.04] border border-white/10 rounded-2xl p-5 mb-10">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[var(--kc-w-5)] border border-white/10 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">Current Plan</p>
-                <h2 className="text-xl font-bold text-white">
-                  {hasPlan ? `${userTier.name} · ${isYearly ? 'Yearly' : 'Monthly'}` : (access.reason === 'trial' ? `${userTier.name} (free trial)` : access.hasAccess ? `${userTier.name} (complimentary)` : 'No active plan')}
-                </h2>
-              </div>
-              <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border', billingCfg.cls)}>
-                <BillingIcon className="w-3 h-3" />{access.reason === 'trial' ? 'Free trial' : (access.reason === 'comped' || access.reason === 'admin') ? 'Full access' : billingCfg.label}
-              </span>
-              {dateLine && (
-                <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Calendar className="w-3 h-3" />{dateLine}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              {hasPlan && planPrice && (
-                <div className="flex items-end gap-1">
-                  <span className="text-3xl font-bold text-white">{formatMoney(isYearly ? planPrice.yearly : planPrice.monthly)}</span>
-                  <span className="text-muted-foreground text-sm mb-0.5">{isYearly ? '/yr' : '/mo'}</span>
-                </div>
-              )}
-              {user?.stripe_customer_id && (
-                <Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={openingPortal}
-                  className="border-white/20 text-white hover:bg-[var(--kc-w-10)]">
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                  {openingPortal ? 'Opening...' : 'Manage billing'}
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-card/[0.03] border border-white/10 rounded-xl p-4 mb-3">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">AI generations</p>
-            <AiUsageMeter bar />
-          </div>
-
-          {/* Usage Meters */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {usages.map(({ key, label, icon: Icon, current }) => {
+        <div className="px-5 py-5 sm:px-6 sm:py-6">
+          <p className="text-[13px] text-muted-foreground mb-3">What you're using</p>
+          <div className="space-y-4">
+            {usages.map(({ key, label, current }) => {
               const limit = getLimit(user, key);
-              const pct = limit === -1 ? 0 : Math.min((current / limit) * 100, 100);
               const atLimit = limit !== -1 && current >= limit;
-              const nearLimit = limit !== -1 && pct >= 80;
+              const nearLimit = limit !== -1 && current / limit >= 0.8;
               return (
-                <div key={key} className="bg-card/[0.03] border border-white/10 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-                  </div>
-                  <div className="flex items-end justify-between mb-2">
-                    <span className={cn('text-2xl font-bold', atLimit ? 'text-destructive' : nearLimit ? 'text-warning' : 'text-white')}>
-                      {current}
+                <div key={key}>
+                  <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                    <span className="text-sm text-foreground">{label}</span>
+                    <span className={cn('text-sm tabular-nums', atLimit ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+                      {limit === -1 ? `${current}, no limit` : `${current} of ${limit} used`}
                     </span>
-                    <span className="text-xs text-muted-foreground">{limit === -1 ? '∞ unlimited' : `/ ${limit}`}</span>
                   </div>
-                  {limit !== -1 && (
-                    <div className="h-1.5 rounded-full bg-[var(--kc-w-5)] overflow-hidden">
-                      <div className={cn('h-full rounded-full transition-all duration-700', atLimit ? 'bg-destructive' : nearLimit ? 'bg-warning' : 'bg-primary')} style={{ width: `${pct}%` }} />
-                    </div>
-                  )}
+                  <Meter value={limit === -1 ? 0 : current} max={limit === -1 ? 1 : limit} tone={atLimit ? 'danger' : nearLimit ? 'warning' : 'ink'} />
                 </div>
               );
             })}
+            <div>
+              <p className="text-sm text-foreground mb-1.5">AI generations</p>
+              <AiUsageMeter bar />
+            </div>
           </div>
         </div>
+      </Panel>
 
-        {/* Pricing Cards */}
-        <PricingCards user={user} onUserUpdate={setUser} clientCount={clients.length} hasPlan={hasPlan} />
+      {/* Pricing */}
+      <h2 className="text-[26px] text-foreground mb-3">{hasPlan ? 'Compare plans' : 'Plans'}</h2>
+      <PricingCards user={user} onUserUpdate={setUser} clientCount={clients.length} hasPlan={hasPlan} />
+      <p className="text-[13px] text-muted-foreground mt-4">
+        Payments are processed by Stripe. Upgrade or downgrade any time, no long-term contracts. Questions? Write to support@koachai.net.
+      </p>
 
-        {/* Trust Bar */}
-        <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {TRUST_ITEMS.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-2.5 text-muted-foreground text-xs">
-              <Icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-              <span>{text}</span>
-            </div>
-          ))}
+      {/* FAQ */}
+      <Panel className="mt-8">
+        <PanelHeader title="Common questions" />
+        <div className="px-5 sm:px-6 pb-2">
+          {FAQS.map(faq => <FAQItem key={faq.q} {...faq} />)}
         </div>
+      </Panel>
 
-        {/* FAQ */}
-        <div className="mt-14">
-          <h2 className="text-2xl font-bold text-white mb-6">Frequently Asked Questions</h2>
-          <div className="bg-card/[0.03] border border-white/10 rounded-2xl px-6">
-            {FAQS.map(faq => <FAQItem key={faq.q} {...faq} />)}
+      {/* Billing management */}
+      {user?.stripe_customer_id && (
+        <Panel className="mt-5 px-5 py-5 sm:px-6 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-[15px] font-semibold text-foreground">Card, invoices and cancellation</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Managed in Stripe's billing portal.</p>
           </div>
-        </div>
-
-        {/* Billing management */}
-        {user?.stripe_customer_id && (
-          <div className="mt-8 bg-card/[0.03] border border-white/10 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[var(--kc-w-5)] flex items-center justify-center">
-                <CreditCard className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Billing managed by Stripe</p>
-                <p className="text-xs text-muted-foreground">Update payment method, download invoices, or cancel</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={handleOpenPortal} disabled={openingPortal}
-                className="border-white/20 text-white hover:bg-[var(--kc-w-10)]">
-                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                {openingPortal ? 'Opening...' : 'Manage billing'}
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={handleOpenPortal} disabled={openingPortal}>
+              <ExternalLink /> {openingPortal ? 'Opening…' : 'Manage billing'}
+            </Button>
+            {user?.stripe_subscription_id && !cancelAtEnd && (
+              <Button variant="link" onClick={() => setCancelModalOpen(true)} className="text-muted-foreground hover:text-destructive">
+                Cancel subscription
               </Button>
-              {user?.stripe_subscription_id && !cancelAtEnd && (
-                <Button variant="ghost" size="sm" onClick={() => setCancelModalOpen(true)}
-                  className="text-destructive/70 hover:text-destructive hover:bg-destructive/10 text-xs">
-                  Cancel subscription
-                </Button>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </Panel>
+      )}
 
-        {cancelModalOpen && (
-          <CancellationModal user={user} onUserUpdate={setUser} onClose={() => setCancelModalOpen(false)} />
-        )}
-
-      </div>
-    </div>
+      {cancelModalOpen && (
+        <CancellationModal user={user} onUserUpdate={setUser} onClose={() => setCancelModalOpen(false)} />
+      )}
+    </Page>
   );
 }

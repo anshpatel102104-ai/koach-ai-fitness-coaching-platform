@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Check, RotateCcw } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = [
-  { key: 'proteins', label: '🥩 Proteins', color: 'text-destructive bg-destructive/10 border-destructive' },
-  { key: 'produce', label: '🥦 Produce', color: 'text-success bg-success/10 border-success' },
-  { key: 'grains', label: '🌾 Grains & Carbs', color: 'text-warning bg-warning/10 border-warning' },
-  { key: 'dairy', label: '🧀 Dairy', color: 'text-warning bg-warning/10 border-warning' },
-  { key: 'fats', label: '🥑 Fats & Oils', color: 'text-primary bg-accent border-accent' },
-  { key: 'condiments', label: '🫙 Condiments', color: 'text-ai bg-ai/10 border-ai' },
-  { key: 'other', label: '📦 Other', color: 'text-muted-foreground bg-muted border-border' },
+  { key: 'proteins', label: 'Meat, fish and eggs' },
+  { key: 'produce', label: 'Produce' },
+  { key: 'grains', label: 'Grains and bread' },
+  { key: 'dairy', label: 'Dairy' },
+  { key: 'fats', label: 'Oils, nuts and seeds' },
+  { key: 'condiments', label: 'Sauces and seasoning' },
+  { key: 'other', label: 'Everything else' },
 ];
 
 const PROTEIN_KEYWORDS = ['chicken', 'beef', 'steak', 'salmon', 'tuna', 'shrimp', 'turkey', 'pork', 'fish', 'egg', 'protein', 'whey', 'casein', 'tofu', 'tempeh', 'tilapia', 'cod', 'ground'];
@@ -31,16 +33,18 @@ function categorize(foodName) {
   return 'other';
 }
 
-function buildGroceryList(meals) {
+export function buildGroceryList(meals) {
   const map = {};
   (meals || []).forEach(meal => {
     (meal.foods || []).forEach(food => {
-      if (!food.food_name) return;
-      const key = food.food_name.toLowerCase().trim();
+      const name = food.food_name || food.name;
+      if (!name) return;
+      const key = name.toLowerCase().trim();
       const cat = categorize(key);
       if (!map[cat]) map[cat] = {};
-      if (!map[cat][key]) map[cat][key] = { name: food.food_name, portions: [] };
-      if (food.portion) map[cat][key].portions.push(food.portion);
+      if (!map[cat][key]) map[cat][key] = { name, portions: [] };
+      const portion = food.portion || food.amount_household;
+      if (portion) map[cat][key].portions.push(portion);
     });
   });
   // Convert to arrays
@@ -54,55 +58,55 @@ function buildGroceryList(meals) {
   return result;
 }
 
-export default function GroceryListModal({ open, onOpenChange, plan }) {
-  const groceries = buildGroceryList(plan?.meals);
+export function groceryCount(meals) {
+  return Object.values(buildGroceryList(meals)).reduce((s, arr) => s + arr.length, 0);
+}
+
+export default function GroceryListModal({ open, onOpenChange, plan, meals }) {
+  const groceries = buildGroceryList(meals || [...(plan?.meals || []), ...(plan?.rest_day_meals || [])]);
   const [checked, setChecked] = useState({});
 
   const toggle = (cat, i) => setChecked(prev => ({ ...prev, [`${cat}-${i}`]: !prev[`${cat}-${i}`] }));
   const totalItems = Object.values(groceries).reduce((s, arr) => s + arr.length, 0);
   const checkedCount = Object.values(checked).filter(Boolean).length;
 
+  const copyList = () => {
+    const text = CATEGORIES
+      .filter(c => groceries[c.key]?.length)
+      .map(c => `${c.label}\n${groceries[c.key].map(i => `- ${i.name}${i.detail ? ` (${i.detail})` : ''}`).join('\n')}`)
+      .join('\n\n');
+    navigator.clipboard?.writeText(text);
+    toast.success('Grocery list copied');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl">
+      <DialogContent className="max-w-lg max-h-[88vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
-        <div className="px-5 pt-5 pb-4 border-b border-border bg-card flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-success/10 flex items-center justify-center">
-              <ShoppingCart className="w-4.5 h-4.5 text-success" />
+        <div className="px-5 pt-5 pb-4 border-b border-border flex-shrink-0 pr-12">
+          <DialogTitle>Grocery list</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground mt-1">
+            {totalItems > 0
+              ? `${totalItems} items for the week, grouped by store aisle. ${checkedCount} ticked off.`
+              : 'Nothing to buy yet.'}
+          </DialogDescription>
+          {totalItems > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={copyList}><Copy /> Copy list</Button>
+              <Button size="sm" variant="ghost" onClick={() => setChecked({})} disabled={checkedCount === 0}>Clear ticks</Button>
             </div>
-            <div>
-              <DialogTitle className="font-heading font-bold text-base">Grocery List</DialogTitle>
-              <p className="text-xs text-muted-foreground">{checkedCount}/{totalItems} items checked</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="ml-auto gap-1.5 text-xs text-muted-foreground"
-              onClick={() => setChecked({})}
-            >
-              <RotateCcw className="w-3 h-3" /> Reset
-            </Button>
-          </div>
-          {/* Progress */}
-          <div className="mt-3 h-1.5 rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full rounded-full bg-success transition-all"
-              style={{ width: totalItems ? `${(checkedCount / totalItems) * 100}%` : '0%' }}
-            />
-          </div>
+          )}
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           {CATEGORIES.map(cat => {
             const items = groceries[cat.key];
             if (!items?.length) return null;
-            const [textColor, bgColor, borderColor] = cat.color.split(' ');
             return (
               <div key={cat.key}>
-                <p className={`text-xs font-bold uppercase tracking-wider mb-2 ${textColor}`}>{cat.label}</p>
-                <div className={`rounded-xl border ${bgColor} ${borderColor} overflow-hidden`}>
+                <p className="text-[13px] text-muted-foreground mb-1">{cat.label}</p>
+                <div>
                   {items.map((item, i) => {
                     const id = `${cat.key}-${i}`;
                     const done = !!checked[id];
@@ -110,13 +114,13 @@ export default function GroceryListModal({ open, onOpenChange, plan }) {
                       <button
                         key={i}
                         onClick={() => toggle(cat.key, i)}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:brightness-[0.97] transition-all text-left border-b last:border-b-0 border-white/60"
+                        className="w-full flex items-center gap-3 py-2.5 text-left border-b border-border last:border-b-0 hover:bg-accent/50 transition-colors"
                       >
-                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${done ? 'bg-success border-success' : 'bg-card border-border'}`}>
-                          {done && <Check className="w-3 h-3 text-white" />}
-                        </div>
-                        <span className={`text-sm flex-1 ${done ? 'line-through text-muted-foreground' : 'text-foreground font-medium'}`}>{item.name}</span>
-                        {item.detail && <span className="text-[10px] text-muted-foreground flex-shrink-0">{item.detail}</span>}
+                        <span className={cn('w-[18px] h-[18px] rounded-[4px] border flex items-center justify-center flex-shrink-0', done ? 'bg-primary border-primary' : 'bg-card border-input')}>
+                          {done && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </span>
+                        <span className={cn('text-sm flex-1', done ? 'line-through text-muted-foreground' : 'text-foreground')}>{item.name}</span>
+                        {item.detail && <span className="text-[13px] text-muted-foreground flex-shrink-0 max-w-[45%] truncate">{item.detail}</span>}
                       </button>
                     );
                   })}
@@ -126,10 +130,7 @@ export default function GroceryListModal({ open, onOpenChange, plan }) {
           })}
 
           {totalItems === 0 && (
-            <div className="text-center py-12">
-              <ShoppingCart className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">No food items found in this plan.</p>
-            </div>
+            <p className="text-sm text-muted-foreground py-6">This plan has no foods yet. Add foods to its meals and the list fills in.</p>
           )}
         </div>
       </DialogContent>

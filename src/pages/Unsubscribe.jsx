@@ -10,24 +10,23 @@ export default function Unsubscribe() {
   const email = params.get('email') || '';
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center px-5" style={{ background: 'var(--tc-sidebar, #0f172a)' }}>
-      <div className="w-full max-w-sm rounded-2xl p-8 text-center"
-        style={{ background: 'var(--tc-card, #fff)', border: '1px solid var(--tc-border, #e5e7eb)' }}>
-        <div className="text-2xl font-black mb-2" style={{ color: 'var(--tc-foreground, #0f172a)' }}>KOACH AI</div>
-        <h1 className="text-lg font-bold mb-2" style={{ color: 'var(--tc-foreground, #0f172a)' }}>
-          Notification preferences
-        </h1>
-        <p className="text-sm mb-4" style={{ color: 'var(--tc-muted-foreground, #64748b)' }}>
-          {email ? <>We’ve received your request for <strong>{email}</strong>. </> : null}
-          To stop coaching emails or change what you receive, manage your notification
-          settings in the app, or reply to your coach directly and they’ll update your preferences.
+    <div className="fixed inset-0 flex flex-col overflow-y-auto bg-background">
+      <header className="flex-shrink-0 bg-sidebar px-5 py-4 sm:px-8">
+        <img src="/koach-logo-white.png" alt="KOACH" className="h-6 w-auto" />
+      </header>
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-10">
+        <h1 className="text-[32px] leading-tight text-foreground">Email preferences</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+          {email ? <>We've received your request for <strong className="font-semibold text-foreground">{email}</strong>. </> : null}
+          To stop coaching emails or change what you get, update your notification settings in the app, or reply to your coach and they'll change it for you.
         </p>
-        <a href="/notification-settings"
-          className="inline-block rounded-xl px-5 py-2.5 text-sm font-bold"
-          style={{ background: 'var(--tc-primary, #2563eb)', color: 'var(--tc-primary-foreground, #fff)' }}>
+        <a
+          href="/notification-settings"
+          className="mt-6 inline-flex h-11 w-fit items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/85"
+        >
           Manage notifications
         </a>
-      </div>
+      </main>
     </div>
   );
 }

@@ -48,7 +48,7 @@ export default function GoalsTab({ client }) {
   const handleToggleComplete = async (goal) => {
     const newStatus = goal.status === 'completed' ? 'active' : 'completed';
     await db.entities.Goal.update(goal.id, { status: newStatus });
-    toast.success(newStatus === 'completed' ? 'Goal marked complete!' : 'Goal reactivated');
+    toast.success(newStatus === 'completed' ? 'Goal marked complete' : 'Goal reactivated');
     refresh();
   };
 
@@ -69,7 +69,7 @@ export default function GoalsTab({ client }) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-bold text-foreground">Client Goals</h3>
+            <h3 className="text-base font-bold text-foreground">Client goals</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{active.length} active · {completed.length} completed</p>
           </div>
           <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function GoalsTab({ client }) {
               onClick={handleAdd}
               className="flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary px-4 py-2 rounded-lg transition-colors"
             >
-              <Plus className="w-4 h-4" /> Add Goal
+              <Plus className="w-4 h-4" /> Add goal
             </button>
           </div>
         </div>
@@ -96,8 +96,8 @@ export default function GoalsTab({ client }) {
         {/* Empty state */}
         {!isLoading && goals.length === 0 && (
           <div className="text-center py-16">
-            <div className="w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <span className="text-2xl">🎯</span>
+            <div className="w-14 h-14 rounded-xl bg-card border border-border flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl"></span>
             </div>
             <p className="text-sm font-semibold text-muted-foreground mb-1">No goals yet</p>
             <p className="text-xs text-muted-foreground mb-4">Create custom goals to track this client's progress.</p>
@@ -106,13 +106,13 @@ export default function GoalsTab({ client }) {
                 onClick={handleAdd}
                 className="flex items-center gap-1.5 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary px-5 py-2.5 rounded-xl transition-colors"
               >
-                <Plus className="w-4 h-4" /> Add First Goal
+                <Plus className="w-4 h-4" /> Add first goal
               </button>
               <button
                 onClick={() => setShowTemplatePicker(true)}
                 className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary transition-colors"
               >
-                <LayoutTemplate className="w-4 h-4" /> Browse Templates
+                <LayoutTemplate className="w-4 h-4" /> Browse templates
               </button>
             </div>
           </div>
@@ -137,8 +137,7 @@ export default function GoalsTab({ client }) {
         {completed.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-0.5 h-3 rounded-full bg-success" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Completed</p>
+              <p className="text-xs font-semibold text-muted-foreground">Completed</p>
             </div>
             {completed.map(g => (
               <GoalCard

@@ -10,7 +10,7 @@ import { SignedImg } from '@/components/shared/SignedImage';
 const DIFFICULTY_STYLES = {
   beginner:     'bg-success/10 text-success border-success',
   intermediate: 'bg-accent text-primary border-accent',
-  advanced:     'bg-orange-50 text-orange-700 border-orange-100',
+  advanced:     'bg-warning-soft text-warning border-warning/30',
   elite:        'bg-destructive/10 text-destructive border-destructive',
 };
 
@@ -25,19 +25,16 @@ export default function ProfileProgramsTab({ client }) {
 
   if (isLoading) return (
     <div className="space-y-3">
-      {[1, 2].map(i => <div key={i} className="h-24 bg-card rounded-2xl border border-border animate-pulse" />)}
+      {[1, 2].map(i => <div key={i} className="h-24 bg-card rounded-xl border border-border animate-pulse" />)}
     </div>
   );
 
   if (!assigned) return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-muted border border-border flex items-center justify-center mb-4">
-        <Dumbbell className="w-7 h-7 text-muted-foreground" />
-      </div>
       <p className="text-sm font-semibold text-foreground mb-1">No program assigned</p>
       <p className="text-xs text-muted-foreground mb-5">Assign a training program to get started</p>
       <Button size="sm" variant="outline" onClick={() => navigate('/programs')} className="gap-1.5">
-        <Dumbbell className="w-3.5 h-3.5" /> Browse Programs
+        <Dumbbell className="w-3.5 h-3.5" /> Browse programs
       </Button>
     </div>
   );
@@ -45,12 +42,9 @@ export default function ProfileProgramsTab({ client }) {
   return (
     <div className="space-y-4">
       {/* Program header card */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-muted">
-          <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-            <Dumbbell className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Assigned Program</h3>
+          <h3 className="text-[18px] text-foreground">Assigned program</h3>
         </div>
 
         <div className="p-4">
@@ -90,7 +84,7 @@ export default function ProfileProgramsTab({ client }) {
 
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => navigate('/programs')} className="flex-1 gap-1.5 text-xs">
-              <Layers className="w-3.5 h-3.5" /> Change Program
+              <Layers className="w-3.5 h-3.5" /> Change program
             </Button>
           </div>
         </div>
@@ -98,12 +92,9 @@ export default function ProfileProgramsTab({ client }) {
 
       {/* Workout schedule */}
       {assigned.workouts?.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border overflow-hidden">
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-muted">
-            <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-            </div>
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Weekly Split</h3>
+            <h3 className="text-[18px] text-foreground">Weekly split</h3>
           </div>
           <div className="divide-y divide-muted">
             {assigned.workouts.map((w, i) => (

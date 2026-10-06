@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Loader2 } from 'lucide-react';
+import { X, Send, Loader2 } from 'lucide-react';
 import { portalDb } from '@/api/supabaseClient';
 
 const QUICK_PROMPTS = [
@@ -34,40 +34,38 @@ export default function AIAssistant({ plan, todayLogged }) {
   return (
     <>
       {/* FAB */}
-      <motion.button onClick={() => setOpen(true)} whileTap={{ scale: 0.95 }}
-        className="fixed bottom-24 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-2xl font-bold text-sm text-white shadow-xl"
-        style={{ background: 'linear-gradient(135deg, rgb(var(--ai)), rgb(var(--primary)))', boxShadow: '0 0 24px rgb(var(--ai) / 0.4)' }}>
-        <Sparkles className="w-4 h-4" />
-        Ask AI
+      <motion.button onClick={() => setOpen(true)}
+        className="fixed bottom-24 right-5 z-40 flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-sm text-primary-foreground shadow-sm"
+        style={{ background: 'rgb(var(--primary))', boxShadow: 'none' }}>
+        Ask about food
       </motion.button>
 
       {/* Drawer */}
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex flex-col" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={() => setOpen(false)}>
             <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25 }}
-              className="mt-auto rounded-t-3xl flex flex-col overflow-hidden"
-              style={{ background: '#0F1628', maxHeight: '80vh', border: '1px solid rgb(var(--ai) / 0.3)' }}
+              className="mt-auto rounded-t-xl flex flex-col overflow-hidden"
+              style={{ background: 'rgb(var(--card))', maxHeight: '80vh', border: '1px solid rgb(var(--primary) / 0.3)' }}
               onClick={e => e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgb(var(--secondary))' }}>
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-ai" />
-                  <p className="text-white font-bold text-sm">AI Nutrition Assistant</p>
+                  <p className="text-foreground font-bold text-sm">Food questions</p>
                 </div>
-                <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-white/40" /></button>
+                <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
               </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
                 {messages.length === 0 && (
                   <div className="space-y-2">
-                    <p className="text-white/30 text-xs mb-3">Try asking:</p>
+                    <p className="text-muted-foreground text-xs mb-3">Try asking:</p>
                     {QUICK_PROMPTS.map((p, i) => (
                       <button key={i} onClick={() => askAI(p)}
-                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs text-white/60 hover:text-white/80 transition-colors"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                        className="w-full text-left px-3 py-2.5 rounded-xl text-xs text-foreground hover:text-foreground transition-colors"
+                        style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
                         {p}
                       </button>
                     ))}
@@ -75,35 +73,35 @@ export default function AIAssistant({ plan, todayLogged }) {
                 )}
                 {messages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className="max-w-[85%] px-4 py-3 rounded-2xl"
+                    <div className="max-w-[85%] px-4 py-3 rounded-xl"
                       style={{
-                        background: msg.role === 'user' ? 'rgb(var(--primary) / 0.2)' : 'rgb(var(--ai) / 0.15)',
-                        border: `1px solid ${msg.role === 'user' ? 'rgb(var(--primary) / 0.3)' : 'rgb(var(--ai) / 0.25)'}`,
+                        background: msg.role === 'user' ? 'rgb(var(--primary))' : 'rgb(var(--secondary))',
+                        border: `1px solid ${msg.role === 'user' ? 'rgb(var(--primary))' : 'rgb(var(--primary))'}`,
                       }}>
-                      <p className="text-white text-sm leading-relaxed">{msg.content}</p>
+                      <p className="text-foreground text-sm leading-relaxed">{msg.content}</p>
                     </div>
                   </div>
                 ))}
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgb(var(--ai) / 0.1)' }}>
-                      <Loader2 className="w-4 h-4 text-ai animate-spin" />
+                    <div className="px-4 py-3 rounded-xl" style={{ background: 'rgb(var(--secondary))' }}>
+                      <Loader2 className="w-4 h-4 text-foreground animate-spin" />
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Input */}
-              <div className="px-5 py-3 flex gap-2" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <div className="px-5 py-3 flex gap-2" style={{ borderTop: '1px solid rgb(var(--secondary))' }}>
                 <input value={query} onChange={e => setQuery(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && askAI()}
                   placeholder="Ask about your nutrition..."
-                  className="flex-1 px-4 py-2.5 rounded-xl text-white text-sm placeholder-white/20 focus:outline-none"
-                  style={{ background: 'rgba(255,255,255,0.07)' }} />
+                  className="flex-1 px-4 py-2.5 rounded-xl text-foreground text-sm placeholder:text-muted-foreground focus:outline-none"
+                  style={{ background: 'rgb(var(--secondary))' }} />
                 <button onClick={() => askAI()} disabled={!query.trim() || loading}
                   className="w-9 h-9 rounded-xl flex items-center justify-center disabled:opacity-30"
-                  style={{ background: 'linear-gradient(135deg, rgb(var(--ai)), rgb(var(--primary)))' }}>
-                  <Send className="w-4 h-4 text-white" />
+                  style={{ background: 'rgb(var(--primary))' }}>
+                  <Send className="w-4 h-4 text-foreground" />
                 </button>
               </div>
             </motion.div>

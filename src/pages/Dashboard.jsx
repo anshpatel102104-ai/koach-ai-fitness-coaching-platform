@@ -67,7 +67,7 @@ export default function Dashboard() {
       ) : clientsLoading && clients.length === 0 ? (
         <DashboardSkeleton />
       ) : (
-        <TodayView clients={clients} checkIns={checkIns} messages={messages} payments={payments} />
+        <TodayView clients={clients} checkIns={checkIns} messages={messages} payments={payments} user={dashUser} />
       )}
     </>
   );

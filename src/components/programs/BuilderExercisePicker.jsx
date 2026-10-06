@@ -42,7 +42,7 @@ export default function BuilderExercisePicker({ onAdd }) {
   return (
     <div className="w-72 flex-shrink-0 border-l border-border bg-card/30 flex flex-col overflow-hidden">
       <div className="p-4 border-b border-border">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Exercise Library</p>
+        <p className="text-xs font-semibold text-muted-foreground mb-3">Exercise Library</p>
         <div className="relative mb-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input

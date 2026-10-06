@@ -36,7 +36,7 @@ export default function ForgotPassword() {
           </AuthSubmit>
         )}
       </form>
-      <div className="text-center text-xs">
+      <div className="text-center text-[13px]">
         <Link to="/login" className={authLinkClass}>Back to sign in</Link>
       </div>
     </AuthShell>

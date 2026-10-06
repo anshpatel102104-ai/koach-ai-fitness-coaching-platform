@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { Panel } from '@/components/kit';
 
 const STATIC_FOOD_SWAPS = {
   Proteins: [
@@ -16,14 +16,6 @@ const STATIC_FOOD_SWAPS = {
   Vegetables: [
     { from: 'Broccoli (100g)', to: ['Spinach (100g)', 'Asparagus (100g)', 'Zucchini (100g)'], macros: { cal: 34, p: 2.8, c: 7, f: 0.4 }, swapMacros: [{ cal: 23, p: 2.9, c: 3.6, f: 0.4 }, { cal: 20, p: 2.2, c: 3.9, f: 0.1 }, { cal: 17, p: 1.2, c: 3.1, f: 0.3 }] },
   ],
-};
-
-const CATEGORY_COLORS = {
-  Proteins:   { bg: 'bg-accent',    border: 'border-accent',    text: 'text-primary',    dot: 'var(--tc-primary)' },
-  Carbs:      { bg: 'bg-orange-50',  border: 'border-orange-100',  text: 'text-orange-600',  dot: 'var(--kc-f97316)' },
-  Fats:       { bg: 'bg-warning/10',  border: 'border-warning',  text: 'text-warning',  dot: 'var(--kc-ca8a04)' },
-  Vegetables: { bg: 'bg-success/10', border: 'border-success', text: 'text-success', dot: 'var(--tc-success)' },
-  Other:      { bg: 'bg-muted',    border: 'border-border',    text: 'text-muted-foreground',    dot: 'var(--tc-muted-foreground)' },
 };
 
 // Per-food swap suggestions for dynamic mode
@@ -59,20 +51,51 @@ function getSwapsForFood(name) {
   for (const [key, swaps] of Object.entries(DYNAMIC_SWAPS)) {
     if (lower.includes(key)) return swaps;
   }
-  return ['Ask your coach for alternatives', 'Similar whole food with same macros'];
+  return null;
 }
 
-function MacroBadge({ cal, p, c, f }) {
+const CATEGORY_LABEL = { Proteins: 'Protein', Carbs: 'Carbs', Fats: 'Fats', Vegetables: 'Vegetables', Other: 'Everything else' };
+const CATEGORY_ORDER = ['Proteins', 'Carbs', 'Fats', 'Vegetables', 'Other'];
+
+function macroLine({ cal, p, c, f }) {
+  return `${cal} kcal · ${p} g P · ${c} g C · ${f} g F`;
+}
+
+function SwapRow({ name, detail, swaps }) {
   return (
-    <div className="flex items-center gap-1.5 text-[10px]">
-      <span className="text-muted-foreground">{cal} kcal</span>
-      <span className="text-primary font-semibold">{p}g P</span>
-      <span className="text-orange-500 font-semibold">{c}g C</span>
-      <span className="text-warning font-semibold">{f}g F</span>
+    <li className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-1 sm:gap-6 py-3.5 border-b border-border last:border-b-0">
+      <div className="min-w-0">
+        <p className="text-[15px] font-semibold text-foreground">{name}</p>
+        {detail && <p className="text-[13px] text-muted-foreground tabular-nums">{detail}</p>}
+      </div>
+      <div className="min-w-0">
+        {swaps ? (
+          <ul>
+            {swaps.map((s, i) => (
+              <li key={i} className="flex items-baseline justify-between gap-3 text-[15px] text-foreground/90">
+                <span>{typeof s === 'string' ? s : s.name}</span>
+                {typeof s !== 'string' && s.macros && <span className="text-[13px] text-muted-foreground tabular-nums whitespace-nowrap">{macroLine(s.macros)}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No standard swap. Pick something with similar macros.</p>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function Group({ title, children }) {
+  return (
+    <div>
+      <p className="text-[13px] text-muted-foreground px-5 sm:px-6 pt-4">{title}</p>
+      <ul className="px-5 sm:px-6">{children}</ul>
     </div>
   );
 }
 
+/** "Swaps" view: each food on the plan with what it can be traded for. */
 export default function AlternativesTab({ plan }) {
   // Extract unique foods from plan meals
   const planFoods = useMemo(() => {
@@ -91,103 +114,54 @@ export default function AlternativesTab({ plan }) {
     return foods;
   }, [plan]);
 
-  const isDynamic = planFoods.length > 0;
-
-  if (isDynamic) {
-    // Group plan foods by category
+  if (planFoods.length > 0) {
     const grouped = {};
     planFoods.forEach(food => {
       const cat = categorizeFood(food.name);
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(food);
+      (grouped[cat] = grouped[cat] || []).push(food);
     });
 
     return (
-      <div className="space-y-6 pb-4">
-        <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/10 rounded-xl">
-          <span className="text-sm">🍽️</span>
-          <p className="text-xs font-semibold text-primary">Based on your meal plan foods</p>
+      <Panel className="pb-2">
+        <div className="px-5 sm:px-6 pt-5">
+          <h2 className="text-[22px] text-foreground">Swaps</h2>
+          <p className="text-sm text-muted-foreground mt-1">Every food on this plan and what it can be traded for.</p>
         </div>
-
-        {Object.entries(grouped).map(([category, foods]) => {
-          const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.Other;
-          return (
-            <div key={category}>
-              <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${colors.text}`}>{category}</h4>
-              <div className="space-y-3">
-                {foods.map((food, fi) => {
-                  const swaps = getSwapsForFood(food.name);
-                  return (
-                    <div key={fi} className={`${colors.bg} border ${colors.border} rounded-xl p-3.5`}>
-                      <div className="mb-2">
-                        <p className="text-sm font-bold text-foreground">{food.name}</p>
-                        {food.portion && <p className="text-[11px] text-muted-foreground">{food.portion}</p>}
-                        {(food.calories > 0 || food.protein > 0) && (
-                          <MacroBadge cal={food.calories} p={food.protein} c={food.carbs} f={food.fats} />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
-                        <ArrowRight className="w-3 h-3" /> Can swap with:
-                      </div>
-                      <div className="space-y-1.5">
-                        {swaps.map((alt, ai) => (
-                          <div key={ai} className="flex items-center gap-2 bg-[var(--kc-w-70)] rounded-lg px-3 py-2">
-                            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: colors.dot }} />
-                            <span className="text-sm text-foreground">{alt}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        {CATEGORY_ORDER.filter(c => grouped[c]).map(category => (
+          <Group key={category} title={CATEGORY_LABEL[category]}>
+            {grouped[category].map((food, fi) => (
+              <SwapRow
+                key={fi}
+                name={food.name}
+                detail={[food.portion, (food.calories > 0 || food.protein > 0) ? macroLine({ cal: food.calories, p: food.protein, c: food.carbs, f: food.fats }) : null].filter(Boolean).join(' · ')}
+                swaps={getSwapsForFood(food.name)}
+              />
+            ))}
+          </Group>
+        ))}
+      </Panel>
     );
   }
 
-  // Fallback to static list
+  // No foods yet: a general swap guide.
   return (
-    <div className="space-y-6 pb-4">
-      <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 border border-border rounded-xl">
-        <span className="text-sm">📖</span>
-        <p className="text-xs font-semibold text-muted-foreground">General swap guide — add foods to meals for personalized suggestions</p>
+    <Panel className="pb-2">
+      <div className="px-5 sm:px-6 pt-5">
+        <h2 className="text-[22px] text-foreground">Swap guide</h2>
+        <p className="text-sm text-muted-foreground mt-1">General swaps. Add foods to the meals to see swaps for this plan.</p>
       </div>
-
-      {Object.entries(STATIC_FOOD_SWAPS).map(([category, swaps]) => {
-        const colors = CATEGORY_COLORS[category] || CATEGORY_COLORS.Other;
-        return (
-          <div key={category}>
-            <h4 className={`text-xs font-bold uppercase tracking-wider mb-2 ${colors.text}`}>{category}</h4>
-            <div className="space-y-3">
-              {swaps.map((swap, si) => (
-                <div key={si} className={`${colors.bg} border ${colors.border} rounded-xl p-3.5`}>
-                  <div className="mb-2">
-                    <p className="text-sm font-bold text-foreground">{swap.from}</p>
-                    <MacroBadge {...swap.macros} />
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mb-2">
-                    <ArrowRight className="w-3 h-3" /> Can swap with:
-                  </div>
-                  <div className="space-y-2">
-                    {swap.to.map((alt, ai) => (
-                      <div key={ai} className="flex items-center justify-between bg-[var(--kc-w-70)] rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: colors.dot }} />
-                          <span className="text-sm text-foreground">{alt}</span>
-                        </div>
-                        {swap.swapMacros[ai] && <MacroBadge {...swap.swapMacros[ai]} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
+      {Object.entries(STATIC_FOOD_SWAPS).map(([category, swaps]) => (
+        <Group key={category} title={CATEGORY_LABEL[category] || category}>
+          {swaps.map((swap, si) => (
+            <SwapRow
+              key={si}
+              name={swap.from}
+              detail={macroLine(swap.macros)}
+              swaps={swap.to.map((name, ai) => ({ name, macros: swap.swapMacros[ai] }))}
+            />
+          ))}
+        </Group>
+      ))}
+    </Panel>
   );
 }

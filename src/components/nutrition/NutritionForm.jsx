@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Plus, ChevronUp, ChevronDown, Loader2, Users, X } from 'lucide-react';
+import { Trash2, Plus, ChevronUp, ChevronDown, Loader2, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
@@ -68,15 +68,15 @@ function MacroRatioBar({ protein, carbs, fats }) {
 
   return (
     <div className="mt-3 space-y-1.5">
-      <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
-        <div className="bg-primary rounded-full transition-all duration-300" style={{ width: `${pPct}%` }} />
-        <div className="bg-warning rounded-full transition-all duration-300" style={{ width: `${cPct}%` }} />
-        <div className="bg-destructive rounded-full transition-all duration-300"  style={{ width: `${fPct}%` }} />
+      <div className="flex h-2.5 rounded-full overflow-hidden bg-secondary">
+        <div className="bg-foreground transition-[width] duration-300" style={{ width: `${pPct}%` }} />
+        <div className="bg-muted-foreground/70 transition-[width] duration-300" style={{ width: `${cPct}%` }} />
+        <div className="bg-input transition-[width] duration-300"  style={{ width: `${fPct}%` }} />
       </div>
-      <div className="flex justify-between text-[10px] font-semibold">
-        <span className="text-primary">Protein {pPct}%</span>
-        <span className="text-warning">Carbs {cPct}%</span>
-        <span className="text-destructive">Fats {fPct}%</span>
+      <div className="flex justify-between text-[13px] text-muted-foreground tabular-nums">
+        <span>Protein {pPct}%</span>
+        <span>Carbs {cPct}%</span>
+        <span>Fat {fPct}%</span>
       </div>
     </div>
   );
@@ -103,26 +103,26 @@ function ClientPicker({ selected, onChange }) {
       {selectedClients.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectedClients.slice(0, 6).map(c => (
-            <span key={c.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+            <span key={c.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary text-foreground text-xs font-semibold">
               {c.name}
-              <button onClick={() => toggle(c.id)} className="opacity-60 hover:opacity-100 text-xs leading-none">×</button>
+              <button onClick={() => toggle(c.id)} className="opacity-60 hover:opacity-100 leading-none" aria-label={`Remove ${c.name}`}><X className="w-3 h-3" /></button>
             </span>
           ))}
           {overflow > 0 && (
-            <span className="px-2.5 py-1 rounded-full bg-secondary text-muted-foreground text-xs font-semibold">+{overflow} more</span>
+            <span className="px-2.5 py-1 rounded-md bg-secondary text-muted-foreground text-xs font-semibold">+{overflow} more</span>
           )}
         </div>
       )}
-      <Input placeholder="Search clients..." value={search} onChange={e => setSearch(e.target.value)} className="text-sm" />
+      <Input placeholder="Search clients" value={search} onChange={e => setSearch(e.target.value)} className="text-sm" />
       <div className="max-h-40 overflow-y-auto space-y-0.5 pr-1">
         {filtered.map(c => (
           <label key={c.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary cursor-pointer">
             <input type="checkbox" checked={selected.includes(c.id)} onChange={() => toggle(c.id)} className="rounded border-input accent-primary" />
             <span className="text-sm font-medium text-foreground">{c.name}</span>
-            {c.lifecycle_status && <span className="ml-auto text-[10px] text-muted-foreground capitalize">{c.lifecycle_status}</span>}
+            {c.lifecycle_status && <span className="ml-auto text-xs text-muted-foreground capitalize">{c.lifecycle_status}</span>}
           </label>
         ))}
-        {filtered.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">No clients found</p>}
+        {filtered.length === 0 && <p className="text-sm text-muted-foreground py-3">No clients match that search.</p>}
       </div>
     </div>
   );
@@ -145,12 +145,12 @@ function MealCard({ meal, index, total, onUpdate, onRemove, onMoveUp, onMoveDown
   }
 
   return (
-    <div className="p-4 rounded-xl border border-border bg-secondary/30 space-y-3">
+    <div className="p-4 rounded-xl border border-border bg-card space-y-3">
       {/* Top row */}
       <div className="flex items-center gap-2">
         <div className="flex flex-col gap-0.5">
-          <button onClick={onMoveUp}   disabled={index === 0}       className="p-0.5 hover:text-primary disabled:opacity-30"><ChevronUp   className="w-3.5 h-3.5" /></button>
-          <button onClick={onMoveDown} disabled={index === total-1} className="p-0.5 hover:text-primary disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
+          <button onClick={onMoveUp}   disabled={index === 0}       className="p-0.5 hover:text-foreground text-muted-foreground disabled:opacity-30" aria-label="Move up"><ChevronUp   className="w-3.5 h-3.5" /></button>
+          <button onClick={onMoveDown} disabled={index === total-1} className="p-0.5 hover:text-foreground text-muted-foreground disabled:opacity-30" aria-label="Move down"><ChevronDown className="w-3.5 h-3.5" /></button>
         </div>
         <Input
           placeholder="Meal name (e.g. Breakfast)"
@@ -166,7 +166,7 @@ function MealCard({ meal, index, total, onUpdate, onRemove, onMoveUp, onMoveDown
             value={mealCalTotal > 0 ? mealCalTotal : meal.calories}
             onChange={e => onUpdate('calories', e.target.value)}
             readOnly={mealCalTotal > 0}
-            className={cn('w-20 text-sm text-center', mealCalTotal > 0 && 'bg-accent/40 text-primary font-semibold')}
+            className={cn('w-20 text-sm text-center', mealCalTotal > 0 && 'bg-secondary text-foreground font-semibold')}
           />
         </div>
         <button onClick={onRemove} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors">
@@ -185,9 +185,9 @@ function MealCard({ meal, index, total, onUpdate, onRemove, onMoveUp, onMoveDown
       <textarea
         value={meal.notes}
         onChange={e => onUpdate('notes', e.target.value)}
-        placeholder="Food suggestions or instructions..."
+        placeholder="What to eat, or how to make it"
         rows={1}
-        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
       />
 
       {/* Added foods */}
@@ -203,21 +203,20 @@ function MealCard({ meal, index, total, onUpdate, onRemove, onMoveUp, onMoveDown
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-base shrink-0">🥗</span>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/60">
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-semibold text-foreground block truncate">{food.name || '—'}</span>
                     {food.amount && (
-                      <span className="text-[10px] text-muted-foreground">{food.amount}</span>
+                      <span className="text-xs text-muted-foreground">{food.amount}</span>
                     )}
                   </div>
-                  <div className="flex gap-1.5 text-[10px] font-semibold shrink-0">
-                    <span className="text-orange-600">{food.calories} kcal</span>
-                    <span className="text-primary">P {food.protein}g</span>
-                    <span className="text-warning">C {food.carbs}g</span>
-                    <span className="text-destructive">F {food.fats}g</span>
+                  <div className="flex gap-1.5 text-xs text-muted-foreground tabular-nums shrink-0">
+                    <span className="font-semibold text-foreground">{food.calories} kcal</span>
+                    <span>{food.protein} P</span>
+                    <span>{food.carbs} C</span>
+                    <span>{food.fats} F</span>
                   </div>
-                  <button onClick={() => removeFood(fi)} className="p-0.5 text-muted-foreground hover:text-destructive transition-colors shrink-0">
+                  <button onClick={() => removeFood(fi)} className="p-0.5 text-muted-foreground hover:text-destructive transition-colors shrink-0" aria-label="Remove food">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -231,10 +230,10 @@ function MealCard({ meal, index, total, onUpdate, onRemove, onMoveUp, onMoveDown
       <Button
         size="sm"
         variant="outline"
-        className="h-7 text-xs gap-1.5 w-full border-dashed"
+        className="w-full border-dashed"
         onClick={() => setFoodSearchOpen(true)}
       >
-        <Plus className="w-3 h-3" /> Add Food
+        <Plus /> Add food
       </Button>
 
       <FoodSearchModal
@@ -319,7 +318,7 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
 
   async function handleSubmit() {
     if (!form.title.trim()) {
-      toast.error('Plan title is required');
+      toast.error('Give the plan a name first');
       return;
     }
     setSaving(true);
@@ -385,7 +384,7 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
   }
 
   const sectionClass = "space-y-4 pb-6 border-b border-border";
-  const labelClass   = "text-xs font-semibold text-foreground block mb-1.5";
+  const labelClass   = "text-sm font-semibold text-foreground block mb-1.5";
 
   // Effective macro values for the ratio bar (food-derived takes priority)
   const eff = {
@@ -399,10 +398,10 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl p-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 py-5 border-b border-border flex-shrink-0">
-          <SheetTitle className="font-heading font-bold text-lg">
+          <SheetTitle className="text-2xl">
             {isEdit
-              ? plan?.title?.includes('AI Generated') ? '✨ Review AI Plan' : 'Edit Plan'
-              : 'New Plan'}
+              ? plan?.title?.includes('AI Generated') ? 'Review the AI draft' : 'Edit plan'
+              : 'New meal plan'}
           </SheetTitle>
         </SheetHeader>
 
@@ -410,11 +409,11 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
 
           {/* SECTION 1 — Basics */}
           <div className={sectionClass}>
-            <h3 className="text-sm font-bold text-foreground">Plan Basics</h3>
+            <h3 className="text-xl text-foreground">Basics</h3>
 
             <div>
-              <label className={labelClass}>Plan Title *</label>
-              <Input placeholder="e.g. Fat Loss Phase 1" value={form.title} onChange={e => set('title', e.target.value)} />
+              <label className={labelClass}>Plan name</label>
+              <Input placeholder="Fat loss, phase 1" value={form.title} onChange={e => set('title', e.target.value)} />
             </div>
 
             <div>
@@ -422,22 +421,22 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
               <textarea
                 value={form.description}
                 onChange={e => set('description', e.target.value)}
-                placeholder="Brief description of this plan..."
+                placeholder="Who it's for and what it aims to do"
                 rows={2}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+                className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
               />
             </div>
 
             <div>
-              <label className={labelClass}>Emoji</label>
+              <label className={labelClass}>Plan icon</label>
               <div className="flex gap-2 flex-wrap">
                 {EMOJIS.map(e => (
                   <button
                     key={e}
                     onClick={() => set('emoji', e)}
                     className={cn(
-                      'w-10 h-10 rounded-xl text-xl flex items-center justify-center border-2 transition-all',
-                      form.emoji === e ? 'border-primary bg-accent/60 shadow-sm' : 'border-border bg-card hover:border-primary/40'
+                      'w-9 h-9 rounded-md text-lg flex items-center justify-center border transition-colors',
+                      form.emoji === e ? 'border-foreground bg-accent' : 'border-input bg-card hover:bg-accent'
                     )}
                   >
                     {e}
@@ -447,15 +446,15 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
             </div>
 
             <div>
-              <label className={labelClass}>Tracking Mode</label>
+              <label className={labelClass}>Tracking</label>
               <div className="flex rounded-lg border border-input overflow-hidden w-fit text-sm font-semibold">
-                {[{ id: 'macros', label: 'Macro Tracking' }, { id: 'habits', label: 'Habit Mode' }].map(opt => (
+                {[{ id: 'macros', label: 'Macros' }, { id: 'habits', label: 'Habits' }].map(opt => (
                   <button
                     key={opt.id}
                     onClick={() => set('tracking_mode', opt.id)}
                     className={cn(
                       'px-4 py-2 transition-colors',
-                      form.tracking_mode === opt.id ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-secondary'
+                      form.tracking_mode === opt.id ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground hover:bg-accent'
                     )}
                   >
                     {opt.label}
@@ -474,19 +473,19 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
           {form.tracking_mode === 'macros' && (
             <div className={sectionClass}>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">Macro Targets</h3>
+                <h3 className="text-xl text-foreground">Daily targets</h3>
                 {hasFoodTotals && (
-                  <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-primary/10 text-primary">
-                    Auto-calculated from meals
+                  <span className="text-[13px] text-muted-foreground">
+                    Added up from the meals below
                   </span>
                 )}
               </div>
               <div className="grid grid-cols-4 gap-2">
                 {[
-                  { field: 'calories', label: 'Calories', unit: 'kcal', val: eff.calories, color: 'text-orange-600' },
-                  { field: 'protein',  label: 'Protein',  unit: 'g',    val: eff.protein,  color: 'text-primary' },
-                  { field: 'carbs',    label: 'Carbs',    unit: 'g',    val: eff.carbs,    color: 'text-warning' },
-                  { field: 'fats',     label: 'Fats',     unit: 'g',    val: eff.fats,     color: 'text-destructive' },
+                  { field: 'calories', label: 'Calories', unit: 'kcal', val: eff.calories, color: '' },
+                  { field: 'protein',  label: 'Protein',  unit: 'g',    val: eff.protein,  color: '' },
+                  { field: 'carbs',    label: 'Carbs',    unit: 'g',    val: eff.carbs,    color: '' },
+                  { field: 'fats',     label: 'Fat',      unit: 'g',    val: eff.fats,     color: '' },
                 ].map(({ field, label, unit, val, color }) => (
                   <div key={field}>
                     <label className={cn(labelClass, color)}>{label} <span className="font-normal text-muted-foreground">({unit})</span></label>
@@ -496,7 +495,7 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
                       value={val}
                       onChange={e => set(field, e.target.value)}
                       readOnly={hasFoodTotals}
-                      className={cn('text-center', hasFoodTotals && 'bg-accent/40 font-semibold cursor-default')}
+                      className={cn('text-center', hasFoodTotals && 'bg-secondary font-semibold cursor-default')}
                     />
                   </div>
                 ))}
@@ -508,9 +507,9 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
           {/* SECTION 3 — Meals */}
           <div className={sectionClass}>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground">Meal Structure</h3>
-              <Button size="sm" variant="outline" onClick={addMeal} className="gap-1.5 h-8 text-xs">
-                <Plus className="w-3.5 h-3.5" /> Add Meal
+              <h3 className="text-xl text-foreground">Meals</h3>
+              <Button size="sm" variant="outline" onClick={addMeal}>
+                <Plus /> Add meal
               </Button>
             </div>
 
@@ -538,26 +537,25 @@ export default function NutritionForm({ open, onOpenChange, onSubmit, plan, init
             </AnimatePresence>
 
             {form.meals.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">No meals added yet. Click "+ Add Meal" to start.</p>
+              <p className="text-sm text-muted-foreground py-2">No meals yet. Add the first one, like breakfast.</p>
             )}
           </div>
 
           {/* SECTION 4 — Assign Clients */}
           <div className="space-y-4 pb-6">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-bold text-foreground">Assign to Clients</h3>
-              <span className="text-xs text-muted-foreground">(optional)</span>
+            <div>
+              <h3 className="text-xl text-foreground">Clients</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Optional. Ticked clients see this plan in their app once you save.</p>
             </div>
             <ClientPicker selected={selectedClientIds} onChange={setSelectedClientIds} />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+        <div className="flex-shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-card">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={saving || !form.title.trim()} className="gap-2 min-w-[110px]">
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save Plan'}
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving</> : 'Save plan'}
           </Button>
         </div>
       </SheetContent>

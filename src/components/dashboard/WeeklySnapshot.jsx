@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek, subWeeks, subDays, eachDayOfInterval, parseISO, isWithinInterval } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
-import { BarChart2 } from 'lucide-react';
+import { Panel, PanelHeader, Segmented } from '@/components/kit';
 
 const RANGE_OPTIONS = [
-  { key: 'this_week',  label: 'This Week' },
-  { key: 'last_week',  label: 'Last Week' },
-  { key: 'last_30',   label: 'Last 30 Days' },
-  { key: 'last_90',   label: 'Last 90 Days' },
+  { key: 'this_week',  label: 'This week' },
+  { key: 'last_week',  label: 'Last week' },
+  { key: 'last_30',   label: '30 days' },
+  { key: 'last_90',   label: '90 days' },
 ];
 
 function getDateRange(key) {
@@ -54,21 +54,19 @@ function groupByDay(items, dateField, range, rangeKey) {
   }));
 }
 
-const GRAD_COLORS = ['var(--tc-primary)', 'var(--tc-primary)', 'var(--tc-ai)'];
-
-function CustomBar(props) {
-  const { x, y, width, height, index, total } = props;
-  const colorIndex = Math.floor((index / Math.max(total - 1, 1)) * (GRAD_COLORS.length - 1));
-  const color = GRAD_COLORS[Math.min(colorIndex, GRAD_COLORS.length - 1)];
-  return <rect x={x} y={y} width={width} height={height} rx={4} fill={color} opacity={height === 0 ? 0.2 : 1} />;
-}
+const INK = 'rgb(var(--foreground))';
+const GREY = 'rgb(var(--muted-foreground))';
+const tooltipStyle = {
+  fontSize: 12, borderRadius: 8, border: '1px solid rgb(var(--border))',
+  background: 'rgb(var(--card))', color: 'rgb(var(--foreground))', boxShadow: 'none',
+};
 
 function MiniChart({ title, summary, chart }) {
   return (
-    <div className="flex-1 min-w-0 flex flex-col gap-2">
-      <p className="text-xs font-bold text-foreground">{title}</p>
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="text-[13px] text-muted-foreground">{summary}</p>
       <div className="h-28">{chart}</div>
-      <p className="text-[11px] text-muted-foreground font-medium">{summary}</p>
     </div>
   );
 }
@@ -130,73 +128,33 @@ export default function WeeklySnapshot({ checkIns = [], clients = [] }) {
     return vals.length ? Math.round(vals.reduce((s, d) => s + d.count, 0) / vals.length) : 0;
   }, [complianceData]);
 
-  const axisStyle = { fontSize: 10, fill: 'var(--tc-muted-foreground)' };
+  const axisStyle = { fontSize: 11, fill: GREY };
 
   return (
-    <div className="rounded-xl bg-card border border-border overflow-hidden"
-      style={{ boxShadow: '0 1px 6px color-mix(in srgb, black 6%, transparent)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, color-mix(in srgb, var(--tc-primary) 15%, transparent), color-mix(in srgb, var(--tc-ai) 15%, transparent))' }}>
-            <BarChart2 className="w-3.5 h-3.5" style={{ color: 'var(--tc-ai)' }} />
-          </div>
-          <h2 className="text-sm font-bold text-foreground">Weekly Snapshot</h2>
-        </div>
-        <select
-          value={range}
-          onChange={e => setRange(e.target.value)}
-          className="text-xs font-semibold border border-border rounded-lg px-2 py-1 bg-card text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-        >
-          {RANGE_OPTIONS.map(o => (
-            <option key={o.key} value={o.key}>{o.label}</option>
-          ))}
-        </select>
+    <Panel>
+      <PanelHeader
+        title="By the numbers"
+        subtitle="Check-ins, new clients and training compliance over the period."
+        right={<Segmented size="sm" value={range} onChange={setRange} options={RANGE_OPTIONS.map(o => ({ value: o.key, label: o.label }))} className="hidden md:inline-flex" />}
+      />
+      <div className="px-5 pb-2 md:hidden">
+        <Segmented size="sm" value={range} onChange={setRange} options={RANGE_OPTIONS.map(o => ({ value: o.key, label: o.label }))} />
       </div>
 
-      {/* Charts */}
-      <div className="px-5 py-4 flex flex-col sm:flex-row gap-6 divide-y sm:divide-y-0 sm:divide-x divide-muted">
-        {/* Chart 1 */}
-        <MiniChart
-          title="Check-in Adherence"
-          summary={`${totalCheckIns} check-in${totalCheckIns !== 1 ? 's' : ''} this period`}
-          chart={
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={checkInData} barSize={14} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
-                <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--tc-border)', boxShadow: '0 2px 8px color-mix(in srgb, black 8%, transparent)' }}
-                  formatter={(v) => [v, 'Check-ins']}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {checkInData.map((_, i) => (
-                    <Cell key={i} fill={i < checkInData.length / 2 ? 'var(--tc-primary)' : 'var(--tc-primary)'} fillOpacity={_ .count === 0 ? 0.2 : 1} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          }
-        />
-
-        {/* Chart 2 */}
-        <div className="sm:pl-6 flex-1 min-w-0">
+      <div className="flex flex-col divide-y divide-border px-5 pb-5 sm:px-6 md:flex-row md:divide-x md:divide-y-0">
+        <div className="min-w-0 flex-1 py-4 md:py-0 md:pr-6">
           <MiniChart
-            title="New Clients"
-            summary={`${totalNewClients} new client${totalNewClients !== 1 ? 's' : ''} added`}
+            title="Check-ins received"
+            summary={`${totalCheckIns} in this period`}
             chart={
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={newClientData} barSize={14} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                <BarChart data={checkInData} barSize={14} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                   <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                   <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--tc-border)', boxShadow: '0 2px 8px color-mix(in srgb, black 8%, transparent)' }}
-                    formatter={(v) => [v, 'New Clients']}
-                  />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {newClientData.map((entry, i) => (
-                      <Cell key={i} fill="var(--tc-success)" fillOpacity={entry.count === 0 ? 0.2 : 1} />
+                  <Tooltip cursor={{ fill: 'rgb(var(--accent))' }} contentStyle={tooltipStyle} formatter={(v) => [v, 'Check-ins']} />
+                  <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                    {checkInData.map((d, i) => (
+                      <Cell key={i} fill={INK} fillOpacity={d.count === 0 ? 0.15 : 1} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -205,30 +163,44 @@ export default function WeeklySnapshot({ checkIns = [], clients = [] }) {
           />
         </div>
 
-        {/* Chart 3 */}
-        <div className="sm:pl-6 flex-1 min-w-0">
+        <div className="min-w-0 flex-1 py-4 md:px-6 md:py-0">
           <MiniChart
-            title="Avg Training Compliance"
-            summary={`${avgCompliance}% avg compliance`}
+            title="New clients"
+            summary={`${totalNewClients} added`}
+            chart={
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={newClientData} barSize={14} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
+                  <YAxis tick={axisStyle} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: 'rgb(var(--accent))' }} contentStyle={tooltipStyle} formatter={(v) => [v, 'New clients']} />
+                  <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                    {newClientData.map((entry, i) => (
+                      <Cell key={i} fill={GREY} fillOpacity={entry.count === 0 ? 0.2 : 0.7} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            }
+          />
+        </div>
+
+        <div className="min-w-0 flex-1 py-4 md:py-0 md:pl-6">
+          <MiniChart
+            title="Training compliance"
+            summary={`${avgCompliance}% average`}
             chart={
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={complianceData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                   <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                   <YAxis tick={axisStyle} axisLine={false} tickLine={false} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid var(--tc-border)', boxShadow: '0 2px 8px color-mix(in srgb, black 8%, transparent)' }}
-                    formatter={(v) => [`${v}%`, 'Compliance']}
-                  />
-                  <Line
-                    type="monotone" dataKey="count" stroke="var(--tc-warning)"
-                    strokeWidth={2} dot={{ r: 3, fill: 'var(--tc-warning)' }} activeDot={{ r: 5 }}
-                  />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Compliance']} />
+                  <Line type="monotone" dataKey="count" stroke={INK} strokeWidth={2} dot={{ r: 2.5, fill: INK }} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             }
           />
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }

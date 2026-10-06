@@ -1,24 +1,23 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Plus, Trash2, Edit2, Pill } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Panel, EmptyState } from '@/components/kit';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const CATEGORY_CONFIG = {
-  supplement: { label: '💊 Supplement', color: 'bg-ai/10 text-ai border-ai' },
-  vitamin:    { label: '🌞 Vitamin',    color: 'bg-warning/10 text-warning border-warning' },
-  mineral:    { label: '🪨 Mineral',    color: 'bg-muted text-foreground border-border' },
-  electrolyte:{ label: '⚡ Electrolyte',color: 'bg-accent text-primary border-primary' },
-  herb:       { label: '🌿 Herb',       color: 'bg-success/10 text-success border-success' },
-  other:      { label: '📦 Other',      color: 'bg-secondary text-muted-foreground border-border' },
+  supplement: { label: 'Supplements' },
+  vitamin:    { label: 'Vitamins' },
+  mineral:    { label: 'Minerals' },
+  electrolyte:{ label: 'Electrolytes' },
+  herb:       { label: 'Herbs' },
+  other:      { label: 'Other' },
 };
 
 const PRESETS = [
@@ -40,10 +39,10 @@ function SupplementForm({ open, onOpenChange, supplement, onSubmit }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{supplement ? 'Edit Supplement' : 'Add Supplement'}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{supplement ? 'Edit supplement' : 'Add supplement'}</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="space-y-4 mt-2">
           <div>
-            <Label>Name *</Label>
+            <Label>Name</Label>
             <Input required value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Creatine Monohydrate" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -55,7 +54,7 @@ function SupplementForm({ open, onOpenChange, supplement, onSubmit }) {
               </Select>
             </div>
             <div>
-              <Label>Default Dosage</Label>
+              <Label>Usual dose</Label>
               <Input value={form.default_dosage || ''} onChange={e => set('default_dosage', e.target.value)} placeholder="e.g. 5g, 2000 IU" />
             </div>
           </div>
@@ -64,7 +63,7 @@ function SupplementForm({ open, onOpenChange, supplement, onSubmit }) {
             <Input value={form.default_timing || ''} onChange={e => set('default_timing', e.target.value)} placeholder="e.g. Post-workout, Morning with food" />
           </div>
           <div>
-            <Label>Purpose / Benefits</Label>
+            <Label>What it's for</Label>
             <Textarea rows={2} value={form.purpose || ''} onChange={e => set('purpose', e.target.value)} placeholder="Why this supplement is used…" />
           </div>
           <div>
@@ -73,7 +72,7 @@ function SupplementForm({ open, onOpenChange, supplement, onSubmit }) {
           </div>
           <div className="flex gap-3 pt-2 border-t border-border">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1">{supplement ? 'Update' : 'Save'}</Button>
+            <Button type="submit" className="flex-1">{supplement ? 'Save changes' : 'Add supplement'}</Button>
           </div>
         </form>
       </DialogContent>
@@ -82,26 +81,22 @@ function SupplementForm({ open, onOpenChange, supplement, onSubmit }) {
 }
 
 function SupplementCard({ supp, onEdit, onDelete }) {
-  const cfg = CATEGORY_CONFIG[supp.category] || CATEGORY_CONFIG.other;
+  const line = [supp.default_dosage, supp.default_timing].filter(Boolean).join(', ');
   return (
-    <div className="bg-card border border-border rounded-xl px-4 py-3">
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{supp.name}</p>
-            <Badge className={cn('text-[10px] border', cfg.color)}>{cfg.label}</Badge>
-          </div>
-          {supp.default_dosage && <p className="text-xs text-muted-foreground mt-0.5">Dose: <span className="text-foreground font-medium">{supp.default_dosage}</span></p>}
-          {supp.default_timing && <p className="text-xs text-muted-foreground">Timing: <span className="text-foreground">{supp.default_timing}</span></p>}
-          {supp.purpose && <p className="text-xs text-muted-foreground mt-1">{supp.purpose}</p>}
+    <div className="flex items-start gap-3 px-5 py-3 border-b border-border last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-3">
+          <p className="text-[15px] font-semibold text-foreground">{supp.name}</p>
+          {line && <p className="text-sm text-foreground/80 text-right">{line}</p>}
         </div>
-        {!supp.is_preset && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={onEdit} className="p-1.5 text-muted-foreground hover:bg-secondary rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
-            <button onClick={onDelete} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-secondary rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
-          </div>
-        )}
+        {supp.purpose && <p className="text-[13px] text-muted-foreground mt-0.5">{supp.purpose}</p>}
       </div>
+      {!supp.is_preset && (
+        <div className="flex items-center gap-0.5 shrink-0">
+          <button onClick={onEdit} aria-label="Edit supplement" className="touch-compact p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent rounded-md"><Edit2 className="w-4 h-4" /></button>
+          <button onClick={onDelete} aria-label="Delete supplement" className="touch-compact p-1.5 text-muted-foreground hover:text-destructive hover:bg-accent rounded-md"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      )}
     </div>
   );
 }
@@ -118,11 +113,11 @@ export default function SupplementsSection() {
 
   const createMutation = useMutation({
     mutationFn: (data) => db.entities.SupplementLibrary.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Supplement added!'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Supplement added'); },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.entities.SupplementLibrary.update(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Updated!'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['supplement-library'] }); toast.success('Supplement updated'); },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => db.entities.SupplementLibrary.delete(id),
@@ -135,7 +130,7 @@ export default function SupplementsSection() {
       if (!exists) await db.entities.SupplementLibrary.create(p);
     }
     qc.invalidateQueries({ queryKey: ['supplement-library'] });
-    toast.success('Common supplements added!');
+    toast.success('Common supplements added');
   };
 
   const byCategory = Object.keys(CATEGORY_CONFIG).reduce((acc, cat) => {
@@ -143,51 +138,53 @@ export default function SupplementsSection() {
     return acc;
   }, {});
 
-  if (isLoading) return <div className="py-20 text-center text-muted-foreground">Loading…</div>;
+  if (isLoading) return <Panel className="h-40 animate-pulse" aria-hidden />;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-muted-foreground">Build your supplement library to assign to client nutrition plans.</p>
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">Supplements you can add to a client's plan, with your usual dose and timing.</p>
         <div className="flex gap-2">
           {supplements.length === 0 && (
-            <Button variant="outline" size="sm" onClick={seedPresets}>⚡ Add Common Supplements</Button>
+            <Button variant="outline" size="sm" onClick={seedPresets}>Add common supplements</Button>
           )}
           <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
-            <Plus className="w-4 h-4 mr-1" /> Add Supplement
+            <Plus /> Add supplement
           </Button>
         </div>
       </div>
 
       {supplements.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground">
-          <Pill className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-semibold text-foreground">No supplements yet</p>
-          <p className="text-sm mt-1">Add common supplements or create your own</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={seedPresets}>⚡ Add Common Supplements</Button>
-        </div>
+        <Panel>
+          <EmptyState
+            title="No supplements yet."
+            body="Start with creatine, vitamin D, fish oil and a few other basics, or add your own."
+            action={<Button variant="outline" size="sm" onClick={seedPresets}>Add common supplements</Button>}
+          />
+        </Panel>
       ) : (
-        <div className="space-y-5">
-          {Object.entries(CATEGORY_CONFIG).map(([cat, cfg]) => {
-            const items = byCategory[cat];
-            if (!items.length) return null;
-            return (
-              <div key={cat}>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{cfg.label}</p>
-                <div className="space-y-2">
-                  {items.map(s => (
-                    <SupplementCard
-                      key={s.id}
-                      supp={s}
-                      onEdit={() => { setEditing(s); setShowForm(true); }}
-                      onDelete={() => deleteMutation.mutate(s.id)}
-                    />
-                  ))}
-                </div>
+        Object.entries(CATEGORY_CONFIG).map(([cat, cfg]) => {
+          const items = byCategory[cat];
+          if (!items.length) return null;
+          return (
+            <Panel key={cat} className="overflow-hidden">
+              <div className="px-5 pt-4 pb-2 flex items-baseline justify-between">
+                <h2 className="text-[20px] text-foreground">{cfg.label}</h2>
+                <span className="text-[13px] text-muted-foreground tabular-nums">{items.length}</span>
               </div>
-            );
-          })}
-        </div>
+              <div className="border-t border-border">
+                {items.map(s => (
+                  <SupplementCard
+                    key={s.id}
+                    supp={s}
+                    onEdit={() => { setEditing(s); setShowForm(true); }}
+                    onDelete={() => deleteMutation.mutate(s.id)}
+                  />
+                ))}
+              </div>
+            </Panel>
+          );
+        })
       )}
 
       <SupplementForm

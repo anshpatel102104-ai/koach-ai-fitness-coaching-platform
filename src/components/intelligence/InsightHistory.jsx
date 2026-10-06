@@ -1,18 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
-import { TrendingUp, AlertTriangle, Zap, Trophy } from 'lucide-react';
+import { Panel, PanelHeader, EmptyState } from '@/components/kit';
 
-const TYPE_ICONS = {
-  performance: { icon: TrendingUp, color: 'var(--tc-primary)' },
-  risk: { icon: AlertTriangle, color: 'var(--kc-ea580c)' },
-  opportunity: { icon: Zap, color: 'var(--tc-success)' },
-  celebration: { icon: Trophy, color: 'var(--tc-warning)' },
-};
+const TYPE_LABEL = { risk: 'Risk', celebration: 'Worth celebrating', opportunity: 'Opportunity', performance: 'Progress' };
+
+/** Readable label from an insight id like "risk_churn_<uuid>". */
+function describeId(id, clients = []) {
+  const parts = id.split('_');
+  const kind = parts.slice(1, -1).join(' ') || parts[1] || 'note';
+  const maybeClient = parts[parts.length - 1];
+  const client = clients.find(c => c.id === maybeClient);
+  return client ? `${kind[0].toUpperCase()}${kind.slice(1)} · ${client.name}` : id.replace(/_/g, ' ');
+}
 
 export default function InsightHistory({ clients }) {
-  const [filter, setFilter] = useState('all');
-
-  // Read dismissed insights from localStorage as a simple history proxy
+  // Dismissed insights in localStorage stand in for history.
   const history = (() => {
     try {
       const raw = JSON.parse(localStorage.getItem('koach_dismissed_insights') || '{}');
@@ -23,36 +25,22 @@ export default function InsightHistory({ clients }) {
   })();
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-bold text-foreground">Insight History</h2>
-        <span className="text-xs text-muted-foreground">({history.length} dismissed insights)</span>
-      </div>
+    <Panel>
+      <PanelHeader title="History" subtitle={`${history.length} dismissed in the last 7 days. Dismissed notes come back after a week if they still apply.`} />
       {history.length === 0 ? (
-        <div className="rounded-2xl p-8 text-center bg-muted border border-border">
-          <p className="text-sm text-muted-foreground">No dismissed insights yet. When you dismiss insights, they appear here.</p>
-        </div>
+        <EmptyState className="pt-2" title="Nothing dismissed yet." body="Notes you dismiss are listed here for a week." />
       ) : (
-        <div className="space-y-2">
-          {history.map(({ id, ts, type }) => {
-            const cfg = TYPE_ICONS[type] || TYPE_ICONS.opportunity;
-            const Icon = cfg.icon;
-            return (
-              <div key={id} className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: `${cfg.color}18` }}>
-                  <Icon style={{ width: 14, height: 14, color: cfg.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{id.replace(/_/g, ' ')}</p>
-                  <p className="text-[10px] text-muted-foreground">{format(new Date(ts), 'MMM d, h:mm a')}</p>
-                </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-border text-muted-foreground">Dismissed</span>
+        <ul className="pb-2">
+          {history.map(({ id, ts, type }) => (
+            <li key={id} className="flex items-center gap-4 border-t border-border px-5 py-3 sm:px-6">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-medium text-foreground">{describeId(id, clients)}</p>
+                <p className="text-[13px] text-muted-foreground">{TYPE_LABEL[type]} · dismissed {format(new Date(ts), 'MMM d, h:mm a')}</p>
               </div>
-            );
-          })}
-        </div>
+            </li>
+          ))}
+        </ul>
       )}
-    </div>
+    </Panel>
   );
 }

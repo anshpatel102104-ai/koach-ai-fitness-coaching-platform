@@ -1,123 +1,66 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  MessageSquare, Dumbbell, ClipboardList, TrendingUp, CheckCircle2, Zap, ChevronDown, ChevronUp,
+  MessageSquare, Dumbbell, ClipboardList, TrendingUp, ChevronDown,
   Send, UserCheck, Eye, ArrowUpRight,
 } from 'lucide-react';
 import { compositeAdherenceScore } from '@/lib/adherence';
+import { Initials, EmptyState } from '@/components/kit';
+import { cn } from '@/lib/utils';
 
-// ── Priority group configs ──────────────────────────────────────────────────
+// ── Priority groups ─────────────────────────────────────────────────────────
 const GROUP_CONFIG = {
-  critical: {
-    label: 'Critical',
-    border: 'var(--tc-destructive)',
-    badgeBg: 'var(--tc-destructive)',
-    badgeText: 'var(--tc-destructive)',
-    badgeBorder: 'var(--tc-destructive)',
-    headerBg: 'var(--kc-fff5f5)',
-    dot: 'var(--tc-destructive)',
-  },
-  high: {
-    label: 'High Priority',
-    border: 'var(--tc-warning)',
-    badgeBg: 'var(--tc-warning)',
-    badgeText: 'var(--tc-warning)',
-    badgeBorder: 'var(--tc-warning)',
-    headerBg: 'var(--kc-fffdf0)',
-    dot: 'var(--tc-warning)',
-  },
-  informational: {
-    label: 'Informational',
-    border: 'var(--tc-primary)',
-    badgeBg: 'var(--tc-accent)',
-    badgeText: 'var(--tc-primary)',
-    badgeBorder: 'var(--tc-accent)',
-    headerBg: 'var(--tc-accent)',
-    dot: 'var(--tc-primary)',
-  },
+  critical:      { label: 'Urgent',          tone: 'text-destructive', defaultOpen: true },
+  high:          { label: 'This week',       tone: 'text-warning',     defaultOpen: true },
+  informational: { label: 'When you can',    tone: 'text-muted-foreground', defaultOpen: false },
 };
 
-// ── Avatar helpers ──────────────────────────────────────────────────────────
-const AVATAR_COLORS = [
-  ['var(--tc-primary)', 'var(--tc-accent)'], ['var(--tc-ai)', 'var(--tc-ai)'], ['var(--tc-success)', 'var(--tc-success)'],
-  ['var(--tc-warning)', 'var(--tc-warning)'], ['var(--tc-destructive)', 'var(--tc-destructive)'],
-];
-function getAvatarColor(name = '') {
-  const idx = (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[idx];
-}
-
-// ── Pill action button ──────────────────────────────────────────────────────
+// ── Row actions: first is ink, the rest outline ─────────────────────────────
 function Pill({ icon: Icon, label, onClick, variant = 'ghost' }) {
   return (
     <button
       onClick={e => { e.stopPropagation(); onClick(); }}
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all shrink-0"
-      style={variant === 'primary'
-        ? { background: 'var(--tc-primary)', color: 'var(--tc-primary-foreground)' }
-        : { background: 'var(--tc-muted)', color: 'var(--tc-foreground)', border: '1px solid var(--tc-border)' }
-      }
+      className={cn(
+        'touch-compact inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-3 text-[13px] font-semibold transition-colors',
+        variant === 'primary'
+          ? 'bg-primary text-primary-foreground hover:bg-primary/85'
+          : 'border border-input bg-card text-foreground hover:bg-accent'
+      )}
     >
-      <Icon className="w-3 h-3 shrink-0" />
+      {variant === 'primary' && Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
       <span>{label}</span>
     </button>
   );
 }
 
-// ── Individual action card ──────────────────────────────────────────────────
+// ── One open item ───────────────────────────────────────────────────────────
 function ActionCard({ id, name, subtitle, flaggedDaysAgo, badge, priority, actions, onResolve }) {
-  const cfg = GROUP_CONFIG[priority] || GROUP_CONFIG.high;
-  const [ringColor, avatarBg] = getAvatarColor(name);
-  const initials = (name || '?').split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: 'auto' }}
-      exit={{ opacity: 0, x: 40, height: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="flex items-start gap-3 px-4 py-3.5 border-b border-border last:border-b-0 hover:bg-muted/60 transition-colors group"
-      style={{ borderLeft: `3px solid ${cfg.border}` }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      className="flex items-start gap-3 border-t border-border px-5 py-3.5 first:border-t-0 sm:px-6"
     >
-      {/* Avatar */}
-      <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold mt-0.5"
-        style={{ background: avatarBg, color: ringColor }}
-      >
-        {initials}
-        {priority === 'critical' && (
-          <span className="absolute -top-1 -right-1 w-2 h-2 bg-destructive rounded-full border border-white animate-pulse" />
-        )}
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-foreground truncate max-w-[140px]">{name}</span>
-          {badge && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0"
-              style={{ background: cfg.badgeBg, color: cfg.badgeText, borderColor: cfg.badgeBorder }}>
-              {badge}
-            </span>
-          )}
+      <Initials name={name || '?'} size={36} tone={priority === 'critical' ? 'alert' : 'default'} className="mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="truncate text-[15px] font-semibold text-foreground">{name}</span>
+          {badge && <span className={cn('text-[13px] font-semibold', GROUP_CONFIG[priority]?.tone)}>{badge}</span>}
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{subtitle}</p>
-        {flaggedDaysAgo != null && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {flaggedDaysAgo === 0 ? 'Flagged today' : `Flagged ${flaggedDaysAgo}d ago`}
-          </p>
-        )}
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {subtitle}
+          {flaggedDaysAgo != null && flaggedDaysAgo > 0 && <span> · flagged {flaggedDaysAgo}d ago</span>}
+        </p>
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {actions}
           <button
             onClick={e => { e.stopPropagation(); onResolve(id); }}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ml-auto shrink-0 opacity-0 group-hover:opacity-100"
-            style={{ background: 'var(--tc-success)', color: 'var(--tc-success)', border: '1px solid var(--tc-success)' }}
+            className="touch-compact ml-1 text-[13px] font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
-            <CheckCircle2 className="w-2.5 h-2.5" /> Resolve
+            Mark done
           </button>
         </div>
       </div>
@@ -125,61 +68,42 @@ function ActionCard({ id, name, subtitle, flaggedDaysAgo, badge, priority, actio
   );
 }
 
-// ── Priority group collapsible section ─────────────────────────────────────
+// ── Collapsible priority group ──────────────────────────────────────────────
 function PriorityGroup({ priority, items, onResolve }) {
-  const [open, setOpen] = useState(true);
   const cfg = GROUP_CONFIG[priority];
+  const [open, setOpen] = useState(cfg.defaultOpen);
   if (!items.length) return null;
 
   return (
-    <div className="rounded-xl overflow-hidden"
-      style={{ border: `1px solid ${cfg.badgeBorder}`, boxShadow: '0 1px 4px color-mix(in srgb, black 4%, transparent)' }}>
+    <div className="border-t border-border">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 transition-colors"
-        style={{
-          background: cfg.headerBg,
-          borderBottom: open ? `1px solid ${cfg.badgeBorder}` : 'none',
-        }}
+        className="flex w-full items-center gap-2 px-5 py-3 text-left transition-colors hover:bg-accent/50 sm:px-6"
+        aria-expanded={open}
       >
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: cfg.dot }} />
-        <span className="text-sm font-bold text-foreground flex-1 text-left">{cfg.label}</span>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0"
-          style={{ background: cfg.badgeBg, color: cfg.badgeText, borderColor: cfg.badgeBorder }}>
-          {items.length}
-        </span>
-        {open
-          ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
-          : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+        <span className={cn('text-sm font-semibold', cfg.tone === 'text-muted-foreground' ? 'text-foreground' : cfg.tone)}>{cfg.label}</span>
+        <span className="text-sm tabular-nums text-muted-foreground">{items.length}</span>
+        <ChevronDown className={cn('ml-auto h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-card overflow-hidden"
-          >
-            <AnimatePresence>
-              {items.map(item => (
-                <ActionCard key={item.id} {...item} priority={priority} onResolve={onResolve} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {open && (
+        <div className="border-t border-border">
+          <AnimatePresence initial={false}>
+            {items.map(item => (
+              <ActionCard key={item.id} {...item} priority={priority} onResolve={onResolve} />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
-export default function RunMyDayCenter({ clients, checkIns, messages, payments = [], refreshKey: externalRefreshKey = 0 }) {
+export default function RunMyDayCenter({ clients, checkIns, messages, payments = [], refreshKey: externalRefreshKey = 0, onCountChange }) {
   const navigate = useNavigate();
   const [resolvedIds, setResolvedIds] = useState(new Set());
   const [resolvedToday, setResolvedToday] = useState(0);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey] = useState(0);
 
   const go = (path) => navigate(path);
   const msgClient = (id, msg) =>
@@ -189,8 +113,6 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
     setResolvedIds(prev => { const next = new Set(prev); next.add(id); return next; });
     setResolvedToday(n => n + 1);
   }, []);
-
-  const handleRefresh = () => setRefreshKey(k => k + 1);
 
   // ── Build action items ──────────────────────────────────────────────────
   const items = useMemo(() => {
@@ -209,14 +131,14 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
         name: client.name,
         subtitle: daysAgo === 999 ? 'No check-in on record' : `No check-in in ${daysAgo} days`,
         badge: daysAgo === 999 ? 'Never' : `${daysAgo}d`,
-        flaggedDaysAgo: Math.max(0, daysAgo - 10),
+        flaggedDaysAgo: daysAgo === 999 ? null : Math.max(0, daysAgo - 10),
         priority,
         actions: (
           <>
-            <Pill icon={Send} label="Send Nudge" variant="primary"
-              onClick={() => msgClient(client.id, "Hey! Just checking in — haven't heard from you in a while. How's everything going? 💪")} />
-            <Pill icon={ClipboardList} label="Log Check-in" onClick={() => go(`/checkin-detail?clientId=${client.id}`)} />
-            <Pill icon={Eye} label="View Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
+            <Pill icon={Send} label="Send a nudge" variant="primary"
+              onClick={() => msgClient(client.id, "Hey, haven't heard from you in a bit. How's the week going?")} />
+            <Pill icon={ClipboardList} label="Log check-in" onClick={() => go(`/checkin-detail?clientId=${client.id}`)} />
+            <Pill icon={Eye} label="Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
           </>
         ),
       });
@@ -229,15 +151,15 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
       result.push({
         id: `noprog-${client.id}`,
         name: client.name,
-        subtitle: 'No workout program assigned',
-        badge: 'No Program',
+        subtitle: 'No program assigned yet',
+        badge: 'No program',
         flaggedDaysAgo: differenceInDays(new Date(), parseISO(client.created_date || new Date().toISOString())),
         priority: 'critical',
         actions: (
           <>
-            <Pill icon={Dumbbell} label="Assign Program" variant="primary"
+            <Pill icon={Dumbbell} label="Assign a program" variant="primary"
               onClick={() => go(`/client-profile?id=${client.id}&tab=programs`)} />
-            <Pill icon={Eye} label="View Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
+            <Pill icon={Eye} label="Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
           </>
         ),
       });
@@ -256,9 +178,9 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
         priority: 'critical',
         actions: (
           <>
-            <Pill icon={MessageSquare} label="Send Invoice" variant="primary"
-              onClick={() => msgClient(client.id, "Hi! Just a quick note about your upcoming payment — let me know if you have any questions 🙏")} />
-            <Pill icon={Eye} label="View Profile" onClick={() => go('/revenue')} />
+            <Pill icon={MessageSquare} label="Send a reminder" variant="primary"
+              onClick={() => msgClient(client.id, "Hi, a quick note about your payment. Let me know if you have any questions.")} />
+            <Pill icon={Eye} label="Billing" onClick={() => go('/revenue')} />
           </>
         ),
       });
@@ -283,7 +205,7 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
         actions: (
           <>
             <Pill icon={MessageSquare} label="Message" variant="primary" onClick={() => msgClient(client.id)} />
-            <Pill icon={Eye} label="View Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
+            <Pill icon={Eye} label="Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
           </>
         ),
       });
@@ -300,16 +222,16 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
       result.push({
         id: `adh-${client.id}`,
         name: client.name,
-        subtitle: `${score}% composite adherence — below target`,
+        subtitle: `Adherence at ${score}%, below the 65% line`,
         badge: `${score}%`,
         flaggedDaysAgo: 0,
         priority: score < 40 ? 'critical' : 'high',
         actions: (
           <>
             <Pill icon={MessageSquare} label="Message" variant="primary"
-              onClick={() => msgClient(client.id, "Hey, I want to make sure your plan is working for you — let's chat about any adjustments 🙌")} />
-            <Pill icon={TrendingUp} label="View Progress" onClick={() => go(`/client-profile?id=${client.id}&tab=progress`)} />
-            <Pill icon={Eye} label="View Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
+              onClick={() => msgClient(client.id, "Hey, I want to make sure the plan is working for you. Can we talk about a few adjustments?")} />
+            <Pill icon={TrendingUp} label="Progress" onClick={() => go(`/client-profile?id=${client.id}&tab=progress`)} />
+            <Pill icon={Eye} label="Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
           </>
         ),
       });
@@ -338,7 +260,7 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
           actions: (
             <>
               <Pill icon={MessageSquare} label="Reply" variant="primary" onClick={() => go(`/messages?clientId=${clientId}`)} />
-              <Pill icon={Eye} label="View Profile" onClick={() => go(`/client-profile?id=${clientId}`)} />
+              <Pill icon={Eye} label="Profile" onClick={() => go(`/client-profile?id=${clientId}`)} />
             </>
           ),
         });
@@ -361,9 +283,9 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
           priority: 'informational',
           actions: (
             <>
-              <Pill icon={Zap} label="AI Review" variant="primary"
+              <Pill icon={ClipboardList} label="Review with AI" variant="primary"
                 onClick={() => go(`/checkin-detail?id=${ci.id}&clientId=${ci.client_id}`)} />
-              <Pill icon={ArrowUpRight} label="Fast Review" onClick={() => go('/fast-review')} />
+              <Pill icon={ArrowUpRight} label="Fast review" onClick={() => go('/fast-review')} />
             </>
           ),
         });
@@ -378,17 +300,17 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
       result.push({
         id: `prog-${client.id}`,
         name: client.name,
-        subtitle: `${score}% adherence — consistently crushing it`,
+        subtitle: `${score}% adherence for 3+ check-ins. Ready to progress`,
         badge: `${score}%`,
         flaggedDaysAgo: null,
         priority: 'informational',
         actions: (
           <>
-            <Pill icon={Dumbbell} label="Assign Workout" variant="primary"
+            <Pill icon={Dumbbell} label="Progress program" variant="primary"
               onClick={() => go(`/client-profile?id=${client.id}&tab=programs`)} />
-            <Pill icon={UserCheck} label="View Progress" onClick={() => go(`/client-profile?id=${client.id}`)} />
-            <Pill icon={MessageSquare} label="Celebrate"
-              onClick={() => msgClient(client.id, "Great work lately! You're crushing it — bumping up your program 🚀")} />
+            <Pill icon={UserCheck} label="Profile" onClick={() => go(`/client-profile?id=${client.id}`)} />
+            <Pill icon={MessageSquare} label="Say well done"
+              onClick={() => msgClient(client.id, "Really strong few weeks. I'm moving your program up a step.")} />
           </>
         ),
       });
@@ -407,46 +329,26 @@ export default function RunMyDayCenter({ clients, checkIns, messages, payments =
   }), [visibleItems]);
 
   const totalUnresolved = visibleItems.length;
+  useEffect(() => { onCountChange?.(totalUnresolved); }, [totalUnresolved, onCountChange]);
+
+  if (totalUnresolved === 0) {
+    return (
+      <EmptyState
+        className="border-t border-border"
+        title="Nothing open. Every client is on track."
+        body={resolvedToday > 0 ? `You cleared ${resolvedToday} item${resolvedToday === 1 ? '' : 's'} today.` : 'New items show up here as check-ins, messages and payments come in.'}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-2.5">
-      {/* Summary bar */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          {resolvedToday > 0 && (
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: 'var(--tc-success)', color: 'var(--tc-success)', border: '1px solid var(--tc-success)' }}>
-              ✓ {resolvedToday} resolved today
-            </span>
-          )}
-        </div>
-        {/* refresh handled by parent */}
-      </div>
-
-      {/* All clear */}
-      {totalUnresolved === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl bg-card text-center"
-          style={{ border: '1px solid var(--tc-success)', boxShadow: '0 1px 6px color-mix(in srgb, black 4%, transparent)' }}
-        >
-          <div className="w-14 h-14 rounded-full flex items-center justify-center"
-            style={{ background: 'var(--tc-success)', border: '2px solid var(--tc-success)' }}>
-            <CheckCircle2 className="w-7 h-7 text-success" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-foreground">All clients are on track</p>
-            <p className="text-sm text-muted-foreground mt-0.5">Great work, Coach! 🎉</p>
-          </div>
-        </motion.div>
-      ) : (
-        <>
-          <PriorityGroup priority="critical" items={byPriority.critical} onResolve={handleResolve} />
-          <PriorityGroup priority="high" items={byPriority.high} onResolve={handleResolve} />
-          <PriorityGroup priority="informational" items={byPriority.informational} onResolve={handleResolve} />
-        </>
+    <div>
+      {resolvedToday > 0 && (
+        <p className="px-5 pb-3 text-sm text-success sm:px-6">{resolvedToday} cleared today</p>
       )}
+      <PriorityGroup priority="critical" items={byPriority.critical} onResolve={handleResolve} />
+      <PriorityGroup priority="high" items={byPriority.high} onResolve={handleResolve} />
+      <PriorityGroup priority="informational" items={byPriority.informational} onResolve={handleResolve} />
     </div>
   );
 }

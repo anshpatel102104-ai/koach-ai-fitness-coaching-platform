@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import HabitCard from './HabitCard';
 import HabitFormModal from './HabitFormModal';
@@ -100,7 +100,7 @@ export default function HabitsSection({ client }) {
             onClick={handleAdd}
             className="flex items-center gap-1.5 text-sm font-semibold text-ai-foreground bg-ai hover:bg-ai px-4 py-2 rounded-lg transition-colors"
           >
-            <Plus className="w-4 h-4" /> Add Habit
+            <Plus className="w-4 h-4" /> Add habit
           </button>
         </div>
 
@@ -112,8 +112,8 @@ export default function HabitsSection({ client }) {
         {/* Empty state */}
         {!isLoading && habits.length === 0 && (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <Sparkles className="w-7 h-7 text-ai" />
+            <div className="w-16 h-16 rounded-xl bg-card border border-border flex items-center justify-center mx-auto mb-4">
+              
             </div>
             <p className="text-sm font-bold text-foreground mb-1">No habits yet</p>
             <p className="text-xs text-muted-foreground mb-5">
@@ -124,7 +124,7 @@ export default function HabitsSection({ client }) {
               onClick={handleAdd}
               className="flex items-center gap-1.5 text-sm font-semibold text-ai-foreground bg-ai hover:bg-ai px-5 py-2.5 rounded-xl transition-colors mx-auto"
             >
-              <Plus className="w-4 h-4" /> Add First Habit
+              <Plus className="w-4 h-4" /> Add first habit
             </button>
           </div>
         )}
@@ -133,9 +133,8 @@ export default function HabitsSection({ client }) {
         {active.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-0.5 h-3 rounded-full bg-ai" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-ai/10 text-ai">{active.length}</span>
+              <p className="text-xs font-semibold text-muted-foreground">Active</p>
+              <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-ai/10 text-ai">{active.length}</span>
             </div>
             {active.map(h => (
               <HabitCard
@@ -154,8 +153,7 @@ export default function HabitsSection({ client }) {
         {inactive.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-0.5 h-3 rounded-full bg-border" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Inactive</p>
+              <p className="text-xs font-semibold text-muted-foreground">Inactive</p>
             </div>
             {inactive.map(h => (
               <HabitCard

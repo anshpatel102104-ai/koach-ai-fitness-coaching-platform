@@ -1,7 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { TrendingDown, TrendingUp, Activity, Weight, BarChart3, UserCheck, ArrowUp, ArrowDown, Minus, AlertTriangle, Zap, Shield } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { Page, PageHeader, Panel, PanelHeader, Initials } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InsightsNav, StatusDot, Meter } from '@/components/business/ui';
 import AnalyticsStatCard from '@/components/analytics/AnalyticsStatCard';
 import AnalyticsTrendCard from '@/components/analytics/AnalyticsTrendCard';
 import { getMonthRanges, calcRetentionTrend, calcChurnTrend, calcAdherenceTrend, calcWeightProgressTrend, calcSummaryStats } from '@/lib/analyticsEngine';
@@ -9,7 +13,7 @@ import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
 import { differenceInDays, parseISO, format, startOfWeek, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const BLUE = 'var(--tc-primary)';
+const INK = 'var(--tc-foreground)';
 
 // ── Client Activity Table ──────────────────────────────────────────────────
 function ClientActivityTable({ clients, checkIns }) {
@@ -29,72 +33,66 @@ function ClientActivityTable({ clients, checkIns }) {
     .sort((a, b) => b.adherence - a.adherence),
   [clients, checkIns]);
 
-  const adherenceColor = (v) => v >= 80 ? 'text-success bg-success/10' : v >= 60 ? 'text-warning bg-warning/10' : 'text-destructive bg-destructive/10';
-  const statusColors = { active: 'bg-success/10 text-success', at_risk: 'bg-destructive/10 text-destructive', completed: 'bg-ai/10 text-ai', alumni: 'bg-muted text-muted-foreground', lead: 'bg-accent text-primary' };
+  const STATUS = {
+    active: { label: 'Active', tone: 'success' },
+    at_risk: { label: 'At risk', tone: 'danger' },
+    completed: { label: 'Completed', tone: 'muted' },
+    alumni: { label: 'Alumni', tone: 'muted' },
+    lead: { label: 'Lead', tone: 'muted' },
+  };
+  const th = 'px-3 py-2.5 text-[13px] font-normal text-muted-foreground whitespace-nowrap';
 
   if (rows.length === 0) return null;
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-border">
-        <p className="text-sm font-semibold text-foreground">Client Activity Summary</p>
-        <p className="text-xs text-muted-foreground mt-0.5">All clients sorted by adherence score</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+    <Panel className="overflow-hidden">
+      <PanelHeader title="Every client" subtitle="Sorted by adherence, best first." />
+      <div className="overflow-x-auto px-2 sm:px-3 pb-3">
+        <table className="w-full min-w-[640px]">
           <thead>
-            <tr className="border-b border-border bg-background">
-              <th className="text-left px-5 py-2.5 text-xs font-semibold text-muted-foreground">Client</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Status</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Last Check-In</th>
-              <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">Adherence</th>
-              <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">Streak</th>
-              <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">Trend</th>
+            <tr className="border-b border-border">
+              <th className={cn(th, 'text-left')}>Client</th>
+              <th className={cn(th, 'text-left')}>Status</th>
+              <th className={cn(th, 'text-left')}>Last check-in</th>
+              <th className={cn(th, 'text-right')}>Adherence</th>
+              <th className={cn(th, 'text-right')}>Streak</th>
+              <th className={cn(th, 'text-right')}>Last 2 vs prior 2</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ client, adherence, streak, lastDate, daysSince, trend }) => (
-              <tr key={client.id} className="border-b border-border last:border-0 hover:bg-background transition-colors">
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                      {client.name?.[0]}
-                    </div>
-                    <span className="font-medium text-foreground text-sm">{client.name}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize', statusColors[client.lifecycle_status] || 'bg-muted text-muted-foreground')}>
-                    {client.lifecycle_status?.replace('_', ' ') || 'unknown'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">
-                  {lastDate ? (
-                    <span className={daysSince > 14 ? 'text-destructive font-medium' : daysSince > 7 ? 'text-warning' : 'text-muted-foreground'}>
-                      {daysSince === 0 ? 'Today' : daysSince === 1 ? 'Yesterday' : `${daysSince}d ago`}
+            {rows.map(({ client, adherence, streak, lastDate, daysSince, trend }) => {
+              const st = STATUS[client.lifecycle_status] || { label: client.lifecycle_status?.replace('_', ' ') || 'Unknown', tone: 'muted' };
+              return (
+                <tr key={client.id} className="border-b border-border last:border-0 hover:bg-accent/60 transition-colors">
+                  <td className="px-3 py-3">
+                    <span className="flex items-center gap-3">
+                      <Initials name={client.name} size={32} tone={client.lifecycle_status === 'at_risk' ? 'alert' : 'default'} />
+                      <span className="text-[15px] font-semibold text-foreground">{client.name}</span>
                     </span>
-                  ) : '—'}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', adherenceColor(adherence))}>
-                    {adherence}%
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className="text-xs font-semibold text-foreground">{streak > 0 ? `🔥 ${streak}d` : '—'}</span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {trend === null ? <span className="text-muted-foreground">—</span>
-                    : trend > 3 ? <ArrowUp className="w-4 h-4 text-success mx-auto" />
-                    : trend < -3 ? <ArrowDown className="w-4 h-4 text-destructive mx-auto" />
-                    : <Minus className="w-4 h-4 text-muted-foreground mx-auto" />}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-3"><StatusDot tone={st.tone}>{st.label}</StatusDot></td>
+                  <td className="px-3 py-3 text-sm">
+                    {lastDate ? (
+                      <span className={daysSince > 14 ? 'text-destructive font-semibold' : 'text-foreground'}>
+                        {daysSince === 0 ? 'Today' : daysSince === 1 ? 'Yesterday' : `${daysSince} days ago`}
+                      </span>
+                    ) : <span className="text-muted-foreground">Never</span>}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <span className={cn('num text-[17px]', adherence < 50 ? 'text-destructive' : 'text-foreground')}>{adherence}%</span>
+                  </td>
+                  <td className="px-3 py-3 text-right text-sm text-foreground tabular-nums">{streak > 0 ? `${streak} day${streak === 1 ? '' : 's'}` : '—'}</td>
+                  <td className="px-3 py-3 text-right text-sm tabular-nums">
+                    {trend === null ? <span className="text-muted-foreground">—</span>
+                      : <span className={trend < -3 ? 'text-destructive font-semibold' : 'text-foreground'}>{trend > 0 ? '+' : ''}{Math.round(trend)}</span>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -113,36 +111,29 @@ function WeeklyGrid({ checkIns }) {
     return week;
   }, [checkIns]);
 
-  const maxCount = Math.max(...days.map(d => d.count), 1);
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const total = days.reduce((n, d) => n + d.count, 0);
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5">
-      <p className="text-sm font-semibold text-foreground mb-1">Weekly Performance Grid</p>
-      <p className="text-xs text-muted-foreground mb-4">Check-in activity this week (Mon–Sun)</p>
-      <div className="grid grid-cols-7 gap-2">
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">This week</h2>
+      <p className="text-sm text-muted-foreground mt-1">{total} check-ins so far. Number is check-ins that day, percent is their average compliance.</p>
+      <div className="grid grid-cols-7 gap-1.5 mt-4">
         {days.map(d => {
-          const intensity = d.count === 0 ? 0 : Math.round((d.count / maxCount) * 5);
-          const bgMap = ['bg-muted', 'bg-accent', 'bg-primary', 'bg-primary', 'bg-primary', 'bg-primary'];
-          const textMap = ['text-muted-foreground', 'text-primary', 'text-primary', 'text-white', 'text-white', 'text-white'];
+          const isToday = d.dateStr === today;
           return (
-            <div key={d.dateStr} className="flex flex-col items-center gap-1.5">
-              <div className={cn('w-full aspect-square rounded-xl flex items-center justify-center font-bold text-sm transition-all', bgMap[intensity], textMap[intensity])}>
-                {d.count || '0'}
-              </div>
-              <span className="text-[10px] text-muted-foreground font-medium">{d.label}</span>
-              {d.count > 0 && <span className="text-[10px] text-muted-foreground">{d.avgComp}%</span>}
+            <div
+              key={d.dateStr}
+              className={cn('rounded-lg px-1 py-2.5 text-center', isToday ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground')}
+            >
+              <p className={cn('text-[13px]', isToday ? 'text-primary-foreground/75' : 'text-muted-foreground')}>{d.label}</p>
+              <p className="num text-[24px] leading-none mt-1">{d.count}</p>
+              <p className={cn('text-xs mt-1 tabular-nums', isToday ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{d.count > 0 ? `${d.avgComp}%` : '—'}</p>
             </div>
           );
         })}
       </div>
-      <div className="flex items-center gap-1.5 mt-3">
-        <span className="text-[10px] text-muted-foreground">Less</span>
-        {['bg-muted', 'bg-accent', 'bg-primary', 'bg-primary', 'bg-primary', 'bg-primary'].map((bg, i) => (
-          <div key={i} className={cn('w-3.5 h-3.5 rounded', bg)} />
-        ))}
-        <span className="text-[10px] text-muted-foreground">More</span>
-      </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -169,26 +160,30 @@ function TopMetricCards({ clients, checkIns }) {
     }
 
     return [
-      { icon: <TrendingUp className="w-4 h-4 text-success" />, label: 'Most Improved', bg: 'bg-success/10', ...mostImproved },
-      { icon: <Zap className="w-4 h-4 text-warning" />, label: 'Highest Streak', bg: 'bg-warning/10', ...highestStreak },
-      { icon: <Shield className="w-4 h-4 text-primary" />, label: 'Most Consistent', bg: 'bg-accent', ...mostConsistent },
-      { icon: <AlertTriangle className="w-4 h-4 text-destructive" />, label: 'Churn Risk', bg: 'bg-destructive/10', ...churnRisk },
+      { label: 'Most improved', ...mostImproved },
+      { label: 'Longest streak', ...highestStreak },
+      { label: 'Most recent check-in', ...mostConsistent },
+      { label: 'Lowest adherence', alert: true, ...churnRisk },
     ];
   }, [clients, checkIns]);
 
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {metrics.map((m, i) => (
-        <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-start gap-3">
-          <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', m.bg)}>{m.icon}</div>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-medium">{m.label}</p>
-            <p className="text-sm font-bold text-foreground mt-0.5 truncate">{m.client?.name || '—'}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{m.value || 'No data'}</p>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Standouts</h2>
+      <p className="text-sm text-muted-foreground mt-1">Among active clients, from their recent check-ins.</p>
+      <div className="mt-2">
+        {metrics.map((m) => (
+          <div key={m.label} className="flex items-center gap-3 py-3 border-b border-border last:border-b-0">
+            <Initials name={m.client?.name || '?'} tone={m.alert && m.client ? 'alert' : 'default'} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] text-muted-foreground">{m.label}</p>
+              <p className="text-[15px] font-semibold text-foreground truncate">{m.client?.name || 'Not enough data'}</p>
+            </div>
+            <p className={cn('text-sm font-semibold text-right', m.alert && m.client ? 'text-destructive' : 'text-foreground')}>{m.value || '—'}</p>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Panel>
   );
 }
 
@@ -213,36 +208,23 @@ function RetentionFunnel({ clients }) {
   const maxCount = Math.max(...stages.map(s => s.count), 1);
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5">
-      <p className="text-sm font-semibold text-foreground mb-1">Retention Funnel</p>
-      <p className="text-xs text-muted-foreground mb-4">Client lifecycle stage distribution</p>
-      <div className="space-y-3">
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Where clients are</h2>
+      <p className="text-sm text-muted-foreground mt-1">Everyone by lifecycle stage, with the share that reached the next one.</p>
+      <div className="mt-4">
         {stages.map((s, i) => {
-          const barPct = maxCount > 0 ? (s.count / maxCount) * 100 : 0;
           const conversion = i > 0 && stages[i - 1].count > 0 ? Math.round((s.count / stages[i - 1].count) * 100) : null;
           return (
-            <div key={s.label}>
-              {i > 0 && conversion !== null && (
-                <div className="flex items-center gap-2 my-1 pl-1">
-                  <div className="w-px h-3 bg-border ml-3" />
-                  <span className="text-[10px] text-muted-foreground">{conversion}% conversion</span>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-foreground w-20 shrink-0 font-medium">{s.label}</span>
-                <div className="flex-1 bg-muted rounded-full h-7 overflow-hidden relative">
-                  <div className="h-full bg-border rounded-full transition-all" style={{ width: `${Math.max(barPct, 2)}%` }} />
-                  <span className="absolute inset-0 flex items-center px-3 text-xs font-semibold text-foreground">
-                    {s.count} clients
-                  </span>
-                </div>
-                <span className="text-xs font-bold text-foreground w-10 text-right">{s.pct}%</span>
-              </div>
+            <div key={s.label} className="grid grid-cols-[88px_1fr_auto] sm:grid-cols-[110px_1fr_90px_110px] items-center gap-3 py-2.5 border-b border-border last:border-b-0">
+              <p className="text-sm text-foreground">{s.label}</p>
+              <Meter value={s.count} max={maxCount} />
+              <p className="text-sm text-right tabular-nums"><span className="num text-[17px] text-foreground">{s.count}</span><span className="text-muted-foreground"> · {s.pct}%</span></p>
+              <p className="hidden sm:block text-[13px] text-muted-foreground text-right">{conversion !== null ? `${conversion}% of previous` : ''}</p>
             </div>
           );
         })}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -265,8 +247,9 @@ export default function Analytics() {
 
   const trendLabel = (delta) => {
     if (delta === null) return 'No data yet';
-    if (Math.abs(delta) < 1) return '—';
-    return `${delta > 0 ? '+' : ''}${Math.round(delta)}% vs last month`;
+    if (Math.abs(delta) < 1) return 'Flat on last month';
+    const n = Math.abs(Math.round(delta));
+    return `${delta > 0 ? 'Up' : 'Down'} ${n} point${n === 1 ? '' : 's'} on last month`;
   };
   const trendPositive = (delta) => delta === null || Math.abs(delta) < 1 ? null : delta >= 0;
 
@@ -277,77 +260,64 @@ export default function Analytics() {
     const a = document.createElement('a'); a.href = 'data:text/csv,' + encodeURIComponent(csv); a.download = 'analytics.csv'; a.click();
   };
 
+  const subtitle = `${stats.retentionRate}% of clients are staying, adherence averages ${stats.avgAdherence}%. ${stats.atRisk ? `${stats.atRisk} at risk.` : 'Nobody at risk.'}`;
+
   return (
-    <div className="p-3 sm:p-6 lg:p-6 max-w-6xl mx-auto space-y-5 w-full">
-      {/* ── Dark header ── */}
-      <div className="bg-sidebar rounded-xl p-4 sm:p-5 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[var(--kc-w-10)] flex items-center justify-center flex-shrink-0">
-            <BarChart3 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-semibold text-white leading-tight">Coach Analytics</h1>
-            <p className="text-xs sm:text-sm text-white/50 mt-0.5">Track retention, adherence, and client progress trends</p>
-          </div>
+    <Page>
+      <PageHeader
+        title="Insights"
+        subtitle={subtitle}
+        actions={(
+          <>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="180">Last 6 months</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleExport}><Download /> Export</Button>
+          </>
+        )}
+      />
+      <InsightsNav className="mb-5" />
+
+      <div className="flex flex-col gap-5">
+        {/* Stat row: one panel, hairline dividers */}
+        <Panel className="grid grid-cols-2 lg:grid-cols-4 overflow-hidden [&>*]:border-border [&>*:nth-child(2n)]:border-l [&>*:nth-child(n+3)]:border-t lg:[&>*:nth-child(n+3)]:border-t-0 lg:[&>*:nth-child(n+2)]:border-l">
+          <AnalyticsStatCard title="Retention" value={`${stats.retentionRate}%`} subtitle={`${stats.active} active clients`}
+            trendLabel={trendLabel(retentionDelta)} trendPositive={trendPositive(retentionDelta)} />
+          <AnalyticsStatCard title="Adherence" value={`${stats.avgAdherence}%`} subtitle="Training and nutrition"
+            trendLabel={trendLabel(adherenceDelta)} trendPositive={trendPositive(adherenceDelta)} />
+          <AnalyticsStatCard title="Weight change" value={stats.avgWeightDelta != null ? `${stats.avgWeightDelta > 0 ? '+' : ''}${stats.avgWeightDelta} lb` : '—'} subtitle="Average across clients"
+            trendLabel={stats.avgWeightDelta != null ? (stats.avgWeightDelta < 0 ? 'Trending down' : stats.avgWeightDelta === 0 ? 'Holding steady' : 'Trending up') : 'Not enough weigh-ins'}
+            trendPositive={null} />
+          <AnalyticsStatCard title="At risk" value={`${stats.churnRate}%`} subtitle={`${stats.atRisk} client${stats.atRisk !== 1 ? 's' : ''}`}
+            trendLabel={stats.atRisk > 0 ? 'Worth a message this week' : 'Everyone on track'} trendPositive={stats.atRisk === 0 ? null : false} />
+        </Panel>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <AnalyticsTrendCard title="Retention" subtitle="Share of enrolled clients still active. Dashed line is 80%." data={retentionTrend} unit="%" color={INK} referenceValue={80}
+            badge={`${stats.retentionRate}%`} />
+          <AnalyticsTrendCard title="Adherence" subtitle="Training and nutrition compliance. Dashed line is 70%." data={adherenceTrend} unit="%" color={INK} referenceValue={70}
+            badge={`${stats.avgAdherence}%`} />
+          <AnalyticsTrendCard title="Weight progress" subtitle="Average change from each client's starting weight" data={weightTrend} unit=" lb" color={INK} referenceValue={0}
+            formatter={v => `${v > 0 ? '+' : ''}${Math.round(v * 10) / 10} lb`} badge={stats.avgWeightDelta != null ? `${stats.avgWeightDelta > 0 ? '+' : ''}${stats.avgWeightDelta} lb` : '—'} />
+          <AnalyticsTrendCard title="At risk" subtitle="Share of clients flagged each month. Dashed line is 10%." data={churnTrend} unit="%" color={INK} referenceValue={10} lowerIsBetter
+            badge={`${stats.churnRate}%`} badgeColor={stats.churnRate > 10 ? 'text-destructive' : undefined} />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <select
-            value={timeRange}
-            onChange={e => setTimeRange(e.target.value)}
-            className="bg-[var(--kc-w-10)] text-white border border-white/20 rounded-lg px-3 py-1.5 text-sm focus:outline-none"
-          >
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="180">Last 6 months</option>
-            <option value="all">All time</option>
-          </select>
-          <button onClick={handleExport} className="px-4 py-1.5 bg-card text-foreground rounded-lg text-sm font-semibold hover:bg-[var(--kc-w-90)] transition-colors">
-            Export
-          </button>
-        </div>
-      </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <AnalyticsStatCard dark title="Retention Rate" value={`${stats.retentionRate}%`} subtitle={`${stats.active} active clients`} icon={UserCheck}
-          trendLabel={trendLabel(retentionDelta)} trendPositive={trendPositive(retentionDelta)} />
-        <AnalyticsStatCard dark title="Avg Adherence" value={`${stats.avgAdherence}%`} subtitle="Training + nutrition avg" icon={Activity}
-          trendLabel={trendLabel(adherenceDelta)} trendPositive={trendPositive(adherenceDelta)} />
-        <AnalyticsStatCard dark title="Avg Weight Change" value={stats.avgWeightDelta != null ? `${stats.avgWeightDelta > 0 ? '+' : ''}${stats.avgWeightDelta} lbs` : '—'} subtitle="Across all clients" icon={Weight}
-          trendLabel={stats.avgWeightDelta != null ? (stats.avgWeightDelta < 0 ? 'On track' : stats.avgWeightDelta === 0 ? 'Stable' : 'Gaining') : 'Not enough data'}
-          trendPositive={stats.avgWeightDelta != null ? stats.avgWeightDelta <= 0 : null} />
-        <AnalyticsStatCard dark title="Churn Risk" value={`${stats.churnRate}%`} subtitle={`${stats.atRisk} at-risk client${stats.atRisk !== 1 ? 's' : ''}`} icon={TrendingDown}
-          trendLabel={stats.atRisk > 0 ? 'Needs attention' : 'All good'} trendPositive={stats.atRisk === 0} />
-      </div>
+        <ClientActivityTable clients={clients} checkIns={checkIns} />
 
-      {/* ── Trend charts ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <AnalyticsTrendCard title="Client Retention Rate" subtitle="% of enrolled clients staying active" data={retentionTrend} unit="%" color={BLUE} referenceValue={80}
-          badge={`${stats.retentionRate}%`} badgeColor="bg-accent text-primary" />
-        <AnalyticsTrendCard title="Avg Adherence Score" subtitle="Training + nutrition compliance" data={adherenceTrend} unit="%" color={BLUE} referenceValue={70}
-          badge={`${stats.avgAdherence}%`} badgeColor="bg-accent text-primary" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <AnalyticsTrendCard title="Avg Weight Progress" subtitle="Mean lbs change from each client's baseline" data={weightTrend} unit=" lbs" color={BLUE} referenceValue={0}
-          formatter={v => `${v > 0 ? '+' : ''}${v} lbs`} badge={stats.avgWeightDelta != null ? `${stats.avgWeightDelta > 0 ? '+' : ''}${stats.avgWeightDelta} lbs` : '—'} badgeColor="bg-accent text-primary" />
-        <AnalyticsTrendCard title="Churn Rate" subtitle="% of clients flagged at-risk each month" data={churnTrend} unit="%" color={BLUE} referenceValue={10}
-          badge={`${stats.churnRate}%`} badgeColor={stats.churnRate > 10 ? 'bg-destructive/10 text-destructive' : 'bg-accent text-primary'} />
-      </div>
-
-      {/* ── Client Activity Table ── */}
-      <ClientActivityTable clients={clients} checkIns={checkIns} />
-
-      {/* ── Weekly Grid + Top Metrics (side by side) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <WeeklyGrid checkIns={checkIns} />
-        <div className="space-y-3">
-          <p className="text-sm font-semibold text-foreground">Top Metrics</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <WeeklyGrid checkIns={checkIns} />
           <TopMetricCards clients={clients} checkIns={checkIns} />
         </div>
-      </div>
 
-      {/* ── Retention Funnel ── */}
-      <RetentionFunnel clients={clients} />
-    </div>
+        <RetentionFunnel clients={clients} />
+      </div>
+    </Page>
   );
 }

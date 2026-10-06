@@ -1,99 +1,60 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-const SCALE_EMOJIS = { 1: '😫', 2: '😞', 3: '😕', 4: '🙁', 5: '😐', 6: '🙂', 7: '😊', 8: '😁', 9: '🤩', 10: '🔥' };
-
-function getScaleColor(val, max = 10) {
-  const pct = val / max;
-  if (pct <= 0.3) return 'rgb(var(--destructive))';
-  if (pct <= 0.5) return 'rgb(var(--warning))';
-  if (pct <= 0.7) return '#EAB308';
-  return 'rgb(var(--success))';
-}
-
-function getScaleLabel(val, label) {
-  const labels = {
-    0: 'Not tracked', 1: 'Very Low', 2: 'Low', 3: 'Below Average', 4: 'Slightly Below',
-    5: 'Average', 6: 'Good', 7: 'Good', 8: 'Very Good', 9: 'Excellent', 10: 'Outstanding'
-  };
-  return `${label}: ${val} — ${labels[val] || ''}`;
-}
-
-export default function CheckInQuestionScale({ value, onChange, min = 1, max = 10, label, isNumber = false, lastValue }) {
-  const numVal = parseFloat(value) || (isNumber ? '' : min);
-  const color = numVal ? getScaleColor(numVal, max) : 'rgb(var(--muted-foreground))';
+/**
+ * 1–10 scale as a row of number tiles (selected = ink), or a plain big
+ * number field when isNumber is set.
+ */
+export default function CheckInQuestionScale({ value, onChange, min = 1, max = 10, isNumber = false, lastValue, unit, lowLabel = 'Low', highLabel = 'High' }) {
+  const numVal = value === '' || value === null || value === undefined ? '' : parseFloat(value);
 
   if (isNumber) {
     return (
-      <div className="text-center space-y-6">
-        <div className="relative inline-block">
+      <div>
+        <div className="flex items-end gap-2">
           <input
             type="number"
             inputMode="decimal"
             value={numVal}
-            onChange={e => onChange(e.target.value)}
+            onChange={e => onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
             placeholder="0"
-            className="text-center bg-transparent text-white font-bold outline-none"
-            style={{ fontSize: '72px', width: '180px', lineHeight: 1 }}
+            className="num h-20 w-40 rounded-xl border-2 border-foreground bg-card text-center text-[48px] text-foreground focus:outline-none"
           />
+          {unit && <span className="pb-3 text-lg font-semibold text-muted-foreground">{unit}</span>}
         </div>
-        {lastValue && (
-          <p className="text-white/30 text-sm">Last: <span className="text-white/50 font-semibold">{lastValue}</span></p>
+        {lastValue !== undefined && lastValue !== null && lastValue !== '' && (
+          <p className="mt-3 text-[15px] text-muted-foreground">Last time: <span className="font-semibold text-foreground">{lastValue}{unit ? ` ${unit}` : ''}</span></p>
         )}
       </div>
     );
   }
 
+  const values = Array.from({ length: max - min + 1 }, (_, i) => i + min);
   return (
-    <div className="space-y-8">
-      {/* Big number display */}
-      <div className="text-center">
-        <motion.div key={numVal}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="inline-block">
-          <span className="font-black text-8xl" style={{ color }}>
-            {numVal || '—'}
-          </span>
-        </motion.div>
-        <p className="text-2xl mt-1">{SCALE_EMOJIS[numVal] || ''}</p>
-        {numVal && <p className="text-white/40 text-sm mt-2">{getScaleLabel(numVal, label)}</p>}
-      </div>
-
-      {/* Slider */}
-      <div className="relative">
-        <input
-          type="range"
-          min={min} max={max} step={1}
-          value={numVal || min}
-          onChange={e => onChange(parseInt(e.target.value))}
-          className="w-full h-2 rounded-full appearance-none cursor-pointer"
-          style={{
-            background: `linear-gradient(to right, ${color} 0%, ${color} ${((numVal - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) ${((numVal - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) 100%)`,
-          }}
-        />
-        <div className="flex justify-between mt-2">
-          <span className="text-[10px] text-white/20">{min}</span>
-          <span className="text-[10px] text-white/20">{max}</span>
-        </div>
-      </div>
-
-      {/* Tap markers */}
-      <div className="grid grid-cols-10 gap-1">
-        {Array.from({ length: max - min + 1 }, (_, i) => i + min).map(n => (
-          <button key={n} onClick={() => onChange(n)}
-            className="flex flex-col items-center gap-1 py-2 rounded-xl transition-all"
-            style={{
-              background: numVal === n ? `${getScaleColor(n, max)}25` : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${numVal === n ? getScaleColor(n, max) + '50' : 'transparent'}`,
-            }}>
-            <span className="text-xs font-bold" style={{ color: numVal === n ? getScaleColor(n, max) : 'rgba(255,255,255,0.3)' }}>{n}</span>
+    <div>
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(values.length, 5)}, minmax(0, 1fr))` }} role="radiogroup">
+        {values.map(n => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={numVal === n}
+            onClick={() => onChange(n)}
+            className={cn(
+              'touch-compact num h-14 rounded-lg text-[24px] transition-colors',
+              numVal === n ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground hover:bg-accent',
+            )}
+          >
+            {n}
           </button>
         ))}
       </div>
-
+      <div className="mt-2 flex justify-between text-[13px] text-muted-foreground">
+        <span>{min} = {lowLabel.toLowerCase()}</span>
+        <span>{max} = {highLabel.toLowerCase()}</span>
+      </div>
       {lastValue !== undefined && lastValue !== null && (
-        <p className="text-white/25 text-xs text-center">Last week: <span className="text-white/40 font-semibold">{lastValue}/10</span></p>
+        <p className="mt-3 text-[15px] text-muted-foreground">Last week: <span className="font-semibold text-foreground">{lastValue} of {max}</span></p>
       )}
     </div>
   );

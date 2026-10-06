@@ -1,90 +1,86 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { format, parseISO } from 'date-fns';
-import { Eye, CheckCircle2, Trash2, Copy, Bell } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Initials } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import InvoiceStatusBadge from './InvoiceStatusBadge';
-
-function Avatar({ name }) {
-  const initials = (name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const colors = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--tc-destructive)'];
-  const color = colors[name?.charCodeAt(0) % colors.length] || 'var(--tc-primary)';
-  return (
-    <div style={{ width: 36, height: 36, borderRadius: 10, background: color + '20', border: `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color, flexShrink: 0 }}>
-      {initials}
-    </div>
-  );
-}
+import { INVOICE_GRID } from './InvoiceListHeader';
+import { money } from '@/components/business/ui';
 
 export default function InvoiceRow({ invoice, onView, onMarkPaid, onDuplicate, onDelete }) {
-  const [hovered, setHovered] = useState(false);
-
-  const handleReminder = async (e) => {
-    e.stopPropagation();
+  const handleReminder = async () => {
     await db.functions.invoke('sendInvoiceReminder', { invoice_id: invoice.id });
     toast.success(`Reminder sent to ${invoice.client_name}`);
   };
 
-  const fmt = (d) => { try { return format(parseISO(d), 'MMM d, yyyy'); } catch { return d || '—'; } };
+  const fmt = (d) => { try { return format(parseISO(d), 'MMM d'); } catch { return d || '—'; } };
+  const overdue = invoice.status === 'overdue';
+  const canRemind = ['sent', 'viewed', 'overdue'].includes(invoice.status);
+  const canMarkPaid = invoice.status !== 'paid' && invoice.status !== 'cancelled';
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', borderBottom: '1px solid var(--tc-muted)', background: hovered ? 'var(--tc-background)' : 'var(--tc-card)', transition: 'background 0.15s', cursor: 'pointer' }}
+      role="button"
+      tabIndex={0}
       onClick={onView}
+      onKeyDown={(e) => { if (e.key === 'Enter') onView?.(); }}
+      className={cn(
+        'relative flex flex-wrap items-center gap-x-3 gap-y-1 pl-5 pr-12 md:pr-6 sm:pl-6 py-3.5 border-b border-border last:border-b-0 cursor-pointer hover:bg-accent/60 transition-colors',
+        INVOICE_GRID
+      )}
     >
-      {/* Avatar + Name */}
-      <Avatar name={invoice.client_name} />
-      <div style={{ flex: 2, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--tc-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invoice.client_name}</div>
-        <div style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', marginTop: 1 }}>{invoice.invoice_number}</div>
+      {/* Client */}
+      <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none">
+        <Initials name={invoice.client_name} tone={overdue ? 'alert' : 'default'} />
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-foreground truncate">{invoice.client_name || 'No client'}</p>
+          <p className="text-[13px] text-muted-foreground truncate">
+            {invoice.invoice_number}
+            <span className="md:hidden">{invoice.due_date ? ` · due ${fmt(invoice.due_date)}` : ''}</span>
+          </p>
+        </div>
       </div>
 
       {/* Description */}
-      <div style={{ flex: 3, minWidth: 0, display: 'none' }} className="sm-flex">
-        <div style={{ fontSize: 13, color: 'var(--tc-muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invoice.description || '—'}</div>
-      </div>
+      <p className="hidden md:block text-sm text-foreground/80 truncate">
+        {invoice.description || '—'}
+        {invoice.type === 'recurring' && <span className="text-muted-foreground"> · recurring</span>}
+      </p>
 
       {/* Amount */}
-      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--tc-foreground)', flexShrink: 0, minWidth: 80, textAlign: 'right' }}>
-        ${Number(invoice.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </div>
+      <p className="num text-[18px] text-foreground text-right ml-auto md:ml-0">{money(invoice.amount, { cents: Number(invoice.amount) % 1 !== 0 })}</p>
 
-      {/* Dates */}
-      <div style={{ flexShrink: 0, minWidth: 100, display: 'none' }} className="md-flex">
-        <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>Due {fmt(invoice.due_date)}</div>
-        <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)', marginTop: 2 }}>Issued {fmt(invoice.issue_date)}</div>
-      </div>
+      {/* Due */}
+      <p className={cn('hidden md:block text-sm', overdue ? 'text-destructive font-semibold' : 'text-foreground')}>{fmt(invoice.due_date)}</p>
 
       {/* Status */}
-      <div style={{ flexShrink: 0 }}>
+      <div className="w-full pl-12 md:w-auto md:pl-0">
         <InvoiceStatusBadge status={invoice.status} />
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0, opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }} onClick={e => e.stopPropagation()}>
-        <ActionBtn icon={Eye} title="View / Edit" onClick={onView} />
-        {['sent', 'viewed', 'overdue'].includes(invoice.status) && (
-          <ActionBtn icon={Bell} title="Send Reminder" onClick={handleReminder} color="var(--tc-warning)" />
-        )}
-        {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
-          <ActionBtn icon={CheckCircle2} title="Mark Paid" onClick={onMarkPaid} color="var(--tc-success)" />
-        )}
-        <ActionBtn icon={Copy} title="Duplicate" onClick={onDuplicate} />
-        <ActionBtn icon={Trash2} title="Delete" onClick={onDelete} color="var(--tc-destructive)" />
+      <div className="absolute right-3 top-3 md:static" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="touch-compact h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Invoice actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onView}>Open invoice</DropdownMenuItem>
+            {canMarkPaid && <DropdownMenuItem onClick={onMarkPaid}>Mark as paid</DropdownMenuItem>}
+            {canRemind && <DropdownMenuItem onClick={handleReminder}>Send a reminder</DropdownMenuItem>}
+            <DropdownMenuItem onClick={onDuplicate}>Duplicate as draft</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">Delete</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
-  );
-}
-
-function ActionBtn({ icon: Icon, title, onClick, color = 'var(--tc-muted-foreground)' }) {
-  const [h, setH] = useState(false);
-  return (
-    <button title={title} onClick={onClick}
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ width: 30, height: 30, borderRadius: 8, border: 'none', background: h ? 'var(--tc-muted)' : 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
-      <Icon size={14} />
-    </button>
   );
 }

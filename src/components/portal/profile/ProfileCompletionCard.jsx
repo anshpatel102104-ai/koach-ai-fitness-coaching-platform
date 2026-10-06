@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Bar } from '@/components/portal/PortalUI';
 
 export default function ProfileCompletionCard({ client, user }) {
   const [dismissed, setDismissed] = useState(false);
 
   const items = [
-    { id: 'photo', label: 'Add profile photo', done: !!client?.avatar_url },
-    { id: 'weight', label: 'Set goal weight', done: !!client?.target_weight },
+    { id: 'photo', label: 'Add a profile photo', done: !!client?.avatar_url },
+    { id: 'weight', label: 'Set a goal weight', done: !!client?.target_weight },
     { id: 'health', label: 'Connect Apple Health', done: false },
-    { id: 'notifs', label: 'Set notification preferences', done: false },
+    { id: 'notifs', label: 'Choose your notifications', done: false },
   ];
 
   const done = items.filter(i => i.done).length;
@@ -18,31 +19,27 @@ export default function ProfileCompletionCard({ client, user }) {
   if (pct === 100 || dismissed) return null;
 
   return (
-    <AnimatePresence>
-      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}
-        className="mx-5 mt-3 mb-0 p-4 rounded-2xl relative bg-card"
-        style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.07)', border: '1px solid rgb(var(--muted))' }}>
-        <button onClick={() => setDismissed(true)}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-          <X className="w-3.5 h-3.5 text-muted-foreground" />
+    <section className="panel p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg text-foreground">Finish your profile</h2>
+          <p className="text-[13px] text-muted-foreground">{done} of {items.length} done</p>
+        </div>
+        <button type="button" onClick={() => setDismissed(true)} aria-label="Dismiss" className="touch-compact text-muted-foreground hover:text-foreground">
+          <X className="h-4 w-4" />
         </button>
-        <p className="text-foreground font-black text-sm mb-0.5">Complete your profile</p>
-        <p className="text-muted-foreground text-[10px] mb-3">Get the most out of KOACH AI</p>
-        {/* Progress bar */}
-        <div className="h-2 rounded-full mb-3 bg-muted">
-          <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, rgb(var(--primary)), rgb(var(--ai)))' }} />
-        </div>
-        <div className="space-y-1.5">
-          {items.filter(i => !i.done).map(item => (
-            <div key={item.id} className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-border flex-shrink-0" />
-              <p className="text-muted-foreground text-xs">{item.label}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-primary text-[10px] mt-2 font-bold">{pct}% complete</p>
-      </motion.div>
-    </AnimatePresence>
+      </div>
+      <Bar pct={pct} className="mt-3" />
+      <ul className="mt-3 space-y-2">
+        {items.map(item => (
+          <li key={item.id} className="flex items-center gap-2.5 text-sm">
+            <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', item.done ? 'bg-success text-white' : 'border-[1.5px] border-input')}>
+              {item.done && <Check className="h-3 w-3" strokeWidth={3} />}
+            </span>
+            <span className={item.done ? 'text-muted-foreground line-through' : 'text-foreground'}>{item.label}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

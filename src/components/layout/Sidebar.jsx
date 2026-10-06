@@ -1,125 +1,118 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import KoachLogo from '@/components/brand/KoachLogo.jsx';
-import NotificationBell from '@/components/notifications/NotificationBell';
-import { ThemeToggleButton } from '@/components/settings/ThemeToggle';
-
 import {
-  LayoutDashboard, Users, MessageSquare, Calendar,
-  Dumbbell, Salad, ClipboardList,
-  Sparkles, Bot, BarChart3,
-  CreditCard, Settings, LogOut, ChevronLeft, ChevronRight,
-  Lock, UserPlus, Trophy, ShoppingBag, Search,
+  BarChart3, Users, SquareCheckBig, MessageCircle, Activity,
+  Dumbbell, Apple, NotebookText, Workflow, Sparkles,
+  CalendarDays, CreditCard, LineChart, UserPlus, ShoppingBag,
+  Settings, LogOut, Lock, Sun, Moon, Palette, UsersRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { hasFeature } from '@/lib/subscription';
+import { hasFeature, getUserTier, getLimit } from '@/lib/subscription';
 import { useTeamRole } from '@/lib/useTeamRole';
-import { useCommandPalette } from '@/components/command/CommandPalette';
 import { track } from '@/lib/telemetry';
 import { darkModeEnabled } from '@/lib/flags';
+import { useTheme } from '@/lib/theme';
+import { Initials } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-function SidebarSearchButton({ collapsed }) {
-  const { open } = useCommandPalette();
-  return (
-    <button
-      onClick={open}
-      title="Search (⌘K)"
-      className={cn(
-        'flex items-center gap-2.5 rounded-lg text-[13px] font-medium transition-colors w-full min-h-[40px]',
-        collapsed ? 'justify-center px-0' : 'px-3'
-      )}
-      style={{ color: 'color-mix(in srgb, white 50%, transparent)', background: 'color-mix(in srgb, white 4%, transparent)' }}
-    >
-      <Search className="w-[16px] h-[16px] flex-shrink-0" />
-      {!collapsed && (
-        <>
-          <span className="flex-1 text-left">Search</span>
-          <kbd className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: 'color-mix(in srgb, white 8%, transparent)' }}>⌘K</kbd>
-        </>
-      )}
-    </button>
-  );
-}
-
-// Consolidated to 13 visible items across 4 groups. Everything else lives in the
-// ⌘K command palette + Settings (routes are preserved — nothing is deleted).
-// At-Risk is folded into Adherence (surfaced there as a filter/tab).
+// Three groups mirror how a coach's week actually runs: coach people, build
+// what they follow, run the business. Everything else lives in ⌘K + Settings
+// (routes are preserved — nothing is deleted).
 const NAV_GROUPS = [
   {
-    label: 'MAIN',
+    label: 'Coaching',
     items: [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-      { icon: Users, label: 'Clients', path: '/clients' },
-      { icon: MessageSquare, label: 'Messages', path: '/messages' },
-      { icon: Calendar, label: 'Calendar', path: '/schedule' },
+      { icon: BarChart3, label: 'Today', path: '/' },
+      { icon: Users, label: 'Clients', path: '/clients', count: 'clients' },
+      { icon: SquareCheckBig, label: 'Check-ins', path: '/checkin-review', feature: 'checkin_review', badge: 'checkins' },
+      { icon: MessageCircle, label: 'Messages', path: '/messages', badge: 'messages' },
+      { icon: Activity, label: 'Adherence', path: '/adherence', feature: 'adherence' },
     ],
   },
   {
-    label: 'COACHING',
+    label: 'Build',
     items: [
-      { icon: Dumbbell, label: 'Programs', path: '/programs' },
-      { icon: Salad, label: 'Nutrition', path: '/nutrition' },
-      { icon: ClipboardList, label: 'Check-ins', path: '/checkin-review', feature: 'checkin_review' },
-      { icon: Trophy, label: 'Adherence', path: '/adherence', feature: 'adherence' },
+      { icon: Dumbbell, label: 'Programs', path: '/programs', also: ['/program-builder'] },
+      { icon: Apple, label: 'Nutrition', path: '/nutrition', also: ['/food-library'] },
+      { icon: NotebookText, label: 'Exercise library', path: '/exercises' },
+      { icon: Workflow, label: 'Automations', path: '/automations' },
+      { icon: Sparkles, label: 'Assistant', path: '/assistant', feature: 'assistant' },
     ],
   },
   {
-    label: 'GROW',
+    label: 'Business',
     items: [
-      { icon: BarChart3, label: 'Business', path: '/business' },
+      { icon: CalendarDays, label: 'Schedule', path: '/schedule', count: 'sessions' },
+      { icon: CreditCard, label: 'Billing', path: '/invoicing', also: ['/packages'] },
+      { icon: LineChart, label: 'Insights', path: '/business', also: ['/analytics', '/revenue'] },
       { icon: UserPlus, label: 'Leads', path: '/sales', feature: 'sales' },
       { icon: ShoppingBag, label: 'Store', path: '/store', feature: 'store' },
     ],
   },
-  {
-    label: 'AI',
-    items: [
-      { icon: Sparkles, label: 'Assistant', path: '/assistant', feature: 'assistant' },
-      { icon: Bot, label: 'Automations', path: '/automations' },
-    ],
-  },
 ];
 
-const ALL_BOTTOM_ITEMS = [
-  { icon: CreditCard, label: 'Subscription', path: '/subscription', ownerOnly: true },
-  { icon: Settings, label: 'Settings', path: '/settings' },
-];
-
-function useUnreadCount() {
+/** Live numbers for the nav: roster size, check-ins waiting, unread, sessions today. */
+function useNavCounts() {
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => db.entities.Client.list('-created_date'),
+    staleTime: 60000,
+  });
+  const { data: checkins = [] } = useQuery({
+    queryKey: ['checkins-review'],
+    queryFn: () => db.entities.CheckIn.list('-date', 200),
+    staleTime: 60000,
+  });
   const { data: messages = [] } = useQuery({
     queryKey: ['messages'],
     queryFn: () => db.entities.Message.list('-created_date', 200),
     staleTime: 30000,
   });
-  return messages.filter(m => m.sender === 'client' && !m.is_read).length;
+  const { data: sessions = [] } = useQuery({
+    queryKey: ['sessions'],
+    queryFn: () => db.entities.Session.list('-date', 200),
+    staleTime: 60000,
+  });
+  const today = new Date().toISOString().slice(0, 10);
+  const active = clients.filter(c => !c.status || c.status === 'active');
+  return {
+    clients: active.length,
+    checkins: checkins.filter(ci => !ci.coach_responded && ci.review_status !== 'reviewed').length,
+    messages: messages.filter(m => m.sender === 'client' && !m.is_read).length,
+    sessions: sessions.filter(s => (s.date || '').slice(0, 10) === today && s.status !== 'cancelled').length,
+    totalClients: active.length,
+  };
 }
 
-function NavItem({ item, collapsed, onUpgrade, user }) {
-  const location = useLocation();
-  const isActive = location.pathname === item.path ||
-    (item.path !== '/' && location.pathname.startsWith(item.path));
-  const isLocked = item.feature && !hasFeature(user, item.feature);
-  const unreadCount = useUnreadCount();
-  const showUnread = item.path === '/messages' && unreadCount > 0;
+function isPathActive(pathname, item) {
+  const paths = [item.path, ...(item.also || [])];
+  return paths.some(p => (p === '/' ? pathname === '/' : pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p + '?')));
+}
 
-  if (isLocked) {
+function NavItem({ item, counts, onUpgrade, user, onNavigate }) {
+  const { pathname } = useLocation();
+  const active = isPathActive(pathname, item);
+  const locked = item.feature && !hasFeature(user, item.feature);
+  const Icon = item.icon;
+  const badge = item.badge ? counts[item.badge] : 0;
+  const count = item.count ? counts[item.count] : 0;
+
+  const base = 'group relative flex items-center gap-3 rounded-lg px-3 h-11 text-[15px] font-medium transition-colors';
+
+  if (locked) {
     return (
       <button
         onClick={() => onUpgrade?.(item.feature)}
-        className="relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm w-full text-left transition-colors min-h-[40px]"
-        style={{ color: 'color-mix(in srgb, white 20%, transparent)' }}
-        title={collapsed ? item.label : undefined}
+        className={cn(base, 'w-full text-left text-sidebar-muted/70 hover:text-sidebar-foreground')}
       >
-        <item.icon className="w-[16px] h-[16px] flex-shrink-0" />
-        {!collapsed && (
-          <>
-            <span className="flex-1 text-[13px]">{item.label}</span>
-            <Lock className="w-3 h-3 opacity-30" />
-          </>
-        )}
+        <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.75} />
+        <span className="flex-1">{item.label}</span>
+        <Lock className="h-3.5 w-3.5 opacity-60" />
       </button>
     );
   }
@@ -127,176 +120,119 @@ function NavItem({ item, collapsed, onUpgrade, user }) {
   return (
     <Link
       to={item.path}
-      onClick={() => track('nav.click', { path: item.path, label: item.label })}
-      title={collapsed ? item.label : undefined}
+      onClick={() => { track('nav.click', { path: item.path, label: item.label }); onNavigate?.(); }}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 min-h-[40px]',
-        isActive
-          ? 'text-white'
-          : 'hover:text-white'
+        base,
+        active
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+          : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
       )}
-      style={{
-        color: isActive ? 'var(--tc-sidebar-accent-foreground)' : 'color-mix(in srgb, white 38%, transparent)',
-        background: isActive ? 'color-mix(in srgb, var(--tc-sidebar-primary) 14%, transparent)' : 'transparent',
-      }}
     >
-      {isActive && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-r-full" style={{ background: 'var(--tc-sidebar-primary)' }} />
-      )}
-      <item.icon className={cn('w-[16px] h-[16px] flex-shrink-0 transition-colors')} />
-      {!collapsed && <span className="flex-1">{item.label}</span>}
-      {!collapsed && showUnread && (
-        <span className="min-w-[18px] h-[18px] rounded-full bg-destructive text-white text-[10px] font-bold flex items-center justify-center px-1 flex-shrink-0">
-          {unreadCount > 99 ? '99+' : unreadCount}
+      <Icon className={cn('h-[18px] w-[18px] flex-shrink-0', active && 'text-sidebar-primary')} strokeWidth={1.75} />
+      <span className="flex-1 truncate">{item.label}</span>
+      {badge > 0 && (
+        <span className="min-w-[22px] h-[22px] rounded-full bg-sidebar-primary px-1.5 text-[12px] font-bold text-sidebar-primary-foreground flex items-center justify-center tabular-nums">
+          {badge > 99 ? '99+' : badge}
         </span>
       )}
-      {collapsed && showUnread && (
-        <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-destructive" />
+      {!badge && count > 0 && (
+        <span className={cn('text-[13px] tabular-nums', active ? 'rounded-md bg-white/10 px-1.5 py-0.5 font-semibold text-white' : 'text-sidebar-muted')}>{count}</span>
       )}
     </Link>
   );
 }
 
-export default function Sidebar({ user, onUpgrade, mobileMode = false, onNavClick }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const { isOwner } = useTeamRole();
+/** Coach card pinned to the bottom: plan + client-spot meter + account menu. */
+function AccountCard({ user, totalClients }) {
+  const navigate = useNavigate();
   const { logout } = useAuth();
+  const { isOwner } = useTeamRole();
+  const { resolved, toggle } = useTheme();
+  const tier = getUserTier(user);
+  const limit = getLimit(user, 'max_clients');
+  const pct = limit > 0 ? Math.min(100, Math.round((totalClients / limit) * 100)) : null;
 
-  // Mobile mode: render just the nav content (no fixed positioning, shown inside overlay)
-  if (mobileMode) {
-    return (
-      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-4 h-full">
-        <div onClick={onNavClick}><SidebarSearchButton collapsed={false} /></div>
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi}>
-            {group.label && (
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] px-3 mb-1.5" style={{ color: 'color-mix(in srgb, white 20%, transparent)' }}>
-                {group.label}
-              </p>
-            )}
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="w-full rounded-xl bg-sidebar-accent/70 hover:bg-sidebar-accent p-3.5 text-left transition-colors">
+          <div className="flex items-center gap-3">
+            <Initials name={user?.full_name || user?.email || 'Coach'} size={34} className="bg-white/10 text-white" />
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold text-white truncate">{user?.full_name || 'Your account'}</p>
+              <p className="text-[13px] text-sidebar-muted">{tier?.name || 'Starter'} plan</p>
+            </div>
+          </div>
+          {pct !== null ? (
+            <>
+              <div className="mt-3 h-1 rounded-full bg-white/10 overflow-hidden">
+                <div className="h-full rounded-full bg-white/80" style={{ width: `${Math.max(pct, 2)}%` }} />
+              </div>
+              <p className="mt-2 text-[12px] text-sidebar-muted">{totalClients} of {limit} client spots used</p>
+            </>
+          ) : (
+            <p className="mt-2 text-[12px] text-sidebar-muted">{totalClients} active clients</p>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-[216px]">
+        <DropdownMenuItem onClick={() => navigate('/settings')}><Settings className="h-4 w-4" />Settings</DropdownMenuItem>
+        {isOwner && <DropdownMenuItem onClick={() => navigate('/subscription')}><CreditCard className="h-4 w-4" />Plan and billing</DropdownMenuItem>}
+        <DropdownMenuItem onClick={() => navigate('/white-label')}><Palette className="h-4 w-4" />Branding</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/team')}><UsersRound className="h-4 w-4" />Team</DropdownMenuItem>
+        {darkModeEnabled && (
+          <DropdownMenuItem onClick={toggle}>
+            {resolved === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {resolved === 'dark' ? 'Light mode' : 'Dark mode'}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:text-destructive"><LogOut className="h-4 w-4" />Log out</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function SidebarBody({ user, onUpgrade, onNavigate }) {
+  const counts = useNavCounts();
+  return (
+    <>
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-6 scrollbar-hide" aria-label="Main">
+        {NAV_GROUPS.map(group => (
+          <div key={group.label}>
+            <p className="px-3 mb-1.5 text-[13px] font-medium text-sidebar-muted">{group.label}</p>
             <div className="space-y-0.5">
               {group.items.map(item => (
-                <div key={item.path} onClick={onNavClick}>
-                  <NavItem item={item} collapsed={false} onUpgrade={onUpgrade} user={user} />
-                </div>
+                <NavItem key={item.path} item={item} counts={counts} onUpgrade={onUpgrade} user={user} onNavigate={onNavigate} />
               ))}
             </div>
           </div>
         ))}
-        <div className="pt-2 border-t border-white/5 space-y-0.5">
-          {ALL_BOTTOM_ITEMS.filter(item => !item.ownerOnly || isOwner).map(item => (
-            <div key={item.path} onClick={onNavClick}>
-              <Link
-                to={item.path}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all min-h-[44px]"
-                style={{ color: 'color-mix(in srgb, white 35%, transparent)' }}
-              >
-                <item.icon className="w-[16px] h-[16px] flex-shrink-0" />
-                <span>{item.label}</span>
-              </Link>
-            </div>
-          ))}
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all w-full min-h-[44px]"
-            style={{ color: 'color-mix(in srgb, white 25%, transparent)' }}
-          >
-            <LogOut className="w-[16px] h-[16px] flex-shrink-0" />
-            <span>Logout</span>
-          </button>
-        </div>
       </nav>
+      <div className="p-3 pt-0">
+        <AccountCard user={user} totalClients={counts.totalClients} />
+      </div>
+    </>
+  );
+}
+
+export default function Sidebar({ user, onUpgrade, mobileMode = false, onNavClick }) {
+  // Mobile mode: nav content only, rendered inside the overlay panel.
+  if (mobileMode) {
+    return (
+      <div className="flex h-full flex-col pt-3">
+        <SidebarBody user={user} onUpgrade={onUpgrade} onNavigate={onNavClick} />
+      </div>
     );
   }
 
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 h-screen z-50 flex-col transition-all duration-200 hidden md:flex',
-        collapsed ? 'w-[56px]' : 'w-[210px]'
-      )}
-      style={{ background: 'var(--tc-sidebar-background)', borderRight: '1px solid var(--tc-sidebar-border)' }}
-    >
-      {/* Logo */}
-      <div className={cn(
-        'h-[56px] flex items-center flex-shrink-0',
-        collapsed ? 'px-3 justify-center' : 'px-4 gap-3'
-      )} style={{ borderBottom: '1px solid var(--tc-sidebar-border)' }}>
-        <KoachLogo size={32} rounded="rounded-xl" glow={true} bg={true} />
-        {!collapsed && (
-          <>
-            <div className="flex-1 min-w-0">
-              <span className="block font-bold text-[13px] text-white tracking-tight leading-none">KOACH AI</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {darkModeEnabled && <ThemeToggleButton onDark />}
-              <NotificationBell />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-4">
-        <SidebarSearchButton collapsed={collapsed} />
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi}>
-            {group.label && !collapsed && (
-              <p className="text-[9px] font-bold uppercase tracking-[0.18em] px-3 mb-1.5" style={{ color: 'color-mix(in srgb, white 20%, transparent)' }}>
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map(item => (
-                <NavItem key={item.path} item={item} collapsed={collapsed} onUpgrade={onUpgrade} user={user} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      {/* Bottom */}
-      <div className="p-2 space-y-0.5" style={{ borderTop: '1px solid color-mix(in srgb, white 5%, transparent)' }}>
-        {ALL_BOTTOM_ITEMS.filter(item => !item.ownerOnly || isOwner).map(item => {
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              title={collapsed ? item.label : undefined}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all"
-              style={{ color: 'color-mix(in srgb, white 35%, transparent)' }}
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-sidebar-accent-foreground)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'color-mix(in srgb, white 35%, transparent)'}
-            >
-              <item.icon className="w-[16px] h-[16px] flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
-
-        <button
-          onClick={() => logout()}
-          title={collapsed ? 'Logout' : undefined}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all w-full"
-          style={{ color: 'color-mix(in srgb, white 25%, transparent)' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--tc-destructive)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'color-mix(in srgb, white 25%, transparent)'}
-        >
-          <LogOut className="w-[16px] h-[16px] flex-shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </button>
-
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className="flex items-center justify-center w-full py-2 rounded-lg transition-all mt-1"
-          style={{ color: 'color-mix(in srgb, white 20%, transparent)' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'color-mix(in srgb, white 60%, transparent)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'color-mix(in srgb, white 20%, transparent)'}
-          title={collapsed ? 'Expand' : 'Collapse'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
+    <aside className="fixed left-0 top-0 z-50 hidden h-screen w-[248px] flex-col bg-sidebar lg:flex">
+      <Link to="/" className="flex h-[92px] flex-shrink-0 items-center px-6" aria-label="KOACH AI home">
+        <img src="/koach-logo-white.png" alt="KOACH AI" className="h-8 w-auto" />
+      </Link>
+      <SidebarBody user={user} onUpgrade={onUpgrade} />
     </aside>
   );
 }

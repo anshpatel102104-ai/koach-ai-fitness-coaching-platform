@@ -6,9 +6,9 @@ import { Dumbbell } from 'lucide-react';
 function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(13,17,28,0.95)', border: '1px solid rgba(255,255,255,0.12)' }}>
-      <p className="text-white font-bold">{payload[0].value} lbs</p>
-      <p className="text-white/40">{payload[0].payload.date}</p>
+    <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(13,17,28,0.95)', border: '1px solid rgb(var(--border))' }}>
+      <p className="text-foreground font-bold">{payload[0].value} lbs</p>
+      <p className="text-muted-foreground">{payload[0].payload.date}</p>
     </div>
   );
 }
@@ -74,11 +74,11 @@ export default function PerformanceCard({ workoutSessions }) {
 
   if (!workoutSessions.length) {
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <p className="text-white font-bold text-sm mb-3">💪 My Performance</p>
+      <div className="rounded-xl p-4" style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
+        <p className="text-foreground font-bold text-sm mb-3">My Performance</p>
         <div className="py-8 text-center">
-          <Dumbbell className="w-10 h-10 text-white/10 mx-auto mb-3" />
-          <p className="text-white/30 text-xs">Complete your first workout to start building your performance history!</p>
+          <Dumbbell className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground text-xs">Complete your first workout to start building your performance history</p>
         </div>
       </div>
     );
@@ -87,24 +87,24 @@ export default function PerformanceCard({ workoutSessions }) {
   const currentEx = selectedExercise || exercises[0] || '';
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <p className="text-white font-bold text-sm mb-3">💪 My Performance</p>
+    <div className="rounded-xl p-4" style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
+      <p className="text-foreground font-bold text-sm mb-3">My Performance</p>
 
       {/* Personal Bests */}
       {pbList.length > 0 && (
         <div className="space-y-1.5 mb-4">
-          <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">Personal Bests</p>
+          <p className="text-muted-foreground text-xs font-semibold">Personal Bests</p>
           {pbList.map(([name, pb]) => (
             <div key={name} className="flex items-center gap-3 py-2 px-3 rounded-xl"
-              style={{ background: 'rgba(255,255,255,0.04)' }}>
+              style={{ background: 'rgb(var(--secondary))' }}>
               <div className="flex-1 min-w-0">
-                <p className="text-white/70 text-xs font-semibold truncate">{name}</p>
-                <p className="text-white/30 text-[10px]">{format(new Date(pb.date), 'MMM d, yyyy')}</p>
+                <p className="text-foreground text-xs font-semibold truncate">{name}</p>
+                <p className="text-muted-foreground text-[12px]">{format(new Date(pb.date), 'MMM d, yyyy')}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-white font-bold text-sm">{pb.weight} lbs × {pb.reps}</span>
+                <span className="text-foreground font-bold text-sm">{pb.weight} lbs × {pb.reps}</span>
                 {isNew(pb.date) && (
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(252,211,77,0.2)', color: 'rgb(var(--warning))' }}>🏆 NEW</span>
+                  <span className="text-[12px] font-black px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(252,211,77,0.2)', color: 'rgb(var(--warning))' }}>NEW</span>
                 )}
               </div>
             </div>
@@ -116,33 +116,33 @@ export default function PerformanceCard({ workoutSessions }) {
       {exercises.length > 0 && (
         <>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest">Strength Progress</p>
+            <p className="text-muted-foreground text-xs font-semibold">Strength Progress</p>
             <select value={currentEx} onChange={e => setSelectedExercise(e.target.value)}
-              className="text-[10px] text-white/60 bg-transparent border border-white/10 rounded-lg px-2 py-1 focus:outline-none">
-              {exercises.map(ex => <option key={ex} value={ex} style={{ background: '#0A0F1A' }}>{ex}</option>)}
+              className="text-[12px] text-foreground bg-transparent border border-border rounded-lg px-2 py-1 focus:outline-none">
+              {exercises.map(ex => <option key={ex} value={ex} style={{ background: 'rgb(var(--foreground))' }}>{ex}</option>)}
             </select>
           </div>
           {chartData.length >= 2 ? (
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 4, right: 8, left: -28, bottom: 0 }}>
-                  <XAxis dataKey="date" tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                  <YAxis tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 8 }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 8 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                  <YAxis tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 8 }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="weight" stroke="rgb(var(--ai))" strokeWidth={2} dot={false}
-                    activeDot={{ r: 4, fill: 'rgb(var(--ai))', stroke: 'rgb(var(--card))', strokeWidth: 2 }} />
+                  <Line type="monotone" dataKey="weight" stroke="rgb(var(--foreground))" strokeWidth={2} dot={false}
+                    activeDot={{ r: 4, fill: 'rgb(var(--primary))', stroke: 'rgb(var(--card))', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-white/20 text-[10px] text-center py-4">Log more {currentEx} sessions to see your progress</p>
+            <p className="text-muted-foreground text-[12px] text-center py-4">Log more {currentEx} sessions to see your progress</p>
           )}
         </>
       )}
 
       {/* Consistency heatmap */}
       <div className="mt-4">
-        <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest mb-2">Workout Heatmap</p>
+        <p className="text-muted-foreground text-xs font-semibold mb-2">Workout Heatmap</p>
         <WorkoutHeatmap sessions={workoutSessions} />
       </div>
     </div>
@@ -173,7 +173,7 @@ function WorkoutHeatmap({ sessions }) {
           {week.map(day => (
             <div key={day.key} className="w-4 h-4 rounded-sm"
               style={{
-                background: day.hasWorkout ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.06)',
+                background: day.hasWorkout ? 'rgb(var(--primary))' : 'rgb(var(--secondary))',
                 border: day.isToday ? '1px solid rgb(var(--primary) / 0.5)' : 'none',
               }} />
           ))}

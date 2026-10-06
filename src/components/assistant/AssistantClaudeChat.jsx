@@ -1,44 +1,42 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Send, Sparkles, Copy, Check, Mic, BookmarkPlus, User, Zap, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
+import { Mic, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
 import { format } from 'date-fns';
 
-const TOOL_ICONS = {
-  create_nutrition_plan: '🥗',
-  update_nutrition_plan: '📊',
-  update_program: '🏋️',
-  get_program: '🔍',
-  list_checkins: '📋',
-  create_program: '💪',
-  update_client: '👤',
-  flag_client_at_risk: '⚠️',
-  send_message: '💬',
-  create_checkin_response: '✅',
-  award_badge: '🏆',
-  get_client_data: '🔍',
-  list_clients: '📋',
+const TOOL_LABELS = {
+  create_nutrition_plan: 'Created a nutrition plan',
+  update_nutrition_plan: 'Updated the nutrition plan',
+  update_program: 'Updated the program',
+  get_program: 'Read the program',
+  list_checkins: 'Read check-ins',
+  create_program: 'Created a program',
+  update_client: 'Updated the client',
+  flag_client_at_risk: 'Flagged as at risk',
+  send_message: 'Sent a message',
+  create_checkin_response: 'Replied to a check-in',
+  award_badge: 'Awarded a badge',
+  get_client_data: 'Read client data',
+  list_clients: 'Read your client list',
 };
+const toolLabel = (tool) => TOOL_LABELS[tool] || String(tool || 'Action').replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
 
 function ActionCard({ action }) {
-  const icon = TOOL_ICONS[action.tool] || '⚙️';
-  const label = (action.tool || '').replace(/_/g, ' ');
   const isError = !!action.result?.error;
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-background border border-border rounded-xl text-sm">
-      <span className="text-lg">{icon}</span>
+    <div className="flex items-start gap-3 px-4 py-2.5 rounded-lg bg-secondary text-sm">
+      <span className={cn('mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0', isError ? 'bg-destructive' : 'bg-success')} />
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-foreground capitalize">{label}</p>
-        <p className="text-muted-foreground text-xs truncate">{action.result?.message || action.result?.error || 'Done'}</p>
+        <p className="font-semibold text-foreground">{toolLabel(action.tool)}</p>
+        <p className={cn('text-[13px] truncate', isError ? 'text-destructive' : 'text-muted-foreground')}>
+          {action.result?.message || action.result?.error || 'Done'}
+        </p>
       </div>
-      {isError
-        ? <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-        : <CheckCircle className="w-4 h-4 text-success shrink-0" />
-      }
     </div>
   );
 }
@@ -46,50 +44,44 @@ function ActionCard({ action }) {
 
 /* A write the assistant proposed. Nothing is saved until the coach confirms. */
 function ProposalCard({ proposal, onResolve }) {
-  const icon = TOOL_ICONS[proposal.tool] || '⚙️';
   const busy = proposal.status === 'saving';
   const done = proposal.status === 'confirmed';
   const dismissed = proposal.status === 'dismissed';
   return (
-    <div className={cn('w-full rounded-xl border p-3 text-sm space-y-2',
-      done ? 'border-success bg-success/10' : dismissed ? 'border-border bg-secondary opacity-60' : 'border-primary/40 bg-primary/5')}>
-      <div className="flex items-center gap-2">
-        <span className="text-lg">{icon}</span>
-        <p className="font-semibold text-foreground flex-1 min-w-0">{proposal.summary}</p>
-        {done && <CheckCircle className="w-4 h-4 text-success shrink-0" />}
-        {proposal.status === 'failed' && <AlertCircle className="w-4 h-4 text-destructive shrink-0" />}
-      </div>
+    <div className={cn('w-full rounded-xl bg-card p-4 text-sm', done ? 'ring-1 ring-success' : 'ring-1 ring-border', dismissed && 'opacity-60')}>
+      <p className="text-[13px] font-semibold text-muted-foreground">
+        {done ? 'Saved' : dismissed ? 'Dismissed, nothing was changed' : 'Proposed change'}
+      </p>
+      <p className="text-[15px] font-semibold text-foreground mt-1">{proposal.summary}</p>
       {proposal.changes?.length > 0 && (
-        <ul className="space-y-1 text-xs">
+        <dl className="mt-2 divide-y divide-border">
           {proposal.changes.map((c, i) => (
-            <li key={i} className="flex flex-wrap gap-x-2 text-muted-foreground">
-              <span className="font-medium text-foreground">{String(c.field).replace(/_/g, ' ')}:</span>
-              {c.before !== '' && c.before != null && <span className="line-through">{String(c.before)}</span>}
-              <span className="text-foreground">{String(c.after)}</span>
-            </li>
+            <div key={i} className="flex flex-wrap items-baseline gap-x-2 py-1.5 text-[13px]">
+              <dt className="font-semibold text-foreground capitalize">{String(c.field).replace(/_/g, ' ')}</dt>
+              <dd className="text-muted-foreground">
+                {c.before !== '' && c.before != null && <span className="line-through mr-2">{String(c.before)}</span>}
+                <span className="text-foreground font-medium">{String(c.after)}</span>
+              </dd>
+            </div>
           ))}
-        </ul>
+        </dl>
       )}
-      {proposal.error && <p className="text-xs text-destructive">{proposal.error}</p>}
+      {proposal.error && <p className="text-[13px] text-destructive mt-2">{proposal.error}</p>}
       {(proposal.status === 'pending' || proposal.status === 'failed' || busy) && (
-        <div className="flex gap-2 pt-1">
-          <button onClick={() => onResolve(proposal, 'confirm')} disabled={busy}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-60">
-            {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />} Confirm &amp; save
-          </button>
-          <button onClick={() => onResolve(proposal, 'dismiss')} disabled={busy}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:bg-secondary disabled:opacity-60">
-            <X className="w-3 h-3" /> Dismiss
-          </button>
+        <div className="flex gap-2 pt-3">
+          <Button size="sm" onClick={() => onResolve(proposal, 'confirm')} disabled={busy}>
+            {busy && <Loader2 className="animate-spin" />} Confirm and save
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onResolve(proposal, 'dismiss')} disabled={busy}>
+            Dismiss
+          </Button>
         </div>
       )}
-      {done && <p className="text-xs text-success font-medium">Saved</p>}
-      {dismissed && <p className="text-xs text-muted-foreground">Dismissed — nothing was changed</p>}
     </div>
   );
 }
 
-function MessageBubble({ message, onFollowUp, onSaveNote, onResolveProposal, isLast }) {
+function MessageBubble({ message, onSaveNote, onResolveProposal }) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
 
@@ -100,45 +92,38 @@ function MessageBubble({ message, onFollowUp, onSaveNote, onResolveProposal, isL
   };
 
   return (
-    <div className={cn('flex gap-3 group', isUser && 'flex-row-reverse')}>
-      <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-        isUser ? 'bg-foreground' : 'bg-primary/10')}>
-        {isUser ? <User className="w-3.5 h-3.5 text-background" /> : <Sparkles className="w-3.5 h-3.5 text-primary" />}
-      </div>
-
-      <div className={cn('flex flex-col gap-2', isUser ? 'items-end max-w-[80%]' : 'items-start max-w-[85%]')}>
-        {/* Action cards */}
+    <div className={cn('flex flex-col gap-2', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col gap-2 w-full', isUser ? 'items-end max-w-[85%] sm:max-w-[70%]' : 'items-start max-w-[92%] sm:max-w-[80%]')}>
         {message.actions?.length > 0 && (
           <div className="w-full space-y-1.5">
             {message.actions.map((a, i) => <ActionCard key={i} action={a} />)}
           </div>
         )}
 
-        {/* Proposed writes — need coach confirmation */}
         {message.proposals?.length > 0 && (
-          <div className="w-full space-y-1.5">
+          <div className="w-full space-y-2">
             {message.proposals.map((p) => <ProposalCard key={p.id} proposal={p} onResolve={onResolveProposal} />)}
           </div>
         )}
 
-        {/* Text bubble */}
         {message.content && (
-          <div className={cn('rounded-2xl px-4 py-3 text-sm',
-            isUser ? 'bg-sidebar text-white' : 'bg-card border border-border text-foreground shadow-sm')}>
+          <div className={cn('rounded-xl px-4 py-3 text-[15px]',
+            isUser ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground ring-1 ring-border/60')}>
             {isUser ? (
               <p className="leading-relaxed whitespace-pre-wrap">{message.content}</p>
             ) : (
               <ReactMarkdown
-                className="prose prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                className="max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
                 components={{
-                  p: ({ children }) => <p className="my-1 leading-relaxed">{children}</p>,
-                  ul: ({ children }) => <ul className="my-1 ml-4 list-disc space-y-0.5">{children}</ul>,
-                  ol: ({ children }) => <ol className="my-1 ml-4 list-decimal space-y-0.5">{children}</ol>,
-                  li: ({ children }) => <li className="my-0">{children}</li>,
+                  p: ({ children }) => <p className="my-1.5 leading-relaxed">{children}</p>,
+                  ul: ({ children }) => <ul className="my-1.5 ml-5 list-disc space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="my-1.5 ml-5 list-decimal space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="my-0 leading-relaxed">{children}</li>,
                   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                  h2: ({ children }) => <h2 className="text-sm font-bold mt-3 mb-1">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>,
-                  code: ({ children }) => <code className="px-1 py-0.5 rounded bg-secondary text-xs font-mono">{children}</code>,
+                  h1: ({ children }) => <p className="text-[15px] font-bold mt-3 mb-1">{children}</p>,
+                  h2: ({ children }) => <p className="text-[15px] font-bold mt-3 mb-1">{children}</p>,
+                  h3: ({ children }) => <p className="text-[15px] font-semibold mt-2 mb-1">{children}</p>,
+                  code: ({ children }) => <code className="px-1 py-0.5 rounded bg-secondary text-[13px] font-mono">{children}</code>,
                 }}
               >
                 {message.content}
@@ -147,21 +132,21 @@ function MessageBubble({ message, onFollowUp, onSaveNote, onResolveProposal, isL
           </div>
         )}
 
-        {/* Actions row */}
-        {!isUser && (
-          <div className="flex items-center gap-2 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {message.timestamp && <span className="text-[10px] text-muted-foreground">{message.timestamp}</span>}
-            <button onClick={handleCopy} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-              {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-            {onSaveNote && (
-              <button onClick={() => onSaveNote(message.content)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                <BookmarkPlus className="w-3 h-3" /> Save note
+        <div className="flex items-center gap-3 px-1 text-[12px] text-muted-foreground">
+          {message.timestamp && <span>{message.timestamp}</span>}
+          {!isUser && message.content && (
+            <>
+              <button onClick={handleCopy} className="font-semibold text-foreground/80 hover:text-foreground underline underline-offset-4 decoration-1">
+                {copied ? 'Copied' : 'Copy'}
               </button>
-            )}
-          </div>
-        )}
+              {onSaveNote && (
+                <button onClick={() => onSaveNote(message.content)} className="font-semibold text-foreground/80 hover:text-foreground underline underline-offset-4 decoration-1">
+                  Save to client notes
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -169,17 +154,9 @@ function MessageBubble({ message, onFollowUp, onSaveNote, onResolveProposal, isL
 
 function TypingIndicator() {
   return (
-    <div className="flex gap-3">
-      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-        <Sparkles className="w-3.5 h-3.5 text-primary" />
-      </div>
-      <div className="bg-card border border-border rounded-2xl px-4 py-3 shadow-sm">
-        <div className="flex gap-1 items-center h-4">
-          {[0, 150, 300].map(delay => (
-            <div key={delay} className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: delay + 'ms' }} />
-          ))}
-        </div>
-      </div>
+    <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+      <Loader2 className="w-4 h-4 animate-spin" />
+      Working on it
     </div>
   );
 }
@@ -292,7 +269,7 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
       }).then(() => onSave?.()).catch(() => {});
 
     } catch (err) {
-      toast.error('AI error: ' + err.message);
+      toast.error('The assistant hit an error: ' + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -337,60 +314,52 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
 
   const isEmpty = messages.length === 0;
   const STARTER_PROMPTS = selectedClient ? [
-    'Create a fat loss nutrition plan for ' + selectedClient.name,
-    'Respond to ' + selectedClient.name + "'s latest check-in",
-    'Send ' + selectedClient.name + ' a motivational message',
-    'Analyze ' + selectedClient.name + "'s progress and flag if at risk",
+    'Draft a reply to ' + selectedClient.name + "'s latest check-in",
+    'Is ' + selectedClient.name + ' at risk of dropping off?',
+    'Build a fat loss nutrition plan for ' + selectedClient.name,
+    'Write ' + selectedClient.name + ' a short check-in message',
   ] : [
-    'List all my at-risk clients',
+    'Which clients are at risk this week?',
     'Who needs a nutrition plan update?',
-    'Respond to all pending check-ins',
-    'Award streak badges to qualifying clients',
+    'Draft replies to pending check-ins',
+    'Award streak badges to clients who earned them',
   ];
 
+  const firstName = selectedClient?.name?.split(' ')[0];
+
   return (
-    <div className="bg-card border border-border rounded-xl flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
-      {/* Agent indicator */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
-        <Zap className="w-3.5 h-3.5 text-primary" />
-        <span className="text-xs font-semibold text-primary">Agentic Mode</span>
-        <span className="text-xs text-muted-foreground">— proposes changes; nothing saves until you confirm</span>
+    <div className="flex flex-col flex-1 h-[calc(100dvh-56px-96px-140px)] min-h-[520px] xl:min-h-0 xl:h-auto rounded-xl xl:rounded-none overflow-hidden ring-1 ring-border/60 xl:ring-0 bg-background">
+      {/* Thread header */}
+      <div className="flex items-center justify-between gap-4 px-5 sm:px-6 py-4 bg-card border-b border-border flex-shrink-0">
+        <h2 className="text-[22px] sm:text-[26px] text-foreground truncate">{selectedClient ? selectedClient.name : 'General'}</h2>
+        <p className="text-[13px] text-muted-foreground text-right hidden sm:block">Proposes changes. Nothing saves until you confirm.</p>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 min-h-0">
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-4 py-12">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
-            <div>
-              <p className="font-bold text-lg text-foreground">
-                {selectedClient ? 'Coaching ' + selectedClient.name : 'AI Coach Assistant'}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                {selectedClient
-                  ? 'I can take real actions for ' + selectedClient.name + ' — create plans, send messages, respond to check-ins, award badges, and more.'
-                  : 'Select a client for context, or ask me anything about your coaching business.'}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 max-w-md w-full mt-2">
+          <div className="max-w-xl mx-auto pt-6 sm:pt-12">
+            <h3 className="text-[28px] text-foreground">{selectedClient ? `What do you need for ${firstName}?` : 'What do you need?'}</h3>
+            <p className="text-[15px] text-muted-foreground mt-2">
+              {selectedClient
+                ? `It can read ${firstName}'s check-ins, plans and program, and draft changes or messages for you to approve.`
+                : 'Ask about your roster or business, or pick a client so it can use their numbers.'}
+            </p>
+            <div className="flex flex-wrap gap-2 mt-5">
               {STARTER_PROMPTS.map(q => (
-                <button key={q} onClick={() => sendMessage(q)}
-                  className="text-xs text-left bg-secondary hover:bg-border p-3 rounded-xl transition-colors text-muted-foreground">
+                <Button key={q} variant="outline" size="sm" className="h-auto min-h-8 py-1.5 whitespace-normal text-left" onClick={() => sendMessage(q)}>
                   {q}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
         ) : (
           <>
+            {messages.length > 0 && <p className="text-center text-[13px] text-muted-foreground">Today</p>}
             {messages.map((msg, i) => (
               <MessageBubble
                 key={i}
                 message={msg}
-                isLast={i === messages.length - 1 && msg.role === 'assistant'}
-                onFollowUp={sendMessage}
                 onSaveNote={msg.role === 'assistant' ? handleSaveNote : null}
                 onResolveProposal={handleResolveProposal}
               />
@@ -401,32 +370,29 @@ export default function AssistantClaudeChat({ selectedClient, pendingPrompt, onP
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-border bg-card flex-shrink-0">
+      {/* Composer */}
+      <div className="px-4 sm:px-6 py-4 border-t border-border bg-card flex-shrink-0">
         <div className="flex gap-2 items-end">
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKey}
-              placeholder={selectedClient ? 'Tell me what to do for ' + selectedClient.name + '...' : 'Ask or give me an action to take...'}
-              rows={1}
-              className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring pr-10 min-h-[40px]"
-              disabled={isLoading}
-              style={{ height: 'auto', overflow: 'hidden' }}
-            />
-          </div>
-          <button onClick={() => toast.info('Voice input coming soon!')}
-            className="h-9 w-9 rounded-xl border border-input bg-background flex items-center justify-center text-muted-foreground hover:bg-secondary transition-colors shrink-0">
-            <Mic className="w-4 h-4" />
-          </button>
-          <button onClick={() => sendMessage()} disabled={isLoading || !input.trim()}
-            className="h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={handleInputChange}
+            onKeyDown={handleKey}
+            placeholder={selectedClient ? `Ask about ${firstName}, or tell it what to do` : 'Ask a question or give it a job'}
+            rows={1}
+            aria-label="Message the assistant"
+            className="flex-1 resize-none rounded-md border border-input bg-card px-4 py-3 text-[15px] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[48px]"
+            disabled={isLoading}
+            style={{ height: 'auto', overflow: 'hidden' }}
+          />
+          <Button variant="outline" size="icon" className="h-12 w-12 flex-shrink-0 hidden sm:inline-flex" onClick={() => toast.info('Voice input isn’t available yet')} aria-label="Voice input">
+            <Mic />
+          </Button>
+          <Button className="h-12 px-5 flex-shrink-0" onClick={() => sendMessage()} disabled={isLoading || !input.trim()}>
+            {isLoading ? <Loader2 className="animate-spin" /> : 'Send'}
+          </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5 px-1">Enter to send · Shift+Enter for new line</p>
+        <p className="text-[12px] text-muted-foreground mt-2 hidden sm:block">Enter to send, Shift + Enter for a new line.</p>
       </div>
     </div>
   );

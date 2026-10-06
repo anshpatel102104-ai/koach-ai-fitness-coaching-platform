@@ -1,57 +1,52 @@
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Sparkles, PlusCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Initials, Stat, Panel } from '@/components/kit';
 import { cn } from '@/lib/utils';
 import AssistantClaudeChat from '../components/assistant/AssistantClaudeChat';
 import { averageAdherenceScore, calculateStreak } from '@/lib/adherence';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 
 // ── Quick action categories ────────────────────────────────────────────────
 const QUICK_ACTIONS = [
   {
     label: 'Nutrition',
-    color: 'text-success',
-    bg: 'bg-success/10',
     actions: [
-      { label: 'Calorie Adjustment', key: 'calorie_adjust' },
-      { label: 'Macro Recalculation', key: 'macro_recalc' },
-      { label: 'Meal Plan Critique', key: 'meal_critique' },
-      { label: 'Supplement Recommendations', key: 'supplement_recs' },
+      { label: 'Adjust calories', key: 'calorie_adjust' },
+      { label: 'Recalculate macros', key: 'macro_recalc' },
+      { label: 'Critique the meal plan', key: 'meal_critique' },
+      { label: 'Supplement suggestions', key: 'supplement_recs' },
     ],
   },
   {
     label: 'Programming',
-    color: 'text-primary',
-    bg: 'bg-accent',
     actions: [
-      { label: 'Workout Progression', key: 'workout_progression' },
-      { label: 'Deload Week Planning', key: 'deload_week' },
-      { label: 'Exercise Substitutions', key: 'exercise_subs' },
-      { label: 'Program Periodization', key: 'periodization' },
+      { label: 'Plan next week’s progression', key: 'workout_progression' },
+      { label: 'Plan a deload week', key: 'deload_week' },
+      { label: 'Exercise substitutions', key: 'exercise_subs' },
+      { label: 'Periodization for the next block', key: 'periodization' },
     ],
   },
   {
-    label: 'Client Management',
-    color: 'text-ai',
-    bg: 'bg-ai/10',
+    label: 'Client management',
     actions: [
-      { label: 'Check-In Response Draft', key: 'checkin_response' },
-      { label: 'Weekly Summary', key: 'weekly_summary' },
-      { label: 'Compliance Issues', key: 'compliance_issues' },
-      { label: 'Motivation Message', key: 'motivation_msg' },
+      { label: 'Draft a check-in reply', key: 'checkin_response' },
+      { label: 'Weekly summary', key: 'weekly_summary' },
+      { label: 'Work out compliance issues', key: 'compliance_issues' },
+      { label: 'Write a motivation message', key: 'motivation_msg' },
     ],
   },
   {
     label: 'Analysis',
-    color: 'text-orange-600',
-    bg: 'bg-orange-50',
     actions: [
-      { label: 'Full Client Analysis', key: 'full_analysis' },
-      { label: 'At-Risk Assessment', key: 'at_risk' },
-      { label: 'Progress Plateau Solutions', key: 'plateau' },
-      { label: 'Goal Adjustment', key: 'goal_adjust' },
+      { label: 'Full client analysis', key: 'full_analysis' },
+      { label: 'Is this client at risk?', key: 'at_risk' },
+      { label: 'Break a plateau', key: 'plateau' },
+      { label: 'Review their goal', key: 'goal_adjust' },
     ],
   },
 ];
@@ -89,10 +84,8 @@ function buildPrompt(key, client, plan, lastCheckIn, adherenceScore, streak) {
   return MAP[key] || `Tell me about ${cn}'s coaching situation.`;
 }
 
-// ── Sidebar component ──────────────────────────────────────────────────────
-function AssistantSidebar({ clients, selectedClient, onSelectClient, onQuickAction, conversations, onLoadConversation, onNewChat }) {
-  const [expandedCat, setExpandedCat] = useState('Nutrition');
-
+// ── Selected-client context (shared by the context column and quick actions) ─
+function useClientContext(selectedClient) {
   const { data: checkIns = [] } = useQuery({
     queryKey: ['checkins-assistant'],
     queryFn: () => db.entities.CheckIn.list('-date', 200),
@@ -109,112 +102,124 @@ function AssistantSidebar({ clients, selectedClient, onSelectClient, onQuickActi
   const adherenceScore = averageAdherenceScore(clientCheckIns) || 0;
   const streak = calculateStreak(clientCheckIns);
   const plan = plans.find(p => p.id === selectedClient?.assigned_nutrition_id);
+  return { lastCheckIn, adherenceScore, streak, plan };
+}
 
-  const handleAction = (key) => {
-    if (!selectedClient) {
-      onQuickAction(`As a fitness coach, I need help with: ${QUICK_ACTIONS.flatMap(c => c.actions).find(a => a.key === key)?.label}. Please provide expert guidance.`);
-      return;
-    }
-    onQuickAction(buildPrompt(key, selectedClient, plan, lastCheckIn, Math.round(adherenceScore), streak));
-  };
+const goalLabel = (goal) => (goal ? goal.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase()) : null);
 
-  return (
-    <div className="w-full lg:w-[280px] lg:shrink-0 flex flex-col gap-4 overflow-y-auto pr-1">
-      {/* Client selector */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Client Context</p>
-        <Select value={selectedClient?.id || ''} onValueChange={id => onSelectClient(clients.find(c => c.id === id) || null)}>
-          <SelectTrigger className="text-sm">
-            <SelectValue placeholder="Select a client..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={null}>General Question</SelectItem>
-            {clients.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Client context card */}
-        {selectedClient && (
-          <div className="mt-3 pt-3 border-t border-border space-y-1.5">
-            <p className="text-xs font-semibold truncate">{selectedClient.name}</p>
-            <div className="flex flex-wrap gap-1">
-              <span className="text-[10px] bg-accent text-primary px-2 py-0.5 rounded-full font-medium capitalize">{selectedClient.goal?.replace(/_/g, ' ')}</span>
-              {selectedClient.current_weight && (
-                <span className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full">{selectedClient.current_weight} lbs</span>
-              )}
-            </div>
-            <div className="grid grid-cols-3 gap-1 mt-2">
-              <div className="text-center bg-secondary rounded-lg py-1.5">
-                <p className="text-sm font-black text-foreground">{Math.round(adherenceScore)}%</p>
-                <p className="text-[9px] text-muted-foreground">Adherence</p>
-              </div>
-              <div className="text-center bg-secondary rounded-lg py-1.5">
-                <p className="text-sm font-black text-foreground">{streak}</p>
-                <p className="text-[9px] text-muted-foreground">Streak</p>
-              </div>
-              <div className="text-center bg-secondary rounded-lg py-1.5">
-                <p className="text-sm font-black text-foreground">{lastCheckIn ? '✓' : '–'}</p>
-                <p className="text-[9px] text-muted-foreground">Check-in</p>
-              </div>
-            </div>
-          </div>
+// ── Client list (left column on wide screens) ──────────────────────────────
+function ClientList({ clients, selectedClient, onSelectClient }) {
+  const [query, setQuery] = useState('');
+  const shown = clients.filter(c => !query || c.name?.toLowerCase().includes(query.toLowerCase()));
+  const Row = ({ client, label, detail }) => {
+    const active = client ? selectedClient?.id === client.id : !selectedClient;
+    return (
+      <button
+        onClick={() => onSelectClient(client)}
+        className={cn(
+          'relative w-full flex items-center gap-3 px-5 py-3 text-left transition-colors',
+          active ? 'bg-accent' : 'hover:bg-accent/50'
         )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider px-4 py-3 border-b border-border">Quick Actions</p>
-        {QUICK_ACTIONS.map(cat => (
-          <div key={cat.label} className="border-b border-border last:border-0">
-            <button
-              onClick={() => setExpandedCat(expandedCat === cat.label ? null : cat.label)}
-              className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-secondary/40 transition-colors"
-            >
-              <span className={cn('text-xs font-bold', cat.color)}>{cat.label}</span>
-              {expandedCat === cat.label ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
-            </button>
-            {expandedCat === cat.label && (
-              <div className="pb-1">
-                {cat.actions.map(action => (
-                  <button
-                    key={action.key}
-                    onClick={() => handleAction(action.key)}
-                    className="w-full text-left text-xs px-5 py-2 hover:bg-secondary/40 text-foreground transition-colors"
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Conversations */}
-      {conversations.length > 0 && (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Recent Chats</p>
-            <button onClick={onNewChat} className="text-[10px] text-primary font-semibold hover:underline">+ New</button>
-          </div>
-          {conversations.slice(0, 5).map(conv => (
-            <button
-              key={conv.id}
-              onClick={() => onLoadConversation(conv)}
-              className="w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-secondary/40 transition-colors"
-            >
-              <p className="text-xs font-semibold truncate text-foreground">{conv.client_name || 'General'}</p>
-              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{conv.title || 'Conversation'}</p>
-              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                {conv.created_date ? formatDistanceToNow(new Date(conv.created_date), { addSuffix: true }) : ''}
-              </p>
-            </button>
-          ))}
+      >
+        {active && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />}
+        <Initials name={label} size={36} tone={active ? 'ink' : 'default'} />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-foreground truncate">{label}</span>
+          {detail && <span className="block text-[13px] text-muted-foreground truncate">{detail}</span>}
+        </span>
+      </button>
+    );
+  };
+  return (
+    <>
+      <div className="px-5 pb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Find a client" className="pl-9 bg-secondary border-transparent" aria-label="Find a client" />
         </div>
-      )}
+      </div>
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {!query && <Row client={null} label="General" detail="Your whole roster or business" />}
+        <p className="px-5 pt-3 pb-1 text-[13px] font-medium text-muted-foreground">Clients</p>
+        {shown.map(c => (
+          <Row key={c.id} client={c} label={c.name || 'Client'} detail={goalLabel(c.goal) || c.email} />
+        ))}
+        {shown.length === 0 && <p className="px-5 py-3 text-sm text-muted-foreground">No client matches that name.</p>}
+      </div>
+    </>
+  );
+}
+
+// ── Context + quick actions ────────────────────────────────────────────────
+function ContextPanel({ selectedClient, ctx }) {
+  if (!selectedClient) {
+    return (
+      <div>
+        <p className="text-[13px] text-muted-foreground">No client selected</p>
+        <p className="text-[15px] text-foreground mt-1">Questions go to your whole roster. Pick a client to give the assistant their numbers.</p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="text-[13px] text-muted-foreground">About {selectedClient.name?.split(' ')[0]}</p>
+      <p className="num text-[32px] leading-none mt-2">{Math.round(ctx.adherenceScore)}%</p>
+      <p className="text-[13px] text-muted-foreground mt-1">adherence over recent check-ins</p>
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <Stat size="sm" label="Check-in streak" value={ctx.streak} sub="in a row" />
+        <Stat size="sm" label="Last check-in" value={ctx.lastCheckIn?.date ? format(new Date(ctx.lastCheckIn.date), 'MMM d') : '—'} />
+      </div>
+      <dl className="mt-4 space-y-1.5 text-sm">
+        {selectedClient.goal && <div><dt className="inline font-semibold">Goal: </dt><dd className="inline">{goalLabel(selectedClient.goal)}</dd></div>}
+        {selectedClient.current_weight && <div><dt className="inline font-semibold">Weight: </dt><dd className="inline">{selectedClient.current_weight} lb</dd></div>}
+        {ctx.plan?.calories && <div><dt className="inline font-semibold">Calories: </dt><dd className="inline">{ctx.plan.calories} kcal</dd></div>}
+      </dl>
     </div>
+  );
+}
+
+function QuickActionList({ onAction }) {
+  return (
+    <div className="space-y-4">
+      {QUICK_ACTIONS.map(cat => (
+        <div key={cat.label}>
+          <p className="text-[13px] font-medium text-muted-foreground mb-1">{cat.label}</p>
+          <ul className="divide-y divide-border">
+            {cat.actions.map(action => (
+              <li key={action.key}>
+                <button
+                  onClick={() => onAction(action.key)}
+                  className="w-full text-left py-2.5 text-sm text-foreground hover:underline underline-offset-4 decoration-1"
+                >
+                  {action.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentChats({ conversations, onLoadConversation }) {
+  if (!conversations.length) return null;
+  return (
+    <ul className="divide-y divide-border">
+      {conversations.slice(0, 5).map(conv => (
+        <li key={conv.id}>
+          <button onClick={() => onLoadConversation(conv)} className="w-full text-left py-2.5 group">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground truncate">{conv.client_name || 'General'}</span>
+              <span className="text-[12px] text-muted-foreground flex-shrink-0">
+                {conv.created_date ? formatDistanceToNow(new Date(conv.created_date), { addSuffix: true }) : ''}
+              </span>
+            </span>
+            <span className="block text-[13px] text-muted-foreground truncate group-hover:text-foreground">{conv.title || 'Conversation'}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -234,9 +239,19 @@ export default function Assistant() {
     staleTime: 30_000,
   });
 
+  const ctx = useClientContext(selectedClient);
+
   const handleQuickAction = useCallback((prompt) => {
     setPendingPrompt(prompt);
   }, []);
+
+  const handleAction = (key) => {
+    if (!selectedClient) {
+      handleQuickAction(`As a fitness coach, I need help with: ${QUICK_ACTIONS.flatMap(c => c.actions).find(a => a.key === key)?.label}. Please provide expert guidance.`);
+      return;
+    }
+    handleQuickAction(buildPrompt(key, selectedClient, ctx.plan, ctx.lastCheckIn, Math.round(ctx.adherenceScore), ctx.streak));
+  };
 
   const handleNewChat = () => {
     setChatKey(k => k + 1);
@@ -251,49 +266,77 @@ export default function Assistant() {
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="bg-sidebar rounded-xl p-5 text-white mb-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[var(--kc-w-10)] flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold leading-tight">AI Coach Assistant</h1>
-              <p className="text-xs text-white/60 mt-0.5">Your personal coaching intelligence — powered by Claude</p>
-            </div>
+    <div className="xl:h-[calc(100dvh-76px)] flex flex-col xl:flex-row xl:overflow-hidden">
+      {/* Left: title + client list (wide) / title + client select (narrow) */}
+      <aside className="xl:w-[300px] xl:flex-shrink-0 xl:bg-card xl:border-r xl:border-border flex flex-col xl:min-h-0">
+        <div className="px-4 sm:px-6 xl:px-5 pt-6 xl:pt-7 pb-4 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[32px] text-foreground">Assistant</h1>
+            <p className="text-sm text-muted-foreground mt-1 xl:hidden">Ask about a client or your roster. It proposes changes; nothing saves until you confirm.</p>
           </div>
-          <button
-            onClick={handleNewChat}
-            className="flex items-center gap-1.5 text-xs font-semibold bg-[var(--kc-w-10)] hover:bg-[var(--kc-w-20)] text-white px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <PlusCircle className="w-3.5 h-3.5" /> New Chat
-          </button>
+          <Button variant="outline" size="sm" onClick={handleNewChat} className="flex-shrink-0"><Plus /> New chat</Button>
         </div>
-      </div>
 
-      {/* Two-column layout */}
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
-        <AssistantSidebar
-          clients={clients}
+        <div className="px-4 sm:px-6 pb-4 xl:hidden">
+          <Select value={selectedClient?.id || ''} onValueChange={id => setSelectedClient(clients.find(c => c.id === id) || null)}>
+            <SelectTrigger className="bg-card" aria-label="Client">
+              <SelectValue placeholder="General, no client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>General, no client</SelectItem>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="hidden xl:flex flex-col flex-1 min-h-0">
+          <ClientList clients={clients} selectedClient={selectedClient} onSelectClient={setSelectedClient} />
+          {conversations.length > 0 && (
+            <div className="border-t border-border px-5 pt-4 pb-3 max-h-[38%] overflow-y-auto flex-shrink-0">
+              <p className="text-[13px] font-medium text-muted-foreground">Recent chats</p>
+              <RecentChats conversations={conversations} onLoadConversation={handleLoadConversation} />
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Centre: the thread */}
+      <section className="flex-1 min-w-0 flex flex-col xl:min-h-0 px-4 sm:px-6 xl:px-0">
+        <AssistantClaudeChat
+          key={chatKey}
           selectedClient={selectedClient}
-          onSelectClient={setSelectedClient}
-          onQuickAction={handleQuickAction}
-          conversations={conversations}
-          onLoadConversation={handleLoadConversation}
-          onNewChat={handleNewChat}
+          pendingPrompt={pendingPrompt}
+          onPromptConsumed={() => setPendingPrompt(null)}
+          onSave={() => refetchConvos()}
         />
+      </section>
 
-        <div className="flex-1 min-w-0">
-          <AssistantClaudeChat
-            key={chatKey}
-            selectedClient={selectedClient}
-            pendingPrompt={pendingPrompt}
-            onPromptConsumed={() => setPendingPrompt(null)}
-            onSave={() => refetchConvos()}
-          />
+      {/* Right: context + quick actions (wide) */}
+      <aside className="hidden xl:flex xl:flex-col w-[300px] flex-shrink-0 bg-card border-l border-border overflow-y-auto px-5 py-7 gap-7">
+        <ContextPanel selectedClient={selectedClient} ctx={ctx} />
+        <div>
+          <p className="text-sm font-semibold text-foreground mb-3">Quick actions</p>
+          <QuickActionList onAction={handleAction} />
         </div>
+      </aside>
+
+      {/* Narrow screens: context, quick actions and recent chats below the thread */}
+      <div className="xl:hidden px-4 sm:px-6 py-6 grid gap-5 md:grid-cols-2">
+        <Panel className="p-5">
+          <ContextPanel selectedClient={selectedClient} ctx={ctx} />
+          {conversations.length > 0 && (
+            <div className="mt-6 pt-5 border-t border-border">
+              <p className="text-sm font-semibold text-foreground mb-1">Recent chats</p>
+              <RecentChats conversations={conversations} onLoadConversation={handleLoadConversation} />
+            </div>
+          )}
+        </Panel>
+        <Panel className="p-5">
+          <p className="text-sm font-semibold text-foreground mb-3">Quick actions</p>
+          <QuickActionList onAction={handleAction} />
+        </Panel>
       </div>
     </div>
   );

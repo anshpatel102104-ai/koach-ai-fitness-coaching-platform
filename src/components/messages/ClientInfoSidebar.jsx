@@ -1,161 +1,145 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { addDays, differenceInCalendarDays, differenceInWeeks, format, parseISO } from 'date-fns';
+import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
-import { differenceInDays, parseISO, format } from 'date-fns';
-import { ExternalLink, ClipboardList, Salad } from 'lucide-react';
 import { BADGE_CONFIG } from '@/lib/badges';
+import { ComplianceStrip, TextLink } from '@/components/kit';
 import AIFollowUpChip from './AIFollowUpChip';
-import { SignedImg } from '@/components/shared/SignedImage';
-
-const AVATAR_COLORS = [
-  ['bg-accent', 'text-primary'],
-  ['bg-ai/10', 'text-ai'],
-  ['bg-success/10', 'text-success'],
-  ['bg-warning/10', 'text-warning'],
-  ['bg-destructive/10', 'text-destructive'],
-  ['bg-cyan-100', 'text-cyan-700'],
-];
-function getAvatarColor(name = '') {
-  const idx = (name.charCodeAt(0) || 0) % AVATAR_COLORS.length;
-  return AVATAR_COLORS[idx];
-}
-
-const STATUS_COLORS = {
-  active: 'bg-success/10 text-success',
-  at_risk: 'bg-destructive/10 text-destructive',
-  lead: 'bg-accent text-primary',
-  completed: 'bg-ai/10 text-ai',
-  alumni: 'bg-muted text-muted-foreground',
-};
 
 const GOAL_LABELS = {
-  fat_loss: 'Fat Loss', muscle_gain: 'Muscle Gain', hybrid: 'Hybrid', strength: 'Strength',
-  endurance: 'Endurance', general_fitness: 'General Fitness',
+  fat_loss: 'Fat loss', weight_loss: 'Fat loss', muscle_gain: 'Muscle gain', hybrid: 'Hybrid', strength: 'Strength',
+  endurance: 'Endurance', general_fitness: 'General fitness',
 };
 
+function Fact({ label, children, tone }) {
+  return (
+    <p className="text-sm leading-relaxed">
+      <span className="font-semibold text-foreground">{label}:</span>{' '}
+      <span className={cn(tone === 'danger' ? 'text-destructive font-medium' : 'text-foreground')}>{children}</span>
+    </p>
+  );
+}
+
+/**
+ * "About Alicia" context column beside a conversation: compliance number +
+ * strip, program and week, next check-in, then the follow-up nudge and links.
+ */
 export default function ClientInfoSidebar({ client, checkIns = [], badges = [], allMessages = [], onInsertMessage }) {
   const navigate = useNavigate();
   const [note, setNote] = useState('');
 
+  const { data: program } = useQuery({
+    queryKey: ['messages-program', client?.assigned_program_id],
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: client.assigned_program_id }).then(r => r[0] || null),
+    enabled: !!client?.assigned_program_id,
+  });
+
+  const sortedCIs = useMemo(() => [...checkIns].sort((a, b) => new Date(b.date) - new Date(a.date)), [checkIns]);
+
   if (!client) return null;
 
-  const [avatarBg, avatarText] = getAvatarColor(client.name);
-  const initials = (client.name || '?').split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  const first = client.name?.split(' ')[0] || client.name;
 
-  const sortedCIs = [...checkIns].sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Compliance over the last (up to) 4 check-ins, oldest → newest.
+  const recent = sortedCIs.slice(0, 4).reverse();
+  const scores = recent.map(ci => {
+    const vals = [ci.compliance_training, ci.compliance_nutrition].filter(v => v != null);
+    return vals.length ? Math.round(vals.reduce((s, v) => s + Number(v), 0) / vals.length) : null;
+  });
+  const known = scores.filter(v => v != null);
+  const avgCompliance = known.length ? Math.round(known.reduce((s, v) => s + v, 0) / known.length) : null;
+
   const lastCI = sortedCIs[0];
-  const avgAdherence = lastCI ? Math.round(((lastCI.compliance_training || 0) + (lastCI.compliance_nutrition || 0)) / 2) : null;
-  const daysSinceCI = lastCI ? differenceInDays(new Date(), parseISO(lastCI.date)) : null;
+  const nextDue = lastCI ? addDays(parseISO(lastCI.date), 7) : null;
+  const daysToNext = nextDue ? differenceInCalendarDays(nextDue, new Date()) : null;
+  const nextLabel = nextDue == null
+    ? 'Not set up yet'
+    : daysToNext < 0 ? `${Math.abs(daysToNext)} day${Math.abs(daysToNext) !== 1 ? 's' : ''} overdue`
+    : daysToNext === 0 ? 'Today'
+    : daysToNext === 1 ? 'Tomorrow'
+    : daysToNext < 7 ? format(nextDue, 'EEEE') : format(nextDue, 'MMM d');
+
+  const programWeek = client.start_date ? differenceInWeeks(new Date(), parseISO(client.start_date)) + 1 : null;
+  const programLabel = program?.name
+    ? `${program.name}${programWeek ? `, week ${programWeek}` : ''}`
+    : client.assigned_program_id ? (programWeek ? `Week ${programWeek}` : 'Assigned') : 'None assigned';
 
   const clientBadges = badges.filter(b => b.client_id === client.id).slice(0, 3);
 
   return (
     <div className="h-full bg-card border-l border-border flex flex-col overflow-y-auto">
-      {/* Client header */}
-      <div className="p-4 border-b border-border text-center">
-        <div className={cn('w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-3 overflow-hidden', client.avatar_url ? '' : `${avatarBg} ${avatarText}`)}>
-          {client.avatar_url ? <SignedImg src={client.avatar_url} alt={client.name} className="w-full h-full object-cover" /> : initials}
+      <div className="px-5 pt-6 pb-5">
+        <p className="text-[13px] font-medium text-muted-foreground">About {first}</p>
+
+        {avgCompliance != null ? (
+          <>
+            <p className="num text-[34px] leading-none text-foreground mt-3">{avgCompliance}%</p>
+            <p className="text-sm text-muted-foreground mt-1">compliance over {known.length} week{known.length !== 1 ? 's' : ''}</p>
+            <ComplianceStrip weeks={scores} className="mt-3" label={`Compliance, last ${scores.length} check-ins`} />
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground mt-3">No check-ins yet, so no compliance to show.</p>
+        )}
+
+        <div className="mt-5 space-y-1">
+          <Fact label="Program">{programLabel}</Fact>
+          <Fact label="Next check-in" tone={daysToNext != null && daysToNext < 0 ? 'danger' : undefined}>{nextLabel}</Fact>
+          {client.goal && <Fact label="Goal">{GOAL_LABELS[client.goal] || client.goal.replace(/_/g, ' ')}</Fact>}
+          {client.tags?.length > 0 && <Fact label="Tags">{client.tags.join(', ')}</Fact>}
         </div>
-        <p className="font-semibold text-foreground text-sm">{client.name}</p>
-        {client.email && <p className="text-xs text-muted-foreground mt-0.5 truncate">{client.email}</p>}
-        {client.lifecycle_status && (
-          <span className={cn('inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-2 capitalize', STATUS_COLORS[client.lifecycle_status] || 'bg-muted text-muted-foreground')}>
-            {client.lifecycle_status.replace('_', ' ')}
-          </span>
+
+        {client.notes && (
+          <p className="text-sm text-muted-foreground leading-relaxed mt-4 line-clamp-4">{client.notes}</p>
         )}
       </div>
 
-      {/* Stats */}
-      <div className="p-4 border-b border-border space-y-3">
-        {client.goal && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Goal</span>
-            <span className="text-xs font-semibold text-foreground">{GOAL_LABELS[client.goal] || client.goal}</span>
-          </div>
-        )}
-        {lastCI && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Last check-in</span>
-            <span className={cn('text-xs font-semibold', daysSinceCI > 14 ? 'text-destructive' : daysSinceCI > 7 ? 'text-warning' : 'text-foreground')}>
-              {daysSinceCI === 0 ? 'Today' : daysSinceCI === 1 ? 'Yesterday' : `${daysSinceCI}d ago`}
-            </span>
-          </div>
-        )}
-        {avgAdherence !== null && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">Adherence</span>
-              <span className={cn('text-xs font-bold', avgAdherence >= 80 ? 'text-success' : avgAdherence >= 60 ? 'text-warning' : 'text-destructive')}>
-                {avgAdherence}%
-              </span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className={cn('h-full rounded-full', avgAdherence >= 80 ? 'bg-success' : avgAdherence >= 60 ? 'bg-warning' : 'bg-destructive')} style={{ width: `${avgAdherence}%` }} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* AI Follow-up Chip */}
+      {/* Follow-up nudge */}
       {onInsertMessage && (
-        <div className="pt-3">
-          <AIFollowUpChip
-            client={client}
-            allMessages={allMessages}
-            checkIns={checkIns}
-            onInsert={onInsertMessage}
-          />
-        </div>
+        <AIFollowUpChip
+          client={client}
+          allMessages={allMessages}
+          checkIns={checkIns}
+          onInsert={onInsertMessage}
+        />
       )}
-
-      {/* Quick actions */}
-      <div className="p-4 border-b border-border space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Quick Actions</p>
-        <button onClick={() => navigate(`/client-profile?clientId=${client.id}`)}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-background hover:bg-accent/10 hover:text-primary transition-colors text-sm text-foreground font-medium">
-          <ExternalLink className="w-3.5 h-3.5" /> View Full Profile
-        </button>
-        <button onClick={() => navigate(`/checkin-review?clientId=${client.id}`)}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-background hover:bg-accent/10 hover:text-primary transition-colors text-sm text-foreground font-medium">
-          <ClipboardList className="w-3.5 h-3.5" /> View Check-ins
-        </button>
-        <button onClick={() => navigate('/nutrition')}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg bg-background hover:bg-accent/10 hover:text-primary transition-colors text-sm text-foreground font-medium">
-          <Salad className="w-3.5 h-3.5" /> View Nutrition
-        </button>
-      </div>
 
       {/* Recent badges */}
       {clientBadges.length > 0 && (
-        <div className="p-4 border-b border-border">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Recent Achievements</p>
-          <div className="space-y-2">
+        <div className="px-5 py-4 border-t border-border">
+          <p className="text-[13px] font-medium text-muted-foreground mb-2">Recent wins</p>
+          <div className="space-y-1.5">
             {clientBadges.map(b => {
               const cfg = BADGE_CONFIG?.[b.badge_key];
               return (
-                <div key={b.id} className="flex items-center gap-2">
-                  <span className="text-lg">{cfg?.emoji || '🏅'}</span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">{cfg?.label || b.badge_key}</p>
-                    {b.awarded_at && <p className="text-[10px] text-muted-foreground">{format(parseISO(b.awarded_at), 'MMM d')}</p>}
-                  </div>
-                </div>
+                <p key={b.id} className="text-sm text-foreground flex justify-between gap-3">
+                  <span className="truncate">{cfg?.label || b.badge_key}</span>
+                  {b.awarded_at && <span className="text-muted-foreground flex-shrink-0">{format(parseISO(b.awarded_at), 'MMM d')}</span>}
+                </p>
               );
             })}
           </div>
         </div>
       )}
 
-      {/* Coach notes */}
-      <div className="p-4 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Quick Notes</p>
+      {/* Scratch notes (local to this view) */}
+      <div className="px-5 py-4 border-t border-border">
+        <label htmlFor="msg-quick-note" className="text-[13px] font-medium text-muted-foreground">Scratch note</label>
         <textarea
+          id="msg-quick-note"
           value={note}
           onChange={e => setNote(e.target.value)}
-          placeholder="Jot a note about this client…"
-          rows={4}
-          className="w-full text-xs rounded-lg border border-border bg-background px-3 py-2 resize-none outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all text-foreground placeholder-muted-foreground"
+          placeholder={`Something to remember about ${first}`}
+          rows={3}
+          className="mt-1.5 w-full text-sm rounded-md border border-input bg-card px-3 py-2 resize-none outline-none focus:border-foreground transition-colors text-foreground placeholder:text-muted-foreground"
         />
+      </div>
+
+      <div className="mt-auto px-5 py-5 flex flex-col items-start gap-2.5">
+        <TextLink onClick={() => navigate(`/client-profile?clientId=${client.id}`)}>Open full profile</TextLink>
+        <TextLink onClick={() => navigate(`/checkin-review?clientId=${client.id}`)} className="text-muted-foreground">Check-ins</TextLink>
+        <TextLink onClick={() => navigate('/nutrition')} className="text-muted-foreground">Nutrition</TextLink>
       </div>
     </div>
   );

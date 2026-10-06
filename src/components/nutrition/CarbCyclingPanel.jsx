@@ -4,10 +4,10 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 const DAY_TYPES = [
-  { key: 'high', label: 'High Carb', color: 'bg-warning text-white border-warning', badge: 'bg-warning/10 text-warning border-warning' },
-  { key: 'medium', label: 'Medium Carb', color: 'bg-primary text-primary-foreground border-primary', badge: 'bg-accent text-primary border-primary' },
-  { key: 'low', label: 'Low Carb', color: 'bg-success text-white border-success', badge: 'bg-success/10 text-success border-success' },
-  { key: 'none', label: 'Not Set', color: 'bg-secondary text-muted-foreground border-border', badge: 'bg-secondary text-muted-foreground border-border' },
+  { key: 'high', label: 'High carb', color: 'bg-primary text-primary-foreground border-primary', badge: 'bg-primary text-primary-foreground border-primary' },
+  { key: 'medium', label: 'Medium carb', color: 'bg-muted-foreground text-card border-muted-foreground', badge: 'bg-secondary text-foreground border-input' },
+  { key: 'low', label: 'Low carb', color: 'bg-secondary text-foreground border-input', badge: 'bg-card text-foreground border-input' },
+  { key: 'none', label: 'Not set', color: 'bg-secondary text-muted-foreground border-border', badge: 'bg-secondary text-muted-foreground border-border' },
 ];
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -83,8 +83,8 @@ export default function CarbCyclingPanel({ value = {}, onChange }) {
                           type="button"
                           onClick={() => setDay(day, dt.key === current ? 'none' : dt.key)}
                           className={cn(
-                            'text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all',
-                            current === dt.key ? dt.color : 'bg-card text-muted-foreground border-border hover:border-primary/30'
+                            'text-xs font-bold px-2.5 py-1 rounded-lg border transition-all',
+                            current === dt.key ? dt.color : 'bg-card text-muted-foreground border-border hover:bg-accent'
                           )}
                         >
                           {dt.label.split(' ')[0]}
@@ -92,7 +92,7 @@ export default function CarbCyclingPanel({ value = {}, onChange }) {
                       ))}
                     </div>
                     {current !== 'none' && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${currentDT?.badge}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-md border font-semibold ${currentDT?.badge}`}>
                         {targets[current] ? `${targets[current]} kcal` : currentDT?.label}
                       </span>
                     )}

@@ -1,8 +1,8 @@
 import {
   LayoutDashboard, Users, MessageSquare, Calendar, Dumbbell, Salad, ClipboardList,
-  Trophy, BarChart3, UserPlus, ShoppingBag, Sparkles, Bot, Settings,
+  Trophy, BarChart3, UserPlus, ShoppingBag, MessagesSquare, Bot, Settings,
   Activity, Apple, Globe, Flame, LayoutTemplate, Palette, UsersRound, FileText,
-  Mail, BookOpen, Shield, CreditCard, Zap, PlusCircle, Sun, Moon,
+  Mail, BookOpen, Shield, CreditCard, CalendarCheck, PenLine, PlusCircle, Sun, Moon,
 } from 'lucide-react';
 
 /**
@@ -30,7 +30,7 @@ const go = (path) => (ctx) => { ctx.navigate(path); ctx.close(); };
 
 /** Navigation targets — every coach route, including the ones demoted from the sidebar. */
 const ROUTES = [
-  { id: 'go.dashboard', title: 'Dashboard', path: '/', icon: LayoutDashboard, keywords: 'home today' },
+  { id: 'go.dashboard', title: 'Today', path: '/', icon: LayoutDashboard, keywords: 'home today dashboard' },
   { id: 'go.clients', title: 'Clients', path: '/clients', icon: Users, keywords: 'roster people' },
   { id: 'go.messages', title: 'Messages', path: '/messages', icon: MessageSquare, keywords: 'chat inbox dm' },
   { id: 'go.calendar', title: 'Calendar', path: '/schedule', icon: Calendar, keywords: 'schedule sessions booking' },
@@ -38,26 +38,26 @@ const ROUTES = [
   { id: 'go.nutrition', title: 'Nutrition', path: '/nutrition', icon: Salad, keywords: 'meals macros diet' },
   { id: 'go.checkins', title: 'Check-ins', path: '/checkin-review', icon: ClipboardList, keywords: 'review forms' },
   { id: 'go.adherence', title: 'Adherence', path: '/adherence', icon: Trophy, keywords: 'compliance streaks' },
-  { id: 'go.atrisk', title: 'At-Risk Clients', path: '/at-risk', icon: Shield, keywords: 'churn retention adherence' },
+  { id: 'go.atrisk', title: 'At-risk clients', path: '/at-risk', icon: Shield, keywords: 'churn retention adherence' },
   { id: 'go.business', title: 'Business', path: '/business', icon: BarChart3, keywords: 'revenue analytics finance' },
   { id: 'go.leads', title: 'Leads', path: '/sales', icon: UserPlus, keywords: 'sales pipeline crm prospects' },
   { id: 'go.store', title: 'Store', path: '/store', icon: ShoppingBag, keywords: 'products checkout selling' },
-  { id: 'go.assistant', title: 'AI Assistant', path: '/assistant', icon: Sparkles, keywords: 'nova copilot chat ai' },
+  { id: 'go.assistant', title: 'AI assistant', path: '/assistant', icon: MessagesSquare, keywords: 'nova copilot chat ai' },
   { id: 'go.automations', title: 'Automations', path: '/automations', icon: Bot, keywords: 'workflows rules triggers' },
   { id: 'go.settings', title: 'Settings', path: '/settings', icon: Settings, keywords: 'preferences account' },
   // Demoted from the sidebar — reachable here and in Settings.
-  { id: 'go.exercises', title: 'Exercise Library', path: '/exercises', icon: Activity, keywords: 'movements demos videos' },
-  { id: 'go.foodlibrary', title: 'Food Library', path: '/food-library', icon: Apple, keywords: 'foods usda ingredients' },
+  { id: 'go.exercises', title: 'Exercise library', path: '/exercises', icon: Activity, keywords: 'movements demos videos' },
+  { id: 'go.foodlibrary', title: 'Food library', path: '/food-library', icon: Apple, keywords: 'foods usda ingredients' },
   { id: 'go.community', title: 'Community', path: '/community', icon: Globe, keywords: 'groups social feed' },
   { id: 'go.challenges', title: 'Challenges', path: '/challenges', icon: Flame, keywords: 'competitions leaderboard' },
   { id: 'go.templates', title: 'Templates', path: '/coaching-templates', icon: LayoutTemplate, keywords: 'presets reuse' },
-  { id: 'go.whitelabel', title: 'White Label', path: '/white-label', icon: Palette, keywords: 'branding theme colors logo' },
+  { id: 'go.whitelabel', title: 'White label', path: '/white-label', icon: Palette, keywords: 'branding theme colors logo' },
   { id: 'go.team', title: 'Team', path: '/team', icon: UsersRound, keywords: 'staff coaches members' },
-  { id: 'go.weeklysummary', title: 'Weekly Summary', path: '/weekly-summary', icon: FileText, keywords: 'report digest' },
-  { id: 'go.emailcenter', title: 'Email Center', path: '/email-center', icon: Mail, keywords: 'broadcast campaigns' },
-  { id: 'go.onboarding', title: 'Onboarding Manager', path: '/onboarding-manager', icon: BookOpen, keywords: 'intake new clients' },
+  { id: 'go.weeklysummary', title: 'Weekly summary', path: '/weekly-summary', icon: FileText, keywords: 'report digest' },
+  { id: 'go.emailcenter', title: 'Email center', path: '/email-center', icon: Mail, keywords: 'broadcast campaigns' },
+  { id: 'go.onboarding', title: 'Client intake', path: '/onboarding-manager', icon: BookOpen, keywords: 'intake new clients onboarding manager' },
   { id: 'go.analytics', title: 'Analytics', path: '/analytics', icon: BarChart3, keywords: 'metrics charts' },
-  { id: 'go.subscription', title: 'Subscription & Billing', path: '/subscription', icon: CreditCard, keywords: 'plan upgrade billing' },
+  { id: 'go.subscription', title: 'Billing and plan', path: '/subscription', icon: CreditCard, keywords: 'plan upgrade billing' },
 ];
 
 const ROUTE_COMMANDS = ROUTES.map(r => ({
@@ -73,17 +73,17 @@ const ROUTE_COMMANDS = ROUTES.map(r => ({
 const ACTION_COMMANDS = [
   {
     id: 'ai.run_my_day',
-    title: 'Run My Day',
+    title: 'Plan my day',
     section: 'AI',
-    icon: Zap,
+    icon: CalendarCheck,
     keywords: 'triage priorities morning',
     run: (ctx) => { ctx.track('ai.action', { action: 'run_my_day' }); ctx.navigate('/'); ctx.close(); },
   },
   {
     id: 'ai.draft_checkin_reply',
-    title: 'Draft check-in reply',
+    title: 'Draft a check-in reply',
     section: 'AI',
-    icon: Sparkles,
+    icon: PenLine,
     keywords: 'respond review feedback',
     run: (ctx) => { ctx.track('ai.action', { action: 'draft_checkin_reply' }); ctx.navigate('/checkin-review'); ctx.close(); },
   },

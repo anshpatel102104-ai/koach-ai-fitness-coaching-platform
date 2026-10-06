@@ -1,34 +1,30 @@
 import React from 'react';
-import { Flame } from 'lucide-react';
 
 export default function StreakBanner({ streak = 0 }) {
   const msg = streak === 0
-    ? "Start your streak today! 💪"
+    ? 'Log something today to start a streak.'
     : streak >= 30
-    ? `${streak} day streak — unstoppable! 🔥🔥🔥`
+    ? 'Thirty days or more without a gap.'
     : streak >= 14
-    ? `${streak} days strong — keep it up! 🔥`
+    ? 'Two weeks and counting.'
     : streak >= 7
-    ? `${streak} day streak — you're on fire! 🔥`
-    : `${streak} day streak — great start!`;
+    ? 'A full week in a row.'
+    : 'Good start. Keep it going tomorrow.';
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-orange-500/10 to-warning/10 border border-orange-500/20 rounded-2xl">
-      <div className="relative">
-        <Flame className="w-7 h-7 text-orange-400" />
-        {streak >= 7 && <Flame className="w-4 h-4 text-warning absolute -top-1 -right-1" />}
-      </div>
-      <div>
-        <p className="font-heading font-bold text-orange-400 text-xl leading-none">{streak}</p>
-        <p className="text-xs text-muted-foreground">{msg}</p>
+    <section className="panel flex items-center gap-4 px-5 py-3">
+      <p className="num text-[32px] text-foreground">{streak}</p>
+      <div className="min-w-0">
+        <p className="text-[15px] font-semibold text-foreground">Day streak</p>
+        <p className="text-[13px] text-muted-foreground">{msg}</p>
       </div>
       {streak > 0 && (
         <div className="ml-auto flex gap-1">
           {[...Array(Math.min(7, streak))].map((_, i) => (
-            <div key={i} className="w-2 h-2 rounded-full bg-orange-400 opacity-80" />
+            <span key={i} className="h-3 w-2 rounded-[2px] bg-success" />
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -1,125 +1,64 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { X, Download, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import { format, parseISO, differenceInDays } from 'date-fns';
-
-const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDate = (d) => { try { return format(parseISO(d), 'MMM d, yyyy'); } catch { return d || '—'; } };
+import { differenceInDays, parseISO } from 'date-fns';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, Pill } from '@/components/portal/PortalUI';
+import { fmtMoney as fmt, fmtDate, INVOICE_STATUS } from './shared';
 
 export default function InvoiceDetailModal({ invoice, onClose, onPay }) {
   const isUnpaid = ['sent', 'viewed', 'overdue', 'draft'].includes(invoice.status);
   const isPaid = invoice.status === 'paid';
+  const cfg = INVOICE_STATUS[invoice.status] || INVOICE_STATUS.draft;
 
   const daysUntilDue = invoice.due_date ? differenceInDays(parseISO(invoice.due_date), new Date()) : null;
   const lineItems = invoice.line_items || [{ description: invoice.description, qty: 1, price: invoice.amount }];
 
+  const statusLine = isPaid
+    ? (invoice.paid_date ? `Paid on ${fmtDate(invoice.paid_date)}.` : 'Payment received.')
+    : invoice.status === 'overdue'
+      ? `Was due ${fmtDate(invoice.due_date)}.`
+      : isUnpaid && daysUntilDue !== null && daysUntilDue <= 3
+        ? `Due in ${daysUntilDue} day${daysUntilDue !== 1 ? 's' : ''}.`
+        : invoice.due_date ? `Due ${fmtDate(invoice.due_date)}.` : null;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end"
-      style={{ background: 'rgba(0,0,0,0.8)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 28 }}
-        className="w-full overflow-y-auto"
-        style={{ background: 'rgb(var(--sidebar))', borderRadius: '24px 24px 0 0', maxHeight: '92vh', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pb-4">
-          <div>
-            <h2 className="text-white font-bold text-lg">{invoice.invoice_number || 'Invoice'}</h2>
-            <p className="text-white/40 text-xs mt-0.5">Issued {fmtDate(invoice.issue_date)}</p>
-          </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <X className="w-4 h-4 text-white/60" />
-          </button>
-        </div>
-
-        {/* Status banner */}
-        {isPaid && (
-          <div className="mx-5 mb-4 p-3.5 rounded-2xl flex items-center gap-3" style={{ background: 'rgb(var(--success) / 0.15)', border: '1px solid rgb(var(--success) / 0.25)' }}>
-            <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
-            <div>
-              <p className="text-success font-bold text-sm">Paid ✓</p>
-              <p className="text-white/40 text-xs">{invoice.paid_date ? `Paid on ${fmtDate(invoice.paid_date)}` : 'Payment received'}</p>
-            </div>
-          </div>
-        )}
-
-        {invoice.status === 'overdue' && (
-          <div className="mx-5 mb-4 p-3.5 rounded-2xl flex items-center gap-3" style={{ background: 'rgb(var(--destructive) / 0.15)', border: '1px solid rgb(var(--destructive) / 0.25)' }}>
-            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
-            <div>
-              <p className="text-destructive font-bold text-sm">Payment Overdue</p>
-              <p className="text-white/40 text-xs">Was due {fmtDate(invoice.due_date)}</p>
-            </div>
-          </div>
-        )}
-
-        {isUnpaid && invoice.status !== 'overdue' && daysUntilDue !== null && daysUntilDue <= 3 && (
-          <div className="mx-5 mb-4 p-3.5 rounded-2xl flex items-center gap-3" style={{ background: 'rgb(var(--warning) / 0.15)', border: '1px solid rgb(var(--warning) / 0.25)' }}>
-            <Clock className="w-5 h-5 text-warning flex-shrink-0" />
-            <p className="text-warning font-bold text-sm">Due in {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''}</p>
-          </div>
-        )}
-
-        {/* Invoice card */}
-        <div className="mx-5 mb-4 rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-          <div className="p-4 border-b border-white/10">
-            <p className="text-white font-bold text-sm">{invoice.description || 'Coaching Services'}</p>
-            <p className="text-white/40 text-xs mt-1">Due {fmtDate(invoice.due_date)}</p>
-          </div>
-
-          {/* Line items */}
-          <div className="p-4 space-y-2 border-b border-white/10">
-            {lineItems.map((item, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm">{item.description || 'Service'}</p>
-                  {item.qty > 1 && <p className="text-white/30 text-xs">× {item.qty}</p>}
-                </div>
-                <p className="text-white text-sm font-semibold">{fmt((item.price || 0) * (item.qty || 1))}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Total */}
-          <div className="p-4 flex items-center justify-between">
-            <p className="text-white font-bold">Total</p>
-            <p className="text-white font-black text-xl">{fmt(invoice.amount)}</p>
-          </div>
-        </div>
-
-        {/* Coach contact */}
-        <div className="mx-5 mb-6 p-4 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <p className="text-white/30 text-xs font-semibold uppercase tracking-wider mb-2">Questions?</p>
-          <p className="text-white/60 text-xs">Contact your coach via the Messages tab in your portal.</p>
-        </div>
-
-        {/* Actions */}
-        <div className="px-5 pb-8 space-y-3">
+    <Sheet open onClose={onClose} title={invoice.invoice_number || 'Invoice'}
+      footer={(
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" className="flex-1" onClick={onClose}>Close</Button>
           {isUnpaid && (
-            <button onClick={() => { onClose(); onPay(invoice); }}
-              className="w-full py-4 rounded-2xl text-base font-black text-white"
-              style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 8px 24px rgb(var(--primary) / 0.4)' }}>
-              Pay Now — {fmt(invoice.amount)}
-            </button>
+            <Button variant="brand" size="lg" className="flex-[2] font-bold" onClick={() => { onClose(); onPay(invoice); }}>
+              Pay {fmt(invoice.amount)}
+            </Button>
           )}
           {isPaid && (
-            <button className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-sm font-bold"
-              style={{ background: 'rgb(var(--success) / 0.15)', color: 'rgb(var(--success))', border: '1px solid rgb(var(--success) / 0.25)' }}>
-              <Download className="w-4 h-4" />
-              Download Receipt
-            </button>
+            <Button size="lg" className="flex-[2]"><Download /> Receipt</Button>
           )}
-          <button onClick={onClose} className="w-full py-3 rounded-2xl text-sm font-semibold text-white/40">
-            Close
-          </button>
         </div>
-      </motion.div>
-    </motion.div>
+      )}>
+      <div className="flex items-center gap-2">
+        <Pill tone={cfg.tone}>{cfg.label}</Pill>
+        <span className="text-[13px] text-muted-foreground">Issued {fmtDate(invoice.issue_date)}</span>
+      </div>
+      {statusLine && <p className={`mt-2 text-[15px] ${invoice.status === 'overdue' ? 'text-destructive' : 'text-muted-foreground'}`}>{statusLine}</p>}
+
+      <div className="mt-4 rounded-xl shadow-[0_0_0_1px_rgb(var(--border))]">
+        <p className="border-b border-border px-4 py-3 text-[15px] font-semibold text-foreground">{invoice.description || 'Coaching services'}</p>
+        <ul className="divide-y divide-border px-4">
+          {lineItems.map((item, i) => (
+            <li key={i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+              <span className="text-foreground">{item.description || 'Service'}{item.qty > 1 ? <span className="text-muted-foreground"> × {item.qty}</span> : null}</span>
+              <span className="font-semibold tabular-nums text-foreground">{fmt((item.price || 0) * (item.qty || 1))}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <span className="text-[15px] font-semibold text-foreground">Total</span>
+          <span className="num text-[26px] text-foreground">{fmt(invoice.amount)}</span>
+        </div>
+      </div>
+
+      <p className="mt-4 text-sm text-muted-foreground">Questions about this invoice? Message your coach.</p>
+    </Sheet>
   );
 }

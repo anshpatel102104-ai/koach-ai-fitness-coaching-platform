@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UtensilsCrossed } from 'lucide-react';
+import { Segmented } from '@/components/kit';
 import { portalDb } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { addRecentFood } from '@/lib/nutritionUtils';
@@ -12,15 +12,12 @@ import RecentFoodsSection from '@/components/nutrition/usda/RecentFoodsSection';
 
 function SkeletonRows() {
   return (
-    <div className="space-y-0 divide-y divide-muted">
+    <div className="divide-y divide-border">
       {[1,2,3,4].map(i => (
         <div key={i} className="flex items-start gap-3 px-4 py-3 animate-pulse">
           <div className="flex-1 space-y-2">
-            <div className="h-3.5 bg-muted rounded w-3/4" />
-            <div className="h-2.5 bg-muted rounded w-1/4" />
-            <div className="flex gap-1">
-              {[1,2,3,4].map(j => <div key={j} className="h-5 w-16 bg-muted rounded-full" />)}
-            </div>
+            <div className="h-3.5 bg-secondary rounded w-3/4" />
+            <div className="h-2.5 bg-secondary rounded w-1/3" />
           </div>
         </div>
       ))}
@@ -40,29 +37,25 @@ function PortalFoodRow({ food, onTap, onAdd }) {
   return (
     <div className="border-b border-border last:border-0">
       <button onClick={() => onTap(food)}
-        className="w-full flex items-start gap-3 px-4 py-3 text-left active:bg-accent transition-colors">
+        className="w-full flex items-start gap-3 px-5 py-3 text-left hover:bg-accent/50 active:bg-accent transition-colors">
         <div className="flex-1 min-w-0">
-          <p className="text-foreground font-bold text-sm leading-snug">{food.name}</p>
+          <p className="text-foreground font-semibold text-[15px] leading-snug">{food.name}</p>
           {(food.category || food.brand) && (
-            <p className="text-muted-foreground text-xs truncate">{[food.category, food.brand].filter(Boolean).join(' · ')}</p>
+            <p className="text-muted-foreground text-[13px] truncate">{[food.category, food.brand].filter(Boolean).join(', ')}</p>
           )}
-          <div className="flex flex-wrap gap-1 mt-1.5">
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">🔥 {cal}cal</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-accent text-primary">💪 {prot}g</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-warning/10 text-warning">🌾 {carb}g</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">🥑 {fat}g</span>
-          </div>
+          <p className="mt-1 text-[13px] text-muted-foreground tabular-nums">
+            <span className="font-semibold text-foreground">{cal} cal</span>, protein {prot} g, carbs {carb} g, fat {fat} g
+          </p>
           <div className="flex items-center gap-1.5 mt-2">
             <input type="number" min={1} step={10} value={qty}
               onChange={e => setQty(Math.max(1, Number(e.target.value)))}
               onClick={e => e.stopPropagation()}
-              className="w-16 h-7 text-xs text-center border border-border rounded-lg bg-card px-1"
+              className="w-16 h-8 text-sm text-center border border-input rounded-md bg-card px-1"
             />
-            <span className="text-xs text-muted-foreground">g</span>
+            <span className="text-[13px] text-muted-foreground">g</span>
             <button
               onClick={e => { e.stopPropagation(); onAdd({ ...food, calories: cal, protein: prot, carbs: carb, fats: fat, serving_quantity: qty, serving_unit: 'g' }); }}
-              className="h-7 px-3 rounded-lg text-xs font-semibold text-white active:opacity-80"
-              style={{ background: 'rgb(var(--primary))' }}>
+              className="touch-compact h-8 px-3 rounded-md text-[13px] font-semibold bg-primary text-primary-foreground hover:bg-primary/85">
               Add
             </button>
           </div>
@@ -125,43 +118,34 @@ export default function FoodSearchSheet({ isOpen, onClose, onSelectFood, mealNam
     <>
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-end"
-        style={{ background: 'rgba(0,0,0,0.45)' }}
+        className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50"
         onClick={onClose}>
         <motion.div
           initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="w-full bg-card rounded-t-[24px] max-h-[92vh] flex flex-col"
+          transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
+          className="w-full max-w-[480px] bg-card rounded-t-xl max-h-[92vh] flex flex-col"
           onClick={e => e.stopPropagation()}>
 
-          {/* Handle */}
-          <div className="flex justify-center py-2.5 flex-shrink-0">
-            <div className="w-10 h-1 rounded-full bg-border" />
-          </div>
 
           {/* Header */}
-          <div className="px-4 pb-3 flex-shrink-0 space-y-3">
-            <p className="text-sm font-black text-foreground">
-              Add Food{mealName ? <span className="font-normal text-muted-foreground"> → {mealName}</span> : ''}
-            </p>
+          <div className="px-5 pt-5 pb-3 flex-shrink-0 space-y-3">
+            <h2 className="text-[22px] text-foreground">
+              Add food{mealName ? <span className="text-muted-foreground"> to {mealName.toLowerCase()}</span> : ''}
+            </h2>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-muted rounded-xl p-1">
-              {[['search','Search'],['recent','Recent'],['custom','+ Custom']].map(([id, label]) => (
-                <button key={id} onClick={() => { setTab(id); if (id !== 'search') clear(); }}
-                  className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-colors ${
-                    tab === id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                  }`}>
-                  {label}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              className="w-full [&>button]:flex-1 [&>button]:justify-center"
+              value={tab}
+              onChange={(id) => { setTab(id); if (id !== 'search') clear(); }}
+              options={[{ value: 'search', label: 'Search' }, { value: 'recent', label: 'Recent' }, { value: 'custom', label: 'Your own' }]}
+            />
 
             {tab === 'search' && (
               <FoodSearchBar
                 query={query} onChange={setQuery} onClear={clear}
                 isSearching={isSearching}
-                placeholder="Search 600,000+ foods..."
+                placeholder="Search foods, e.g. greek yogurt"
               />
             )}
           </div>
@@ -173,39 +157,37 @@ export default function FoodSearchSheet({ isOpen, onClose, onSelectFood, mealNam
             {tab === 'search' && (
               <>
                 {!query || query.length < 2 ? (
-                  <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
-                    <UtensilsCrossed className="w-10 h-10 text-border" />
-                    <p className="text-sm font-semibold text-foreground">USDA FoodData Central</p>
-                    <p className="text-xs text-muted-foreground">Accurate data for 600k+ foods. Type 2+ characters.</p>
+                  <div className="px-5 py-8">
+                    <p className="text-[15px] font-semibold text-foreground">Type at least two letters</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Results come from USDA FoodData Central.</p>
                   </div>
                 ) : isLoading && results.length === 0 ? (
                   <SkeletonRows />
                 ) : hasError ? (
                   <div className="p-4">
-                    <p className="text-center text-sm font-semibold text-foreground mb-1">Can't reach food database</p>
-                    <p className="text-center text-xs text-muted-foreground mb-4">Add your food manually.</p>
+                    <p className="text-[15px] font-semibold text-foreground mb-1">Can't reach the food database</p>
+                    <p className="text-sm text-muted-foreground mb-4">Add the food by hand instead.</p>
                     <CustomFoodForm onAdd={handleAdd} onSave={handleSave} />
                   </div>
                 ) : showEmpty ? (
                   <div className="p-4">
-                    <div className="text-center py-4 mb-4">
-                      <UtensilsCrossed className="w-8 h-8 text-border mx-auto mb-2" />
-                      <p className="text-sm font-semibold text-foreground">No results for "{query}"</p>
-                      <p className="text-xs text-muted-foreground">Try a different term or add custom.</p>
+                    <div className="py-2 mb-4">
+                      <p className="text-[15px] font-semibold text-foreground">Nothing for "{query}"</p>
+                      <p className="text-sm text-muted-foreground">Try another word, or add it yourself below.</p>
                     </div>
                     <CustomFoodForm onAdd={handleAdd} onSave={handleSave} />
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between px-4 py-2 bg-muted border-b border-border">
-                      <p className="text-xs text-muted-foreground">{total.toLocaleString()} results</p>
-                      <p className="text-[10px] text-muted-foreground">USDA FoodData Central</p>
+                    <div className="flex items-center justify-between px-5 py-2 bg-secondary border-y border-border">
+                      <p className="text-[13px] text-muted-foreground">{total.toLocaleString()} results</p>
+                      <p className="text-[13px] text-muted-foreground">USDA FoodData Central</p>
                     </div>
 
                     {common.length > 0 && (
                       <>
-                        <div className="px-4 py-1.5 bg-muted border-b border-border">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Common Foods</p>
+                        <div className="px-5 py-1.5 border-b border-border">
+                          <p className="text-[13px] font-semibold text-muted-foreground">Common foods</p>
                         </div>
                         {common.map(food => (
                           <PortalFoodRow key={food.id} food={food} onTap={setDetailFood} onAdd={handleAdd} />
@@ -215,8 +197,8 @@ export default function FoodSearchSheet({ isOpen, onClose, onSelectFood, mealNam
 
                     {branded.length > 0 && (
                       <>
-                        <div className="px-4 py-1.5 bg-muted border-b border-border">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Branded Foods</p>
+                        <div className="px-5 py-1.5 border-b border-border">
+                          <p className="text-[13px] font-semibold text-muted-foreground">Branded foods</p>
                         </div>
                         {branded.map(food => (
                           <PortalFoodRow key={food.id} food={food} onTap={setDetailFood} onAdd={handleAdd} />
@@ -227,8 +209,8 @@ export default function FoodSearchSheet({ isOpen, onClose, onSelectFood, mealNam
                     {hasMore && (
                       <div className="p-4 text-center">
                         <button onClick={loadMore} disabled={isLoading}
-                          className="text-sm font-semibold text-primary">
-                          {isLoading ? 'Loading...' : `Load more`}
+                          className="text-sm font-semibold text-foreground underline underline-offset-4">
+                          {isLoading ? 'Loading' : 'Load more'}
                         </button>
                       </div>
                     )}

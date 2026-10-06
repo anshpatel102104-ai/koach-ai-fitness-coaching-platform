@@ -20,9 +20,9 @@ export default function NotifsAI({ s, set }) {
   const upd = (key, val) => set('ai_insights', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="AI & Insights" emoji="🤖"
+    <NSection title="AI and insights"
       onReset={() => set('ai_insights', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for AI Insights')}>
+      onTest={() => toast.success('Test notification sent for AI insights')}>
 
       <NRow enabled={d.new_insight.enabled} onToggle={v => upd('new_insight', { enabled: v })}
         title="New AI insight available"

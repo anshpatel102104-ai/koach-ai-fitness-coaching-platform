@@ -38,43 +38,43 @@ export default function AddLeadModal({ open, onOpenChange, onSubmit, lead, initi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-bold text-foreground">{lead ? 'Edit Lead' : 'Add New Lead'}</DialogTitle>
+          <DialogTitle>{lead ? 'Edit lead' : 'Add a lead'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Label className="text-xs font-semibold text-foreground">Full Name *</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <Label>Name</Label>
               <Input className="mt-1" value={form.name} onChange={e => set('name', e.target.value)} required placeholder="Sarah Johnson" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-foreground">Email</Label>
+              <Label>Email</Label>
               <Input className="mt-1" type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="sarah@example.com" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-foreground">Phone</Label>
+              <Label>Phone</Label>
               <Input className="mt-1" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1 555 0123" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-foreground">Instagram Handle</Label>
+              <Label>Instagram</Label>
               <Input className="mt-1" value={form.instagram} onChange={e => set('instagram', e.target.value)} placeholder="@username" />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-foreground">Potential Value ($/mo)</Label>
+              <Label>Value ($ per month)</Label>
               <Input className="mt-1" type="number" min="0" value={form.deal_value} onChange={e => set('deal_value', e.target.value)} placeholder="500" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs font-semibold text-foreground">Source</Label>
+              <Label>Source</Label>
               <Select value={form.source} onValueChange={v => set('source', v)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="instagram">Instagram DM</SelectItem>
                   <SelectItem value="referral">Referral</SelectItem>
-                  <SelectItem value="store_purchase">Store Purchase</SelectItem>
+                  <SelectItem value="store_purchase">Store purchase</SelectItem>
                   <SelectItem value="website">Website</SelectItem>
-                  <SelectItem value="cold_outreach">Cold Outreach</SelectItem>
+                  <SelectItem value="cold_outreach">Cold outreach</SelectItem>
                   <SelectItem value="dm">DM (other)</SelectItem>
                   <SelectItem value="tiktok">TikTok</SelectItem>
                   <SelectItem value="youtube">YouTube</SelectItem>
@@ -83,7 +83,7 @@ export default function AddLeadModal({ open, onOpenChange, onSubmit, lead, initi
               </Select>
             </div>
             <div>
-              <Label className="text-xs font-semibold text-foreground">Initial Stage</Label>
+              <Label>Stage</Label>
               <Select value={form.stage} onValueChange={v => set('stage', v)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -94,19 +94,19 @@ export default function AddLeadModal({ open, onOpenChange, onSubmit, lead, initi
           </div>
 
           <div>
-            <Label className="text-xs font-semibold text-foreground">Their Goal</Label>
-            <Input className="mt-1" value={form.goal} onChange={e => set('goal', e.target.value)} placeholder="e.g. Lose 20lbs before summer" />
+            <Label>Their goal</Label>
+            <Input className="mt-1" value={form.goal} onChange={e => set('goal', e.target.value)} placeholder="Lose 20 lb before summer" />
           </div>
 
           <div>
-            <Label className="text-xs font-semibold text-foreground">Notes</Label>
-            <Textarea className="mt-1" value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} placeholder="Any additional context about this lead…" />
+            <Label>Notes</Label>
+            <Textarea className="mt-1" value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} placeholder="Where they came from, what they asked, anything to remember" />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="bg-sidebar hover:bg-black text-white">
-              {lead ? 'Save Changes' : 'Add Lead'}
+            <Button type="submit">
+              {lead ? 'Save changes' : 'Add lead'}
             </Button>
           </div>
         </form>

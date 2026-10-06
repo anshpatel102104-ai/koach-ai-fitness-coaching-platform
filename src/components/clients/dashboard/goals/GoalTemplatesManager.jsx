@@ -5,15 +5,15 @@ import { X, Pencil, Trash2, LayoutTemplate } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TYPE_META = {
-  numeric:   { label: 'Numeric',   color: 'var(--tc-primary)', bg: 'var(--tc-accent)' },
-  nutrition: { label: 'Nutrition', color: 'var(--tc-success)', bg: 'var(--tc-success)' },
-  simple:    { label: 'Simple',    color: 'var(--tc-ai)', bg: 'var(--tc-ai)' },
+  numeric:   { label: 'Numeric',   color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+  nutrition: { label: 'Nutrition', color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+  simple:    { label: 'Simple',    color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
 };
 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</label>
+      <label className="block text-xs font-semibold text-muted-foreground mb-1">{label}</label>
       {children}
     </div>
   );
@@ -76,10 +76,10 @@ function TemplateEditForm({ template, onSaved, onCancel }) {
           </button>
         ))}
       </div>
-      <Field label="Template Name"><TInput value={form.name} onChange={v => set('name', v)} placeholder="e.g. Weight Loss Target" /></Field>
+      <Field label="Template name"><TInput value={form.name} onChange={v => set('name', v)} placeholder="e.g. Weight Loss Target" /></Field>
       {form.goal_type === 'numeric' && (
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Target Value"><TInput type="number" value={form.target_value} onChange={v => set('target_value', v)} placeholder="e.g. 175" /></Field>
+          <Field label="Target value"><TInput type="number" value={form.target_value} onChange={v => set('target_value', v)} placeholder="e.g. 175" /></Field>
           <Field label="Unit"><TInput value={form.unit} onChange={v => set('unit', v)} placeholder="e.g. lbs" /></Field>
         </div>
       )}
@@ -127,14 +127,14 @@ export default function GoalTemplatesManager({ onClose }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
-      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-lg flex flex-col" style={{ maxHeight: '85vh' }}
+      <div className="relative bg-card rounded-xl w-full max-w-lg flex flex-col" style={{ maxHeight: '85vh' }}
         onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <LayoutTemplate className="w-4 h-4 text-primary" />
-            <h3 className="text-base font-bold text-foreground">Goal Templates</h3>
+            <h3 className="text-base font-bold text-foreground">Goal templates</h3>
             <span className="text-[11px] font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{templates.length}</span>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
@@ -170,11 +170,11 @@ export default function GoalTemplatesManager({ onClose }) {
               return <TemplateEditForm key={t.id} template={t} onSaved={() => { setEditingId(null); refresh(); }} onCancel={() => setEditingId(null)} />;
             }
             return (
-              <div key={t.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 shadow-sm">
+              <div key={t.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
                       style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground">

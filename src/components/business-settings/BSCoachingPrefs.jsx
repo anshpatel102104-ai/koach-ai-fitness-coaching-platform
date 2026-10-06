@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Users } from 'lucide-react';
-import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSGroup } from './BSSection';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { fieldClass } from '@/components/settings/SettingsLayout';
 
 const FREQ_OPTIONS = [
   { value: 'daily', label: 'Daily' },
@@ -33,9 +36,9 @@ export default function BSCoachingPrefs({ s, set, forms, programs, mealPlans }) 
   const removeTag = (i) => set('default_tags', (s.default_tags || []).filter((_, idx) => idx !== i));
 
   return (
-    <BSSection icon={Users} title="Coaching Preferences" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+    <BSSection icon={Users} title="Coaching" subtitle="Check-ins, automatic assignments, client limits and tags." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
       {/* Check-in */}
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Client Management</p>
+      <BSGroup>Client management</BSGroup>
       <BSRow label="Default check-in frequency">
         <BSSelect value={s.checkin_frequency} onChange={v => set('checkin_frequency', v)} options={FREQ_OPTIONS} />
       </BSRow>
@@ -50,7 +53,7 @@ export default function BSCoachingPrefs({ s, set, forms, programs, mealPlans }) 
           <BSToggle value={s.auto_assign_checkin_form} onChange={v => set('auto_assign_checkin_form', v)} />
           {s.auto_assign_checkin_form && (
             <BSSelect value={s.default_checkin_form_id || ''} onChange={v => set('default_checkin_form_id', v)}
-              options={[{ value: '', label: '— Select form —' }, ...forms.map(f => ({ value: f.id, label: f.name }))]} />
+              options={[{ value: '', label: 'Choose a form' }, ...forms.map(f => ({ value: f.id, label: f.name }))]} />
           )}
         </div>
       </BSRow>
@@ -59,7 +62,7 @@ export default function BSCoachingPrefs({ s, set, forms, programs, mealPlans }) 
           <BSToggle value={s.auto_assign_program} onChange={v => set('auto_assign_program', v)} />
           {s.auto_assign_program && (
             <BSSelect value={s.default_program_id || ''} onChange={v => set('default_program_id', v)}
-              options={[{ value: '', label: '— Select program —' }, ...programs.map(p => ({ value: p.id, label: p.title }))]} />
+              options={[{ value: '', label: 'Choose a program' }, ...programs.map(p => ({ value: p.id, label: p.title }))]} />
           )}
         </div>
       </BSRow>
@@ -68,22 +71,20 @@ export default function BSCoachingPrefs({ s, set, forms, programs, mealPlans }) 
           <BSToggle value={s.auto_assign_meal_plan} onChange={v => set('auto_assign_meal_plan', v)} />
           {s.auto_assign_meal_plan && (
             <BSSelect value={s.default_meal_plan_id || ''} onChange={v => set('default_meal_plan_id', v)}
-              options={[{ value: '', label: '— Select meal plan —' }, ...mealPlans.map(m => ({ value: m.id, label: m.title }))]} />
+              options={[{ value: '', label: 'Choose a meal plan' }, ...mealPlans.map(m => ({ value: m.id, label: m.title }))]} />
           )}
         </div>
       </BSRow>
-      <BSRow label="Welcome message" hint="Sent automatically to new clients">
+      <BSRow label="Welcome message" hint="Sent from you when a client joins.">
         <div className="space-y-2">
           <BSToggle value={s.welcome_message_enabled} onChange={v => set('welcome_message_enabled', v)} />
           {s.welcome_message_enabled && (
             <BSTextarea value={s.welcome_message} onChange={v => set('welcome_message', v)}
-              placeholder="Welcome to [Business Name]! I'm so excited to start this journey with you..." rows={3} />
+              placeholder="Welcome to [Business Name]. Your plan is ready in the app." rows={3} />
           )}
         </div>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Client Limits</p>
+      <BSGroup>Client limits</BSGroup>
       <BSRow label="Maximum active clients">
         <div className="flex items-center gap-3">
           <BSToggle value={s.max_clients_unlimited} onChange={v => set('max_clients_unlimited', v)} label="Unlimited" />
@@ -92,40 +93,38 @@ export default function BSCoachingPrefs({ s, set, forms, programs, mealPlans }) 
           )}
         </div>
       </BSRow>
-      <BSRow label="Waitlist" hint="New requests go to waitlist when at capacity">
+      <BSRow label="Waitlist" hint="New requests wait in line once you are full.">
         <BSToggle value={s.waitlist_enabled} onChange={v => set('waitlist_enabled', v)} />
       </BSRow>
-      <BSRow label="Capacity alerts" hint="Alert at 80%, 90%, and 100% capacity">
+      <BSRow label="Capacity alerts" hint="We tell you at 80%, 90% and 100% of your limit.">
         <BSToggle value={s.capacity_alerts} onChange={v => set('capacity_alerts', v)} />
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Client Categorization</p>
-      <BSRow label="Default client tags" hint="Applied to all new clients automatically">
+      <BSGroup>Client categorization</BSGroup>
+      <BSRow label="Default client tags" hint="Added to every new client.">
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="flex flex-wrap gap-2">
             {(s.default_tags || []).map((tag, i) => (
-              <span key={i} className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-accent text-primary border border-primary">
+              <span key={i} className="inline-flex h-8 items-center gap-1 rounded-full bg-secondary pl-3 pr-1 text-sm font-medium text-foreground">
                 {tag}
-                <button onClick={() => removeTag(i)} className="text-primary hover:text-primary ml-0.5 font-bold">×</button>
+                <button onClick={() => removeTag(i)} aria-label={`Remove ${tag}`} className="touch-compact flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">×</button>
               </span>
             ))}
           </div>
           <div className="flex gap-2">
             <input value={newTag} onChange={e => setNewTag(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addTag()}
-              placeholder="Add a tag..." className="flex-1 px-3 py-2 rounded-xl border border-border text-sm focus:outline-none focus:border-primary" />
-            <button onClick={addTag} className="px-4 py-2 rounded-xl text-sm font-semibold text-primary-foreground" style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>Add</button>
+              placeholder="Add a tag" className={cn(fieldClass, 'flex-1')} />
+            <Button variant="outline" onClick={addTag}>Add</Button>
           </div>
         </div>
       </BSRow>
-      <BSRow label="At Risk threshold" hint="Auto-tag client as 'At Risk'">
+      <BSRow label="At-risk threshold" hint="Tag a client as at risk at or below this adherence.">
         <div className="flex items-center gap-2">
           <BSInput type="number" value={s.auto_tag_at_risk_pct} onChange={v => set('auto_tag_at_risk_pct', v)} min={0} max={100} className="w-24" />
           <span className="text-sm text-muted-foreground">% adherence or below</span>
         </div>
       </BSRow>
-      <BSRow label="High Performer threshold" hint="Auto-tag client as 'High Performer'">
+      <BSRow label="High performer threshold" hint="Tag a client as a high performer at or above this adherence.">
         <div className="flex items-center gap-2">
           <BSInput type="number" value={s.auto_tag_high_performer_pct} onChange={v => set('auto_tag_high_performer_pct', v)} min={0} max={100} className="w-24" />
           <span className="text-sm text-muted-foreground">% adherence or above</span>

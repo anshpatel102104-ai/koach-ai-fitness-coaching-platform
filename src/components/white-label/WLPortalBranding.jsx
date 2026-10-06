@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { WLSection, WLRow, WLToggle, WLSelect, WLColorPicker, WLInput, WLUploadButton, WLDivider } from './WLHelpers';
+import { WLSection, WLRow, WLToggle, WLSelect, WLColorPicker, WLInput, WLUploadButton, WLGroup, WLPlanNote } from './WLHelpers';
 import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 const NAV_STYLES = [
@@ -8,7 +8,7 @@ const NAV_STYLES = [
   { value: 'tab', label: 'Tab bar' },
 ];
 const NAV_BGS = [
-  { value: 'brand', label: 'Brand color' },
+  { value: 'brand', label: 'Brand colour' },
   { value: 'white', label: 'White' },
   { value: 'dark', label: 'Dark' },
 ];
@@ -17,16 +17,17 @@ const SPLASH_ANIMATIONS = [
   { value: 'pulse', label: 'Pulse' },
   { value: 'logo', label: 'Logo animation' },
 ];
+// 'gradient' is the stored legacy value; it now renders as the flat brand colour.
 const LOGIN_BG_TYPES = [
-  { value: 'gradient', label: 'Gradient' },
-  { value: 'solid', label: 'Solid color' },
+  { value: 'gradient', label: 'Brand colour' },
+  { value: 'solid', label: 'Another colour' },
   { value: 'image', label: 'Image' },
 ];
 const DOMAIN_STATUS = {
-  pending: { icon: Clock, color: 'var(--tc-warning)', bg: 'var(--tc-warning)', label: 'Pending DNS setup' },
-  verified: { icon: CheckCircle, color: 'var(--tc-primary)', bg: 'var(--tc-accent)', label: 'Domain verified' },
-  active: { icon: CheckCircle, color: 'var(--tc-success)', bg: 'var(--tc-success)', label: 'Active & live' },
-  error: { icon: AlertCircle, color: 'var(--tc-destructive)', bg: 'var(--tc-destructive)', label: 'DNS error — check records' },
+  pending: { icon: Clock, tone: 'text-warning', label: 'Waiting for DNS' },
+  verified: { icon: CheckCircle, tone: 'text-foreground', label: 'Domain verified' },
+  active: { icon: CheckCircle, tone: 'text-success', label: 'Live' },
+  error: { icon: AlertCircle, tone: 'text-destructive', label: 'DNS error. Check the records below.' },
 };
 
 export default function WLPortalBranding({ s, set, locked, eliteLocked, enterpriseLocked }) {
@@ -35,27 +36,25 @@ export default function WLPortalBranding({ s, set, locked, eliteLocked, enterpri
   const StatusIcon = domainStatus.icon;
 
   return (
-    <WLSection title="Client Portal Branding" emoji="📱"
-      description="Customize the look and feel of your client-facing app" locked={locked}>
+    <WLSection title="Client app"
+      description="Header, navigation, loading screen, login page and domain." locked={locked}>
 
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Header & Navigation</p>
-      <WLRow label="Show business logo" hint="Display your logo in the portal header">
+      <WLGroup>Header and navigation</WLGroup>
+      <WLRow label="Show business logo" hint="In the app header, top left.">
         <WLToggle value={s.portal_show_logo !== false} onChange={v => set('portal_show_logo', v)} />
       </WLRow>
-      <WLRow label="Navigation style" hint="Layout for the client portal navigation">
+      <WLRow label="Navigation style" hint="Where the main tabs sit in the app.">
         <WLSelect value={s.portal_nav_style || 'bottom'} onChange={v => set('portal_nav_style', v)} options={NAV_STYLES} />
       </WLRow>
-      <WLRow label="Navigation bar color">
+      <WLRow label="Navigation bar colour">
         <WLSelect value={s.portal_nav_bg || 'white'} onChange={v => set('portal_nav_bg', v)} options={NAV_BGS} />
       </WLRow>
-      <WLRow label="Hide 'Powered by KOACH AI'" hint="Remove KOACH AI badge from footer (Elite+)">
+      <WLRow label="Hide Powered by KOACH" hint="Removes the KOACH badge from the app footer.">
         <WLToggle value={s.portal_hide_koach_badge || false} onChange={v => set('portal_hide_koach_badge', v)} disabled={eliteLocked} />
-        {eliteLocked && <p className="text-xs text-warning font-medium mt-1">⭐ Available on Elite and above</p>}
+        {eliteLocked && <WLPlanNote>Elite plan and above</WLPlanNote>}
       </WLRow>
-
-      <WLDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Loading Screen</p>
-      <WLRow label="Custom splash screen">
+      <WLGroup>Loading screen</WLGroup>
+      <WLRow label="Your own splash screen">
         <WLToggle value={s.splash_enabled !== false} onChange={v => set('splash_enabled', v)} />
       </WLRow>
       {s.splash_enabled !== false && (
@@ -68,19 +67,17 @@ export default function WLPortalBranding({ s, set, locked, eliteLocked, enterpri
           </WLRow>
         </>
       )}
-
-      <WLDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Login Page</p>
+      <WLGroup>Login page</WLGroup>
       <WLRow label="Background type">
         <WLSelect value={s.login_bg_type || 'gradient'} onChange={v => set('login_bg_type', v)} options={LOGIN_BG_TYPES} />
       </WLRow>
       {s.login_bg_type !== 'image' ? (
-        <WLRow label="Background color">
+        <WLRow label="Background colour">
           <WLColorPicker value={s.login_bg_color} onChange={v => set('login_bg_color', v)} />
         </WLRow>
       ) : (
         <WLRow label="Background image">
-          <WLUploadButton label="Background Image" url={s.login_bg_image_url} onChange={v => set('login_bg_image_url', v)} hint="1920×1080px recommended" />
+          <WLUploadButton label="Image" url={s.login_bg_image_url} onChange={v => set('login_bg_image_url', v)} hint="1920 × 1080" />
         </WLRow>
       )}
       <WLRow label="Show logo on login page">
@@ -88,50 +85,36 @@ export default function WLPortalBranding({ s, set, locked, eliteLocked, enterpri
       </WLRow>
       <WLRow label="Welcome headline">
         <WLInput value={s.login_headline} onChange={v => set('login_headline', v)}
-          placeholder={`Welcome to ${s.business_name || 'Your Coaching App'}`} />
+          placeholder={`Welcome to ${s.business_name || 'your coaching app'}`} />
       </WLRow>
       <WLRow label="Welcome subtitle">
         <WLInput value={s.login_subtitle} onChange={v => set('login_subtitle', v)}
-          placeholder="Sign in to access your training dashboard" />
+          placeholder="Sign in to see your plan for today" />
       </WLRow>
-
-      <WLDivider />
-      <div className="flex items-start gap-3">
-        <div className="flex-1">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-            Custom Domain
-            {enterpriseLocked && <span className="text-[10px] bg-ai/10 text-ai font-bold px-2 py-0.5 rounded-full">Enterprise only</span>}
+      <WLGroup right={enterpriseLocked && <WLPlanNote>Enterprise plan</WLPlanNote>}>Custom domain</WLGroup>
+      <WLRow label="Domain" hint="DNS changes can take up to 48 hours.">
+        <WLInput value={s.custom_domain} onChange={v => { set('custom_domain', v); setShowDnsInstructions(!!v); }}
+          placeholder="app.yourdomain.com"
+          className={enterpriseLocked ? 'opacity-50 pointer-events-none' : ''} />
+        {s.custom_domain && (
+          <p className={`mt-2 flex items-center gap-1.5 text-[13px] font-semibold ${domainStatus.tone}`}>
+            <StatusIcon className="h-4 w-4 flex-shrink-0" />
+            {domainStatus.label}
+            <span className="font-normal text-muted-foreground">· SSL is set up for you</span>
           </p>
-          <WLRow label="Domain" hint="e.g. app.mylesharrisfitness.com">
-            <WLInput value={s.custom_domain} onChange={v => { set('custom_domain', v); setShowDnsInstructions(!!v); }}
-              placeholder="app.yourdomain.com"
-              className={enterpriseLocked ? 'opacity-50 pointer-events-none' : ''} />
-            {s.custom_domain && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: domainStatus.bg }}>
-                <StatusIcon className="w-4 h-4 flex-shrink-0" style={{ color: domainStatus.color }} />
-                <span className="text-xs font-semibold" style={{ color: domainStatus.color }}>{domainStatus.label}</span>
-                <span className="text-xs text-muted-foreground ml-1">· SSL auto-provisioned</span>
-              </div>
-            )}
-          </WLRow>
-          {showDnsInstructions && s.custom_domain && !enterpriseLocked && (
-            <div className="mt-3 p-4 rounded-xl bg-muted border border-border">
-              <p className="text-xs font-bold text-foreground mb-2">DNS Setup Instructions</p>
-              <div className="space-y-1 font-mono text-xs">
-                <p className="text-muted-foreground">Add a CNAME record to your DNS provider:</p>
-                <div className="bg-card border border-border rounded-lg p-2 mt-1">
-                  <p><span className="text-primary">Type:</span> CNAME</p>
-                  <p><span className="text-primary">Name:</span> {s.custom_domain.split('.')[0]}</p>
-                  <p><span className="text-primary">Value:</span> portal.koachai.net</p>
-                  <p><span className="text-primary">TTL:</span> 300</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      <p className="text-xs text-muted-foreground">💡 Custom domain requires Enterprise plan and DNS access. Allow up to 48 hours for DNS propagation.</p>
+        )}
+        {showDnsInstructions && s.custom_domain && !enterpriseLocked && (
+          <div className="mt-3 rounded-lg bg-secondary p-4">
+            <p className="mb-2 text-[13px] font-semibold text-foreground">Add this CNAME record at your DNS provider</p>
+            <dl className="grid grid-cols-[64px_1fr] gap-y-1 font-mono text-[13px]">
+              <dt className="text-muted-foreground">Type</dt><dd className="text-foreground">CNAME</dd>
+              <dt className="text-muted-foreground">Name</dt><dd className="text-foreground">{s.custom_domain.split('.')[0]}</dd>
+              <dt className="text-muted-foreground">Value</dt><dd className="text-foreground">portal.koachai.net</dd>
+              <dt className="text-muted-foreground">TTL</dt><dd className="text-foreground">300</dd>
+            </dl>
+          </div>
+        )}
+      </WLRow>
     </WLSection>
   );
 }

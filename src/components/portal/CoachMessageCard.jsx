@@ -1,39 +1,28 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { differenceInHours, parseISO } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { Initials } from '@/components/kit';
 
+/**
+ * Coach note on the client Today screen: ink initials, coach name, the
+ * latest message. Tapping opens the conversation.
+ */
 export default function CoachMessageCard({ message, coachName, onReply }) {
   if (!message) return null;
-  const hoursAgo = differenceInHours(new Date(), parseISO(message.created_date));
-  if (hoursAgo > 24) return null;
+  const name = coachName || 'Your coach';
+  const when = message.created_date
+    ? formatDistanceToNowStrict(new Date(message.created_date), { addSuffix: true })
+    : null;
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-      className="mx-5 p-4 rounded-2xl relative overflow-hidden"
-      style={{
-        background: 'rgb(var(--primary) / 0.08)',
-        border: '1.5px solid rgb(var(--primary) / 0.35)',
-        boxShadow: '0 0 20px rgb(var(--primary) / 0.12)',
-      }}>
-      {/* Pulsing border effect */}
-      <div className="absolute inset-0 rounded-2xl animate-pulse pointer-events-none"
-        style={{ boxShadow: '0 0 0 1px rgb(var(--primary) / 0.3)', animationDuration: '2s' }} />
-
-      <div className="flex items-center gap-3 mb-2.5">
-        <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm flex-shrink-0">
-          {coachName?.[0]?.toUpperCase() || 'C'}
-        </div>
-        <div>
-          <p className="text-white font-semibold text-xs">{coachName || 'Your Coach'}</p>
-          <p className="text-primary text-[10px]">{hoursAgo === 0 ? 'Just now' : `${hoursAgo}h ago`}</p>
-        </div>
-      </div>
-      <p className="text-white/70 text-sm leading-relaxed mb-3 line-clamp-3">{message.content}</p>
-      <button onClick={onReply}
-        className="px-4 py-2 rounded-xl text-xs font-bold text-white"
-        style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary)))' }}>
-        Reply →
-      </button>
-    </motion.div>
+    <button type="button" onClick={onReply} className="panel flex w-full items-start gap-3 p-4 text-left hover:bg-accent/60 transition-colors">
+      <Initials name={name === 'Your coach' ? 'Coach' : name} tone="ink" size={40} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-[15px] font-semibold text-foreground truncate">{name}</span>
+          {when && <span className="text-[13px] text-muted-foreground flex-shrink-0">{when}</span>}
+        </span>
+        <span className="mt-0.5 block text-[15px] leading-snug text-foreground line-clamp-3">{message.content}</span>
+      </span>
+    </button>
   );
 }

@@ -1,16 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, X, Image as ImageIcon, EyeOff, Megaphone
+  Plus, X, Image as ImageIcon, EyeOff, Megaphone, Check
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Initials, InkPanel } from '@/components/kit';
+import { Sheet } from '@/components/portal/PortalUI';
 import { formatDistanceToNow } from 'date-fns';
 import PostCard from './PostCard';
 import ChallengeCard from './ChallengeCard';
 import { SignedImg } from '@/components/shared/SignedImage';
-
-const REACTION_EMOJIS = ['🔥', '💪', '❤️', '🏆', '👏'];
 
 function PostComposer({ user, myClient, onPost, onClose, groupId }) {
   const [text, setText] = useState('');
@@ -46,74 +47,42 @@ function PostComposer({ user, myClient, onPost, onClose, groupId }) {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.4)' }}
-      onClick={onClose}>
-      <motion.div initial={{ y: 300 }} animate={{ y: 0 }} exit={{ y: 300 }}
-        className="w-full bg-card rounded-t-3xl p-5 pb-8"
-        style={{ boxShadow: '0 -8px 32px rgba(0,0,0,0.1)' }}
-        onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 rounded-full bg-border mx-auto mb-4" />
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-foreground font-black text-base">Share with Community</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
-            <X className="w-4 h-4 text-muted-foreground" />
+    <Sheet open onClose={onClose} title="New post"
+      footer={(
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+            <ImageIcon /> {uploading ? 'Uploading' : 'Photo'}
+          </Button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          <Button variant={anonymous ? 'default' : 'outline'} size="sm" onClick={() => setAnonymous(!anonymous)} aria-pressed={anonymous}>
+            <EyeOff /> Anonymous
+          </Button>
+          <Button className="ml-auto" onClick={handlePost} disabled={!text.trim()}>Post</Button>
+        </div>
+      )}>
+      <div className="flex items-center gap-3">
+        <Initials name={anonymous ? '?' : (user?.full_name || myClient?.name || 'You')} size={36} />
+        <p className="text-[15px] font-semibold text-foreground">
+          {anonymous ? 'Posting anonymously' : (user?.full_name || myClient?.name || 'You')}
+        </p>
+      </div>
+      <Textarea
+        value={text}
+        onChange={e => setText(e.target.value)}
+        placeholder="Share a win, ask a question, or say hello."
+        className="mt-3 text-base"
+        rows={5}
+      />
+      {mediaUrl && (
+        <div className="relative mt-2 overflow-hidden rounded-lg">
+          <SignedImg src={mediaUrl} alt="" className="max-h-40 w-full object-cover" />
+          <button type="button" onClick={() => setMediaUrl(null)} aria-label="Remove photo"
+            className="touch-compact absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white">
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
-
-        {/* Author row */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0"
-            style={{ background: anonymous ? 'rgb(var(--muted-foreground))' : 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-            {anonymous ? '?' : (user?.full_name || 'U')[0].toUpperCase()}
-          </div>
-          <p className="text-foreground font-semibold text-sm">
-            {anonymous ? 'Posting anonymously' : (user?.full_name || myClient?.name || 'You')}
-          </p>
-        </div>
-
-        <textarea
-          value={text}
-          onChange={e => setText(e.target.value)}
-          placeholder="Share a win, ask a question, or say hello! 👋"
-          className="w-full p-3 rounded-2xl bg-muted border border-border text-foreground text-sm resize-none focus:outline-none focus:border-primary"
-          rows={4}
-        />
-
-        {mediaUrl && (
-          <div className="relative mt-2 rounded-xl overflow-hidden">
-            <SignedImg src={mediaUrl} alt="attachment" className="w-full max-h-40 object-cover" />
-            <button onClick={() => setMediaUrl(null)}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
-              <X className="w-3 h-3 text-white" />
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => fileRef.current?.click()}
-              className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-              <ImageIcon size={16} />
-              {uploading ? 'Uploading...' : 'Photo'}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-
-            <button onClick={() => setAnonymous(!anonymous)}
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${anonymous ? 'text-primary' : 'text-muted-foreground'}`}>
-              <EyeOff size={16} />
-              Anonymous
-            </button>
-          </div>
-
-          <button onClick={handlePost} disabled={!text.trim()}
-            className="px-5 py-2 rounded-xl text-sm font-black text-white disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-            Post
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
+      )}
+    </Sheet>
   );
 }
 
@@ -141,95 +110,68 @@ export default function CommunityFeedTab({ user, myClient, posts, allClients, qu
 
   if (!guidelinesAccepted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--accent)), rgb(var(--ai)))' }}>
-          🤝
-        </div>
-        <h2 className="text-foreground font-black text-xl mb-2">Community Guidelines</h2>
-        <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-          Be kind, supportive, and respectful. Celebrate each other's wins. No negative comments, spam, or off-topic content. All posts may be reviewed by your coach.
+      <section className="panel p-5">
+        <h2 className="text-[24px] text-foreground">Before you post</h2>
+        <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">
+          This group is for people training with the same coach. Your coach can see and review every post.
         </p>
-        <div className="text-left w-full max-w-xs space-y-2 mb-6">
-          {['Be supportive and positive 🙌', 'Respect everyone\'s journey 💙', 'No spam or self-promotion 🚫', 'Content is private to members 🔒'].map(g => (
-            <div key={g} className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-                <div className="w-2 h-2 rounded-full bg-success" />
-              </div>
-              <p className="text-muted-foreground text-sm">{g}</p>
-            </div>
+        <ul className="mt-3 divide-y divide-border border-y border-border">
+          {['Be supportive. Celebrate other people\'s wins.', 'Respect everyone\'s pace and starting point.', 'No spam or selling.', 'What\'s shared here stays with group members.'].map(g => (
+            <li key={g} className="flex items-center gap-2.5 py-2.5 text-[15px] text-foreground">
+              <Check className="h-4 w-4 flex-shrink-0 text-success" strokeWidth={3} /> {g}
+            </li>
           ))}
-        </div>
-        <button onClick={() => { localStorage.setItem('community_guidelines_accepted', 'true'); setGuidelinesAccepted(true); }}
-          className="w-full py-4 rounded-2xl font-black text-white text-base"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-          I Agree — Join Community
-        </button>
-      </div>
+        </ul>
+        <Button size="lg" className="mt-4 w-full" onClick={() => { localStorage.setItem('community_guidelines_accepted', 'true'); setGuidelinesAccepted(true); }}>
+          I agree, show the group
+        </Button>
+      </section>
     );
   }
 
   return (
-    <div className="relative">
-      <div className="space-y-0 pb-4">
-        {announcements.map(post => (
-          <div key={post.id} className="mx-4 mt-4">
-            <div className="rounded-2xl p-4 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 4px 20px rgb(var(--primary) / 0.25)' }}>
-              <div className="flex items-start gap-2 mb-2">
-                <Megaphone className="w-4 h-4 text-white/70 mt-0.5 flex-shrink-0" />
-                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest">Announcement</p>
-              </div>
-              <p className="text-white font-bold text-sm leading-relaxed">{post.content}</p>
-              <p className="text-white/50 text-[10px] mt-2">
-                {post.created_date ? formatDistanceToNow(new Date(post.created_date), { addSuffix: true }) : ''}
-              </p>
-            </div>
-          </div>
-        ))}
+    <div className="relative space-y-3">
+      {announcements.map(post => (
+        <InkPanel key={post.id} className="p-4 sm:p-4">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-semibold text-ai-foreground/70">
+            <Megaphone className="h-3.5 w-3.5" /> Announcement
+          </p>
+          <p className="text-[15px] font-semibold leading-relaxed text-ai-foreground">{post.content}</p>
+          <p className="mt-2 text-[13px] text-ai-foreground/60">
+            {post.created_date ? formatDistanceToNow(new Date(post.created_date), { addSuffix: true }) : ''}
+          </p>
+        </InkPanel>
+      ))}
 
-        {/* Active Challenge */}
-        {activeChallenge && (
-          <div className="mx-4 mt-4">
-            <ChallengeCard challenge={activeChallenge} myClient={myClient} queryClient={queryClient} />
-          </div>
-        )}
+      {/* Active Challenge */}
+      {activeChallenge && (
+        <ChallengeCard challenge={activeChallenge} myClient={myClient} queryClient={queryClient} />
+      )}
 
-        {/* Feed */}
-        {regularPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-            <div className="text-5xl mb-4">🎉</div>
-            <h3 className="text-foreground font-black text-lg mb-2">Welcome to the Community!</h3>
-            <p className="text-muted-foreground text-sm mb-6">Be the first to post and introduce yourself to the group.</p>
-            <button onClick={() => setShowComposer(true)}
-              className="px-6 py-3 rounded-2xl font-black text-white"
-              style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-              Say Hello 👋
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4">
-            {regularPosts.map(post => (
-              <PostCard key={post.id} post={post} user={user} myClient={myClient} queryClient={queryClient} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Feed */}
+      {regularPosts.length === 0 ? (
+        <section className="panel px-4 py-6">
+          <p className="text-[15px] font-semibold text-foreground">No posts yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Be the first. Say hello and what you're training for.</p>
+          <Button className="mt-4" onClick={() => setShowComposer(true)}>Write a post</Button>
+        </section>
+      ) : (
+        regularPosts.map(post => (
+          <PostCard key={post.id} post={post} user={user} myClient={myClient} queryClient={queryClient} />
+        ))
+      )}
 
-      {/* FAB */}
-      <motion.button whileTap={{ scale: 0.9 }} onClick={() => setShowComposer(true)}
-        className="fixed bottom-28 right-5 w-14 h-14 rounded-full flex items-center justify-center z-40"
-        style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 4px 20px rgb(var(--primary) / 0.4)' }}>
-        <Plus className="w-6 h-6 text-white" />
-      </motion.button>
+      {/* New post button */}
+      <button type="button" onClick={() => setShowComposer(true)} aria-label="New post"
+        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md md:right-[calc(50%-224px)]">
+        <Plus className="h-6 w-6" />
+      </button>
 
-      <AnimatePresence>
-        {showComposer && (
-          <PostComposer user={user} myClient={myClient} groupId={groupId}
-            onPost={(data) => createPost.mutate(data)}
-            onClose={() => setShowComposer(false)} />
-        )}
-      </AnimatePresence>
+      {showComposer && (
+        <PostComposer user={user} myClient={myClient} groupId={groupId}
+          onPost={(data) => createPost.mutate(data)}
+          onClose={() => setShowComposer(false)} />
+      )}
     </div>
   );
 }

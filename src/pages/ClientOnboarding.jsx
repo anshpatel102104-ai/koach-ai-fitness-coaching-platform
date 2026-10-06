@@ -1,9 +1,7 @@
-// cache-bust: 2026-06-18T19:45:00Z — force full recompile, bundle index-wl2fz097.js is stale
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import KoachLogo from '@/components/brand/KoachLogo.jsx';
 
 /* ─── URL params ─── */
 const urlParams = new URLSearchParams(window.location.search);
@@ -32,215 +30,218 @@ const STEPS = [
 const NO_PROGRESS = new Set(['welcome', 'generating', 'done']);
 const PROGRESS_STEPS = STEPS.filter(s => !NO_PROGRESS.has(s));
 
-/* ─── Shared primitives ─── */
+/* Steps grouped into the four labelled segments of the progress bar. */
+const PHASES = [
+  { label: 'You', steps: ['basic_info', 'goals', 'body_metrics'] },
+  { label: 'Training', steps: ['experience', 'lifestyle', 'training_prefs', 'equipment'] },
+  { label: 'Health', steps: ['nutrition', 'medical', 'consent'] },
+  { label: 'Mindset', steps: ['mindset', 'obstacles', 'commitment'] },
+];
+
+/* ─── Shared primitives (light canvas, white option rows, ink selection) ─── */
 function Screen({ children }) {
+  return <div className="flex h-full w-full flex-col bg-background">{children}</div>;
+}
+
+/** Back lives in the sticky footer now; kept so every step's markup stays the same. */
+// eslint-disable-next-line no-unused-vars
+function BackBtn({ onClick }) {
+  return null;
+}
+
+/** Page 13 top bar: back, "Intake, step 2 of 13", segmented progress with labels. */
+function StepTopBar({ step, onBack, coachName }) {
+  const idx = PROGRESS_STEPS.indexOf(step);
   return (
-    <div className="w-full h-full flex flex-col" style={{ background: 'var(--tc-sidebar)' }}>
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full opacity-[0.05]"
-          style={{ background: 'radial-gradient(circle, var(--tc-primary) 0%, transparent 65%)', filter: 'blur(70px)' }}
-        />
+    <div className="flex-shrink-0 bg-background px-5 pt-4">
+      <div className="mx-auto w-full max-w-md">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            aria-label="Back"
+            className="touch-compact flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-card text-foreground shadow-[0_0_0_1px_rgb(var(--border))]"
+          >
+            <svg width="18" height="18" fill="none" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M10 3L6 8L10 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <p className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">
+            Intake, step {idx + 1} of {PROGRESS_STEPS.length}
+          </p>
+          {coachName && <p className="truncate text-sm text-muted-foreground">For Coach {coachName}</p>}
+        </div>
+        <div className="mt-4 grid grid-cols-4 gap-1.5" role="progressbar" aria-valuemin={1} aria-valuemax={PROGRESS_STEPS.length} aria-valuenow={idx + 1}>
+          {PHASES.map(p => {
+            const first = PROGRESS_STEPS.indexOf(p.steps[0]);
+            const last = PROGRESS_STEPS.indexOf(p.steps[p.steps.length - 1]);
+            const state = idx > last ? 'done' : idx >= first ? 'current' : 'todo';
+            return (
+              <div key={p.label}>
+                <span className={`block h-1 rounded-full ${state === 'done' ? 'bg-success' : state === 'current' ? 'bg-foreground' : 'bg-border'}`} />
+                <span className={`mt-1.5 block text-[13px] ${state === 'todo' ? 'text-muted-foreground' : 'font-semibold text-foreground'}`}>{p.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {children}
     </div>
   );
 }
 
-function BackBtn({ onClick }) {
+// eslint-disable-next-line no-unused-vars
+function Header({ eyebrow, headline, sub }) {
+  return (
+    <div className="mx-auto w-full max-w-md flex-shrink-0 px-5 pb-4 pt-5">
+      <h1 className="text-[32px] leading-[1.04] text-foreground sm:text-[36px]">{headline}</h1>
+      {sub && <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+/** Sticky footer: Back (outline) + Next (ink). */
+function CTABtn({ label = 'Next', onClick, disabled, onBack }) {
+  return (
+    <div className="flex-shrink-0 border-t border-border bg-background px-5 pt-3" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+      <div className="mx-auto flex w-full max-w-md gap-2">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="h-12 rounded-lg border border-input bg-card px-5 text-[15px] font-semibold text-foreground transition-colors hover:bg-accent"
+          >
+            Back
+          </button>
+        )}
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className="h-12 flex-1 rounded-lg bg-primary px-5 text-[15px] font-semibold text-primary-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
+        >
+          {label}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CheckDot({ selected, square }) {
+  return (
+    <span
+      className={`flex h-6 w-6 flex-shrink-0 items-center justify-center ${square ? 'rounded-md' : 'rounded-full'} ${selected ? 'bg-primary' : 'border-[1.5px] border-input bg-card'}`}
+      aria-hidden="true"
+    >
+      {selected && (
+        <svg viewBox="0 0 10 10" fill="none" className="h-3 w-3">
+          <path d="M2 5L4 7L8 3" stroke="rgb(var(--primary-foreground))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
+// `emoji` is accepted but no longer drawn.
+// eslint-disable-next-line no-unused-vars
+function Chip({ label, selected, onClick, emoji }) {
   return (
     <button
       onClick={onClick}
-      className="flex-shrink-0 flex items-center gap-1.5 text-sm font-medium px-6 pt-5 pb-1 relative z-10"
-      style={{ color: 'var(--kc-4a4a4a)' }}
+      aria-pressed={selected}
+      className={`touch-compact h-10 rounded-full px-4 text-[15px] font-medium transition-colors ${selected
+        ? 'bg-primary text-primary-foreground'
+        : 'bg-card text-foreground shadow-[inset_0_0_0_1px_rgb(var(--input))] hover:bg-accent'}`}
     >
-      <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
-        <path d="M10 3L6 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      Back
+      {label}
     </button>
   );
 }
 
-function Header({ eyebrow, headline, sub }) {
-  return (
-    <motion.div
-      className="px-6 pt-4 pb-2 flex-shrink-0 max-w-md mx-auto w-full relative z-10"
-      initial={{ opacity: 0, y: 22 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-    >
-      {eyebrow && (
-        <p className="text-[11px] uppercase tracking-[0.26em] font-bold mb-2.5" style={{ color: 'var(--tc-primary)' }}>
-          {eyebrow}
-        </p>
-      )}
-      <h2 className="font-bold text-white leading-[1.1] mb-2"
-        style={{ fontSize: 'clamp(1.75rem, 5.5vw, 2.6rem)', letterSpacing: '-0.03em' }}>
-        {headline}
-      </h2>
-      {sub && <p className="text-sm leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>{sub}</p>}
-    </motion.div>
-  );
-}
-
-function CTABtn({ label = 'Continue', onClick, disabled }) {
-  return (
-    <div
-      className="flex-shrink-0 px-6 pt-3 pb-8 w-full max-w-md mx-auto relative z-10"
-      style={{ background: 'var(--tc-sidebar)' }}
-    >
-      <motion.button
-        onClick={onClick}
-        disabled={disabled}
-        whileHover={!disabled ? { scale: 1.02, boxShadow: '0 0 40px color-mix(in srgb, var(--tc-primary) 45%, transparent)' } : {}}
-        whileTap={!disabled ? { scale: 0.98 } : {}}
-        className="w-full py-4 rounded-2xl font-bold text-base transition-all"
-        style={{
-          background: disabled ? 'color-mix(in srgb, white 6%, transparent)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-primary))',
-          boxShadow: disabled ? 'none' : '0 0 24px color-mix(in srgb, var(--tc-primary) 28%, transparent)',
-          color: disabled ? 'var(--kc-444444)' : 'var(--tc-primary-foreground)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {label}
-      </motion.button>
-    </div>
-  );
-}
-
-function Chip({ label, selected, onClick, emoji }) {
-  return (
-    <motion.button
-      onClick={onClick}
-      whileTap={{ scale: 0.94 }}
-      className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-      style={{
-        background: selected ? 'color-mix(in srgb, var(--tc-primary) 12%, transparent)' : 'color-mix(in srgb, white 4%, transparent)',
-        border: selected ? '1.5px solid color-mix(in srgb, var(--tc-primary) 55%, transparent)' : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-        color: selected ? 'var(--tc-primary-foreground)' : 'var(--kc-6a6a6a)',
-        boxShadow: selected ? '0 0 18px color-mix(in srgb, var(--tc-primary) 15%, transparent)' : 'none',
-      }}
-    >
-      {emoji && <span className="mr-1.5">{emoji}</span>}{label}
-    </motion.button>
-  );
-}
-
+// eslint-disable-next-line no-unused-vars
 function BigCard({ emoji, label, sublabel, selected, onClick }) {
   return (
-    <motion.button
+    <button
       onClick={onClick}
-      whileTap={{ scale: 0.975 }}
-      className="relative w-full text-left rounded-2xl p-4 transition-all"
-      style={{
-        background: selected ? 'color-mix(in srgb, var(--tc-primary) 9%, transparent)' : 'color-mix(in srgb, white 3%, transparent)',
-        border: selected ? '1.5px solid color-mix(in srgb, var(--tc-primary) 60%, transparent)' : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-        boxShadow: selected ? '0 0 28px color-mix(in srgb, var(--tc-primary) 12%, transparent)' : 'none',
-      }}
+      aria-pressed={selected}
+      className={`flex w-full items-center gap-4 rounded-xl bg-card px-4 py-3.5 text-left transition-shadow ${selected
+        ? 'shadow-[inset_0_0_0_2px_rgb(var(--foreground))]'
+        : 'shadow-[inset_0_0_0_1px_rgb(var(--border))] hover:shadow-[inset_0_0_0_1px_rgb(var(--input))]'}`}
     >
-      <div className="flex items-center gap-4">
-        <span className="text-2xl flex-shrink-0">{emoji}</span>
-        <div className="flex-1 text-left">
-          <p className="font-semibold text-sm" style={{ color: selected ? 'var(--tc-primary-foreground)' : 'var(--kc-b3b3b3)' }}>{label}</p>
-          {sublabel && <p className="text-xs mt-0.5" style={{ color: 'var(--kc-4a4a4a)' }}>{sublabel}</p>}
-        </div>
-        <div
-          className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
-          style={{
-            background: selected ? 'var(--tc-primary)' : 'transparent',
-            border: selected ? '2px solid var(--tc-primary)' : '2px solid color-mix(in srgb, white 12%, transparent)',
-          }}
-        >
-          {selected && (
-            <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3">
-              <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-        </div>
-      </div>
-    </motion.button>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold text-foreground">{label}</span>
+        {sublabel && <span className="mt-0.5 block text-sm text-muted-foreground">{sublabel}</span>}
+      </span>
+      <CheckDot selected={selected} />
+    </button>
   );
 }
 
 function PremiumField({ label, value, onChange, type = 'text', placeholder, autoFocus }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--kc-4a4a4a)' }}>{label}</p>
+    <label className="block space-y-1.5">
+      <span className="block text-sm font-medium text-foreground">{label}</span>
       <input
         type={type}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full px-5 py-4 rounded-2xl text-white text-base font-medium placeholder-[var(--kc-2e2e2e)] outline-none transition-all"
-        style={{ background: 'var(--tc-foreground)', border: '1.5px solid color-mix(in srgb, white 7%, transparent)' }}
-        onFocus={e => (e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 50%, transparent)')}
-        onBlur={e => (e.target.style.borderColor = 'color-mix(in srgb, white 7%, transparent)')}
+        className="h-12 w-full rounded-lg border border-input bg-card px-4 text-base text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus:border-foreground focus:ring-1 focus:ring-foreground"
       />
-    </div>
+    </label>
   );
 }
 
 function NumBox({ label, value, onChange, unit, placeholder }) {
   return (
-    <div
-      className="flex-1 flex flex-col items-center gap-2 py-5 px-3 rounded-2xl"
-      style={{ background: 'var(--tc-foreground)', border: '1.5px solid color-mix(in srgb, white 7%, transparent)' }}
-    >
-      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--kc-4a4a4a)' }}>{label}</p>
-      <input
-        type="number"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full text-center text-3xl font-bold text-white bg-transparent border-0 focus:outline-none placeholder-[var(--kc-222222)]"
-        style={{ minWidth: 0 }}
-      />
-      {unit && <p className="text-xs" style={{ color: 'var(--kc-3a3a3a)' }}>{unit}</p>}
-    </div>
+    <label className="flex flex-1 flex-col gap-1 rounded-xl bg-card px-4 py-3.5 shadow-[inset_0_0_0_1px_rgb(var(--border))] focus-within:shadow-[inset_0_0_0_2px_rgb(var(--foreground))]">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="flex items-baseline gap-1.5">
+        <input
+          type="number"
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="num w-full min-w-0 border-0 bg-transparent p-0 text-[34px] leading-none text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+        />
+        {unit && <span className="text-sm text-muted-foreground">{unit}</span>}
+      </span>
+    </label>
   );
 }
 
 function SliderRow({ label, value, onChange, min = 1, max = 10, leftLabel, rightLabel }) {
+  const v = value || min;
+  const pct = ((v - min) / (max - min)) * 100;
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-white">{label}</p>
-        <span
-          className="text-sm font-bold px-2.5 py-0.5 rounded-lg"
-          style={{ background: 'color-mix(in srgb, var(--tc-primary) 12%, transparent)', color: 'var(--tc-primary)' }}
-        >
-          {value || min}/{max}
-        </span>
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[15px] font-semibold text-foreground">{label}</p>
+        <p className="text-sm text-muted-foreground"><span className="num text-xl text-foreground">{v}</span> of {max}</p>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        value={value || min}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-1.5 rounded-full outline-none appearance-none"
-        style={{ background: `linear-gradient(to right, var(--tc-primary) ${((value || min) - min) / (max - min) * 100}%, color-mix(in srgb, white 8%, transparent) 0%)` }}
-      />
+      <div className="relative flex h-7 items-center">
+        <span className="absolute inset-x-0 h-1.5 rounded-full bg-border" />
+        <span className="absolute left-0 h-1.5 rounded-full bg-foreground" style={{ width: `${pct}%` }} />
+        <input
+          type="range"
+          min={min}
+          max={max}
+          value={v}
+          onChange={e => onChange(Number(e.target.value))}
+          aria-label={label}
+          className="relative h-7 w-full cursor-pointer appearance-none bg-transparent outline-none"
+        />
+      </div>
       {(leftLabel || rightLabel) && (
-        <div className="flex justify-between">
-          <span className="text-xs" style={{ color: 'var(--kc-3a3a3a)' }}>{leftLabel}</span>
-          <span className="text-xs" style={{ color: 'var(--kc-3a3a3a)' }}>{rightLabel}</span>
+        <div className="flex justify-between text-[13px] text-muted-foreground">
+          <span>{leftLabel}</span>
+          <span>{rightLabel}</span>
         </div>
       )}
     </div>
   );
 }
 
+/** Small question heading between groups of options. */
 function SectionDivider({ label }) {
-  return (
-    <div className="flex items-center gap-3 my-2">
-      <div className="flex-1 h-px" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }} />
-      <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--kc-333333)' }}>{label}</p>
-      <div className="flex-1 h-px" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }} />
-    </div>
-  );
+  return <p className="pt-1 text-[15px] font-semibold text-foreground">{label}</p>;
 }
 
 function PremiumTextarea({ value, onChange, placeholder, rows = 4 }) {
@@ -250,10 +251,7 @@ function PremiumTextarea({ value, onChange, placeholder, rows = 4 }) {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full px-5 py-4 rounded-2xl text-white text-base leading-relaxed resize-none focus:outline-none transition-all"
-      style={{ background: 'var(--tc-foreground)', border: '1.5px solid color-mix(in srgb, white 7%, transparent)' }}
-      onFocus={e => (e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 45%, transparent)')}
-      onBlur={e => (e.target.style.borderColor = 'color-mix(in srgb, white 7%, transparent)')}
+      className="w-full resize-none rounded-lg border border-input bg-card px-4 py-3 text-base leading-relaxed text-foreground outline-none placeholder:text-muted-foreground focus:border-foreground focus:ring-1 focus:ring-foreground"
     />
   );
 }
@@ -264,71 +262,48 @@ function WelcomeStep({ onNext }) {
   const displayName = COACH_NAME || (COACH_ID ? decodeURIComponent(COACH_ID).split('@')[0] : null);
   const totalSteps = PROGRESS_STEPS.length;
   return (
-    <Screen>
-      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-10 relative z-10">
-        <motion.div
-          className="flex flex-col items-center gap-8 text-center w-full max-w-sm"
-          initial="hidden"
-          animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.11 } } }}
-        >
-          <motion.div variants={{ hidden: { opacity: 0, scale: 0.7 }, show: { opacity: 1, scale: 1, transition: { duration: 0.7, ease: [0.32, 0.72, 0, 1] } } }}>
-            <KoachLogo size={80} rounded="rounded-3xl" glow bg />
-          </motion.div>
-
-          <motion.div
-            variants={{ hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.6 } } }}
-            className="space-y-4"
-          >
-            {displayName && (
-              <p className="text-sm font-semibold" style={{ color: 'var(--tc-primary)' }}>
-                Coach {displayName} invited you ✦
-              </p>
-            )}
-            <h1
-              className="font-bold text-white leading-[1.05]"
-              style={{ fontSize: 'clamp(2.5rem, 9vw, 4rem)', letterSpacing: '-0.035em' }}
-            >
-              Your next level<br />starts now.
-            </h1>
-            <p className="text-base leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>
-              This personalized intake helps your coach build your training, nutrition, recovery, and success plan.
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { duration: 0.4 } } }}
-            className="flex flex-wrap justify-center gap-2"
-          >
-            {['Personalized', 'AI-Powered', 'Science-Backed', 'Elite-Grade'].map(t => (
-              <span
-                key={t}
-                className="px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ background: 'color-mix(in srgb, var(--tc-primary) 8%, transparent)', color: 'var(--tc-primary)', border: '1px solid color-mix(in srgb, var(--tc-primary) 18%, transparent)' }}
-              >
-                {t}
-              </span>
-            ))}
-          </motion.div>
-
-          <motion.div
-            variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
-            className="w-full space-y-3"
-          >
-            <motion.button
-              onClick={onNext}
-              whileHover={{ scale: 1.03, boxShadow: '0 0 48px color-mix(in srgb, var(--tc-primary) 50%, transparent)' }}
-              whileTap={{ scale: 0.97 }}
-              className="w-full py-4 rounded-2xl text-primary-foreground font-bold text-lg"
-              style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-primary))', boxShadow: '0 0 28px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}
-            >
-              Let's Go →
-            </motion.button>
-            <p className="text-xs" style={{ color: 'var(--kc-2e2e2e)' }}>Takes about 5 minutes · {totalSteps} steps · Private & secure</p>
-          </motion.div>
-        </motion.div>
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-background">
+      {/* Graphite hero */}
+      <div className="flex-shrink-0 bg-sidebar px-5 pb-8 pt-6 text-white">
+        <div className="mx-auto w-full max-w-md">
+          <img src="/koach-logo-white.png" alt="KOACH" className="h-6 w-auto" />
+          <p className="mt-10 text-sm text-white/70">
+            {displayName ? `Coach ${displayName} invited you` : 'Your coach invited you'}
+          </p>
+          <h1 className="mt-1 text-[40px] leading-[1.02] text-white">Let's build your plan.</h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-white/75">
+            Your answers shape your training, nutrition and check-ins. Only your coach sees them.
+          </p>
+        </div>
       </div>
-    </Screen>
+
+      {/* What we'll ask */}
+      <div className="mx-auto w-full max-w-md flex-1 px-5 py-6">
+        <p className="text-[13px] font-semibold text-muted-foreground">Four short parts, about 5 minutes</p>
+        <ol className="mt-3 space-y-2">
+          {PHASES.map((p, i) => (
+            <li key={p.label} className="flex items-center gap-4 rounded-xl bg-card px-4 py-3.5 shadow-[inset_0_0_0_1px_rgb(var(--border))]">
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-foreground text-sm font-bold text-foreground">{i + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-foreground">{p.label}</span>
+                <span className="block text-sm text-muted-foreground">
+                  {['Name, goals and body measurements', 'Experience, routine, style and equipment', 'Food, injuries and health screening', 'Your reasons, obstacles and commitment'][i]}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="flex-shrink-0 border-t border-border bg-background px-5 pt-3" style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}>
+        <div className="mx-auto w-full max-w-md">
+          <button onClick={onNext} className="h-12 w-full rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground">
+            Start
+          </button>
+          <p className="mt-2 text-center text-[13px] text-muted-foreground">{totalSteps} steps · Private to you and your coach</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -338,42 +313,38 @@ function BasicInfoStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 1 of 13" headline="What should your coach call you?" />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-4 max-w-md mx-auto w-full pb-4"
+      <Header eyebrow="Step 1 of 13" headline="What should your coach call you?" sub="Your coach uses this to message you." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-4 max-w-md mx-auto w-full pb-4"
         >
           <div className="flex gap-3">
             <div className="flex-1">
-              <PremiumField label="First Name *" value={data.first_name} onChange={v => set('first_name', v)} placeholder="Alex" autoFocus />
+              <PremiumField label="First name" value={data.first_name} onChange={v => set('first_name', v)} placeholder="Alex" autoFocus />
             </div>
             <div className="flex-1">
-              <PremiumField label="Last Name" value={data.last_name} onChange={v => set('last_name', v)} placeholder="Johnson" />
+              <PremiumField label="Last name (optional)" value={data.last_name} onChange={v => set('last_name', v)} placeholder="Johnson" />
             </div>
           </div>
-          <PremiumField label="Email Address *" value={data.email} onChange={v => set('email', v)} type="email" placeholder="alex@email.com" />
+          <PremiumField label="Email" value={data.email} onChange={v => set('email', v)} type="email" placeholder="alex@email.com" />
           <PremiumField label="Phone (optional)" value={data.phone} onChange={v => set('phone', v)} type="tel" placeholder="+1 (555) 000-0000" />
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
 
 /* STEP 2: GOALS */
 const GOAL_OPTIONS = [
-  { id: 'fat_loss', emoji: '🔥', label: 'Lose Fat', sublabel: 'Shred body fat, get lean' },
-  { id: 'muscle_gain', emoji: '💪', label: 'Build Muscle', sublabel: 'Gain size, strength & mass' },
-  { id: 'strength', emoji: '🏋️', label: 'Gain Strength', sublabel: 'Move bigger weights' },
-  { id: 'confidence', emoji: '⭐', label: 'Improve Confidence', sublabel: 'Feel great in your skin' },
-  { id: 'energy', emoji: '⚡', label: 'Improve Energy', sublabel: 'More vitality every day' },
-  { id: 'athletic', emoji: '🏆', label: 'Athletic Performance', sublabel: 'Train like an athlete' },
-  { id: 'general_health', emoji: '🎯', label: 'General Health', sublabel: 'Live longer, feel better' },
-  { id: 'lifestyle', emoji: '🌅', label: 'Lifestyle Change', sublabel: 'Build lasting healthy habits' },
-  { id: 'hybrid', emoji: '⚡', label: 'Hybrid Performance', sublabel: 'Lose fat AND gain muscle' },
+  { id: 'fat_loss', label: 'Lose fat', sublabel: 'Get leaner and lighter' },
+  { id: 'muscle_gain', label: 'Build muscle', sublabel: 'Add size and strength' },
+  { id: 'strength', label: 'Get stronger', sublabel: 'Lift heavier weights' },
+  { id: 'confidence', label: 'Feel more confident', sublabel: 'Like what you see in the mirror' },
+  { id: 'energy', label: 'More energy', sublabel: 'Stop running out by mid-afternoon' },
+  { id: 'athletic', label: 'Perform better at a sport', sublabel: 'Speed, power, endurance' },
+  { id: 'general_health', label: 'General health', sublabel: 'Feel better day to day' },
+  { id: 'lifestyle', label: 'Build habits that stick', sublabel: 'Routine you can keep' },
+  { id: 'hybrid', label: 'Lose fat and build muscle', sublabel: 'Recomposition' },
 ];
 
 function GoalsStep({ data, set, onNext, onBack }) {
@@ -382,22 +353,18 @@ function GoalsStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 2 of 13" headline="What's your main goal right now?" sub="Select all that apply." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-2.5 max-w-md mx-auto w-full pb-4"
+      <Header eyebrow="Step 2 of 13" headline="What do you want from coaching?" sub="Pick as many as are true." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-2.5 max-w-md mx-auto w-full pb-4"
         >
-          {GOAL_OPTIONS.map((g, i) => (
-            <motion.div key={g.id} initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+          {GOAL_OPTIONS.map(g => (
+            <div key={g.id}>
               <BigCard {...g} selected={selected.includes(g.id)} onClick={() => toggle(g.id)} />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={selected.length === 0} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={selected.length === 0} />
     </Screen>
   );
 }
@@ -408,42 +375,38 @@ function BodyMetricsStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 3 of 13" headline="Tell us about yourself." sub="Used to calculate your personalized targets." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-4 max-w-md mx-auto w-full pb-4"
+      <Header eyebrow="Step 3 of 13" headline="Your starting numbers." sub="Used to set your calories and training targets. Rough is fine." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-4 max-w-md mx-auto w-full pb-4"
         >
           <div className="flex gap-3">
-            <NumBox label="Age *" value={data.age} onChange={v => set('age', v)} unit="years" placeholder="25" />
-            <NumBox label="Weight *" value={data.current_weight} onChange={v => set('current_weight', v)} unit="lbs" placeholder="170" />
+            <NumBox label="Age" value={data.age} onChange={v => set('age', v)} unit="years" placeholder="25" />
+            <NumBox label="Weight" value={data.current_weight} onChange={v => set('current_weight', v)} unit="lbs" placeholder="170" />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <PremiumField label="Height *" value={data.height} onChange={v => set('height', v)} placeholder={`5'10"`} />
+              <PremiumField label="Height" value={data.height} onChange={v => set('height', v)} placeholder={`5'10"`} />
             </div>
             <div className="flex-1">
-              <PremiumField label="Goal Weight" value={data.target_weight} onChange={v => set('target_weight', v)} placeholder="160 lbs" />
+              <PremiumField label="Goal weight (optional)" value={data.target_weight} onChange={v => set('target_weight', v)} placeholder="160 lbs" />
             </div>
           </div>
           <div className="flex gap-3">
-            <NumBox label="Body Fat % (opt)" value={data.body_fat_pct} onChange={v => set('body_fat_pct', v)} unit="optional" placeholder="18" />
+            <NumBox label="Body fat % (optional)" value={data.body_fat_pct} onChange={v => set('body_fat_pct', v)} unit="%" placeholder="18" />
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
 
 /* STEP 4: EXPERIENCE */
 const EXP_LEVELS = [
-  { id: 'none', emoji: '🌱', label: 'Beginner', sublabel: 'New to structured training' },
-  { id: 'some', emoji: '🔥', label: 'Intermediate', sublabel: '1–3 years of consistent training' },
-  { id: 'experienced', emoji: '⚡', label: 'Advanced', sublabel: '3–5 years of serious training' },
-  { id: 'advanced', emoji: '🏆', label: 'Elite', sublabel: '5+ years, competitive level' },
+  { id: 'none', label: 'Beginner', sublabel: 'New to structured training' },
+  { id: 'some', label: 'Intermediate', sublabel: '1 to 3 years of regular training' },
+  { id: 'experienced', label: 'Advanced', sublabel: '3 to 5 years of serious training' },
+  { id: 'advanced', label: 'Competitive', sublabel: '5+ years, you compete' },
 ];
 const EXP_DURATIONS = ['Never', '<1 year', '1–3 years', '3–5 years', '5+ years'];
 
@@ -451,41 +414,39 @@ function ExperienceStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 4 of 13" headline="What's your fitness experience?" />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-7 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 4 of 13" headline="How much have you trained?" />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-6">
           <div className="space-y-2.5">
-            {EXP_LEVELS.map((l, i) => (
-              <motion.div key={l.id} initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+            {EXP_LEVELS.map(l => (
+              <div key={l.id}>
                 <BigCard {...l} selected={data.experience === l.id} onClick={() => set('experience', l.id)} />
-              </motion.div>
+              </div>
             ))}
           </div>
-          <SectionDivider label="Training Duration" />
+          <SectionDivider label="How long have you trained consistently?" />
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">How long have you trained consistently?</p>
-            <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2">
               {EXP_DURATIONS.map(d => (
                 <Chip key={d} label={d} selected={data.training_duration === d} onClick={() => set('training_duration', d)} />
               ))}
             </div>
           </div>
-          <SectionDivider label="Training History" />
+          <SectionDivider label="Anything about your training history? (optional)" />
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--kc-4a4a4a)' }}>
+            <p className="text-sm font-medium text-foreground">
               Describe your training history (optional)
             </p>
             <PremiumTextarea
               value={data.training_history}
               onChange={v => set('training_history', v)}
-              placeholder="e.g. Trained powerlifting for 2 years, took 6 months off, recently returned to gym..."
+              placeholder="Powerlifted for 2 years, took 6 months off, back in the gym since March"
               rows={3}
             />
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!data.experience} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!data.experience} />
     </Screen>
   );
 }
@@ -500,27 +461,26 @@ function LifestyleStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 5 of 13" headline="What does your lifestyle look like?" sub="Recovery is half the battle." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-7 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 5 of 13" headline="What does a normal week look like?" sub="Sleep, stress and work change what you can recover from." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-6">
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Daily activity level *</p>
+            <p className="text-[15px] font-semibold text-foreground">Daily activity</p>
             <div className="flex flex-wrap gap-2">
               {ACTIVITY_OPTS.map(o => <Chip key={o} label={o} selected={data.activity_level === o} onClick={() => set('activity_level', o)} />)}
             </div>
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Work schedule</p>
+            <p className="text-[15px] font-semibold text-foreground">Work schedule</p>
             <div className="flex flex-wrap gap-2">
               {SCHEDULE_OPTS.map(o => <Chip key={o} label={o} selected={data.work_schedule === o} onClick={() => set('work_schedule', o)} />)}
             </div>
           </div>
 
           <SliderRow
-            label="Stress Level"
+            label="Stress"
             value={data.stress_level}
             onChange={v => set('stress_level', v)}
             min={1} max={10}
@@ -529,7 +489,7 @@ function LifestyleStep({ data, set, onNext, onBack }) {
           />
 
           <SliderRow
-            label="Sleep Quality"
+            label="Sleep quality"
             value={data.sleep_quality}
             onChange={v => set('sleep_quality', v)}
             min={1} max={10}
@@ -538,7 +498,7 @@ function LifestyleStep({ data, set, onNext, onBack }) {
           />
 
           <SliderRow
-            label="Daily Water Intake"
+            label="Water each day"
             value={data.water_intake}
             onChange={v => set('water_intake', v)}
             min={1} max={10}
@@ -547,28 +507,28 @@ function LifestyleStep({ data, set, onNext, onBack }) {
           />
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Alcohol frequency</p>
+            <p className="text-[15px] font-semibold text-foreground">Alcohol frequency</p>
             <div className="flex flex-wrap gap-2">
               {ALCOHOL_OPTS.map(o => <Chip key={o} label={o} selected={data.alcohol_frequency === o} onClick={() => set('alcohol_frequency', o)} />)}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
 
 /* STEP 6: TRAINING PREFS */
 const TRAINING_STYLES = [
-  { id: 'gym', emoji: '🏋️', label: 'Gym Workouts', sublabel: 'Weights, machines, barbells' },
-  { id: 'running', emoji: '🏃', label: 'Running', sublabel: 'Road, trail, cardio-focused' },
-  { id: 'hybrid', emoji: '⚡', label: 'Hybrid Training', sublabel: 'Mix of strength and cardio' },
-  { id: 'strength', emoji: '💪', label: 'Strength Training', sublabel: 'Powerlifting, barbell focus' },
-  { id: 'functional', emoji: '🔄', label: 'Functional Fitness', sublabel: 'CrossFit, athletic movement' },
-  { id: 'home', emoji: '🏠', label: 'Home Workouts', sublabel: 'Minimal equipment, bodyweight' },
-  { id: 'cardio', emoji: '❤️', label: 'Cardio-Focused', sublabel: 'Cycling, swimming, HIIT' },
-  { id: 'sports', emoji: '🏆', label: 'Sports Performance', sublabel: 'Sport-specific training' },
+  { id: 'gym', label: 'Gym workouts', sublabel: 'Weights, machines, barbells' },
+  { id: 'running', label: 'Running', sublabel: 'Road or trail' },
+  { id: 'hybrid', label: 'Hybrid', sublabel: 'Strength and cardio together' },
+  { id: 'strength', label: 'Strength', sublabel: 'Barbell lifts, powerlifting' },
+  { id: 'functional', label: 'Functional fitness', sublabel: 'CrossFit-style, athletic movement' },
+  { id: 'home', label: 'Home workouts', sublabel: 'Little or no equipment' },
+  { id: 'cardio', label: 'Cardio', sublabel: 'Cycling, swimming, intervals' },
+  { id: 'sports', label: 'Sport-specific', sublabel: 'Training for your sport' },
 ];
 
 function TrainingPrefsStep({ data, set, onNext, onBack }) {
@@ -579,81 +539,74 @@ function TrainingPrefsStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 6 of 13" headline="How do you enjoy training?" sub="Select all that apply." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-7 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 6 of 13" headline="How do you like to train?" sub="Pick as many as you enjoy." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-6">
           <div className="space-y-2.5">
-            {TRAINING_STYLES.map((s, i) => (
-              <motion.div key={s.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+            {TRAINING_STYLES.map(s => (
+              <div key={s.id}>
                 <BigCard {...s} selected={selected.includes(s.id)} onClick={() => toggle(s.id)} />
-              </motion.div>
+              </div>
             ))}
           </div>
-          <SectionDivider label="Training Frequency" />
+          <SectionDivider label="Days a week you can train" />
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Days available to train per week *</p>
-            <div className="flex gap-2">
+                        <div className="flex gap-2">
               {DAYS.map(d => (
-                <motion.button
+                <button
                   key={d}
-                  whileTap={{ scale: 0.9 }}
                   onClick={() => set('training_days_per_week', d)}
-                  className="flex-1 py-3.5 rounded-xl font-bold text-sm transition-all"
-                  style={{
-                    background: data.training_days_per_week === d ? 'color-mix(in srgb, var(--tc-primary) 14%, transparent)' : 'color-mix(in srgb, white 4%, transparent)',
-                    border: data.training_days_per_week === d ? '1.5px solid color-mix(in srgb, var(--tc-primary) 55%, transparent)' : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-                    color: data.training_days_per_week === d ? 'var(--tc-primary-foreground)' : 'var(--kc-4a4a4a)',
-                    boxShadow: data.training_days_per_week === d ? '0 0 14px color-mix(in srgb, var(--tc-primary) 12%, transparent)' : 'none',
-                  }}
+                  aria-pressed={data.training_days_per_week === d}
+                  className={`touch-compact num h-12 flex-1 rounded-lg text-xl transition-colors ${data.training_days_per_week === d
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-foreground shadow-[inset_0_0_0_1px_rgb(var(--border))] hover:bg-accent'}`}
                 >
                   {d}
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={selected.length === 0 || !data.training_days_per_week} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={selected.length === 0 || !data.training_days_per_week} />
     </Screen>
   );
 }
 
 /* STEP 7: EQUIPMENT */
 const EQUIPMENT_OPTS = [
-  { id: 'full_gym', emoji: '🏋️', label: 'Full Commercial Gym', sublabel: 'Barbells, cables, machines, dumbbells' },
-  { id: 'home_full', emoji: '🏠', label: 'Home Gym (Full)', sublabel: 'Barbell, rack, plates, dumbbells' },
-  { id: 'home_basic', emoji: '🪬', label: 'Home Gym (Basic)', sublabel: 'Dumbbells, resistance bands, bench' },
-  { id: 'bodyweight', emoji: '🤸', label: 'Bodyweight Only', sublabel: 'No equipment available' },
-  { id: 'outdoor', emoji: '🏞️', label: 'Outdoors / Park', sublabel: 'Pull-up bars, open space' },
-  { id: 'hotel', emoji: '🧳', label: 'Hotel / Travel Gym', sublabel: 'Limited machines, light dumbbells' },
+  { id: 'full_gym', label: 'Full gym', sublabel: 'Barbells, cables, machines, dumbbells' },
+  { id: 'home_full', label: 'Home gym, full', sublabel: 'Barbell, rack, plates, dumbbells' },
+  { id: 'home_basic', label: 'Home gym, basic', sublabel: 'Dumbbells, bands, a bench' },
+  { id: 'bodyweight', label: 'Bodyweight only', sublabel: 'No equipment' },
+  { id: 'outdoor', label: 'Outdoors or a park', sublabel: 'Pull-up bars, open space' },
+  { id: 'hotel', label: 'Hotel or travel gym', sublabel: 'A few machines, light dumbbells' },
 ];
 
 function EquipmentStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 7 of 13" headline="What equipment do you have access to?" sub="This determines what exercises we can program." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-4 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 7 of 13" headline="Where will you train?" sub="Your coach only programs exercises you can actually do there." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-4 max-w-md mx-auto w-full pb-4">
           <div className="space-y-2.5">
-            {EQUIPMENT_OPTS.map((e, i) => (
-              <motion.div key={e.id} initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
+            {EQUIPMENT_OPTS.map(e => (
+              <div key={e.id}>
                 <BigCard {...e} selected={data.equipment_access === e.id} onClick={() => set('equipment_access', e.id)} />
-              </motion.div>
+              </div>
             ))}
           </div>
-          <SectionDivider label="Specific Equipment (optional)" />
+          <SectionDivider label="Any specific equipment? (optional)" />
           <PremiumTextarea
             value={data.equipment_notes}
             onChange={v => set('equipment_notes', v)}
-            placeholder="e.g. I have a squat rack, barbell, and dumbbells up to 50lbs. No cable machine..."
+            placeholder="Squat rack, barbell, dumbbells up to 50 lb. No cable machine."
             rows={3}
           />
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!data.equipment_access} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!data.equipment_access} />
     </Screen>
   );
 }
@@ -685,47 +638,45 @@ function NutritionStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 8 of 13" headline="Nutrition & dietary preferences." sub="We'll build your plan around what you actually like." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-7 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 8 of 13" headline="What do you like to eat?" sub="Your meal plan is built around food you already enjoy." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-6">
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Foods you enjoy</p>
+            <p className="text-[15px] font-semibold text-foreground">Foods you enjoy</p>
             <div className="flex flex-wrap gap-2">
               {FOOD_CHIPS.map(f => <Chip key={f} label={f} selected={favFoods.includes(f)} onClick={() => toggleFood(f)} />)}
             </div>
           </div>
 
-          <SectionDivider label="Foods you dislike" />
-          <PremiumField
-            label="Anything you don't like?"
+                    <PremiumField
+            label="Anything you won't eat?"
             value={data.disliked_foods}
             onChange={v => set('disliked_foods', v)}
-            placeholder="e.g. fish, mushrooms, tofu..."
+            placeholder="Fish, mushrooms, tofu"
           />
 
-          <SectionDivider label="Dietary Preferences" />
+          <SectionDivider label="Dietary preferences" />
           <div className="flex flex-wrap gap-2">
             {DIET_OPTS.map(d => <Chip key={d} label={d} selected={diets.includes(d)} onClick={() => toggleDiet(d)} />)}
           </div>
 
-          <SectionDivider label="Food Allergies *" />
-          <p className="text-xs" style={{ color: 'var(--kc-5a5a5a)' }}>Select all that apply — required for safe programming.</p>
+          <SectionDivider label="Food allergies" />
+          <p className="-mt-3 text-sm text-muted-foreground">Required. Pick None if you have none.</p>
           <div className="flex flex-wrap gap-2">
             {ALLERGY_OPTS.map(a => <Chip key={a} label={a} selected={allergies.includes(a)} onClick={() => toggleAllergy(a)} />)}
           </div>
 
-          <SectionDivider label="Other allergies or notes" />
+          <SectionDivider label="Other allergies or notes (optional)" />
           <PremiumTextarea
             value={data.allergy_notes}
             onChange={v => set('allergy_notes', v)}
-            placeholder="Any other allergies, intolerances, or important food notes..."
+            placeholder="Intolerances, or anything else about food"
             rows={2}
           />
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
@@ -754,19 +705,18 @@ function MedicalStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 9 of 13" headline="Health & injury history." sub="This helps us keep your plan safe and effective." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-7 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 9 of 13" headline="Injuries and health." sub="So your plan works around anything that hurts." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-6">
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">Physical limitations / injuries *</p>
+            <p className="text-[15px] font-semibold text-foreground">Injuries or problem areas</p>
             <div className="flex flex-wrap gap-2">
               {INJURY_OPTS.map(o => <Chip key={o} label={o} selected={injuries.includes(o)} onClick={() => toggleInjury(o)} />)}
             </div>
           </div>
 
-          <SectionDivider label="Medical Conditions *" />
+          <SectionDivider label="Medical conditions" />
           <div className="flex flex-wrap gap-2">
             {MEDICAL_OPTS.map(o => <Chip key={o} label={o} selected={medical.includes(o)} onClick={() => toggleMedical(o)} />)}
           </div>
@@ -775,58 +725,46 @@ function MedicalStep({ data, set, onNext, onBack }) {
           <PremiumTextarea
             value={data.medications}
             onChange={v => set('medications', v)}
-            placeholder="List any medications you're currently taking that may affect exercise (e.g. beta-blockers, insulin)..."
+            placeholder="Anything that affects exercise, like beta-blockers or insulin"
             rows={2}
           />
 
-          <SectionDivider label="PAR-Q Health Screening *" />
-          <div className="p-4 rounded-2xl space-y-4" style={{ background: 'color-mix(in srgb, var(--tc-warning) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-warning) 15%, transparent)' }}>
+          <SectionDivider label="Health screening" />
+          <div className="space-y-3 rounded-xl bg-card p-4 shadow-[inset_0_0_0_1px_rgb(var(--border))]">
+            <p className="text-[15px] leading-relaxed text-foreground">
+              Has a doctor ever said you have a heart condition, or that you should only do physical activity a doctor recommends?
+            </p>
             <div className="flex gap-2">
-              <span className="text-lg flex-shrink-0">❤️</span>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--kc-d4a017)' }}>
-                <strong>Has a doctor ever said you have a heart condition, or that you should only do physical activity recommended by a doctor?</strong>
-              </p>
-            </div>
-            <div className="flex gap-3">
               {['Yes', 'No'].map(ans => (
-                <motion.button
+                <button
                   key={ans}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => set('parq_answer', ans)}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
-                  style={{
-                    background: data.parq_answer === ans
-                      ? (ans === 'Yes' ? 'color-mix(in srgb, var(--tc-destructive) 12%, transparent)' : 'color-mix(in srgb, var(--tc-success) 10%, transparent)')
-                      : 'color-mix(in srgb, white 4%, transparent)',
-                    border: data.parq_answer === ans
-                      ? (ans === 'Yes' ? '1.5px solid color-mix(in srgb, var(--tc-destructive) 55%, transparent)' : '1.5px solid color-mix(in srgb, var(--tc-success) 55%, transparent)')
-                      : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-                    color: data.parq_answer === ans ? 'var(--tc-primary-foreground)' : 'var(--kc-4a4a4a)',
-                  }}
+                  aria-pressed={data.parq_answer === ans}
+                  className={`h-12 flex-1 rounded-lg text-[15px] font-semibold transition-colors ${data.parq_answer === ans
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card text-foreground shadow-[inset_0_0_0_1px_rgb(var(--input))] hover:bg-accent'}`}
                 >
-                  {ans === 'Yes' ? '⚠️ Yes' : '✅ No'}
-                </motion.button>
+                  {ans}
+                </button>
               ))}
             </div>
             {data.parq_answer === 'Yes' && (
-              <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                className="p-3 rounded-xl text-xs leading-relaxed"
-                style={{ background: 'color-mix(in srgb, var(--tc-destructive) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-destructive) 20%, transparent)', color: 'var(--tc-destructive)' }}>
-                Please ensure you have medical clearance before starting any exercise program. Your coach will review this and may request documentation.
-              </motion.div>
+              <p className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive">
+                Get medical clearance before you start. Your coach will see this and may ask for a note from your doctor.
+              </p>
             )}
           </div>
 
-          <SectionDivider label="Additional Health Notes" />
+          <SectionDivider label="Anything else about your health? (optional)" />
           <PremiumTextarea
             value={data.health_notes}
             onChange={v => set('health_notes', v)}
-            placeholder="Anything else your coach should know about your health or injury history..."
+            placeholder="Surgery, recent illness, pregnancy"
             rows={3}
           />
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
@@ -838,84 +776,44 @@ function ConsentStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 10 of 13" headline="Health & coaching agreement." sub="Please read and confirm before continuing." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="space-y-5 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 10 of 13" headline="Before you start." sub="Read this and confirm." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-4">
 
           {/* Disclaimer card */}
-          <div className="rounded-2xl p-5 space-y-4" style={{ background: 'color-mix(in srgb, white 3%, transparent)', border: '1px solid color-mix(in srgb, white 7%, transparent)' }}>
-            <div className="flex gap-3">
-              <span className="text-2xl flex-shrink-0">🛡️</span>
-              <div>
-                <p className="text-sm font-bold text-white mb-1">Coaching is not medical advice</p>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>
-                  The coaching, training programs, and nutrition guidance provided are for general fitness and wellness purposes only. They do not constitute medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional before starting any exercise or nutrition program, especially if you have any pre-existing health conditions.
-                </p>
+          <div className="divide-y divide-border rounded-xl bg-card px-4 shadow-[inset_0_0_0_1px_rgb(var(--border))]">
+            {[
+              ['Coaching is not medical advice', 'The coaching, training programs and nutrition guidance are for general fitness and wellness only. They are not medical advice, diagnosis or treatment. Talk to a qualified healthcare professional before starting any exercise or nutrition program, especially if you have a pre-existing condition.'],
+              ['Exercise clearance', 'By continuing, you confirm you are physically able to exercise, have disclosed any known medical conditions or limitations above, and are not using this coaching in place of professional medical advice.'],
+              ['Privacy', 'Your personal information and health data are shared only with your coach. They are never sold or shared with third parties.'],
+            ].map(([title, body]) => (
+              <div key={title} className="py-4">
+                <p className="text-[15px] font-semibold text-foreground">{title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
               </div>
-            </div>
-
-            <div className="h-px" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }} />
-
-            <div className="flex gap-3">
-              <span className="text-2xl flex-shrink-0">✅</span>
-              <div>
-                <p className="text-sm font-bold text-white mb-1">Exercise clearance</p>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>
-                  By proceeding, you confirm that you are physically capable of participating in exercise, have disclosed any known medical conditions or limitations above, and are not relying on this coaching as a substitute for professional medical advice.
-                </p>
-              </div>
-            </div>
-
-            <div className="h-px" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }} />
-
-            <div className="flex gap-3">
-              <span className="text-2xl flex-shrink-0">🔒</span>
-              <div>
-                <p className="text-sm font-bold text-white mb-1">Privacy</p>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>
-                  Your personal information and health data are shared only with your coach and will not be sold or shared with third parties.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Consent checkbox */}
-          <motion.button
+          <button
             onClick={() => set('consent_agreed', !consentChecked)}
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-start gap-4 p-5 rounded-2xl text-left transition-all"
-            style={{
-              background: consentChecked ? 'color-mix(in srgb, var(--tc-success) 7%, transparent)' : 'color-mix(in srgb, white 3%, transparent)',
-              border: consentChecked ? '1.5px solid color-mix(in srgb, var(--tc-success) 40%, transparent)' : '1.5px solid color-mix(in srgb, white 10%, transparent)',
-            }}
+            aria-pressed={consentChecked}
+            className={`flex w-full items-start gap-4 rounded-xl bg-card p-4 text-left transition-shadow ${consentChecked
+              ? 'shadow-[inset_0_0_0_2px_rgb(var(--foreground))]'
+              : 'shadow-[inset_0_0_0_1px_rgb(var(--border))]'}`}
           >
-            <div
-              className="w-6 h-6 rounded-md flex-shrink-0 flex items-center justify-center mt-0.5 transition-all"
-              style={{
-                background: consentChecked ? 'var(--tc-success)' : 'transparent',
-                border: consentChecked ? '2px solid var(--tc-success)' : '2px solid color-mix(in srgb, white 20%, transparent)',
-              }}
-            >
-              {consentChecked && (
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6L5 9L10 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-            <p className="text-sm leading-relaxed" style={{ color: consentChecked ? 'var(--tc-primary-foreground)' : 'var(--kc-7a7a7a)' }}>
-              I confirm I am cleared to exercise, I understand that coaching is not medical advice, and I take full responsibility for my own health and safety during this program. <span style={{ color: 'var(--tc-success)' }}>*Required</span>
+            <CheckDot selected={consentChecked} square />
+            <p className="text-[15px] leading-relaxed text-foreground">
+              I am cleared to exercise, I understand coaching is not medical advice, and I take responsibility for my own health and safety during this program.
             </p>
-          </motion.button>
+          </button>
 
           {!consentChecked && (
-            <p className="text-xs text-center" style={{ color: 'var(--kc-3a3a3a)' }}>
-              You must agree to the above to continue
-            </p>
+            <p className="text-center text-[13px] text-muted-foreground">Tick the box to continue.</p>
           )}
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!consentChecked} label="I Agree — Continue" />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!consentChecked} label="I agree" />
     </Screen>
   );
 }
@@ -930,57 +828,48 @@ function MindsetStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 11 of 13" headline="Why is this important to you?" sub="This keeps you going when it gets hard. Be honest." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-6 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 11 of 13" headline="Why does this matter to you?" sub="Your coach brings this up on the hard weeks. Be honest." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-6 max-w-md mx-auto w-full pb-4">
           <div className="relative">
             <PremiumTextarea
               value={data.motivation}
               onChange={v => set('motivation', v)}
-              placeholder="I want to feel strong, confident, and show up as my best self every single day..."
+              placeholder="I want to keep up with my kids and stop feeling tired by 3pm"
               rows={6}
             />
-            <span className="absolute bottom-3 right-4 text-xs" style={{ color: 'var(--kc-2e2e2e)' }}>
+            <span className="absolute bottom-3 right-4 text-xs tabular-nums text-muted-foreground">
               {(data.motivation || '').length}/500
             </span>
           </div>
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: 'var(--kc-2e2e2e)' }}>Quick picks</p>
+            <p className="text-sm text-muted-foreground">Stuck? Tap a word to add it.</p>
             <div className="flex flex-wrap gap-2">
               {WHY_PROMPTS.map(p => (
-                <motion.button
-                  key={p}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => append(p)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all"
-                  style={{ background: 'color-mix(in srgb, white 4%, transparent)', border: '1px solid color-mix(in srgb, white 7%, transparent)', color: 'var(--kc-5a5a5a)' }}
-                >
-                  {p}
-                </motion.button>
+                <Chip key={p} label={`+ ${p}`} selected={false} onClick={() => append(p)} />
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!valid} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!valid} />
     </Screen>
   );
 }
 
 /* STEP 12: OBSTACLES */
 const OBSTACLE_OPTS = [
-  { id: 'consistency', emoji: '🔄', label: 'Consistency' },
-  { id: 'motivation', emoji: '😴', label: 'Motivation' },
-  { id: 'nutrition', emoji: '🍕', label: 'Nutrition' },
-  { id: 'time', emoji: '⏰', label: 'Time' },
-  { id: 'stress', emoji: '😤', label: 'Stress' },
-  { id: 'gym_anxiety', emoji: '😰', label: 'Gym Anxiety' },
-  { id: 'travel', emoji: '✈️', label: 'Travel' },
-  { id: 'discipline', emoji: '🧠', label: 'Discipline' },
-  { id: 'recovery', emoji: '💤', label: 'Recovery' },
-  { id: 'social', emoji: '🍻', label: 'Social Events' },
-  { id: 'injury', emoji: '🩹', label: 'Injuries' },
+  { id: 'consistency', label: 'Consistency' },
+  { id: 'motivation', label: 'Motivation' },
+  { id: 'nutrition', label: 'Nutrition' },
+  { id: 'time', label: 'Time' },
+  { id: 'stress', label: 'Stress' },
+  { id: 'gym_anxiety', label: 'Gym anxiety' },
+  { id: 'travel', label: 'Travel' },
+  { id: 'discipline', label: 'Discipline' },
+  { id: 'recovery', label: 'Recovery' },
+  { id: 'social', label: 'Social events' },
+  { id: 'injury', label: 'Injuries' },
 ];
 
 function ObstaclesStep({ data, set, onNext, onBack }) {
@@ -989,44 +878,37 @@ function ObstaclesStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 12 of 13" headline="What usually holds you back?" sub="Your coach will build a plan to overcome these." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-5 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 12 of 13" headline="What usually gets in the way?" sub="Your coach plans around these from week one." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-5 max-w-md mx-auto w-full pb-4">
           <div className="grid grid-cols-2 gap-2.5">
-            {OBSTACLE_OPTS.map((o, i) => (
-              <motion.button
+            {OBSTACLE_OPTS.map(o => (
+              <button
                 key={o.id}
-                whileTap={{ scale: 0.94 }}
                 onClick={() => toggle(o.id)}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="py-4 px-4 rounded-2xl text-left transition-all"
-                style={{
-                  background: selected.includes(o.id) ? 'color-mix(in srgb, var(--tc-primary) 10%, transparent)' : 'color-mix(in srgb, white 3%, transparent)',
-                  border: selected.includes(o.id) ? '1.5px solid color-mix(in srgb, var(--tc-primary) 55%, transparent)' : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-                  boxShadow: selected.includes(o.id) ? '0 0 18px color-mix(in srgb, var(--tc-primary) 12%, transparent)' : 'none',
-                }}
+                aria-pressed={selected.includes(o.id)}
+                className={`flex items-center justify-between gap-2 rounded-xl bg-card px-4 py-3.5 text-left transition-shadow ${selected.includes(o.id)
+                  ? 'shadow-[inset_0_0_0_2px_rgb(var(--foreground))]'
+                  : 'shadow-[inset_0_0_0_1px_rgb(var(--border))]'}`}
               >
-                <div className="text-xl mb-1.5">{o.emoji}</div>
-                <p className="text-sm font-semibold" style={{ color: selected.includes(o.id) ? 'var(--tc-primary-foreground)' : 'var(--kc-7a7a7a)' }}>{o.label}</p>
-              </motion.button>
+                <span className="text-[15px] font-semibold text-foreground">{o.label}</span>
+                <CheckDot selected={selected.includes(o.id)} />
+              </button>
             ))}
           </div>
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={selected.length === 0} />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={selected.length === 0} />
     </Screen>
   );
 }
 
 /* STEP 13: COMMITMENT + ANYTHING ELSE */
 const COMMIT_LEVELS = [
-  { value: 3, emoji: '🌱', label: 'Casual', sub: "I'll try when I can" },
-  { value: 6, emoji: '💪', label: 'Motivated', sub: 'Ready to put in real effort' },
-  { value: 8, emoji: '🔥', label: 'Serious', sub: "I'm all in, let's go" },
-  { value: 10, emoji: '⚡', label: 'Elite', sub: 'Nothing will stop me' },
+  { value: 3, label: 'Casual', sub: "I'll fit it in when I can" },
+  { value: 6, label: 'Motivated', sub: 'Ready to put in real effort' },
+  { value: 8, label: 'Serious', sub: 'This is a priority for me' },
+  { value: 10, label: 'All in', sub: 'I will rearrange my week for it' },
 ];
 
 function CommitmentStep({ data, set, onNext, onBack }) {
@@ -1034,70 +916,48 @@ function CommitmentStep({ data, set, onNext, onBack }) {
   return (
     <Screen>
       <BackBtn onClick={onBack} />
-      <Header eyebrow="Step 13 of 13" headline="Almost done — final questions." sub="Be honest — there's no wrong answer." />
-      <div className="flex-1 overflow-y-auto px-6 relative z-10">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-          className="space-y-6 max-w-md mx-auto w-full pb-4">
+      <Header eyebrow="Step 13 of 13" headline="Last one." sub="There is no wrong answer." />
+      <div className="flex-1 overflow-y-auto px-5">
+        <div className="space-y-6 max-w-md mx-auto w-full pb-4">
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold text-white">How committed are you to changing?</p>
-            <div className="grid grid-cols-2 gap-3">
-              {COMMIT_LEVELS.map((c, i) => {
+            <p className="text-[15px] font-semibold text-foreground">How committed are you right now?</p>
+            <div className="space-y-2">
+              {COMMIT_LEVELS.map(c => {
                 const sel = level === c.value;
                 return (
-                  <motion.button
-                    key={c.value}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => set('commitment_level', c.value)}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.07 }}
-                    className="py-6 px-4 rounded-2xl text-center transition-all"
-                    style={{
-                      background: sel ? 'color-mix(in srgb, var(--tc-primary) 10%, transparent)' : 'color-mix(in srgb, white 3%, transparent)',
-                      border: sel ? '1.5px solid color-mix(in srgb, var(--tc-primary) 55%, transparent)' : '1.5px solid color-mix(in srgb, white 7%, transparent)',
-                      boxShadow: sel ? '0 0 30px color-mix(in srgb, var(--tc-primary) 18%, transparent)' : 'none',
-                      transform: sel ? 'scale(1.03)' : 'scale(1)',
-                    }}
-                  >
-                    <div className="text-3xl mb-2">{c.emoji}</div>
-                    <p className="font-bold text-sm" style={{ color: sel ? 'var(--tc-primary-foreground)' : 'var(--kc-9a9a9a)' }}>{c.label}</p>
-                    <p className="text-xs mt-1" style={{ color: 'var(--kc-4a4a4a)' }}>{c.sub}</p>
-                  </motion.button>
+                  <BigCard key={c.value} label={c.label} sublabel={c.sub} selected={sel} onClick={() => set('commitment_level', c.value)} />
                 );
               })}
             </div>
           </div>
 
-          <div className="py-3 px-5 rounded-2xl text-center space-y-1"
-            style={{ background: 'color-mix(in srgb, var(--tc-primary) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-primary) 10%, transparent)' }}>
-            <p className="text-xs" style={{ color: 'var(--kc-5a5a5a)' }}>
-              Your coach uses this to calibrate your plan intensity and accountability level.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Your coach uses this to set how hard the plan pushes and how often they check in.
+          </p>
 
-          <SectionDivider label="Anything else your coach should know?" />
+          <SectionDivider label="Anything else your coach should know? (optional)" />
           <PremiumTextarea
             value={data.anything_else}
             onChange={v => set('anything_else', v)}
-            placeholder="Is there anything important we haven't covered? Upcoming events, special circumstances, past coaching experiences, specific requests for your coach..."
+            placeholder="A wedding in June, night shifts, a coach you had before"
             rows={5}
           />
-        </motion.div>
+        </div>
       </div>
-      <CTABtn onClick={onNext} disabled={!level} label="Build My Coaching Plan →" />
+      <CTABtn onBack={onBack} onClick={onNext} disabled={!level} label="Send to my coach" />
     </Screen>
   );
 }
 
-/* AI GENERATION */
+/* SUBMITTING */
 const GEN_ITEMS = [
-  { label: 'Training Profile',       icon: '🏋️', activateAt: 0.5 },
-  { label: 'Equipment & Access',     icon: '🏠', activateAt: 1.0 },
-  { label: 'Nutrition Preferences',  icon: '🥗', activateAt: 1.6 },
-  { label: 'Recovery Targets',       icon: '⚡', activateAt: 2.2 },
-  { label: 'Health & Safety Notes',  icon: '🛡️', activateAt: 2.8 },
-  { label: 'Obstacle Response Plan', icon: '🔄', activateAt: 3.4 },
+  { label: 'Training profile',       activateAt: 0.5 },
+  { label: 'Equipment and access',   activateAt: 1.0 },
+  { label: 'Food preferences',       activateAt: 1.6 },
+  { label: 'Recovery targets',       activateAt: 2.2 },
+  { label: 'Health and safety notes', activateAt: 2.8 },
+  { label: 'What holds you back',    activateAt: 3.4 },
 ];
 const REDIRECT_AFTER = 5200;
 
@@ -1109,41 +969,19 @@ function GenItemCard({ item }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: status === 'waiting' ? 0.18 : 1, x: 0 }}
-      transition={{ delay: item.activateAt * 0.3, duration: 0.4 }}
-      className="flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-500"
-      style={{
-        background: status === 'done' ? 'color-mix(in srgb, var(--tc-success) 6%, transparent)' : status === 'loading' ? 'color-mix(in srgb, var(--tc-primary) 7%, transparent)' : 'color-mix(in srgb, white 2%, transparent)',
-        border: status === 'done' ? '1px solid color-mix(in srgb, var(--tc-success) 22%, transparent)' : status === 'loading' ? '1px solid color-mix(in srgb, var(--tc-primary) 28%, transparent)' : '1px solid color-mix(in srgb, white 4%, transparent)',
-      }}
-    >
-      <span className="text-xl">{item.icon}</span>
-      <div className="flex-1">
-        <p className="text-sm font-semibold" style={{ color: status === 'waiting' ? 'var(--kc-2e2e2e)' : 'var(--tc-primary-foreground)' }}>{item.label}</p>
-        <p className="text-[11px] mt-0.5" style={{
-          color: status === 'done' ? 'color-mix(in srgb, var(--tc-success) 80%, transparent)' : status === 'loading' ? 'color-mix(in srgb, var(--tc-primary) 80%, transparent)' : 'var(--kc-2e2e2e)',
-        }}>
-          {status === 'done' ? 'Personalized' : status === 'loading' ? 'Analyzing…' : 'Queued'}
-        </p>
-      </div>
-      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
-        {status === 'loading' && (
-          <motion.div className="w-4 h-4 rounded-full border-2"
-            style={{ borderColor: 'var(--tc-primary)', borderTopColor: 'transparent' }}
-            animate={{ rotate: 360 }} transition={{ duration: 0.65, repeat: Infinity, ease: 'linear' }} />
-        )}
+    <div className="flex items-center gap-3 py-3">
+      <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center">
+        {status === 'loading' && <span className="h-4 w-4 animate-spin rounded-full border-2 border-foreground border-t-transparent" />}
         {status === 'done' && (
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-            className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--tc-success)' }}>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </motion.div>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </span>
         )}
-      </div>
-    </motion.div>
+        {status === 'waiting' && <span className="h-4 w-4 rounded-full border-[1.5px] border-input" />}
+      </span>
+      <p className={`flex-1 text-[15px] ${status === 'waiting' ? 'text-muted-foreground' : 'font-semibold text-foreground'}`}>{item.label}</p>
+      <p className="text-[13px] text-muted-foreground">{status === 'done' ? 'Ready' : status === 'loading' ? 'Reading' : 'Waiting'}</p>
+    </div>
   );
 }
 
@@ -1169,78 +1007,43 @@ function GeneratingStep({ onNext, submitStatus, submitError, onRetry }) {
 
   return (
     <Screen>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-        <motion.div
-          className="w-[800px] h-[800px] rounded-full"
-          style={{ background: 'radial-gradient(circle, color-mix(in srgb, var(--tc-primary) 8%, transparent) 0%, transparent 65%)', filter: 'blur(80px)' }}
-          animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
-      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full px-6 gap-7 relative z-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.26em] font-bold" style={{ color: 'var(--tc-primary)' }}>KOACH AI Engine</p>
-          <AnimatePresence mode="wait">
-            {allDone ? (
-              <motion.h2 key="done" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="text-3xl font-bold" style={{ color: 'var(--tc-success)', letterSpacing: '-0.025em' }}>
-                Your profile is ready.
-              </motion.h2>
-            ) : (
-              <motion.h2 key="building" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="text-3xl font-bold text-white" style={{ letterSpacing: '-0.025em' }}>
-                Personalizing your<br />coaching experience…
-              </motion.h2>
-            )}
-          </AnimatePresence>
-          <p className="text-sm" style={{ color: 'var(--kc-5a5a5a)' }}>
-            {allDone ? 'Sending to your coach…' : 'Analyzing your profile for your coach'}
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 overflow-y-auto px-5 py-8">
+        <div>
+          <h1 className="text-[32px] leading-[1.04] text-foreground">
+            {allDone ? 'Your profile is ready.' : 'Putting your answers together.'}
+          </h1>
+          <p className="mt-2 text-[15px] text-muted-foreground">
+            {allDone ? 'Sending it to your coach now.' : 'Your coach gets one tidy summary instead of 13 screens.'}
           </p>
-        </motion.div>
+        </div>
 
-        <div className="w-full h-[2px] rounded-full overflow-hidden" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }}>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
           <motion.div
-            className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-primary))' }}
-            animate={{ width: allDone ? '100%' : `${(GEN_ITEMS.length / GEN_ITEMS.length) * 85}%` }}
+            className="h-full rounded-full bg-foreground"
+            animate={{ width: allDone ? '100%' : '85%' }}
             initial={{ width: '0%' }}
             transition={{ duration: lastAt * 0.9 }}
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="divide-y divide-border rounded-xl bg-card px-4 shadow-[inset_0_0_0_1px_rgb(var(--border))]">
           {GEN_ITEMS.map((item, i) => <GenItemCard key={i} item={item} />)}
         </div>
 
         {/* Error state — shown instead of success when submission fails */}
         {submitStatus === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full space-y-3"
-          >
-            <div className="p-5 rounded-2xl space-y-3"
-              style={{ background: 'color-mix(in srgb, var(--tc-destructive) 7%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-destructive) 30%, transparent)' }}>
-              <p className="text-sm font-bold text-center" style={{ color: 'var(--tc-destructive)' }}>⚠️ Submission Failed</p>
-              <div className="rounded-xl p-3 text-left"
-                style={{ background: 'color-mix(in srgb, black 30%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-destructive) 20%, transparent)' }}>
-                <p className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--kc-6a6a6a)' }}>Error details</p>
-                <p className="text-xs leading-relaxed break-words" style={{ color: 'var(--tc-destructive)', fontFamily: 'monospace' }}>
-                  {submitError || 'Unknown error — no message received.'}
-                </p>
-              </div>
-              <p className="text-xs text-center" style={{ color: 'var(--kc-6a6a6a)' }}>
-                Your answers are saved in this browser session. Tap Try Again to resubmit.
-              </p>
-              <button
-                onClick={onRetry}
-                className="w-full py-3 rounded-xl font-bold text-sm text-primary-foreground"
-                style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-primary))' }}
-              >
-                Try Again
-              </button>
-            </div>
-          </motion.div>
+          <div className="space-y-3 rounded-xl bg-card p-4 shadow-[inset_0_0_0_1px_rgb(var(--destructive)/0.5)]">
+            <p className="text-[15px] font-semibold text-destructive">Your answers did not send</p>
+            <p className="break-words rounded-lg bg-secondary p-3 font-mono text-[13px] leading-relaxed text-foreground">
+              {submitError || 'Unknown error. No message came back from the server.'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Your answers are still here in this browser. Try again, and if it keeps failing, send your coach a message.
+            </p>
+            <button onClick={onRetry} className="h-12 w-full rounded-lg bg-primary text-[15px] font-semibold text-primary-foreground">
+              Try again
+            </button>
+          </div>
         )}
       </div>
     </Screen>
@@ -1253,70 +1056,39 @@ function DoneStep({ firstName, coachDisplayName, clientEmail }) {
   const coach = coachDisplayName ? `Coach ${coachDisplayName}` : 'your coach';
   return (
     <Screen>
-      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
-        <motion.div
-          className="flex flex-col items-center gap-8 text-center w-full max-w-sm"
-          initial="hidden"
-          animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.12 } } }}
-        >
-          <motion.div
-            variants={{ hidden: { scale: 0, opacity: 0 }, show: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 200, delay: 0.1 } } }}
-            className="w-24 h-24 rounded-3xl flex items-center justify-center"
-            style={{ background: 'color-mix(in srgb, var(--tc-success) 10%, transparent)', border: '2px solid color-mix(in srgb, var(--tc-success) 30%, transparent)' }}
-          >
-            <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
-              <path d="M9 21L17 29L33 13" stroke="var(--tc-success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </motion.div>
-
-          <motion.div variants={{ hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0 } }} className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.22em] font-bold" style={{ color: 'var(--tc-success)' }}>Application received</p>
-            <h2 className="font-bold text-white" style={{ fontSize: 'clamp(2rem, 7vw, 2.8rem)', letterSpacing: '-0.03em' }}>
-              Thanks, {name} —<br />your application<br />is in. ✅
-            </h2>
-            <p className="text-base leading-relaxed" style={{ color: 'var(--kc-6a6a6a)' }}>
-              {coach} will review your intake and reach out shortly to get you started.
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 overflow-y-auto px-5 py-8">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success">
+          <svg width="22" height="22" viewBox="0 0 42 42" fill="none">
+            <path d="M9 21L17 29L33 13" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <div>
+          <h1 className="text-[36px] leading-[1.04] text-foreground">Thanks, {name}. Your answers are in.</h1>
+          <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+            {coach.charAt(0).toUpperCase() + coach.slice(1)} will read them and get in touch to start your plan.
+          </p>
+          {clientEmail && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              We sent a confirmation to <span className="font-semibold text-foreground">{clientEmail}</span>.
             </p>
-            {clientEmail && (
-              <p className="text-sm" style={{ color: 'var(--kc-4a4a4a)' }}>
-                A confirmation has been sent to <span style={{ color: 'var(--kc-6a6a6a)' }}>{clientEmail}</span>
-              </p>
-            )}
-          </motion.div>
+          )}
+        </div>
 
-          <motion.div
-            variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
-            className="w-full space-y-3"
-          >
-            <div className="py-5 px-5 rounded-2xl space-y-3"
-              style={{ background: 'color-mix(in srgb, var(--tc-primary) 6%, transparent)', border: '1.5px solid color-mix(in srgb, var(--tc-primary) 15%, transparent)' }}>
-              <p className="font-bold text-white text-sm">What happens next?</p>
-              {[
-                `${coach} reviews your full intake profile`,
-                'Your personalised training & nutrition plan gets built',
-                "You'll be contacted within 24 hours to get started",
-              ].map((step, i) => (
-                <div key={i} className="flex items-start gap-3">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                    style={{ background: 'color-mix(in srgb, var(--tc-primary) 15%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-                    <span className="text-[9px] font-bold" style={{ color: 'var(--tc-primary)' }}>{i + 1}</span>
-                  </div>
-                  <p className="text-sm text-left" style={{ color: 'var(--kc-7a7a7a)' }}>{step}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-center gap-2 py-2">
-              {['Exclusive', 'Personalised', 'Elite-Grade'].map(t => (
-                <span key={t} className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: 'color-mix(in srgb, var(--tc-success) 8%, transparent)', color: 'var(--tc-success)', border: '1px solid color-mix(in srgb, var(--tc-success) 20%, transparent)' }}>
-                  {t}
-                </span>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
+        <div className="rounded-xl bg-card p-4 shadow-[inset_0_0_0_1px_rgb(var(--border))]">
+          <p className="text-[15px] font-semibold text-foreground">What happens next</p>
+          <ol className="mt-3 space-y-3">
+            {[
+              `${coach.charAt(0).toUpperCase() + coach.slice(1)} reads your intake`,
+              'Your training and nutrition plan gets built',
+              'You hear back within 24 hours',
+            ].map((step, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-foreground text-[13px] font-bold text-foreground">{i + 1}</span>
+                <p className="pt-0.5 text-[15px] text-foreground">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
     </Screen>
   );
@@ -1341,7 +1113,6 @@ export default function ClientOnboarding() {
 
   const progressIdx = PROGRESS_STEPS.indexOf(step);
   const showProgress = progressIdx >= 0;
-  const progress = showProgress ? (progressIdx + 1) / PROGRESS_STEPS.length : 0;
 
   const coachDisplayName = COACH_NAME || (COACH_ID ? decodeURIComponent(COACH_ID).split('@')[0] : '');
 
@@ -1375,7 +1146,7 @@ export default function ClientOnboarding() {
       }
 
       if (!res?.data?.success) {
-        const errMsg = res?.data?.error || res?.data?.message || JSON.stringify(res?.data) || 'Submission failed — no success confirmation received.';
+        const errMsg = res?.data?.error || res?.data?.message || JSON.stringify(res?.data) || 'Submission failed. No confirmation came back.';
         throw new Error(errMsg);
       }
 
@@ -1397,12 +1168,13 @@ export default function ClientOnboarding() {
     next();
   };
 
+  // Functional step transition: a short slide in the direction of travel.
   const variants = {
-    enter: dir => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0 }),
+    enter: dir => ({ x: dir > 0 ? 32 : -32, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: dir => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0 }),
+    exit: dir => ({ x: dir > 0 ? -32 : 32, opacity: 0 }),
   };
-  const transition = { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.38 };
+  const transition = { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.22 };
 
   const props = { data, set, onNext: handleNext, onBack: back };
 
@@ -1436,32 +1208,25 @@ export default function ClientOnboarding() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden" style={{ background: 'var(--tc-sidebar)' }}>
-      {showProgress && (
-        <div className="absolute top-0 left-0 right-0 z-50 h-[2px]" style={{ background: 'color-mix(in srgb, white 5%, transparent)' }}>
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-primary))' }}
-            animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.45, ease: 'easeInOut' }}
-          />
-        </div>
-      )}
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
+      {showProgress && <StepTopBar step={step} onBack={back} coachName={coachDisplayName} />}
 
-      <AnimatePresence mode="wait" custom={direction}>
-        <motion.div
-          key={step}
-          custom={direction}
-          variants={step === 'welcome' ? {} : variants}
-          initial={step === 'welcome' ? { opacity: 0 } : 'enter'}
-          animate={step === 'welcome' ? { opacity: 1 } : 'center'}
-          exit={step === 'welcome' ? { opacity: 0 } : 'exit'}
-          transition={transition}
-          className="absolute inset-0"
-        >
-          {renderStep()}
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative flex-1 overflow-hidden">
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={step}
+            custom={direction}
+            variants={step === 'welcome' ? {} : variants}
+            initial={step === 'welcome' ? { opacity: 0 } : 'enter'}
+            animate={step === 'welcome' ? { opacity: 1 } : 'center'}
+            exit={step === 'welcome' ? { opacity: 0 } : 'exit'}
+            transition={transition}
+            className="absolute inset-0"
+          >
+            {renderStep()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

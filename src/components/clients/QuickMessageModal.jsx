@@ -34,18 +34,18 @@ export default function QuickMessageModal({ clients = [], suggestedTemplate = ''
       const names = clients.length === 1
         ? clients[0].name
         : `${clients.length} clients`;
-      toast.success(`Message sent to ${names} ✓`);
+      toast.success(`Message sent to ${names} `);
       onClose();
     },
   });
 
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm rounded-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-sm rounded-xl p-0 overflow-hidden">
         <div className="px-5 pt-5 pb-4 border-b border-border">
           <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" />
-            Quick Message
+            Quick message
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
             {clients.length === 1

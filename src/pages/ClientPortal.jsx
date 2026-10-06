@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { Home, Dumbbell, BarChart2, MessageSquare, Users, CalendarDays } from 'lucide-react';
+import { Home, Dumbbell, Apple, TrendingUp, MessageCircle } from 'lucide-react';
 import { addDays, parseISO, differenceInDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 import PortalHome from '@/components/portal/PortalHome';
 import PortalProfile from '@/pages/portal/PortalProfile';
 import PortalBilling from '@/pages/portal/PortalBilling';
@@ -21,13 +21,18 @@ import NotificationPrompt from '@/components/pwa/NotificationPrompt';
 import AddToHomeScreenPrompt from '@/components/pwa/AddToHomeScreenPrompt';
 import { pushNotificationManager } from '@/lib/pushNotificationManager';
 
+/*
+ * Client app shell. Five tabs, as in the reference: Today / Train / Food /
+ * Progress / Coach. Schedule, community, check-ins, notifications, profile
+ * and billing are reached from the Today screen (and the Train header for
+ * the schedule), so every route stays one tap from home.
+ */
 const NAV = [
-  { icon: Home,          label: 'Home',      path: '/portal' },
-  { icon: Dumbbell,      label: 'Train',     path: '/portal/workouts' },
-  { icon: CalendarDays,  label: 'Schedule',  path: '/portal/calendar' },
-  { icon: BarChart2,     label: 'Progress',  path: '/portal/progress' },
-  { icon: Users,         label: 'Community', path: '/portal/community' },
-  { icon: MessageSquare, label: 'Coach',     path: '/portal/messages' },
+  { icon: Home,          label: 'Today',    path: '/portal' },
+  { icon: Dumbbell,      label: 'Train',    path: '/portal/workouts' },
+  { icon: Apple,         label: 'Food',     path: '/portal/nutrition' },
+  { icon: TrendingUp,    label: 'Progress', path: '/portal/progress' },
+  { icon: MessageCircle, label: 'Coach',    path: '/portal/messages' },
 ];
 
 function BottomNav({ user, hideForActiveWorkout }) {
@@ -53,66 +58,53 @@ function BottomNav({ user, hideForActiveWorkout }) {
     enabled: !!myClient?.id,
   });
 
-  const { data: communityPosts = [] } = useQuery({
-    queryKey: ['portal-community-nav'],
-    queryFn: () => portalDb.entities.CommunityPost.filter({ is_announcement: true, is_hidden: false }, '-created_date', 5),
-    refetchInterval: 60000,
-  });
-
   const unreadMsgs = messages.filter(m => m.sender === 'coach' && !m.is_read).length;
   const lastCI = [...checkIns].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   const nextDue = lastCI ? addDays(parseISO(lastCI.date), 7) : null;
   const checkInDue = !nextDue || differenceInDays(nextDue, new Date()) <= 0;
-  const newCommunityPosts = communityPosts.filter(p => {
-    if (!p.created_date) return false;
-    return differenceInDays(new Date(), new Date(p.created_date)) < 1;
-  }).length;
 
+  // Count = number badge; true = a quiet dot.
   const badges = {
     '/portal/messages': unreadMsgs > 0 ? unreadMsgs : null,
-    '/portal/workouts': checkInDue ? '!' : null,
-    '/portal/community': newCommunityPosts > 0 ? newCommunityPosts : null,
+    '/portal/workouts': checkInDue ? true : null,
   };
 
   const hiddenPaths = ['/portal/profile', '/portal/billing'];
   if (hideForActiveWorkout || hiddenPaths.some(p => location.pathname.startsWith(p))) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card"
-      style={{
-        borderTop: '1px solid var(--tc-muted)',
-        boxShadow: '0 -4px 24px color-mix(in srgb, black 7%, transparent)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}>
-      <div className="flex">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      aria-label="Client app"
+    >
+      <div className="mx-auto flex max-w-[480px]">
         {NAV.map(item => {
           const isActive = location.pathname === item.path ||
             (item.path !== '/portal' && location.pathname.startsWith(item.path));
           const badge = badges[item.path];
           return (
-            <Link key={item.path} to={item.path}
-              className="flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-all relative">
-              {isActive && (
-                <motion.div layoutId="nav-indicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                  style={{ background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-ai))' }} />
-              )}
-              <div className="relative">
+            <Link
+              key={item.path}
+              to={item.path}
+              aria-current={isActive ? 'page' : undefined}
+              className="flex flex-1 flex-col items-center justify-center gap-1 pt-2.5 pb-2"
+            >
+              <span className="relative">
                 <item.icon
-                  className="w-5 h-5 transition-all"
-                  strokeWidth={isActive ? 2.5 : 1.8}
-                  style={{ color: isActive ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)' }}
+                  className={cn('h-[22px] w-[22px]', isActive ? 'text-brand' : 'text-muted-foreground')}
+                  strokeWidth={isActive ? 2.25 : 1.75}
                 />
-                {badge && (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white px-1"
-                    style={{ background: badge === '!' ? 'var(--tc-destructive)' : 'var(--tc-primary)' }}>
-                    {badge}
-                  </motion.div>
+                {badge === true && (
+                  <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-brand ring-2 ring-card" aria-label="Check-in due" />
                 )}
-              </div>
-              <span className="text-[10px] font-semibold transition-all"
-                style={{ color: isActive ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)' }}>
+                {typeof badge === 'number' && (
+                  <span className="absolute -right-2.5 -top-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold tabular-nums text-brand-foreground ring-2 ring-card">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
+              <span className={cn('text-[12px]', isActive ? 'font-bold text-foreground' : 'font-medium text-muted-foreground')}>
                 {item.label}
               </span>
             </Link>
@@ -137,7 +129,7 @@ export default function ClientPortal() {
   // Track portal visits and show prompts
   useEffect(() => {
     pushNotificationManager.trackPortalVisit();
-    
+
     // Show add-to-home prompt after 3 visits
     if (pushNotificationManager.shouldShowAddToHomeScreen()) {
       setShowAddToHomePrompt(true);
@@ -164,23 +156,26 @@ export default function ClientPortal() {
   };
 
   return (
-    <div className="fixed inset-0" style={{ background: 'var(--tc-muted)' }}>
+    <div className="fixed inset-0 bg-background">
       <div className="absolute inset-0 overflow-y-auto">
-        <Routes>
-          <Route path="/"          element={<PortalHome user={user} />} />
-          <Route path="/workouts"  element={<PortalWorkouts user={user} onActiveWorkoutChange={setActiveWorkoutMode} />} />
-          <Route path="/nutrition" element={<PortalNutritionPage user={user} />} />
-          <Route path="/checkin"   element={<PortalCheckIn user={user} />} />
-          <Route path="/progress"  element={<PortalProgress user={user} />} />
-          <Route path="/calendar"  element={<PortalCalendar user={user} />} />
-          <Route path="/community" element={<PortalCommunity user={user} />} />
-          <Route path="/messages"  element={<PortalMessages user={user} />} />
-          <Route path="/notifications" element={<PortalNotifications user={user} />} />
-          <Route path="/profile"   element={<PortalProfile user={user} />} />
-          <Route path="/billing"   element={<PortalBilling user={user} />} />
-        </Routes>
+        {/* Mobile-first column; centred on larger screens. */}
+        <div className="mx-auto min-h-full w-full max-w-[480px] bg-background">
+          <Routes>
+            <Route path="/"          element={<PortalHome user={user} />} />
+            <Route path="/workouts"  element={<PortalWorkouts user={user} onActiveWorkoutChange={setActiveWorkoutMode} />} />
+            <Route path="/nutrition" element={<PortalNutritionPage user={user} />} />
+            <Route path="/checkin"   element={<PortalCheckIn user={user} />} />
+            <Route path="/progress"  element={<PortalProgress user={user} />} />
+            <Route path="/calendar"  element={<PortalCalendar user={user} />} />
+            <Route path="/community" element={<PortalCommunity user={user} />} />
+            <Route path="/messages"  element={<PortalMessages user={user} />} />
+            <Route path="/notifications" element={<PortalNotifications user={user} />} />
+            <Route path="/profile"   element={<PortalProfile user={user} />} />
+            <Route path="/billing"   element={<PortalBilling user={user} />} />
+          </Routes>
         </div>
-        <BottomNav user={user} hideForActiveWorkout={activeWorkoutMode} />
+      </div>
+      <BottomNav user={user} hideForActiveWorkout={activeWorkoutMode} />
 
       {/* Notification permission prompt */}
       <NotificationPrompt

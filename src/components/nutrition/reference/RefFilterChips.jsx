@@ -1,21 +1,14 @@
 import React from 'react';
+import { Segmented } from '@/components/kit';
 
+/** Filter for the reference lists. Same API as before; renders the kit segmented control. */
 export default function RefFilterChips({ options, active, onChange }) {
   return (
-    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
-      {options.map(opt => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`flex-shrink-0 px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-            active === opt
-              ? 'bg-sidebar text-white border-border'
-              : 'bg-card text-muted-foreground border-border hover:border-border'
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
+    <Segmented
+      size="sm"
+      value={active}
+      onChange={onChange}
+      options={options.map(opt => ({ value: opt, label: opt }))}
+    />
   );
 }

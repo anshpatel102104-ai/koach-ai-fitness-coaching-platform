@@ -46,14 +46,14 @@ export default function MeasurementsCard({ checkIns, onLogMeasurements }) {
 
   if (!data) {
     return (
-      <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="rounded-xl p-4" style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-white font-bold text-sm">📏 Body Measurements</p>
+          <p className="text-foreground font-bold text-sm">Body Measurements</p>
         </div>
         <div className="py-8 text-center">
-          <p className="text-white/30 text-xs">No measurements logged yet</p>
-          <button onClick={onLogMeasurements} className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-white"
-            style={{ background: 'rgb(var(--primary) / 0.2)', border: '1px solid rgb(var(--primary) / 0.3)' }}>
+          <p className="text-muted-foreground text-xs">No measurements logged yet</p>
+          <button onClick={onLogMeasurements} className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-primary-foreground"
+            style={{ background: 'rgb(var(--primary))', border: '1px solid rgb(var(--primary) / 0.3)' }}>
             + Log Measurements
           </button>
         </div>
@@ -62,12 +62,12 @@ export default function MeasurementsCard({ checkIns, onLogMeasurements }) {
   }
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+    <div className="rounded-xl p-4" style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
       <div className="flex items-center justify-between mb-3">
-        <p className="text-white font-bold text-sm">📏 Body Measurements</p>
+        <p className="text-foreground font-bold text-sm">Body Measurements</p>
         <button onClick={onLogMeasurements}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold"
-          style={{ background: 'rgb(var(--primary) / 0.2)', color: 'rgb(var(--primary))', border: '1px solid rgb(var(--primary) / 0.25)' }}>
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[12px] font-bold"
+          style={{ background: 'rgb(var(--card))', color: 'rgb(var(--foreground))', border: '1px solid rgb(var(--input))' }}>
           <Plus className="w-3 h-3" /> Log
         </button>
       </div>
@@ -77,22 +77,22 @@ export default function MeasurementsCard({ checkIns, onLogMeasurements }) {
           const isProgress = m.change !== null && m.change < 0;
           const isRegress = m.change !== null && m.change > 0;
           const TrendIcon = isProgress ? TrendingDown : isRegress ? TrendingUp : Minus;
-          const trendColor = isProgress ? 'rgb(var(--success))' : isRegress ? 'rgb(var(--destructive))' : 'rgba(255,255,255,0.3)';
+          const trendColor = isProgress ? 'rgb(var(--success))' : isRegress ? 'rgb(var(--destructive))' : 'rgb(var(--muted-foreground))';
 
           return (
-            <div key={m.key} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div key={m.key} className="flex items-center gap-3 py-2" style={{ borderBottom: '1px solid rgb(var(--secondary))' }}>
               <div className="flex-1 min-w-0">
-                <p className="text-white/60 text-xs font-semibold">{m.label}</p>
+                <p className="text-foreground text-xs font-semibold">{m.label}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {m.start && <span className="text-white/25 text-[10px]">{m.start}"</span>}
-                  {m.start && m.current && <span className="text-white/15 text-[9px]">→</span>}
-                  {m.current && <span className="text-white text-sm font-bold">{m.current}"</span>}
+                  {m.start && <span className="text-muted-foreground text-[12px]">{m.start}"</span>}
+                  {m.start && m.current && <span className="text-muted-foreground text-[12px]">→</span>}
+                  {m.current && <span className="text-foreground text-sm font-bold">{m.current}"</span>}
                 </div>
               </div>
               {m.change !== null && (
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <TrendIcon className="w-3 h-3" style={{ color: trendColor }} />
-                  <span className="text-[10px] font-bold" style={{ color: trendColor }}>
+                  <span className="text-[12px] font-bold" style={{ color: trendColor }}>
                     {m.change > 0 ? '+' : ''}{m.change}"
                   </span>
                 </div>

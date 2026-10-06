@@ -3,10 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { differenceInWeeks, parseISO, format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TrendingDown, TrendingUp, Minus, Image, Star, Scale, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ClientProgressDetail from '@/components/progress/ClientProgressDetail';
-import { SignedImg } from '@/components/shared/SignedImage';
+import { useSignedUrl } from '@/components/shared/SignedImage';
+import { Page, PageHeader, Panel, Stat, Initials, EmptyState } from '@/components/kit';
 
 /* ── helpers ── */
 function calcProgressScore(client, checkIns) {
@@ -145,88 +146,56 @@ export default function Progress() {
     }).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
   }, [activeClients, selectedClientId, cisByClient, sessionsByClient]);
 
+  const subtitle = activeClients.length
+    ? `${activeClients.length} active client${activeClients.length === 1 ? '' : 's'}, ${stats.totalLost} lb lost between them. Highest progress score first.`
+    : 'Progress shows up here once active clients start checking in.';
+
   return (
-    <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto overflow-x-hidden">
-      {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl px-5 py-4"
-        style={{ background: 'var(--tc-sidebar)' }}>
-        <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">Progress</h1>
-          <p className="text-xs sm:text-sm mt-0.5 text-white/50">
-            Track, visualize, and celebrate client transformations
-          </p>
-        </div>
-        <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-          <SelectTrigger className="w-48 bg-[var(--kc-w-10)] border-white/20 text-white h-9 text-sm">
-            <SelectValue placeholder="All clients" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            {activeClients.map(c => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+    <Page>
+      <PageHeader
+        title="Progress"
+        subtitle={subtitle}
+        actions={
+          <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            <SelectTrigger className="w-full sm:w-56 h-10 bg-card" aria-label="Filter by client">
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All clients</SelectItem>
+              {activeClients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
+
+      {/* Roster totals */}
+      <Panel className="grid grid-cols-2 lg:grid-cols-4 mb-5 divide-border [&>*]:border-border">
+        <div className="p-5 border-b lg:border-b-0 border-r"><Stat label="Weight lost, all clients" value={stats.totalLost} unit="lb" /></div>
+        <div className="p-5 border-b lg:border-b-0 lg:border-r"><Stat label="Average progress score" value={stats.avgScore} unit="/100" /></div>
+        <div className="p-5 border-r"><Stat label="Trained in the last 7 days" value={stats.personalBests} /></div>
+        <div className="p-5"><Stat label="Clients with photos" value={stats.photoClients} /></div>
+      </Panel>
+
+      {/* Client list */}
+      <Panel className="overflow-hidden">
+        {visibleClients.length === 0 ? (
+          <EmptyState
+            title="No active clients yet"
+            body="Mark a client active and log a check-in to start tracking progress."
+          />
+        ) : (
+          <>
+            <div className="hidden lg:grid grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_72px_88px] gap-x-6 px-6 py-3 border-b border-border text-[13px] text-muted-foreground">
+              <span>Client</span><span>Start, now, goal</span><span>Toward goal</span><span className="text-right">Score</span><span />
+            </div>
+            {visibleClients.map(row => (
+              <ClientProgressRow key={row.client.id} row={row} onViewProgress={() => setDetailClient(row)} />
             ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-card rounded-xl border border-success p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-2 h-2 rounded-full bg-success" />
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-success/10">
-              <Scale className="w-4 h-4 text-success" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.totalLost}<span className="text-sm font-normal text-muted-foreground ml-1">lbs</span></p>
-          <p className="text-xs text-muted-foreground mt-0.5">Total Weight Lost</p>
-        </div>
-        <div className="bg-card rounded-xl border border-accent p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-accent">
-              <BarChart3 className="w-4 h-4 text-primary" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.avgScore}<span className="text-sm font-normal text-muted-foreground ml-1">/100</span></p>
-          <p className="text-xs text-muted-foreground mt-0.5">Avg Progress Score</p>
-        </div>
-        <div className="bg-card rounded-xl border border-orange-100 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-2 h-2 rounded-full bg-orange-400" />
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-50">
-              <Star className="w-4 h-4 text-orange-500" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.personalBests}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Personal Bests This Week</p>
-        </div>
-        <div className="bg-card rounded-xl border border-ai p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-2 h-2 rounded-full bg-ai" />
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-ai/10">
-              <Image className="w-4 h-4 text-ai" />
-            </div>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{stats.photoClients}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Before/After Photos</p>
-        </div>
-      </div>
-
-      {/* Client List */}
-      {visibleClients.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 bg-card rounded-2xl border border-border">
-          <BarChart3 className="w-12 h-12 text-muted-foreground mb-3" />
-          <p className="font-semibold text-foreground">No active clients yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Add clients and start logging check-ins to track progress.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {visibleClients.map(row => (
-            <ClientProgressRow key={row.client.id} row={row} onViewProgress={() => setDetailClient(row)} />
-          ))}
-        </div>
-      )}
+          </>
+        )}
+      </Panel>
 
       {/* Detail Modal */}
       {detailClient && (
@@ -238,97 +207,85 @@ export default function Progress() {
           onClose={() => setDetailClient(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }
+
+const GOAL_LABEL = { weight_loss: 'Fat loss', muscle_gain: 'Muscle gain', strength: 'Strength', endurance: 'Endurance', flexibility: 'Mobility', general_fitness: 'General fitness' };
 
 function ClientProgressRow({ row, onViewProgress }) {
   const { client, cis, sessions, startWeight, currentWeight, goalWeight, weeksActive, trend, score, goalPct, lastDate } = row;
-
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  const trendColor = trend === 'down' ? 'text-success' : trend === 'up' ? 'text-destructive' : 'text-muted-foreground';
-  const trendBg = trend === 'down' ? 'bg-success/10' : trend === 'up' ? 'bg-destructive/10' : 'bg-muted';
-
-  // Goal label
-  const goalLabel = { weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', strength: 'Strength', endurance: 'Endurance', flexibility: 'Flexibility', general_fitness: 'General Fitness' }[client.goal] || 'General';
+  const avatar = useSignedUrl(client.avatar_url);
+  const trendText = trend === 'down' ? 'trending down' : trend === 'up' ? 'trending up' : 'holding steady';
+  const facts = [
+    GOAL_LABEL[client.goal] || 'General fitness',
+    weeksActive ? `week ${weeksActive}` : null,
+    `${cis.length} check-in${cis.length === 1 ? '' : 's'}`,
+    `${sessions.length} workout${sessions.length === 1 ? '' : 's'}`,
+    lastDate ? `updated ${format(parseISO(lastDate), 'MMM d')}` : null,
+  ].filter(Boolean).join(', ');
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-      {/* Row 1: Avatar + Score + CTA */}
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-primary-foreground font-bold text-sm"
-          style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-          {client.avatar_url
-            ? <SignedImg src={client.avatar_url} alt={client.name} className="w-10 h-10 rounded-full object-cover" />
-            : client.name?.[0]?.toUpperCase()}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onViewProgress}
+      onKeyDown={e => { if (e.key === 'Enter') onViewProgress(); }}
+      className="grid grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1fr)_72px_88px] items-center gap-x-6 gap-y-3 px-4 sm:px-6 py-4 border-b border-border last:border-b-0 hover:bg-accent/60 cursor-pointer transition-colors"
+    >
+      {/* Client */}
+      <div className="flex items-center gap-3 min-w-0">
+        <Initials name={client.name || ''} src={avatar || undefined} />
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-foreground truncate">{client.name}</p>
+          <p className="text-[13px] text-muted-foreground truncate">{facts}</p>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground truncate text-sm">{client.name}</p>
-          <p className="text-xs text-muted-foreground">{goalLabel}</p>
-        </div>
-        {score !== null && (
-          <div className="text-center flex-shrink-0">
-            <div className={cn('text-base font-bold', score >= 70 ? 'text-success' : score >= 50 ? 'text-orange-500' : 'text-destructive')}>{score}</div>
-            <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Score</div>
-          </div>
-        )}
-        <button onClick={onViewProgress}
-          className="px-3 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap min-h-[36px] flex-shrink-0">
-          View →
-        </button>
       </div>
 
-      {/* Row 2: Weight pills */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto scrollbar-hide">
+      {/* Score (mobile: top right) */}
+      <p className="lg:hidden text-right">
+        {score !== null ? <span className={cn('num text-[22px]', score < 50 ? 'text-destructive' : 'text-foreground')}>{score}</span> : <span className="num text-[22px] text-muted-foreground">{'\u2014'}</span>}
+      </p>
+
+      {/* Weights */}
+      <div className="col-span-2 lg:col-span-1 flex items-baseline gap-4 sm:gap-5">
         <WeightPill label="Start" value={startWeight} />
-        <div className={cn('flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0', trendBg, trendColor)}>
-          <TrendIcon className="w-3 h-3" />
-        </div>
-        <WeightPill label="Now" value={currentWeight} highlight />
-        <span className="text-muted-foreground text-xs flex-shrink-0">→</span>
-        <WeightPill label="Goal" value={goalWeight} goal />
+        <WeightPill label="Now" value={currentWeight} sub={trendText} />
+        <WeightPill label="Goal" value={goalWeight} />
       </div>
 
-      {/* Row 3: Progress bar */}
-      <div className="mb-2">
-        <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-          <span>Goal Progress</span>
-          <span>{goalPct !== null ? `${goalPct}%` : 'N/A'}</span>
+      {/* Toward goal */}
+      <div className="col-span-2 lg:col-span-1">
+        <div className="flex justify-between text-[13px] text-muted-foreground mb-1.5">
+          <span className="lg:hidden">Toward goal</span>
+          <span className="tabular-nums lg:ml-auto">{goalPct !== null ? `${goalPct}%` : 'No goal weight'}</span>
         </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all"
-            style={{ width: `${goalPct ?? 0}%` }} />
+        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+          <div className="h-full bg-primary rounded-full" style={{ width: `${goalPct ?? 0}%` }} />
         </div>
       </div>
 
-      {/* Row 4: Chips */}
-      <div className="flex gap-1.5 flex-wrap">
-        {weeksActive && <Chip label={`${weeksActive}w active`} />}
-        <Chip label={`${cis.length} check-ins`} />
-        <Chip label={`${sessions.length} workouts`} />
-        {lastDate && <Chip label={`Updated ${format(parseISO(lastDate), 'MMM d')}`} />}
+      {/* Score (desktop) */}
+      <p className="hidden lg:block text-right">
+        {score !== null ? <span className={cn('num text-[22px]', score < 50 ? 'text-destructive' : 'text-foreground')}>{score}</span> : <span className="num text-[22px] text-muted-foreground">{'\u2014'}</span>}
+      </p>
+
+      <div className="hidden lg:flex justify-end" onClick={e => e.stopPropagation()}>
+        <Button variant="outline" size="sm" onClick={onViewProgress}>Open</Button>
       </div>
     </div>
   );
 }
 
-function WeightPill({ label, value, highlight, goal }) {
+function WeightPill({ label, value, sub }) {
   return (
-    <div className="text-center">
-      <div className={cn('text-xs font-bold',
-        highlight ? 'text-primary' : goal ? 'text-success' : 'text-foreground')}>
-        {value ? `${value}` : '—'}
-        {value && <span className="text-[9px] font-normal ml-0.5">lbs</span>}
-      </div>
-      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">{label}</div>
+    <div className="min-w-0">
+      <p className="text-[13px] text-muted-foreground">{label}</p>
+      <p className="num text-[18px] text-foreground leading-tight">
+        {value ? value : '\u2014'}
+        {value ? <span className="text-[0.7em] ml-0.5">lb</span> : null}
+      </p>
+      {sub && <p className="text-[12px] text-muted-foreground whitespace-nowrap">{sub}</p>}
     </div>
-  );
-}
-
-function Chip({ label }) {
-  return (
-    <span className="px-2 py-0.5 bg-muted rounded-full text-[10px] text-muted-foreground font-medium whitespace-nowrap">
-      {label}
-    </span>
   );
 }

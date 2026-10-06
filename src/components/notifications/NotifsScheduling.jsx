@@ -20,9 +20,9 @@ export default function NotifsScheduling({ s, set }) {
   const upd = (key, val) => set('scheduling', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Scheduling" emoji="📅"
+    <NSection title="Scheduling"
       onReset={() => set('scheduling', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Scheduling')}>
+      onTest={() => toast.success('Test notification sent for scheduling')}>
 
       <NRow enabled={d.session_request.enabled} onToggle={v => upd('session_request', { enabled: v })}
         title="New session request"

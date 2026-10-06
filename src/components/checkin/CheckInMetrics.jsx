@@ -1,39 +1,27 @@
 import React from 'react';
+import { KeyValue } from '@/components/kit';
+import { MOOD_LABEL } from './reviewParts';
 
-const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
-
+/** Check-in numbers as two columns of key/value lines. */
 export default function CheckInMetrics({ checkIn }) {
-  const ENERGY_LABEL = { 1: 'Exhausted', 2: 'Low', 3: 'Moderate', 4: 'High', 5: 'Energized' };
-  const STRESS_LABEL = { 1: 'Calm', 2: 'Low', 3: 'Moderate', 4: 'High', 5: 'Very High' };
-
+  const flag = (cond) => (cond ? 'text-destructive' : undefined);
   const metrics = [
-    { label: 'Weight', value: checkIn.weight ? `${checkIn.weight} lbs` : null },
-    { label: 'Body Fat', value: checkIn.body_fat_pct ? `${checkIn.body_fat_pct}%` : null },
-    { label: 'Sleep', value: checkIn.sleep_hours ? `${checkIn.sleep_hours}h` : null },
-    { label: 'Mood', value: checkIn.mood ? `${MOOD_EMOJI[checkIn.mood]} ${checkIn.mood}` : null },
-    { label: 'Energy', value: checkIn.energy_level != null ? `${checkIn.energy_level}/5 ${ENERGY_LABEL[checkIn.energy_level] || ''}` : null },
-    { label: 'Stress', value: checkIn.stress_level != null ? `${checkIn.stress_level}/5 ${STRESS_LABEL[checkIn.stress_level] || ''}` : null },
-    { label: 'Training', value: checkIn.compliance_training != null ? `${checkIn.compliance_training}%` : null, isCompliance: true, val: checkIn.compliance_training },
-    { label: 'Nutrition', value: checkIn.compliance_nutrition != null ? `${checkIn.compliance_nutrition}%` : null, isCompliance: true, val: checkIn.compliance_nutrition },
+    { label: 'Weight', value: checkIn.weight ? `${checkIn.weight} lb` : null },
+    { label: 'Body fat', value: checkIn.body_fat_pct ? `${checkIn.body_fat_pct}%` : null },
+    { label: 'Sleep', value: checkIn.sleep_hours ? `${checkIn.sleep_hours} h` : null, cls: flag(checkIn.sleep_hours < 6) },
+    { label: 'Mood', value: checkIn.mood ? (MOOD_LABEL[checkIn.mood] || checkIn.mood) : null, cls: flag(checkIn.mood === 'stressed' || checkIn.mood === 'tired') },
+    { label: 'Energy', value: checkIn.energy_level != null ? `${checkIn.energy_level} out of 10` : null, cls: flag(checkIn.energy_level <= 4) },
+    { label: 'Stress', value: checkIn.stress_level != null ? `${checkIn.stress_level} out of 10` : null, cls: flag(checkIn.stress_level >= 7) },
+    { label: 'Training', value: checkIn.compliance_training != null ? `${Math.round(checkIn.compliance_training)}%` : null, cls: flag(checkIn.compliance_training < 60) },
+    { label: 'Nutrition', value: checkIn.compliance_nutrition != null ? `${Math.round(checkIn.compliance_nutrition)}%` : null, cls: flag(checkIn.compliance_nutrition < 60) },
   ].filter(m => m.value);
 
   if (!metrics.length) return null;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+    <div className="grid sm:grid-cols-2 sm:gap-x-8">
       {metrics.map(m => (
-        <div key={m.label} className="bg-secondary/40 rounded-xl p-3">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1">{m.label}</p>
-          <p className="text-sm font-semibold">{m.value}</p>
-          {m.isCompliance && m.val != null && (
-            <div className="mt-1.5 h-1 rounded-full bg-border overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${m.val >= 80 ? 'bg-accent' : m.val >= 60 ? 'bg-chart-4' : 'bg-destructive'}`}
-                style={{ width: `${m.val}%` }}
-              />
-            </div>
-          )}
-        </div>
+        <KeyValue key={m.label} label={m.label} value={<span className={m.cls}>{m.value}</span>} />
       ))}
     </div>
   );

@@ -9,7 +9,7 @@ export default function LogWeightModal({ client, onSave, onClose, loading }) {
 
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-card rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+      <div className="bg-card rounded-xl w-full max-w-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground">Log Weight{client?.name ? ` — ${client.name}` : ''}</h3>
           <button onClick={onClose}><X className="w-4 h-4 text-muted-foreground" /></button>

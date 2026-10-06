@@ -53,7 +53,7 @@ function FilterPills({ label, items, value, onChange, colorFn }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold text-muted-foreground">{label}</span>
         {hasMore && (
           <button onClick={() => setExpanded(e => !e)} className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
             {expanded ? 'less' : `+${items.length - 5} more`}

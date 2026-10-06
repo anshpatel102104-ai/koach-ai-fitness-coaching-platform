@@ -1,34 +1,24 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
+/**
+ * Collapsible settings section. `icon` may be a lucide component or a node;
+ * strings (old emoji icons) are ignored so no emoji reaches the UI.
+ */
 export default function ProfileSectionCard({ icon, title, children, defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
+  const Icon = typeof icon === 'function' || (icon && typeof icon === 'object' && icon.$$typeof && !React.isValidElement(icon)) ? icon : null;
 
   return (
-    <div className="rounded-2xl overflow-hidden"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-4 text-left">
-        <span className="text-lg w-7 flex-shrink-0">{icon}</span>
-        <p className="text-white font-semibold text-sm flex-1">{title}</p>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
-          <ChevronDown className="w-4 h-4 text-white/30" />
-        </motion.div>
+    <section className="panel overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-accent/50">
+        {Icon ? <Icon className="h-[18px] w-[18px] text-muted-foreground" /> : React.isValidElement(icon) ? icon : null}
+        <span className="flex-1 text-[15px] font-semibold text-foreground">{title}</span>
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}>
-            <div className="px-4 pb-4 border-t border-white/5">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+      {open && <div className="border-t border-border px-4 pb-4 pt-1">{children}</div>}
+    </section>
   );
 }

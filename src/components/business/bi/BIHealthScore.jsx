@@ -1,39 +1,8 @@
 import React, { useMemo } from 'react';
 import { parseISO, subMonths, startOfMonth } from 'date-fns';
-
-function ScoreRing({ score, size = 120, stroke = 10 }) {
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
-  const progress = (score / 100) * circumference;
-  const color = score >= 75 ? 'var(--tc-success)' : score >= 50 ? 'var(--tc-warning)' : 'var(--tc-destructive)';
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--tc-muted)" strokeWidth={stroke} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={`${progress} ${circumference}`} strokeLinecap="round"
-          style={{ transition: 'stroke-dasharray 1s ease' }} />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-2xl font-bold" style={{ color }}>{score}</p>
-        <p className="text-[9px] text-muted-foreground font-medium">/ 100</p>
-      </div>
-    </div>
-  );
-}
-
-function CategoryBar({ label, score, color }) {
-  return (
-    <div className="flex items-center gap-2">
-      <p className="text-xs text-muted-foreground w-28 flex-shrink-0">{label}</p>
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${score}%`, background: color }} />
-      </div>
-      <span className="text-xs font-bold w-8 text-right" style={{ color }}>{score}</span>
-    </div>
-  );
-}
+import { Panel } from '@/components/kit';
+import { Meter } from '@/components/business/ui';
+import { cn } from '@/lib/utils';
 
 export default function BIHealthScore({ clients, checkIns, leads }) {
   const activeClients = useMemo(() => clients.filter(c => c.lifecycle_status === 'active' || c.status === 'active'), [clients]);
@@ -79,34 +48,38 @@ export default function BIHealthScore({ clients, checkIns, leads }) {
     return { overall, revenueScore, clientScore, growthScore, operationalScore };
   }, [clients, checkIns, leads, mrr]);
 
+  const tone = (v) => (v >= 70 ? 'ink' : v >= 40 ? 'warning' : 'danger');
   const categories = [
-    { label: 'Revenue Health', score: scores.revenueScore, color: scores.revenueScore >= 70 ? 'var(--tc-success)' : scores.revenueScore >= 40 ? 'var(--tc-warning)' : 'var(--tc-destructive)' },
-    { label: 'Client Health', score: scores.clientScore, color: scores.clientScore >= 70 ? 'var(--tc-success)' : scores.clientScore >= 40 ? 'var(--tc-warning)' : 'var(--tc-destructive)' },
-    { label: 'Growth Health', score: scores.growthScore, color: scores.growthScore >= 70 ? 'var(--tc-success)' : scores.growthScore >= 40 ? 'var(--tc-warning)' : 'var(--tc-destructive)' },
-    { label: 'Operational', score: scores.operationalScore, color: scores.operationalScore >= 70 ? 'var(--tc-success)' : scores.operationalScore >= 40 ? 'var(--tc-warning)' : 'var(--tc-destructive)' },
+    { label: 'Revenue', score: scores.revenueScore, hint: 'Recurring income and new sign-ups' },
+    { label: 'Clients', score: scores.clientScore, hint: 'Adherence, minus clients at risk' },
+    { label: 'Growth', score: scores.growthScore, hint: 'Leads in the pipeline and conversion' },
+    { label: 'Operations', score: scores.operationalScore, hint: 'Check-ins reviewed and replied to' },
   ];
+  const weakest = [...categories].sort((a, b) => a.score - b.score)[0];
 
-  const label = scores.overall >= 75 ? 'Excellent' : scores.overall >= 60 ? 'Good' : scores.overall >= 40 ? 'Needs Work' : 'Critical';
-  const labelColor = scores.overall >= 75 ? 'var(--tc-success)' : scores.overall >= 60 ? 'var(--tc-primary)' : scores.overall >= 40 ? 'var(--tc-warning)' : 'var(--tc-destructive)';
+  const label = scores.overall >= 75 ? 'Strong' : scores.overall >= 60 ? 'Steady' : scores.overall >= 40 ? 'Needs work' : 'At risk';
+  const sentence = scores.overall >= 75
+    ? `Every area is holding up. ${weakest.label} is the lowest at ${weakest.score}.`
+    : `${weakest.label} is pulling the score down at ${weakest.score}. ${weakest.hint}.`;
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-foreground mb-4">Business Health Score</h3>
-      <div className="flex items-center gap-6 mb-5">
-        <ScoreRing score={scores.overall} />
-        <div>
-          <p className="text-lg font-bold" style={{ color: labelColor }}>{label}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Overall business health</p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {scores.overall < 60 ? 'Focus on client retention and pipeline growth to improve your score.' :
-              scores.overall < 75 ? 'Good foundation — increase check-in review rate for a boost.' :
-              'Excellent! Keep maintaining strong client relationships.'}
-          </p>
-        </div>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6 flex flex-col">
+      <h2 className="text-[22px] text-foreground">Business health</h2>
+      <div className="flex items-baseline gap-3 mt-3">
+        <p className={cn('num text-[56px] leading-none', scores.overall < 40 ? 'text-destructive' : 'text-foreground')}>{scores.overall}</p>
+        <p className="text-[15px] font-semibold text-foreground">{label}<span className="text-muted-foreground font-normal"> out of 100</span></p>
       </div>
-      <div className="space-y-2.5">
-        {categories.map(c => <CategoryBar key={c.label} {...c} />)}
+      <p className="text-[15px] text-muted-foreground mt-2 max-w-md">{sentence}</p>
+
+      <div className="mt-5 pt-4 border-t border-border space-y-3.5">
+        {categories.map(c => (
+          <div key={c.label} className="grid grid-cols-[96px_1fr_32px] items-center gap-3">
+            <p className="text-sm text-foreground">{c.label}</p>
+            <Meter value={c.score} tone={tone(c.score)} />
+            <p className={cn('text-sm font-semibold text-right tabular-nums', c.score < 40 ? 'text-destructive' : 'text-foreground')}>{c.score}</p>
+          </div>
+        ))}
       </div>
-    </div>
+    </Panel>
   );
 }

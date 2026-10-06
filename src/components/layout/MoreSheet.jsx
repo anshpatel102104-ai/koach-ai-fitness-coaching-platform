@@ -15,7 +15,7 @@ import { track } from '@/lib/telemetry';
 // Messages/Calendar/Business; everything else lives here (routes preserved).
 const SECTIONS = [
   {
-    title: 'COACHING',
+    title: 'Coaching',
     items: [
       { icon: Dumbbell,      label: 'Programs',   path: '/programs' },
       { icon: Salad,         label: 'Nutrition',  path: '/nutrition' },
@@ -26,7 +26,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'GROW',
+    title: 'Grow',
     items: [
       { icon: UserPlus,    label: 'Leads',      path: '/sales' },
       { icon: ShoppingBag, label: 'Store',      path: '/store' },
@@ -35,7 +35,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'AI',
+    title: 'Automate',
     items: [
       { icon: Sparkles,  label: 'Assistant',   path: '/assistant' },
       { icon: Bot,       label: 'Automations', path: '/automations' },
@@ -43,7 +43,7 @@ const SECTIONS = [
     ],
   },
   {
-    title: 'TOOLS',
+    title: 'Tools',
     items: [
       { icon: LayoutTemplate, label: 'Templates',      path: '/coaching-templates' },
       { icon: Palette,        label: 'White Label',    path: '/white-label' },
@@ -69,7 +69,7 @@ export default function MoreSheet({ open, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-black/60 md:hidden"
+            className="fixed inset-0 z-50 bg-[rgb(17_19_24/0.55)] lg:hidden"
             onClick={onClose}
           />
           <motion.div
@@ -78,7 +78,7 @@ export default function MoreSheet({ open, onClose }) {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed left-0 right-0 z-50 md:hidden flex flex-col rounded-t-2xl overflow-hidden bg-card border-t border-border"
+            className="fixed left-0 right-0 z-50 lg:hidden flex flex-col rounded-t-2xl overflow-hidden bg-card"
             style={{ bottom: '60px', maxHeight: 'calc(80dvh - 60px)' }}
           >
             {/* Drag handle */}
@@ -90,7 +90,7 @@ export default function MoreSheet({ open, onClose }) {
             <div className="overflow-y-auto flex-1 px-4 pt-2 pb-8">
               {SECTIONS.map((section) => (
                 <div key={section.title} className="mb-5">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.18em] mb-2.5 px-1 text-muted-foreground">
+                  <p className="text-[13px] font-medium mb-2 px-1 text-muted-foreground">
                     {section.title}
                   </p>
                   <div className="grid grid-cols-4 gap-2">
@@ -105,13 +105,13 @@ export default function MoreSheet({ open, onClose }) {
                           className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all active:scale-95"
                         >
                           <div className={cn(
-                            'w-12 h-12 rounded-xl flex items-center justify-center',
-                            isActive ? 'bg-foreground' : 'bg-muted'
+                            'w-12 h-12 rounded-lg flex items-center justify-center',
+                            isActive ? 'bg-primary' : 'bg-secondary'
                           )}>
-                            <item.icon className={cn('w-5 h-5', isActive ? 'text-background' : 'text-muted-foreground')} />
+                            <item.icon strokeWidth={1.75} className={cn('w-5 h-5', isActive ? 'text-primary-foreground' : 'text-foreground')} />
                           </div>
                           <span className={cn(
-                            'text-[10px] text-center leading-tight',
+                            'text-[11px] text-center leading-tight',
                             isActive ? 'text-foreground font-semibold' : 'text-muted-foreground'
                           )}>
                             {item.label}
@@ -126,14 +126,14 @@ export default function MoreSheet({ open, onClose }) {
               {/* Account links */}
               <div className="border-t border-border pt-4 mt-1">
                 <div className="grid grid-cols-4 gap-2">
-                  {[{ icon: CreditCard, label: 'Subscription', path: '/subscription' }].map(item => {
+                  {[{ icon: CreditCard, label: 'Plan', path: '/subscription' }].map(item => {
                     const isActive = location.pathname.startsWith(item.path);
                     return (
                       <Link key={item.path} to={item.path} onClick={onClose} className="flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all active:scale-95">
-                        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', isActive ? 'bg-foreground' : 'bg-muted')}>
-                          <item.icon className={cn('w-5 h-5', isActive ? 'text-background' : 'text-muted-foreground')} />
+                        <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', isActive ? 'bg-primary' : 'bg-secondary')}>
+                          <item.icon strokeWidth={1.75} className={cn('w-5 h-5', isActive ? 'text-primary-foreground' : 'text-foreground')} />
                         </div>
-                        <span className="text-[10px] text-muted-foreground text-center leading-tight">{item.label}</span>
+                        <span className="text-[11px] text-muted-foreground text-center leading-tight">{item.label}</span>
                       </Link>
                     );
                   })}

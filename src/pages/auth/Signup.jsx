@@ -54,7 +54,7 @@ export default function Signup() {
         <AuthField label="Full name" value={fullName} onChange={setFullName} placeholder="Your name" autoComplete="name" />
         <AuthField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" />
         <AuthField label="Password" type="password" value={password} onChange={setPassword} placeholder="At least 6 characters" autoComplete="new-password" />
-        <p className="text-xs text-white/50">
+        <p className="text-[13px] text-white/60">
           {LABEL[plan]} · {interval === 'annual' ? 'Yearly' : 'Monthly'} · 30-day free trial
           {!explicit && (
             <>
@@ -71,7 +71,7 @@ export default function Signup() {
           </AuthSubmit>
         )}
       </form>
-      <div className="text-center text-xs text-white/40">
+      <div className="text-center text-[13px] text-white/50">
         Already have an account? <Link to={email ? `/login?email=${encodeURIComponent(email)}` : '/login'} className={authLinkClass + ' text-white'}>Sign in</Link>
       </div>
     </AuthShell>

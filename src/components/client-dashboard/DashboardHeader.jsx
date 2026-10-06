@@ -1,93 +1,54 @@
 import React from 'react';
-import { Settings, CheckCircle2 } from 'lucide-react';
+import { Settings, Check } from 'lucide-react';
 import { format } from 'date-fns';
-
-const hour = new Date().getHours();
-const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+import { cn } from '@/lib/utils';
 
 const PILLS = [
-  { key: 'workout', emoji: '💪', label: 'Workout', done: (log) => log.workout_done },
-  { key: 'meals',   emoji: '🥗', label: 'Meals',   done: (log) => (log.meals_logged || 0) >= 3 },
-  { key: 'water',   emoji: '💧', label: 'Water',   done: (log) => (log.water_glasses || 0) >= 6 },
-  { key: 'steps',   emoji: '👟', label: 'Steps',   done: (log) => (log.steps || 0) >= 8000 },
+  { key: 'workout', label: 'Workout', done: (log) => log.workout_done },
+  { key: 'meals',   label: 'Meals',   done: (log) => (log.meals_logged || 0) >= 3 },
+  { key: 'water',   label: 'Water',   done: (log) => (log.water_glasses || 0) >= 6 },
+  { key: 'steps',   label: 'Steps',   done: (log) => (log.steps || 0) >= 8000 },
 ];
 
+/** Graphite header: name, date, streak and today's four habits. */
 export default function DashboardHeader({ user, streak, log, onSettings }) {
-  const firstName = user?.full_name?.split(' ')[0] || 'Athlete';
-  const initial = user?.full_name?.[0]?.toUpperCase() || 'A';
+  const firstName = user?.full_name?.split(' ')[0] || 'there';
+  const initial = user?.full_name?.[0]?.toUpperCase() || '?';
 
   return (
-    <div
-      className="rounded-2xl p-5 relative overflow-hidden"
-      style={{ background: 'var(--tc-sidebar)' }}
-    >
-      {/* Subtle background orb */}
-      <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-10"
-        style={{ background: 'radial-gradient(circle, var(--tc-primary), transparent)' }} />
-      <div className="absolute -bottom-6 -left-6 w-32 h-32 rounded-full opacity-5"
-        style={{ background: 'radial-gradient(circle, var(--tc-primary), transparent)' }} />
-
-      {/* Top row: avatar + greeting + streak + settings */}
-      <div className="flex items-start justify-between relative z-10 mb-4">
+    <section className="rounded-xl bg-sidebar p-5 text-white">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
-          <div className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-base flex-shrink-0"
-            style={{ background: 'color-mix(in srgb, var(--tc-primary) 25%, transparent)', color: 'var(--tc-primary)', border: '1.5px solid color-mix(in srgb, var(--tc-primary) 35%, transparent)' }}>
-            {initial}
-          </div>
+          <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-semibold">{initial}</span>
           <div>
-            <p className="text-white/50 text-xs font-medium">{greeting}</p>
-            <p className="text-white font-bold text-lg leading-tight" style={{ letterSpacing: '-0.02em' }}>
-              {firstName}
-            </p>
-            <p className="text-white/35 text-[11px] mt-0.5">{format(new Date(), 'EEEE, MMMM d')}</p>
+            <p className="text-[13px] text-white/60">{format(new Date(), 'EEEE, MMMM d')}</p>
+            <h1 className="text-[28px] text-white">Hi, {firstName}</h1>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
-          {/* Streak badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-            style={{ background: streak > 0 ? 'color-mix(in srgb, var(--kc-fb923c) 15%, transparent)' : 'color-mix(in srgb, white 6%, transparent)', border: '1px solid color-mix(in srgb, var(--kc-fb923c) 30%, transparent)' }}>
-            <span className="text-sm">🔥</span>
-            <span className="text-white font-bold text-sm">{streak}</span>
-            <span className="text-white/50 text-[11px]">streak</span>
-          </div>
-
-          {/* Settings */}
-          <button
-            onClick={onSettings}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-            style={{ background: 'color-mix(in srgb, white 8%, transparent)' }}
-          >
-            <Settings className="w-3.5 h-3.5 text-white/50" />
+          <span className="text-right">
+            <span className="num block text-[24px] text-white">{streak}</span>
+            <span className="block text-[12px] text-white/60">day streak</span>
+          </span>
+          <button type="button" onClick={onSettings} aria-label="Settings"
+            className="touch-compact flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 hover:bg-white/15">
+            <Settings className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* Bottom row: quick stat pills */}
-      <div className="grid grid-cols-4 gap-2 relative z-10">
-        {PILLS.map(({ key, emoji, label, done }) => {
+      <div className="grid grid-cols-4 gap-2">
+        {PILLS.map(({ key, label, done }) => {
           const isDone = done(log);
           return (
-            <div
-              key={key}
-              className="flex flex-col items-center gap-1 py-2 px-1 rounded-xl transition-all"
-              style={{
-                background: isDone ? 'color-mix(in srgb, white 92%, transparent)' : 'color-mix(in srgb, white 7%, transparent)',
-                border: isDone ? 'none' : '1px solid color-mix(in srgb, white 10%, transparent)',
-              }}
-            >
-              <span className="text-base leading-none">{emoji}</span>
-              <span className={`text-[10px] font-semibold leading-none ${isDone ? 'text-foreground' : 'text-white/55'}`}>
-                {label}
-              </span>
-              {isDone && (
-                <CheckCircle2 className="w-3 h-3 text-success" />
-              )}
+            <div key={key} className={cn('flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-[13px] font-semibold',
+              isDone ? 'bg-white text-sidebar' : 'bg-white/10 text-white/70')}>
+              {isDone && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              {label}
             </div>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

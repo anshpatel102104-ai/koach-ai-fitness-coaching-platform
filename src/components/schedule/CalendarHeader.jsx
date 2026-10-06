@@ -1,72 +1,41 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/kit';
 
-export default function CalendarHeader({ title, onPrev, onNext, onToday, view, onViewChange, onNewSession, onAvailability }) {
-  const views = ['Day', 'Week', 'Month'];
+/**
+ * Calendar toolbar: range title with prev / today / next on the left,
+ * Day / Week / Month on the right. Booking + availability actions live in
+ * the page header (onNewSession / onAvailability are accepted for callers
+ * that render this standalone).
+ */
+export default function CalendarHeader({ title, onPrev, onNext, onToday, view, onViewChange }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-      {/* Navigation row */}
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+      <div className="flex items-center gap-3 min-w-0">
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={onPrev}
-            className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors min-h-[44px] min-w-[44px]"
-          >
-            <ChevronLeft className="w-4 h-4 text-foreground" />
-          </button>
-          <button
-            onClick={onNext}
-            className="w-9 h-9 flex items-center justify-center rounded-lg border border-border bg-card hover:bg-muted transition-colors min-h-[44px] min-w-[44px]"
-          >
-            <ChevronRight className="w-4 h-4 text-foreground" />
-          </button>
-          <button
-            onClick={onToday}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border border-border bg-card hover:bg-muted text-foreground transition-colors min-h-[44px]"
-          >
-            Today
-          </button>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={onPrev} aria-label="Previous">
+            <ChevronLeft />
+          </Button>
+          <Button variant="outline" size="sm" className="h-9" onClick={onToday}>Today</Button>
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={onNext} aria-label="Next">
+            <ChevronRight />
+          </Button>
         </div>
-        <h2 className="text-sm sm:text-base font-bold text-foreground font-heading ml-1 truncate">{title}</h2>
+        <h2 className="text-[22px] text-foreground truncate">{title}</h2>
       </div>
 
-      {/* Actions row */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* View toggle */}
-        <div className="flex items-center bg-muted border border-border rounded-xl p-1 gap-0.5">
-          {views.map(v => (
-            <button
-              key={v}
-              onClick={() => onViewChange(v.toLowerCase())}
-              className={cn(
-                'text-xs font-semibold px-3 py-1.5 rounded-lg transition-all min-h-[36px]',
-                view === v.toLowerCase()
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
-
-        {/* Availability - icon on mobile */}
-        <button
-          onClick={onAvailability}
-          className="flex items-center gap-1.5 text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-colors min-h-[44px]"
-        >
-          <Clock className="w-4 h-4 sm:hidden flex-shrink-0" />
-          <span className="hidden sm:inline">Set Availability</span>
-        </button>
-
-        <button
-          onClick={onNewSession}
-          className="flex items-center gap-1.5 text-sm font-semibold px-3 sm:px-4 py-2 rounded-xl text-white bg-gradient-to-r from-primary to-ai hover:opacity-90 transition-opacity shadow-sm min-h-[44px]"
-        >
-          <Plus className="w-4 h-4" /> <span className="hidden xs:inline">New Session</span><span className="xs:hidden">Book</span>
-        </button>
-      </div>
+      <Segmented
+        className="self-start sm:self-auto"
+        size="sm"
+        value={view}
+        onChange={onViewChange}
+        options={[
+          { value: 'day', label: 'Day' },
+          { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Month' },
+        ]}
+      />
     </div>
   );
 }

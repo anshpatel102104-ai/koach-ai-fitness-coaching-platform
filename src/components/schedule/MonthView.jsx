@@ -6,23 +6,20 @@ import {
 import { cn } from '@/lib/utils';
 import SessionDetailPopover from './SessionDetailPopover';
 
-const typeColors = {
-  video_call: 'bg-primary text-primary-foreground',
-  in_person: 'bg-success text-white',
-  check_in: 'bg-primary text-primary-foreground',
-  program_review: 'bg-ai text-ai-foreground',
-  onboarding: 'bg-success text-white',
-  progress_review: 'bg-warning text-white',
-  consultation: 'bg-muted-foreground text-background',
-};
+function clock(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const hh = h % 12 || 12;
+  return m ? `${hh}:${String(m).padStart(2, '0')}` : `${hh}${h >= 12 ? 'pm' : 'am'}`;
+}
 
 export default function MonthView({ currentDate, sessions, onDayClick, onEditSession, clients = [] }) {
   const [selectedSession, setSelectedSession] = useState(null);
   const today = new Date();
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
   const days = [];
   let d = gridStart;
@@ -38,11 +35,11 @@ export default function MonthView({ currentDate, sessions, onDayClick, onEditSes
 
   return (
     <>
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+      <section className="panel overflow-hidden">
         {/* Day labels */}
         <div className="grid grid-cols-7 border-b border-border">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="py-2.5 text-center text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+            <div key={d} className="py-2.5 px-2 text-[13px] text-muted-foreground">
               {d}
             </div>
           ))}
@@ -54,8 +51,10 @@ export default function MonthView({ currentDate, sessions, onDayClick, onEditSes
             {week.map(day => {
               const isToday = isSameDay(day, today);
               const inMonth = isSameMonth(day, currentDate);
-              const daySessions = sessions.filter(s => s.date === format(day, 'yyyy-MM-dd'));
-              const maxVisible = 2;
+              const daySessions = sessions
+                .filter(s => s.date === format(day, 'yyyy-MM-dd'))
+                .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+              const maxVisible = 3;
               const extra = daySessions.length - maxVisible;
 
               return (
@@ -63,41 +62,43 @@ export default function MonthView({ currentDate, sessions, onDayClick, onEditSes
                   key={day.toISOString()}
                   onClick={() => onDayClick(day)}
                   className={cn(
-                    'min-h-[90px] p-1.5 border-r border-border last:border-r-0 cursor-pointer hover:bg-muted transition-colors',
-                    !inMonth && 'bg-background'
+                    'min-h-[64px] sm:min-h-[108px] p-1 sm:p-1.5 border-r border-border last:border-r-0 cursor-pointer hover:bg-accent/60 transition-colors',
+                    !inMonth && 'bg-background/50'
                   )}
                 >
-                  {/* Date number */}
                   <div className={cn(
-                    'w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold mb-1',
-                    isToday ? 'bg-primary text-primary-foreground' : inMonth ? 'text-foreground' : 'text-muted-foreground'
+                    'num w-7 h-7 flex items-center justify-center rounded-md text-[15px] mb-1',
+                    isToday ? 'bg-primary text-primary-foreground' : inMonth ? 'text-foreground' : 'text-muted-foreground/60'
                   )}>
                     {format(day, 'd')}
                   </div>
 
-                  {/* Session chips */}
-                  <div className="space-y-0.5">
+                  {/* Mobile: just a count */}
+                  {daySessions.length > 0 && (
+                    <p className="sm:hidden text-[11px] font-semibold text-foreground px-1">{daySessions.length}</p>
+                  )}
+
+                  <div className="hidden sm:block space-y-0.5">
                     {daySessions.slice(0, maxVisible).map(s => {
                       const isCancelled = s.status === 'cancelled';
-                      const client = clients.find(c => c.id === s.client_id);
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={s.id}
                           onClick={e => { e.stopPropagation(); setSelectedSession(s); }}
                           className={cn(
-                            'w-full text-left text-[10px] font-medium px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-90 transition-opacity',
-                            typeColors[s.type] || 'bg-primary text-primary-foreground',
-                            isCancelled && 'bg-destructive text-white line-through'
+                            'touch-compact flex w-full items-baseline gap-1.5 rounded px-1.5 py-[3px] text-left text-xs hover:bg-accent',
+                            s._isGoogleEvent ? 'text-muted-foreground' : 'bg-secondary text-foreground',
+                            isCancelled && 'line-through text-muted-foreground'
                           )}
                         >
-                          {s.time ? `${s.time} ` : ''}{s.title}
-                        </div>
+                          {s.time && <span className="text-muted-foreground tabular-nums flex-shrink-0">{clock(s.time)}</span>}
+                          <span className="truncate font-medium">{s.client_name || s.title}</span>
+                        </button>
                       );
                     })}
                     {extra > 0 && (
-                      <div className="text-[10px] font-semibold text-muted-foreground pl-1">
-                        +{extra} more
-                      </div>
+                      <p className="text-xs text-muted-foreground px-1.5">{extra} more</p>
                     )}
                   </div>
                 </div>
@@ -105,7 +106,7 @@ export default function MonthView({ currentDate, sessions, onDayClick, onEditSes
             })}
           </div>
         ))}
-      </div>
+      </section>
 
       {/* Session Detail Popover */}
       {selectedSession && (

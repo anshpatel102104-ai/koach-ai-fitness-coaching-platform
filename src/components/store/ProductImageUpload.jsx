@@ -4,7 +4,7 @@ import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
 
-export default function ProductImageUpload({ value, onChange, className, label = 'Product Image', tip = 'Recommended: 1200×675px (16:9)' }) {
+export default function ProductImageUpload({ value, onChange, className, label = 'Product image', tip = '1200 × 675 px works best' }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -26,14 +26,15 @@ export default function ProductImageUpload({ value, onChange, className, label =
 
   return (
     <div className={className}>
-      {label && <p className="text-xs font-semibold text-foreground mb-1.5">{label}</p>}
+      {label && <p className="text-sm font-medium text-foreground mb-1.5">{label}</p>}
       {value ? (
-        <div className="relative rounded-xl overflow-hidden border border-border" style={{ aspectRatio: '16/9' }}>
+        <div className="relative rounded-lg overflow-hidden bg-secondary" style={{ aspectRatio: '16/9' }}>
           <SignedImg src={value} alt="Product" className="w-full h-full object-cover" />
           <button
             type="button"
             onClick={() => onChange('')}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/85 transition-colors"
+            aria-label="Remove image"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -45,22 +46,19 @@ export default function ProductImageUpload({ value, onChange, className, label =
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-all',
-            'bg-background hover:bg-muted',
-            dragging ? 'border-primary bg-accent' : 'border-border',
+            'flex flex-col items-center justify-center rounded-lg border border-dashed cursor-pointer transition-colors px-2 text-center',
+            'hover:bg-accent/60',
+            dragging ? 'border-foreground bg-accent' : 'border-input',
           )}
           style={{ aspectRatio: '16/9' }}
         >
           {uploading ? (
-            <div className="w-6 h-6 border-2 border-primary/30 border-t-blue-500 rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
           ) : (
             <>
-              <div className="w-10 h-10 rounded-xl bg-border flex items-center justify-center mb-2">
-                <ImageIcon className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <p className="text-xs font-semibold text-foreground">Drop image or click to upload</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{tip}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, WEBP</p>
+              <ImageIcon className="w-5 h-5 text-muted-foreground mb-1.5" />
+              <p className="text-[13px] font-semibold text-foreground">Drop an image or click</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{tip}. JPG, PNG or WEBP.</p>
             </>
           )}
         </div>

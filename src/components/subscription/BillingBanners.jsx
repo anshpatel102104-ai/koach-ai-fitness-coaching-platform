@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { differenceInDays } from 'date-fns';
-import { Zap, X, AlertTriangle, ExternalLink, Lock } from 'lucide-react';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -40,25 +41,29 @@ export default function BillingBanners({ user }) {
   };
 
   const banners = [];
+  const bar = (key, children, { alert = false } = {}) => (
+    <div
+      key={key}
+      className={cn(
+        'flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg bg-card px-4 py-2.5 text-sm shadow-[0_0_0_1px_rgb(var(--border)/0.6)]',
+        alert && 'border-l-[3px] border-destructive'
+      )}
+    >
+      {children}
+    </div>
+  );
+  const link = 'touch-compact text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2 flex-shrink-0 disabled:opacity-50';
 
   if (access.reason === 'grace') {
-    banners.push(
-      <div key="pastdue" className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm mb-5 bg-destructive/10 border border-destructive/30">
-        <div className="flex items-center gap-2 text-destructive">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span className="font-medium">
-            Payment failed — fix your payment by {fmt(access.graceEndsAt)} to keep your access.
-          </span>
-        </div>
-        <button
-          onClick={fixPayment}
-          disabled={opening}
-          className="flex items-center gap-1.5 text-xs font-bold text-destructive border border-destructive/30 px-3 py-1.5 rounded-lg hover:bg-destructive/10 transition-colors flex-shrink-0 disabled:opacity-50"
-        >
-          <ExternalLink className="w-3 h-3" /> {opening ? 'Opening…' : 'Fix payment'}
-        </button>
-      </div>
-    );
+    banners.push(bar('pastdue', (
+      <>
+        <p className="flex-1 min-w-[220px]">
+          <span className="font-semibold text-destructive">Your payment failed.</span>{' '}
+          <span className="text-muted-foreground">Fix it by {fmt(access.graceEndsAt)} to keep access.</span>
+        </p>
+        <button onClick={fixPayment} disabled={opening} className={link}>{opening ? 'Opening…' : 'Fix payment'}</button>
+      </>
+    ), { alert: true }));
   }
 
   const trialEnd = user.billing_status === 'trialing' ? (user.trial_ends_at || user.current_period_end || user.subscription_renewal_date)
@@ -68,58 +73,40 @@ export default function BillingBanners({ user }) {
     if (daysLeft >= 0) {
       const urgent = daysLeft <= 3;
       const isStripeTrial = user.billing_status === 'trialing';
-      banners.push(
-        <div key="trial" className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm mb-5 ${urgent ? 'bg-warning/10 border border-warning/30' : 'bg-primary/10 border border-primary/20'}`}>
-          <div className={`flex items-center gap-2 ${urgent ? 'text-warning' : 'text-primary'}`}>
-            <Zap className="w-4 h-4 flex-shrink-0" />
-            <span className="font-medium">
-              You're on a free trial —{' '}
-              <span className="font-bold">{daysLeft} day{daysLeft !== 1 ? 's' : ''} remaining</span>
-              {!isStripeTrial && ' · subscribe to keep your access'}
-              {urgent && ' · Trial ending soon!'}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={() => navigate('/subscription')}
-              className="text-xs font-bold text-primary-foreground px-3 py-1.5 rounded-lg transition-all"
-              style={{ background: 'linear-gradient(to right, var(--tc-primary), var(--tc-ai))' }}
-            >
-              {isStripeTrial ? 'Manage plan' : 'Subscribe'}
-            </button>
-            <button onClick={() => setDismissedTrial(true)} className="text-muted-foreground hover:text-border" aria-label="Dismiss">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      );
+      banners.push(bar('trial', (
+        <>
+          <p className="flex-1 min-w-[220px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{daysLeft} day{daysLeft !== 1 ? 's' : ''} left in your free trial.</span>
+            {!isStripeTrial && ' Subscribe to keep access.'}
+            {urgent && isStripeTrial && ' Your plan starts when it ends.'}
+          </p>
+          <button onClick={() => navigate('/subscription')} className={link}>
+            {isStripeTrial ? 'Manage plan' : 'Subscribe'}
+          </button>
+          <button onClick={() => setDismissedTrial(true)} className="touch-compact p-1 -mr-1 text-muted-foreground hover:text-foreground" aria-label="Dismiss">
+            <X className="w-4 h-4" />
+          </button>
+        </>
+      )));
     }
   }
 
   // Over the cap: existing clients are kept (never deleted or hidden).
   if (!exempt && cap !== -1 && clients.length > cap) {
     const readOnly = !!user.stripe_subscription_id; // mirrors app.enforce_client_cap
-    banners.push(
-      <div key="cap" className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm mb-5 bg-warning/10 border border-warning/30">
-        <div className="flex items-center gap-2 text-warning">
-          <Lock className="w-4 h-4 flex-shrink-0" />
-          <span className="font-medium">
-            You have {clients.length} clients but your {tier.name} plan allows {cap}.{' '}
-            {readOnly
-              ? 'Your existing clients are safe but read-only, and you can’t add new ones until you upgrade or are back under the limit.'
-              : 'Your existing clients are safe, but you can’t add new ones until you upgrade or are back under the limit.'}
-          </span>
-        </div>
-        <button
-          onClick={() => navigate('/subscription')}
-          className="text-xs font-bold text-warning border border-warning/30 px-3 py-1.5 rounded-lg hover:bg-warning/10 transition-colors flex-shrink-0"
-        >
-          Upgrade
-        </button>
-      </div>
-    );
+    banners.push(bar('cap', (
+      <>
+        <p className="flex-1 min-w-[220px] text-muted-foreground">
+          <span className="font-semibold text-foreground">{clients.length} clients on a {tier.name} plan that allows {cap}.</span>{' '}
+          {readOnly
+            ? 'Existing clients are safe but read-only, and new ones wait until you upgrade or drop under the limit.'
+            : 'Existing clients are safe. New ones wait until you upgrade or drop under the limit.'}
+        </p>
+        <button onClick={() => navigate('/subscription')} className={link}>See plans</button>
+      </>
+    )));
   }
 
   if (!banners.length) return null;
-  return <div className="px-4 sm:px-6 pt-4">{banners}</div>;
+  return <div className="mx-auto w-full max-w-[1360px] px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 space-y-2">{banners}</div>;
 }

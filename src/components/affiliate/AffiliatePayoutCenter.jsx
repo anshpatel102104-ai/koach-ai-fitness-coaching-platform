@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Panel, PanelHeader, Stat, KeyValue, EmptyState } from '@/components/kit';
 
 export default function AffiliatePayoutCenter({ profile }) {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -17,131 +20,83 @@ export default function AffiliatePayoutCenter({ profile }) {
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + p.net_amount, 0);
 
+  const verified = profile.tax_form_status === 'verified';
+
   return (
-    <div className="space-y-6">
-      {/* Payout settings */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Payout Settings</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-1">Payment Method</label>
-            <p className="px-4 py-2 rounded-lg bg-muted text-foreground font-semibold">Stripe Connect (Bank Transfer)</p>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-1">Payout Schedule</label>
-            <p className="px-4 py-2 rounded-lg bg-muted text-foreground font-semibold">Monthly (1st of each month)</p>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-1">Minimum Payout</label>
-            <p className="px-4 py-2 rounded-lg bg-muted text-foreground font-semibold">$100</p>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-1">Tax Form Status</label>
-            <p className={`px-4 py-2 rounded-lg font-semibold ${
-              profile.tax_form_status === 'verified'
-                ? 'bg-success/10 text-success'
-                : 'bg-warning/10 text-warning'
-            }`}>
-              {profile.tax_form_status === 'verified' ? '✓ Verified (W-9/W-8BEN on file)' : 'Pending — Submit tax form to receive payouts'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly statement */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Earnings Breakdown</h3>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-foreground mb-2">Select Month</label>
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-
-        {selectedPayout ? (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-muted">
-              <p className="text-sm text-muted-foreground">Gross Earnings</p>
-              <p className="text-3xl font-black text-foreground">${selectedPayout.gross_earnings.toFixed(2)}</p>
-            </div>
-
-            {selectedPayout.commission_breakdown && selectedPayout.commission_breakdown.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-bold text-foreground">Commissions by Coach:</p>
-                {selectedPayout.commission_breakdown.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted">
-                    <span className="text-foreground">{item.coach_id?.substring(0, 8)}... @ {item.rate}%</span>
-                    <span className="font-bold text-foreground">${item.commission.toFixed(2)}</span>
-                  </div>
-                ))}
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+      <div className="lg:col-span-3 space-y-5">
+        <Panel>
+          <PanelHeader title="Monthly statement" right={
+            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} aria-label="Month"
+              className="h-9 px-3 rounded-md border border-input bg-card text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+          } />
+          {selectedPayout ? (
+            <div className="px-5 sm:px-6 pb-6">
+              <div className="grid grid-cols-2 gap-6">
+                <Stat label="Gross" value={`$${selectedPayout.gross_earnings.toFixed(2)}`} />
+                <Stat label="Net payout" value={`$${selectedPayout.net_amount.toFixed(2)}`} sub={`Status: ${selectedPayout.status}`} />
               </div>
-            )}
-
-            <div className="p-4 rounded-lg bg-accent border border-primary">
-              <p className="text-sm text-primary">Net Payout</p>
-              <p className="text-3xl font-black text-primary">${selectedPayout.net_amount.toFixed(2)}</p>
-              <p className="text-xs text-primary mt-1">Status: {selectedPayout.status}</p>
+              {selectedPayout.commission_breakdown && selectedPayout.commission_breakdown.length > 0 && (
+                <div className="mt-5">
+                  <p className="text-sm font-semibold text-foreground mb-1">By coach</p>
+                  {selectedPayout.commission_breakdown.map((item, i) => (
+                    <KeyValue key={i} label={`${item.coach_id?.substring(0, 8)}… at ${item.rate}%`} value={`$${item.commission.toFixed(2)}`} />
+                  ))}
+                </div>
+              )}
+              {selectedPayout.statement_url && (
+                <Button variant="outline" className="mt-5"><Download /> Download statement</Button>
+              )}
             </div>
+          ) : (
+            <EmptyState title="No payout for this month" body="Pick another month, or check back after the 1st." />
+          )}
+        </Panel>
 
-            {selectedPayout.statement_url && (
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border text-foreground font-bold hover:bg-muted">
-                <Download className="w-4 h-4" /> Download Statement
-              </button>
-            )}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">No payout data for this month</p>
-        )}
-      </div>
-
-      {/* Year to date */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Year to Date</h3>
-        <div className="p-4 rounded-lg bg-gradient-to-r from-success/10 to-success/10 border border-success">
-          <p className="text-sm text-success">Total Paid Out (2026)</p>
-          <p className="text-4xl font-black text-success">${totalYearToDate.toFixed(2)}</p>
-        </div>
-      </div>
-
-      {/* Payout history */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-4">Payout History</h3>
-        {payouts.length > 0 ? (
-          <div className="overflow-x-auto">
+        <Panel>
+          <PanelHeader title="History" />
+          {payouts.length > 0 ? (
             <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="text-left py-3 px-3 font-bold text-foreground">Month</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Gross</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Net</th>
-                  <th className="text-center py-3 px-3 font-bold text-foreground">Status</th>
+              <thead className="border-y border-border">
+                <tr className="text-[13px] text-muted-foreground">
+                  <th className="text-left font-medium py-3 pl-5 sm:pl-6 pr-3">Month</th>
+                  <th className="text-right font-medium py-3 px-3">Gross</th>
+                  <th className="text-right font-medium py-3 px-3">Net</th>
+                  <th className="text-right font-medium py-3 pr-5 sm:pr-6 pl-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {payouts.map((p) => (
-                  <tr key={p.id} className="border-b border-border hover:bg-muted">
-                    <td className="py-3 px-3 font-semibold text-foreground">{p.payout_month}</td>
+                  <tr key={p.id}>
+                    <td className="py-3 pl-5 sm:pl-6 pr-3 font-semibold text-foreground">{p.payout_month}</td>
                     <td className="py-3 px-3 text-right text-muted-foreground">${p.gross_earnings.toFixed(2)}</td>
-                    <td className="py-3 px-3 text-right font-bold text-foreground">${p.net_amount.toFixed(2)}</td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
-                        p.status === 'paid' ? 'bg-success' : p.status === 'pending' ? 'bg-warning' : 'bg-muted-foreground'
-                      }`}>
-                        {p.status}
-                      </span>
+                    <td className="py-3 px-3 text-right"><span className="num text-base">${p.net_amount.toFixed(2)}</span></td>
+                    <td className="py-3 pr-5 sm:pr-6 pl-3 text-right">
+                      <Badge variant={p.status === 'paid' ? 'success' : p.status === 'pending' ? 'warning' : 'secondary'} className="capitalize">{p.status}</Badge>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          ) : (
+            <EmptyState title="No payouts yet" body="Your first one is sent on the 1st after you pass $100." />
+          )}
+        </Panel>
+      </div>
+
+      <div className="lg:col-span-2 space-y-5">
+        <Panel className="p-5 sm:p-6">
+          <Stat label={`Paid out in ${new Date().getFullYear()}`} value={`$${totalYearToDate.toFixed(2)}`} size="lg" />
+        </Panel>
+        <Panel>
+          <PanelHeader title="How you get paid" />
+          <div className="px-5 sm:px-6 pb-4">
+            <KeyValue label="Method" value="Stripe Connect, bank transfer" />
+            <KeyValue label="Schedule" value="Monthly, on the 1st" />
+            <KeyValue label="Minimum" value="$100" />
+            <KeyValue label="Tax form" value={<span className={verified ? 'text-success' : 'text-warning'}>{verified ? 'Verified, on file' : 'Needed before payouts'}</span>} />
           </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">No payout history yet</p>
-        )}
+        </Panel>
       </div>
     </div>
   );

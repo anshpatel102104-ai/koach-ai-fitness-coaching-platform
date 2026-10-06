@@ -1,122 +1,78 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * Check-in review detail pane (was a side drawer; now the canvas half of the
+ * Check-ins screen). Name + week, stat row, photo comparison, answers, the
+ * AI-drafted reply with tone control, then secondary tools tucked into
+ * disclosures. Mobile gets the stacked layout with a sticky Skip / Send bar.
+ */
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { db } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
-import {
-  ChevronLeft, ChevronRight, Moon, Zap, Heart, Smile, Dumbbell,
-  Salad, Scale, CheckCircle2, AlertTriangle, X, Mic, MicOff,
-  Lock, Send, Sparkles, Flag
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { scoreColor, checkInScore } from '@/lib/adherence';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, ChevronDown, MoreHorizontal, Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
-import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Panel, InkPanel, Segmented } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { generateRecommendations } from '@/lib/decisionEngine';
+import {
+  firstName, possessive, submittedLabel, sentLabel, weekNumber, previousCheckIn,
+  ReviewStats, ReviewStatTiles, PhotoCompare, PhotoStrip, AnswersPanel, checkInAnswers,
+  Disclosure, CompareRows, MeasurementRows, RecommendationList,
+} from './reviewParts';
 
-const MOOD_EMOJI = { great: '😄', good: '🙂', okay: '😐', tired: '😴', stressed: '😰' };
-
-const REACTIONS = [
-  { emoji: '🎉', label: 'Great week!' },
-  { emoji: '💪', label: 'Keep pushing!' },
-  { emoji: '📈', label: 'Progress!' },
-  { emoji: '🔥', label: 'On fire!' },
+const QUICK_REPLIES = [
+  'Great week. Keep it going.',
+  'Keep pushing. You are close.',
+  'Progress is showing. Same plan next week.',
+  'You are on a roll. Nothing to change.',
 ];
 
-function MetricTile({ icon: IconComp, label, value, unit, color }) {
-  const Icon = IconComp;
-  return (
-    <div className="bg-muted border border-border rounded-xl p-3 flex flex-col gap-1">
-      <div className="flex items-center gap-1.5">
-        <Icon className={cn('w-3.5 h-3.5', color || 'text-muted-foreground')} />
-        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
-      </div>
-      <p className="text-lg font-bold text-foreground">
-        {value ?? '–'}
-        {value != null && unit && <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>}
-      </p>
-    </div>
-  );
-}
+const TONES = [
+  { value: 'warm', label: 'Warm' },
+  { value: 'direct', label: 'Direct' },
+  { value: 'detailed', label: 'Detailed' },
+];
 
-function AIAnalysis({ checkIn, clientName }) {
-  const [analysis, setAnalysis] = useState(checkIn.ai_summary || null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setAnalysis(checkIn.ai_summary || null);
-  }, [checkIn.id, checkIn.ai_summary]);
-
-  const generate = async () => {
-    setLoading(true);
-    try {
-      const res = await db.functions.invoke('aiCheckInInsights', {
-        action: 'reviewCheckIn', checkIn, clientName,
-      });
-      const result = res.data;
-      setAnalysis(result);
-      await db.entities.CheckIn.update(checkIn.id, { ai_summary: result });
-    } catch (e) {
-      toast.error('AI analysis failed');
-    }
-    setLoading(false);
-  };
-
-  if (!analysis) {
-    return (
-      <button
-        onClick={generate}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-ai bg-ai/50 text-ai text-sm font-semibold hover:bg-ai/10 transition-colors"
-      >
-        <Sparkles className="w-4 h-4" />
-        {loading ? 'Analyzing...' : 'Generate AI Analysis'}
-      </button>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-ai bg-ai/60 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-ai/60 border-b border-ai">
-        <Sparkles className="w-3.5 h-3.5 text-ai" />
-        <span className="text-xs font-bold text-ai uppercase tracking-wide">AI Analysis</span>
-        <button onClick={() => setAnalysis(null)} className="ml-auto text-ai hover:text-ai transition-colors">
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <div className="p-4 space-y-3">
-        <p className="text-sm text-foreground leading-relaxed">{analysis.summary}</p>
-        {analysis.flags?.length > 0 && (
-          <div className="space-y-1">
-            {analysis.flags.map((flag, i) => (
-              <div key={i} className="flex items-start gap-1.5 text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-lg px-2.5 py-1.5">
-                <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" /> {flag}
-              </div>
-            ))}
-          </div>
-        )}
-        {analysis.suggested_response && (
-          <div className="bg-[var(--kc-w-80)] border border-ai rounded-lg p-3">
-            <p className="text-[10px] font-bold text-ai uppercase tracking-wide mb-1">Suggested Response</p>
-            <p className="text-xs text-foreground leading-relaxed italic">"{analysis.suggested_response}"</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export default function CheckInEnhancedDrawer({ checkIn, client, allCheckIns, currentIndex, total, onNavigate, open, onOpenChange }) {
-  const [coachResponse, setCoachResponse] = useState(checkIn?.coach_notes || '');
-  const [internalNotes, setInternalNotes] = useState(checkIn?.internal_notes || '');
-  const [activeTab, setActiveTab] = useState('response');
-  const [isRecording, setIsRecording] = useState(false);
+export default function CheckInEnhancedDrawer({
+  checkIn, client, allCheckIns = [], currentIndex = 0, total = 0,
+  onNavigate, onOpenChange, onDone, overdueCount = 0,
+}) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [coachResponse, setCoachResponse] = useState('');
+  const [draftSource, setDraftSource] = useState(null); // 'ai' | 'saved' | null
+  const [lastAiDraft, setLastAiDraft] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
+  const [tone, setTone] = useState('direct');
+  const [analysis, setAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [answersOpen, setAnswersOpen] = useState(false);
+
   useEffect(() => {
-    setCoachResponse(checkIn?.coach_notes || '');
-    setInternalNotes(checkIn?.internal_notes || '');
-  }, [checkIn?.id]);
+    if (!checkIn) return;
+    const suggested = checkIn.ai_summary?.suggested_response || '';
+    if (checkIn.coach_notes) {
+      setCoachResponse(checkIn.coach_notes);
+      setDraftSource('saved');
+    } else if (suggested) {
+      setCoachResponse(suggested);
+      setDraftSource('ai');
+    } else {
+      setCoachResponse('');
+      setDraftSource(null);
+    }
+    setLastAiDraft(suggested);
+    setInternalNotes(checkIn.internal_notes || '');
+    setAnalysis(checkIn.ai_summary || null);
+    setAnswersOpen(false);
+  }, [checkIn?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateMutation = useMutation({
     mutationFn: (data) => db.entities.CheckIn.update(checkIn.id, data),
@@ -126,21 +82,60 @@ export default function CheckInEnhancedDrawer({ checkIn, client, allCheckIns, cu
     },
   });
 
+  const prevCI = useMemo(() => previousCheckIn(checkIn, allCheckIns), [checkIn, allCheckIns]);
+  const recommendations = useMemo(
+    () => (checkIn ? generateRecommendations(checkIn, client, allCheckIns) : []),
+    [checkIn, client, allCheckIns]
+  );
+
   if (!checkIn) return null;
 
-  const score = checkInScore(checkIn);
   const clientName = client?.name || checkIn.client_name || 'Client';
-  const prevCI = allCheckIns?.find(ci => ci.id !== checkIn.id);
+  const first = firstName(client, checkIn);
+  const week = weekNumber(checkIn, client, allCheckIns);
+  const answers = checkInAnswers(checkIn);
+  const flaggedCount = answers.filter(a => a.flagged).length;
+  const isReviewed = checkIn.coach_responded && checkIn.review_status === 'reviewed';
+  const isFlagged = checkIn.review_status === 'flagged';
+  const busy = updateMutation.isPending;
 
-  const handleSendResponse = () => {
-    if (!coachResponse.trim()) return;
-    updateMutation.mutate({ coach_notes: coachResponse, coach_responded: true, review_status: 'reviewed' });
+  /* ── AI draft (aiCheckInInsights → reviewCheckIn, cached on the check-in) ── */
+  const generate = async (toneKey = tone) => {
+    setAiLoading(true);
+    try {
+      const res = await db.functions.invoke('aiCheckInInsights', {
+        action: 'reviewCheckIn', checkIn, clientName, tone: toneKey,
+      });
+      const result = res.data;
+      setAnalysis(result);
+      if (result?.suggested_response) {
+        setCoachResponse(result.suggested_response);
+        setLastAiDraft(result.suggested_response);
+        setDraftSource('ai');
+      }
+      await db.entities.CheckIn.update(checkIn.id, { ai_summary: result });
+    } catch (e) {
+      toast.error('Could not draft a reply. Try again in a moment.');
+    }
+    setAiLoading(false);
   };
 
-  const handleSendReaction = (reaction) => {
-    const msg = `${reaction.emoji} ${reaction.label}`;
-    updateMutation.mutate({ coach_notes: msg, coach_responded: true, review_status: 'reviewed' });
-    toast.success('Reaction sent!');
+  const handleTone = (next) => {
+    setTone(next);
+    // Redraft only when the coach hasn't edited the AI draft.
+    if (!coachResponse.trim() || (draftSource === 'ai' && coachResponse === lastAiDraft)) generate(next);
+  };
+
+  /* ── Writes ── */
+  const handleSendResponse = async () => {
+    if (!coachResponse.trim()) return;
+    await updateMutation.mutateAsync({ coach_notes: coachResponse, coach_responded: true, review_status: 'reviewed' });
+    onDone?.({ sent: true });
+  };
+
+  const handleSendReaction = (text) => {
+    updateMutation.mutate({ coach_notes: text, coach_responded: true, review_status: 'reviewed' });
+    toast.success(`Sent to ${first}`);
   };
 
   const handleMarkReviewed = () => {
@@ -157,256 +152,278 @@ export default function CheckInEnhancedDrawer({ checkIn, client, allCheckIns, cu
     toast.success('Flagged for follow-up');
   };
 
-  const handleUseSuggested = (suggested) => {
-    setCoachResponse(suggested);
-    setActiveTab('response');
+  const voiceHandlers = {
+    onMouseDown: () => setIsRecording(true),
+    onMouseUp: () => { setIsRecording(false); toast.info('Voice notes are not available yet.'); },
+    onTouchStart: () => setIsRecording(true),
+    onTouchEnd: () => { setIsRecording(false); toast.info('Voice notes are not available yet.'); },
   };
 
-  const TABS = [
-    { key: 'response', label: 'Response' },
-    { key: 'notes', label: 'Private Notes' },
-    { key: 'compare', label: 'Compare' },
-  ];
+  const disclosure = draftSource === 'ai'
+    ? `Drafted by AI from ${possessive(client)} answers. Edit anything before sending.`
+    : draftSource === 'saved'
+      ? `Already sent to ${first}. Edit and send again to update it.`
+      : `Only ${first} sees this reply.`;
+
+  const toneLabel = TONES.find(t => t.value === tone)?.label.toLowerCase();
+
+  /* ── Header menu (secondary actions) ── */
+  const menu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="More actions" className="h-8 w-8 flex-shrink-0">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuItem onClick={handleFlag} disabled={busy || isFlagged}>
+          {isFlagged ? 'Flagged for follow-up' : 'Flag for follow-up'}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleMarkReviewed} disabled={busy || isReviewed}>
+          {isReviewed ? 'Reviewed' : 'Mark reviewed without replying'}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-[13px] font-medium text-muted-foreground">Send a quick reply</DropdownMenuLabel>
+        {QUICK_REPLIES.map(text => (
+          <DropdownMenuItem key={text} onClick={() => handleSendReaction(text)} disabled={busy}>
+            {text}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate(`/checkin-detail?id=${checkIn.id}&clientId=${checkIn.client_id}`)}>
+          Open full check-in
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate(`/messages?clientId=${checkIn.client_id}`)}>
+          Message {first}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col overflow-hidden">
+    <div className="px-4 pt-4 pb-40 sm:px-6 lg:px-8 lg:py-7 space-y-4 max-w-[1120px]">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-border flex-shrink-0"
-          style={{ background: 'var(--tc-sidebar)' }}>
-          <div className="w-10 h-10 rounded-full bg-[var(--kc-w-10)] flex items-center justify-center text-white font-bold text-sm shrink-0">
-            {clientName[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-white">{clientName}</p>
-            <p className="text-xs text-white/60">
-              {format(parseISO(checkIn.date), 'EEEE, MMM d, yyyy')}
-              {checkIn.mood && <span className="ml-1.5">{MOOD_EMOJI[checkIn.mood]}</span>}
+      {/* Mobile: back + position */}
+      <div className="flex items-center gap-3 lg:hidden">
+        <button
+          onClick={() => onOpenChange?.(false)}
+          aria-label="Back to the queue"
+          className="flex h-11 w-11 items-center justify-center rounded-lg bg-card ring-1 ring-border"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <span className="text-[15px] text-muted-foreground">Check-in {Math.min(currentIndex + 1, Math.max(total, 1))} of {Math.max(total, 1)}</span>
+        {overdueCount > 0 && <span className="ml-auto text-sm font-semibold text-destructive">{overdueCount} overdue</span>}
+      </div>
+
+      {/* Header */}
+      <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-[32px] lg:text-[38px] leading-[1.05] text-foreground">
+            {clientName}<span className="hidden lg:inline">{week ? `, week ${week}` : ''}</span>
+          </h1>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-[15px] text-muted-foreground min-w-0">
+              <span className="lg:hidden">{week ? `Week ${week}, ` : ''}{sentLabel(checkIn)}</span>
+              <span className="hidden lg:inline">{submittedLabel(checkIn)}</span>
+              {isReviewed && <span className="text-success font-medium"> · Reviewed</span>}
+              {isFlagged && <span className="text-destructive font-medium"> · Flagged for follow-up</span>}
             </p>
-          </div>
-          {score !== null && (
-            <div className="text-center">
-              <div className={cn('text-2xl font-black', scoreColor(score))}>{score}</div>
-              <div className="text-[10px] text-white/50">score</div>
+            <div className="ml-auto xl:ml-2 flex items-center gap-0.5 flex-shrink-0">
+              {total > 1 && (
+                <span className="hidden lg:flex items-center gap-0.5">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Previous check-in"
+                    disabled={currentIndex <= 0} onClick={() => onNavigate?.(currentIndex - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Next check-in"
+                    disabled={currentIndex >= total - 1} onClick={() => onNavigate?.(currentIndex + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </span>
+              )}
+              {menu}
             </div>
-          )}
-          <button onClick={() => onOpenChange(false)} className="p-1.5 rounded-lg hover:bg-[var(--kc-w-10)] transition-colors ml-1">
-            <X className="w-4 h-4 text-white/60" />
-          </button>
+          </div>
         </div>
+        <ReviewStats checkIn={checkIn} prev={prevCI} className="hidden lg:flex flex-shrink-0 pt-1" />
+      </header>
 
-        {/* Navigation */}
-        {total > 1 && (
-          <div className="flex items-center justify-between px-5 py-2 bg-muted border-b border-border flex-shrink-0">
-            <button disabled={currentIndex === 0} onClick={() => onNavigate(currentIndex - 1)}
-              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-              <ChevronLeft className="w-4 h-4" /> Prev
+      {/* Mobile stat tiles */}
+      <ReviewStatTiles checkIn={checkIn} prev={prevCI} className="lg:hidden" />
+
+      {/* Photos */}
+      <PhotoCompare checkIn={checkIn} clientCIs={allCheckIns} className="hidden lg:grid" />
+      <PhotoStrip urls={checkIn.photo_urls || []} className="lg:hidden" />
+
+      {/* Answers: full on desktop, one summary row on mobile */}
+      <AnswersPanel checkIn={checkIn} client={client} className="hidden lg:block" />
+      {(answers.length > 0 || checkIn.notes) && (
+        <div className="lg:hidden">
+          <Panel>
+            <button
+              type="button"
+              onClick={() => setAnswersOpen(o => !o)}
+              aria-expanded={answersOpen}
+              className="w-full flex items-center gap-2 px-4 py-3.5 text-left"
+            >
+              <span className="text-[15px] font-semibold text-foreground">
+                {answers.length} answer{answers.length !== 1 ? 's' : ''}{flaggedCount > 0 ? `, ${flaggedCount} flagged` : ''}
+              </span>
+              <ChevronDown className={cn('ml-auto h-4 w-4 text-muted-foreground transition-transform', answersOpen && 'rotate-180')} />
             </button>
-            <span className="text-xs text-muted-foreground">{currentIndex + 1} / {total}</span>
-            <button disabled={currentIndex === total - 1} onClick={() => onNavigate(currentIndex + 1)}
-              className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-              Next <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+          </Panel>
+          {answersOpen && <AnswersPanel checkIn={checkIn} client={client} className="mt-2" />}
+        </div>
+      )}
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
-          {/* AI Analysis */}
-          <AIAnalysis checkIn={checkIn} clientName={clientName} onUseSuggested={handleUseSuggested} />
-
-          {/* Metrics */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Metrics</p>
-            <div className="grid grid-cols-2 gap-2">
-              <MetricTile icon={Moon} label="Sleep" value={checkIn.sleep_hours} unit="hrs"
-                color={checkIn.sleep_hours >= 7 ? 'text-primary' : checkIn.sleep_hours >= 6 ? 'text-warning' : 'text-destructive'} />
-              <MetricTile icon={Zap} label="Energy" value={checkIn.energy_level} unit="/10"
-                color={checkIn.energy_level >= 7 ? 'text-success' : checkIn.energy_level >= 4 ? 'text-warning' : 'text-destructive'} />
-              <MetricTile icon={Heart} label="Stress" value={checkIn.stress_level} unit="/10"
-                color={checkIn.stress_level <= 3 ? 'text-success' : checkIn.stress_level <= 6 ? 'text-warning' : 'text-destructive'} />
-              <MetricTile icon={Smile} label="Mood" value={checkIn.mood ? MOOD_EMOJI[checkIn.mood] + ' ' + checkIn.mood : null} color="text-warning" />
-              <MetricTile icon={Dumbbell} label="Training" value={checkIn.compliance_training} unit="%"
-                color={checkIn.compliance_training >= 75 ? 'text-success' : checkIn.compliance_training >= 50 ? 'text-warning' : 'text-destructive'} />
-              <MetricTile icon={Salad} label="Nutrition" value={checkIn.compliance_nutrition} unit="%"
-                color={checkIn.compliance_nutrition >= 75 ? 'text-success' : checkIn.compliance_nutrition >= 50 ? 'text-warning' : 'text-destructive'} />
-              {checkIn.weight != null && <MetricTile icon={Scale} label="Weight" value={checkIn.weight} unit="lbs" color="text-primary" />}
-            </div>
-          </div>
-
-          {/* Photos */}
-          {checkIn.photo_urls?.length > 0 && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Progress Photos</p>
-              <div className="flex gap-2 flex-wrap">
-                {checkIn.photo_urls.map((url, i) => (
-                  <SignedLink key={i} href={url} target="_blank" rel="noreferrer">
-                    <SignedImg src={url} alt="progress" className="w-20 h-20 object-cover rounded-xl border border-border hover:scale-105 transition-transform" />
-                  </SignedLink>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Measurements */}
-          {checkIn.measurements && Object.values(checkIn.measurements).some(Boolean) && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Measurements</p>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.entries(checkIn.measurements).filter(([, v]) => v).map(([k, v]) => (
-                  <div key={k} className="bg-muted border border-border rounded-lg p-2.5 text-center">
-                    <p className="text-xs font-bold text-foreground">{v}"</p>
-                    <p className="text-[10px] text-muted-foreground capitalize">{k}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Client notes */}
-          {checkIn.notes && (
-            <div className="bg-muted border border-border rounded-xl p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Client Notes</p>
-              <p className="text-sm leading-relaxed">{checkIn.notes}</p>
-            </div>
-          )}
-
-          {/* Coach tools tabs */}
-          <div>
-            <div className="flex gap-1 mb-3 bg-muted rounded-xl p-1">
-              {TABS.map(tab => (
-                <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                  className={cn('flex-1 py-2 text-xs font-semibold rounded-lg transition-all',
-                    activeTab === tab.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {activeTab === 'response' && (
-              <div className="space-y-3">
-                {/* Voice note placeholder */}
-                <button
-                  onMouseDown={() => setIsRecording(true)}
-                  onMouseUp={() => { setIsRecording(false); toast.info('Voice notes coming soon!'); }}
-                  onTouchStart={() => setIsRecording(true)}
-                  onTouchEnd={() => { setIsRecording(false); toast.info('Voice notes coming soon!'); }}
-                  className={cn(
-                    'w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-semibold transition-all',
-                    isRecording
-                      ? 'border-destructive bg-destructive/10 text-destructive animate-pulse'
-                      : 'border-dashed border-muted-foreground text-muted-foreground hover:border-muted-foreground'
-                  )}>
-                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  {isRecording ? 'Recording... release to stop' : 'Hold to record voice note'}
-                </button>
-
-                <textarea
-                  rows={4}
-                  value={coachResponse}
-                  onChange={e => setCoachResponse(e.target.value)}
-                  placeholder="Type your feedback and coaching response to the client..."
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-primary/40"
-                />
-
-                {/* Quick reactions */}
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Quick Reactions</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {REACTIONS.map(r => (
-                      <button key={r.emoji} onClick={() => handleSendReaction(r)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-muted hover:bg-card hover:border-primary/30 transition-all text-xs font-semibold text-foreground">
-                        <span className="text-base">{r.emoji}</span> {r.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
+      {/* What the AI noticed */}
+      {analysis?.summary && (
+        <InkPanel
+          title="What the AI noticed"
+          footer={
+            <div className="flex flex-wrap gap-2">
+              {analysis.suggested_response && coachResponse !== analysis.suggested_response && (
                 <Button
-                  onClick={handleSendResponse}
-                  disabled={!coachResponse.trim() || updateMutation.isPending}
-                  className="w-full gap-2"
+                  size="sm"
+                  className="bg-ai-foreground text-ai hover:bg-ai-foreground/90"
+                  onClick={() => { setCoachResponse(analysis.suggested_response); setLastAiDraft(analysis.suggested_response); setDraftSource('ai'); }}
                 >
-                  <Send className="w-3.5 h-3.5" /> Send Response
+                  Use its reply
                 </Button>
-              </div>
-            )}
+              )}
+              <Button size="sm" variant="ghost" className="text-ai-foreground hover:bg-ai-foreground/10 border border-ai-foreground/25" onClick={() => setAnalysis(null)}>
+                Dismiss
+              </Button>
+            </div>
+          }
+        >
+          <p>{analysis.summary}</p>
+          {analysis.flags?.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {analysis.flags.map((flag, i) => (
+                <li key={i} className="flex gap-2 text-[14px]">
+                  <span aria-hidden className="mt-[8px] h-1.5 w-1.5 rounded-full bg-destructive flex-shrink-0" />
+                  {flag}
+                </li>
+              ))}
+            </ul>
+          )}
+        </InkPanel>
+      )}
 
-            {activeTab === 'notes' && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted border border-border rounded-lg px-3 py-2">
-                  <Lock className="w-3.5 h-3.5" /> These notes are private — not visible to the client
-                </div>
-                <textarea
-                  rows={6}
-                  value={internalNotes}
-                  onChange={e => setInternalNotes(e.target.value)}
-                  placeholder="Add private coaching notes, observations, or action items..."
-                  className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-primary/40"
-                />
-                <Button variant="outline" onClick={() => updateMutation.mutate({ internal_notes: internalNotes })}
-                  disabled={updateMutation.isPending} className="w-full">
-                  Save Private Notes
-                </Button>
-              </div>
-            )}
+      {/* Your reply */}
+      <Panel className="p-4 sm:p-6">
+        <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+          <h2 className="hidden sm:block text-[22px] text-foreground">Your reply</h2>
+          <p className="sm:hidden text-[15px] font-semibold text-foreground">Reply</p>
+          <div className="hidden sm:flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Tone</span>
+            <Segmented size="sm" options={TONES} value={tone} onChange={handleTone} />
+          </div>
+          <span className="sm:hidden text-[13px] text-muted-foreground">
+            {aiLoading ? 'Drafting…' : draftSource === 'ai' ? `AI draft, ${toneLabel} tone` : draftSource === 'saved' ? 'Sent' : 'Not drafted'}
+          </span>
+        </div>
 
-            {activeTab === 'compare' && prevCI && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground mb-3">
-                  Comparing to previous check-in ({format(parseISO(prevCI.date), 'MMM d')})
-                </p>
-                {[
-                  { label: 'Weight', curr: checkIn.weight, prev: prevCI.weight, unit: 'lbs', lower: false },
-                  { label: 'Energy', curr: checkIn.energy_level, prev: prevCI.energy_level, unit: '/10', lower: false },
-                  { label: 'Sleep', curr: checkIn.sleep_hours, prev: prevCI.sleep_hours, unit: 'hrs', lower: false },
-                  { label: 'Stress', curr: checkIn.stress_level, prev: prevCI.stress_level, unit: '/10', lower: true },
-                  { label: 'Training', curr: checkIn.compliance_training, prev: prevCI.compliance_training, unit: '%', lower: false },
-                  { label: 'Nutrition', curr: checkIn.compliance_nutrition, prev: prevCI.compliance_nutrition, unit: '%', lower: false },
-                ].filter(r => r.curr != null || r.prev != null).map(row => {
-                  const diff = row.curr != null && row.prev != null ? Number((row.curr - row.prev).toFixed(1)) : null;
-                  const improved = diff !== null ? (row.lower ? diff < 0 : diff > 0) : null;
-                  return (
-                    <div key={row.label} className="flex items-center gap-3 py-2 border-b border-muted last:border-0">
-                      <span className="text-xs text-muted-foreground w-20">{row.label}</span>
-                      <span className="text-sm font-semibold text-foreground">{row.prev ?? '–'}{row.unit}</span>
-                      <span className="text-muted-foreground">→</span>
-                      <span className="text-sm font-semibold text-foreground">{row.curr ?? '–'}{row.unit}</span>
-                      {diff !== null && diff !== 0 && (
-                        <span className={cn('text-xs font-bold ml-auto',
-                          improved ? 'text-success' : 'text-destructive')}>
-                          {diff > 0 ? '+' : ''}{diff}{row.unit}
-                        </span>
-                      )}
-                      {diff === 0 && <span className="text-xs text-muted-foreground ml-auto">no change</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        <div className="relative">
+          <textarea
+            value={coachResponse}
+            onChange={e => { setCoachResponse(e.target.value); if (draftSource === 'saved') setDraftSource(null); }}
+            placeholder={`Write to ${first}, or let the AI draft it from ${possessive(client)} answers.`}
+            className="w-full min-h-[200px] lg:min-h-[260px] resize-y rounded-lg border border-input bg-card px-4 py-3.5 text-[15px] leading-relaxed text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground"
+          />
+          {!coachResponse.trim() && !aiLoading && (
+            <Button className="absolute left-4 bottom-4" size="sm" onClick={() => generate()}>
+              Draft with AI
+            </Button>
+          )}
+          {aiLoading && (
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-card/80">
+              <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Drafting from {possessive(client)} answers…
+              </span>
+            </div>
+          )}
+        </div>
 
-            {activeTab === 'compare' && !prevCI && (
-              <p className="text-sm text-muted-foreground text-center py-8">No previous check-in to compare</p>
+        {/* Mobile adjust chips */}
+        <div className="flex flex-wrap gap-2 mt-3 sm:hidden">
+          <Button variant="outline" size="sm" disabled={aiLoading} onClick={() => generate('shorter')}>Shorter</Button>
+          <Button variant="outline" size="sm" disabled={aiLoading} onClick={() => { setTone('warm'); generate('warm'); }}>Warmer</Button>
+          <Button variant="outline" size="sm" {...voiceHandlers}
+            className={cn(isRecording && 'border-destructive text-destructive')}>
+            {isRecording ? 'Recording…' : 'Voice note'}
+          </Button>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            {disclosure}
+            {coachResponse.trim() && !aiLoading && (
+              <>
+                {' '}
+                <button onClick={() => generate()} className="font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+                  Draft again
+                </button>
+              </>
             )}
+          </p>
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+            <Button variant="outline" className="h-11 px-5" onClick={() => onDone?.({ sent: false })}>Skip for now</Button>
+            <Button className="h-11 px-5" onClick={handleSendResponse} disabled={!coachResponse.trim() || busy}>
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              Send and open next
+            </Button>
           </div>
         </div>
+      </Panel>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 border-t border-border px-5 py-3 flex gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5 border-orange-200 text-orange-600 hover:bg-orange-50"
-            onClick={handleFlag} disabled={updateMutation.isPending}>
-            <Flag className="w-3.5 h-3.5" /> Flag
+      {/* Secondary tools */}
+      <Panel className="overflow-hidden">
+        <Disclosure
+          title="Suggested changes"
+          meta={recommendations.length ? `${recommendations.length} from this week's numbers` : 'None this week'}
+          defaultOpen={recommendations.some(r => r.priority === 'critical')}
+        >
+          <RecommendationList recommendations={recommendations} checkIn={checkIn} client={client} />
+        </Disclosure>
+        <Disclosure title="Compared with last check-in" meta={prevCI ? format(parseISO(prevCI.date), 'MMM d') : undefined}>
+          <CompareRows checkIn={checkIn} prev={prevCI} />
+        </Disclosure>
+        {checkIn.measurements && Object.values(checkIn.measurements).some(Boolean) && (
+          <Disclosure title="Measurements">
+            <MeasurementRows measurements={checkIn.measurements} />
+          </Disclosure>
+        )}
+        <Disclosure title="Private notes" meta={checkIn.internal_notes ? 'Saved' : 'Only you can see these'}>
+          <p className="flex items-center gap-1.5 text-[13px] text-muted-foreground mb-2">
+            <Lock className="h-3.5 w-3.5" /> {first} never sees these.
+          </p>
+          <textarea
+            rows={4}
+            value={internalNotes}
+            onChange={e => setInternalNotes(e.target.value)}
+            placeholder="Observations, things to watch next week, reminders for yourself."
+            className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-[15px] leading-relaxed resize-y focus:outline-none focus:border-foreground"
+          />
+          <Button variant="outline" className="mt-3" onClick={() => updateMutation.mutate({ internal_notes: internalNotes })} disabled={busy}>
+            Save notes
           </Button>
-          <Button size="sm" className="flex-1 gap-1.5 bg-success hover:bg-success"
-            onClick={handleMarkReviewed}
-            disabled={updateMutation.isPending || (checkIn.coach_responded && checkIn.review_status === 'reviewed')}>
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            {checkIn.coach_responded && checkIn.review_status === 'reviewed' ? 'Reviewed ✓' : 'Mark Reviewed'}
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </Disclosure>
+      </Panel>
+
+      {/* Mobile sticky action bar (sits above the bottom tab bar) */}
+      <div
+        className="fixed inset-x-0 z-30 flex gap-3 border-t border-border bg-card px-4 py-3 lg:hidden"
+        style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}
+      >
+        <Button variant="outline" className="h-12 px-5 text-[15px]" onClick={() => onDone?.({ sent: false })}>Skip</Button>
+        <Button className="h-12 flex-1 text-[15px]" onClick={handleSendResponse} disabled={!coachResponse.trim() || busy}>
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+          Send and next
+        </Button>
+      </div>
+    </div>
   );
 }

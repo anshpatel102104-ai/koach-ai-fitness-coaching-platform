@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
 import { SignedImg } from '@/components/shared/SignedImage';
 import {
   Camera, Plus, X, Check,
   MapPin, Award, ChevronDown, ExternalLink,
   User, Briefcase, BookOpen, Eye
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  SettingsShell, SettingsPanel, SettingsField, SaveButton, fieldClass, textareaClass,
+} from '@/components/settings/SettingsLayout';
 
 /* ── Constants ── */
 const SPECIALTIES = [
@@ -32,12 +36,12 @@ const TIMEZONES = [
 const YEARS_EXP = ['Less than 1 year', '1-2 years', '3-5 years', '6-10 years', '10-15 years', '15+ years'];
 
 const COMPLETION_CHECKS = [
-  { key: 'avatar_url', label: 'Add profile photo', section: 'photo' },
+  { key: 'avatar_url', label: 'Add a profile photo', section: 'photo' },
   { key: 'short_bio', label: 'Write your bio', section: 'about' },
-  { key: 'certifications', label: 'Add certifications', section: 'about', isArray: true },
+  { key: 'certifications', label: 'List your certifications', section: 'about', isArray: true },
   { key: 'instagram', label: 'Connect Instagram', section: 'business' },
   { key: 'timezone', label: 'Set your timezone', section: 'business' },
-  { key: 'specialties', label: 'Add your specialties', section: 'about', isArray: true },
+  { key: 'specialties', label: 'Pick your specialties', section: 'about', isArray: true },
 ];
 
 const EMPTY = {
@@ -50,43 +54,23 @@ const EMPTY = {
 };
 
 /* ── Sub-components ── */
-function SectionCard({ icon: Icon, title, children }) {
-  return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--tc-accent), var(--tc-ai))' }}>
-          <Icon className="w-4 h-4 text-primary" />
-        </div>
-        <h2 className="font-bold text-foreground text-base">{title}</h2>
-      </div>
-      <div className="p-6">{children}</div>
-    </div>
-  );
-}
-
 function Field({ label, children, hint }) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{label}</label>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
+  return <SettingsField label={label} hint={hint}>{children}</SettingsField>;
 }
 
 function Input({ value, onChange, placeholder, prefix, maxLength, className = '' }) {
   return (
     <div className="relative flex items-center">
-      {prefix && <span className="absolute left-3 text-muted-foreground text-sm font-medium pointer-events-none">{prefix}</span>}
+      {prefix && <span className="pointer-events-none absolute left-3 text-[15px] text-muted-foreground">{prefix}</span>}
       <input
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className={`w-full px-3 py-2.5 rounded-xl border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors ${prefix ? 'pl-7' : ''} ${className}`}
+        className={cn(fieldClass, prefix && 'pl-7', maxLength && 'pr-16', className)}
       />
       {maxLength && (
-        <span className="absolute right-3 text-[10px] text-border pointer-events-none">
+        <span className="pointer-events-none absolute right-3 text-xs tabular-nums text-muted-foreground">
           {(value || '').length}/{maxLength}
         </span>
       )}
@@ -96,19 +80,19 @@ function Input({ value, onChange, placeholder, prefix, maxLength, className = ''
 
 function Textarea({ value, onChange, placeholder, maxLength, rows = 3 }) {
   return (
-    <div className="relative">
+    <div>
       <textarea
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
         rows={rows}
-        className="w-full px-3 py-2.5 rounded-xl border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+        className={textareaClass}
       />
       {maxLength && (
-        <span className="absolute bottom-3 right-3 text-[10px] text-border">
+        <p className="mt-1 text-right text-xs tabular-nums text-muted-foreground">
           {(value || '').length}/{maxLength}
-        </span>
+        </p>
       )}
     </div>
   );
@@ -120,7 +104,7 @@ function Select({ value, onChange, options, placeholder }) {
       <select
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary appearance-none bg-card transition-colors"
+        className={cn(fieldClass, 'appearance-none pr-9')}
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => (
@@ -129,7 +113,7 @@ function Select({ value, onChange, options, placeholder }) {
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
     </div>
   );
 }
@@ -141,96 +125,97 @@ function ChipSelector({ options, selected = [], onChange }) {
   };
   return (
     <div className="flex flex-wrap gap-2">
-      {options.map(opt => (
-        <button key={opt} onClick={() => toggle(opt)}
-          className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-          style={selected.includes(opt)
-            ? { background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', color: 'white' }
-            : { background: 'var(--tc-muted)', color: 'var(--tc-muted-foreground)', border: '1px solid var(--tc-border)' }
-          }>
-          {opt}
-        </button>
-      ))}
+      {options.map(opt => {
+        const on = selected.includes(opt);
+        return (
+          <button key={opt} type="button" onClick={() => toggle(opt)} aria-pressed={on}
+            className={cn(
+              'touch-compact inline-flex h-8 items-center gap-1 rounded-full px-3 text-sm font-medium transition-colors',
+              on ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground shadow-[inset_0_0_0_1px_rgb(var(--input))] hover:bg-accent'
+            )}>
+            {on && <Check className="h-3.5 w-3.5" />}
+            {opt}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 function CertificationRow({ cert, onChange, onRemove }) {
   return (
-    <div className="flex gap-2 items-start">
-      <div className="flex-1 grid grid-cols-3 gap-2">
+    <div className="flex items-start gap-2">
+      <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-[2fr_2fr_1fr]">
         <input value={cert.name || ''} onChange={e => onChange({ ...cert, name: e.target.value })}
-          placeholder="Certification name"
-          className="px-3 py-2 rounded-xl border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary col-span-1" />
+          placeholder="Certification" className={fieldClass} />
         <input value={cert.organization || ''} onChange={e => onChange({ ...cert, organization: e.target.value })}
-          placeholder="Issuing organization"
-          className="px-3 py-2 rounded-xl border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary col-span-1" />
+          placeholder="Issued by" className={fieldClass} />
         <input value={cert.year || ''} onChange={e => onChange({ ...cert, year: e.target.value })}
-          placeholder="Year"
-          className="px-3 py-2 rounded-xl border border-border text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:border-primary col-span-1" />
+          placeholder="Year" className={fieldClass} />
       </div>
-      <button onClick={onRemove} className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center flex-shrink-0 mt-0.5 hover:bg-destructive/10 transition-colors">
-        <X className="w-3.5 h-3.5 text-destructive" />
-      </button>
+      <Button variant="ghost" size="icon" onClick={onRemove} aria-label="Remove certification" className="flex-shrink-0 text-muted-foreground hover:text-destructive">
+        <X />
+      </Button>
     </div>
   );
 }
 
-/* ── Public Profile Preview Card ── */
+/* ── Public Profile Preview Card (graphite, like the client app hero) ── */
 function ProfilePreviewCard({ profile }) {
-  const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Your Name';
+  const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Your name';
   return (
-    <div className="bg-gradient-to-br from-sidebar to-sidebar rounded-2xl p-6 text-white max-w-sm mx-auto">
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-16 h-16 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center text-xl font-black"
-          style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 0 3px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
+    <div className="mx-auto max-w-sm rounded-xl bg-sidebar p-6 text-white">
+      <div className="mb-4 flex items-start gap-4">
+        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-xl font-bold">
           {profile.avatar_url
-            ? <SignedImg src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+            ? <SignedImg src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
             : name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
           }
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-black text-lg leading-tight">{name}</h3>
-          {profile.title && <p className="text-white/60 text-xs mt-0.5">{profile.title}</p>}
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[22px] leading-tight">{name}</h3>
+          {profile.title && <p className="mt-0.5 text-sm text-white/70">{profile.title}</p>}
           {profile.location && (
-            <p className="flex items-center gap-1 text-white/40 text-xs mt-1">
-              <MapPin className="w-3 h-3" />{profile.location}
+            <p className="mt-1 flex items-center gap-1 text-[13px] text-white/50">
+              <MapPin className="h-3.5 w-3.5" />{profile.location}
             </p>
           )}
         </div>
       </div>
       {profile.short_bio && (
-        <p className="text-white/70 text-sm leading-relaxed mb-4 italic">"{profile.short_bio}"</p>
+        <p className="mb-4 text-[15px] leading-relaxed text-white/80">{profile.short_bio}</p>
       )}
       {profile.specialties?.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="mb-4 flex flex-wrap gap-1.5">
           {profile.specialties.slice(0, 4).map(s => (
-            <span key={s} className="px-2 py-1 rounded-full text-[10px] font-semibold" style={{ background: 'color-mix(in srgb, var(--tc-primary) 20%, transparent)', color: 'var(--tc-primary)' }}>{s}</span>
+            <span key={s} className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/90">{s}</span>
           ))}
           {profile.specialties.length > 4 && (
-            <span className="px-2 py-1 rounded-full text-[10px] font-semibold" style={{ background: 'color-mix(in srgb, white 10%, transparent)', color: 'color-mix(in srgb, white 50%, transparent)' }}>+{profile.specialties.length - 4}</span>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-white/60">+{profile.specialties.length - 4}</span>
           )}
         </div>
       )}
       {profile.certifications?.filter(c => c.name).length > 0 && (
-        <div className="space-y-1 mb-4">
+        <div className="mb-4 space-y-1">
           {profile.certifications.filter(c => c.name).slice(0, 2).map((c, i) => (
-            <div key={i} className="flex items-center gap-2 text-xs text-white/50">
-              <Award className="w-3 h-3 text-warning flex-shrink-0" />
+            <div key={i} className="flex items-center gap-2 text-[13px] text-white/60">
+              <Award className="h-3.5 w-3.5 flex-shrink-0" />
               {c.name}{c.organization ? ` · ${c.organization}` : ''}{c.year ? ` · ${c.year}` : ''}
             </div>
           ))}
         </div>
       )}
-      <div className="flex gap-3 pt-3 border-t border-white/10">
-        {profile.instagram && <span className="text-white/40 text-xs">@{profile.instagram}</span>}
-        {profile.website_url && <span className="text-white/40 text-xs truncate">{profile.website_url}</span>}
-      </div>
+      {(profile.instagram || profile.website_url) && (
+        <div className="flex gap-3 border-t border-white/10 pt-3">
+          {profile.instagram && <span className="text-[13px] text-white/50">@{profile.instagram}</span>}
+          {profile.website_url && <span className="truncate text-[13px] text-white/50">{profile.website_url}</span>}
+        </div>
+      )}
     </div>
   );
 }
 
-/* ── Completion Bar ── */
+/* ── Completion (sits under the section list) ── */
 function CompletionBar({ profile, onJump }) {
   const items = COMPLETION_CHECKS.map(c => {
     const val = profile[c.key];
@@ -241,36 +226,31 @@ function CompletionBar({ profile, onJump }) {
   const pct = Math.round((done / items.length) * 100);
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-bold text-foreground">Profile Completion</h2>
-        <span className="text-2xl font-black" style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{pct}%</span>
+    <div className="panel p-5">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[15px] font-semibold text-foreground">Profile</p>
+        <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground tabular-nums">{done} of {items.length}</span> done</p>
       </div>
-      <div className="h-2.5 rounded-full bg-muted mb-5">
-        <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-ai))' }} />
+      <div className="mt-2 h-1.5 rounded-full bg-secondary" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
       </div>
-      <div className="space-y-2">
+      <ul className="mt-3 space-y-1">
         {items.map(item => (
-          <div key={item.key} className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${item.done ? 'bg-success' : 'bg-border'}`}>
-                {item.done
-                  ? <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                  : <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-                }
-              </div>
-              <span className={`text-sm ${item.done ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>{item.label}</span>
-            </div>
-            {!item.done && (
-              <button onClick={() => onJump(item.section)}
-                className="text-xs text-primary font-semibold hover:underline">
-                Complete
-              </button>
-            )}
-          </div>
+          <li key={item.key}>
+            <button
+              type="button"
+              disabled={item.done}
+              onClick={() => onJump(item.section)}
+              className="touch-compact flex w-full items-center gap-2.5 rounded-md py-1 text-left text-sm disabled:cursor-default"
+            >
+              {item.done
+                ? <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-success"><Check className="h-2.5 w-2.5 text-white" strokeWidth={3} /></span>
+                : <span className="h-4 w-4 flex-shrink-0 rounded-full border border-input" />}
+              <span className={item.done ? 'text-muted-foreground line-through' : 'text-foreground underline-offset-4 hover:underline'}>{item.label}</span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
@@ -280,7 +260,7 @@ export default function CoachProfile() {
   const { me } = useAuth();
   const queryClient = useQueryClient();
   const fileRef = useRef();
-  const sectionRefs = { photo: useRef(), business: useRef(), about: useRef(), preview: useRef() };
+  const [section, setSection] = useState('photo');
 
   const [profile, setProfile] = useState(EMPTY);
   const [profileId, setProfileId] = useState(null);
@@ -367,194 +347,164 @@ export default function CoachProfile() {
   };
   const removeCert = (i) => set('certifications', (profile.certifications || []).filter((_, idx) => idx !== i));
 
-  const jumpTo = (section) => sectionRefs[section]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const jumpTo = (target) => setSection(target);
 
   const initials = [profile.first_name, profile.last_name].filter(Boolean).map(n => n[0]).join('').toUpperCase() || 'C';
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-black text-foreground">My Profile</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage your public coaching profile and business information</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <AnimatePresence>
-            {savedAt && !isDirty && (
-              <motion.p initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                className="text-xs text-success font-semibold flex items-center gap-1">
-                <Check className="w-3 h-3" /> All changes saved
-              </motion.p>
-            )}
-          </AnimatePresence>
-          <button onClick={() => save()}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-xl font-bold text-primary-foreground text-sm flex items-center gap-2 disabled:opacity-60 transition-opacity"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-            Save Changes
-          </button>
-        </div>
-      </div>
+  const NAV = [{
+    items: [
+      { id: 'photo', label: 'Photo and name', icon: User },
+      { id: 'business', label: 'Business details', icon: Briefcase },
+      { id: 'about', label: 'About you', icon: BookOpen },
+      { id: 'preview', label: 'Public preview', icon: Eye },
+    ],
+  }];
 
-      <div className="space-y-6">
-        {/* SECTION 1 — Photo & Identity */}
-        <div ref={sectionRefs.photo}>
-          <SectionCard icon={User} title="Profile Photo & Identity">
-            {/* Avatar */}
-            <div className="flex flex-col items-center mb-8">
-              <div className="relative mb-4">
-                <div className="w-28 h-28 rounded-full overflow-hidden flex items-center justify-center text-3xl font-black text-primary-foreground"
-                  style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 0 4px white, 0 0 0 6px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-                  {profile.avatar_url
-                    ? <SignedImg src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                    : initials
-                  }
-                </div>
-                <button onClick={() => fileRef.current?.click()}
-                  className="absolute bottom-0 right-0 w-9 h-9 rounded-full flex items-center justify-center text-primary-foreground"
-                  style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 2px 8px color-mix(in srgb, var(--tc-primary) 40%, transparent), 0 0 0 3px white' }}>
-                  <Camera className="w-4 h-4" />
-                </button>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+  return (
+    <SettingsShell
+      backTo="/settings"
+      title="Coach profile"
+      subtitle="What prospective clients see on your package pages, and how clients see you in their app."
+      nav={NAV}
+      active={section}
+      onSelect={setSection}
+      actions={<SaveButton onClick={() => save()} saving={saving} saved={!!savedAt} dirty={isDirty} />}
+      aside={<CompletionBar profile={profile} onJump={jumpTo} />}
+    >
+      {section === 'photo' && (
+        <SettingsPanel title="Photo and name" bodyClassName="divide-y-0 pb-4">
+          <div className="flex items-center gap-5 py-4">
+            <div className="relative">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-secondary text-3xl font-bold text-foreground">
+                {profile.avatar_url
+                  ? <SignedImg src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                  : initials
+                }
               </div>
-              <div className="flex gap-3">
-                <button onClick={() => fileRef.current?.click()}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-                  Upload Photo
-                </button>
+              <button onClick={() => fileRef.current?.click()} aria-label="Upload photo"
+                className="touch-compact absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-card">
+                <Camera className="h-4 w-4" />
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">A clear, well-lit face photo. Clients see it next to every message.</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>Upload photo</Button>
                 {profile.avatar_url && (
-                  <button onClick={() => set('avatar_url', '')}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold text-destructive bg-destructive/10 border border-destructive hover:bg-destructive/10 transition-colors">
-                    Remove
-                  </button>
+                  <Button variant="link" size="sm" className="text-destructive" onClick={() => set('avatar_url', '')}>Remove</Button>
                 )}
               </div>
             </div>
+          </div>
 
-            {/* Identity fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="First Name">
-                <Input value={profile.first_name} onChange={v => set('first_name', v)} placeholder="First name" />
-              </Field>
-              <Field label="Last Name">
-                <Input value={profile.last_name} onChange={v => set('last_name', v)} placeholder="Last name" />
-              </Field>
-              <Field label="Coach Title / Tagline" hint="Shown below your name on your public profile">
-                <Input value={profile.title} onChange={v => set('title', v)} placeholder="e.g. Online Fitness Coach & Nutritionist" />
-              </Field>
-              <Field label="Pronouns (optional)">
-                <Select value={profile.pronouns} onChange={v => set('pronouns', v)} options={PRONOUNS} placeholder="Select pronouns" />
-              </Field>
-            </div>
-          </SectionCard>
-        </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="First name">
+              <Input value={profile.first_name} onChange={v => set('first_name', v)} placeholder="First name" />
+            </Field>
+            <Field label="Last name">
+              <Input value={profile.last_name} onChange={v => set('last_name', v)} placeholder="Last name" />
+            </Field>
+            <Field label="Title" hint="Shown under your name.">
+              <Input value={profile.title} onChange={v => set('title', v)} placeholder="Online strength and nutrition coach" />
+            </Field>
+            <Field label="Pronouns (optional)">
+              <Select value={profile.pronouns} onChange={v => set('pronouns', v)} options={PRONOUNS} placeholder="Choose" />
+            </Field>
+          </div>
+        </SettingsPanel>
+      )}
 
-        {/* SECTION 2 — Business Information */}
-        <div ref={sectionRefs.business}>
-          <SectionCard icon={Briefcase} title="Business Information">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Business / Coaching Name">
-                <Input value={profile.business_name} onChange={v => set('business_name', v)} placeholder="e.g. Myles Harris Fitness" />
-              </Field>
-              <Field label="Business Email" hint="Used for client communications">
-                <Input value={profile.business_email} onChange={v => set('business_email', v)} placeholder="coach@yourdomain.com" />
-              </Field>
-              <Field label="Business Phone">
-                <Input value={profile.business_phone} onChange={v => set('business_phone', v)} placeholder="+1 (555) 000-0000" />
-              </Field>
-              <Field label="Website URL">
-                <Input value={profile.website_url} onChange={v => set('website_url', v)} placeholder="https://yourwebsite.com" />
-              </Field>
-              <Field label="Instagram">
-                <Input value={profile.instagram} onChange={v => set('instagram', v)} placeholder="yourhandle" prefix="@" />
-              </Field>
-              <Field label="TikTok (optional)">
-                <Input value={profile.tiktok} onChange={v => set('tiktok', v)} placeholder="yourhandle" prefix="@" />
-              </Field>
-              <Field label="YouTube Channel (optional)">
-                <Input value={profile.youtube} onChange={v => set('youtube', v)} placeholder="https://youtube.com/@..." />
-              </Field>
-              <Field label="Location / City" hint="Shown on public profile">
-                <Input value={profile.location} onChange={v => set('location', v)} placeholder="e.g. Los Angeles, CA" />
-              </Field>
-              <Field label="Timezone" hint="Important for session scheduling">
-                <Select value={profile.timezone} onChange={v => set('timezone', v)} options={TIMEZONES} />
-              </Field>
-            </div>
-          </SectionCard>
-        </div>
+      {section === 'business' && (
+        <SettingsPanel title="Business details" bodyClassName="divide-y-0 pb-4">
+          <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
+            <Field label="Business name">
+              <Input value={profile.business_name} onChange={v => set('business_name', v)} placeholder="Hybrid Life Coaching" />
+            </Field>
+            <Field label="Business email" hint="Clients reply to this address.">
+              <Input value={profile.business_email} onChange={v => set('business_email', v)} placeholder="coach@yourdomain.com" />
+            </Field>
+            <Field label="Phone">
+              <Input value={profile.business_phone} onChange={v => set('business_phone', v)} placeholder="+1 (555) 000-0000" />
+            </Field>
+            <Field label="Website">
+              <Input value={profile.website_url} onChange={v => set('website_url', v)} placeholder="https://yourwebsite.com" />
+            </Field>
+            <Field label="Instagram">
+              <Input value={profile.instagram} onChange={v => set('instagram', v)} placeholder="yourhandle" prefix="@" />
+            </Field>
+            <Field label="TikTok (optional)">
+              <Input value={profile.tiktok} onChange={v => set('tiktok', v)} placeholder="yourhandle" prefix="@" />
+            </Field>
+            <Field label="YouTube (optional)">
+              <Input value={profile.youtube} onChange={v => set('youtube', v)} placeholder="https://youtube.com/@..." />
+            </Field>
+            <Field label="City" hint="Shown on your public profile.">
+              <Input value={profile.location} onChange={v => set('location', v)} placeholder="Los Angeles, CA" />
+            </Field>
+            <Field label="Timezone" hint="Used for sessions and check-in reminders.">
+              <Select value={profile.timezone} onChange={v => set('timezone', v)} options={TIMEZONES} />
+            </Field>
+          </div>
+        </SettingsPanel>
+      )}
 
-        {/* SECTION 3 — About You */}
-        <div ref={sectionRefs.about}>
-          <SectionCard icon={BookOpen} title="About You">
-            <div className="space-y-5">
-              <Field label="Short Bio" hint="Shown as tagline on client portal (max 150 characters)">
-                <Textarea value={profile.short_bio} onChange={v => set('short_bio', v)}
-                  placeholder="A short punchy tagline about your coaching style..." maxLength={150} rows={2} />
-              </Field>
-              <Field label="Full Bio" hint="Shown on package landing pages (max 1000 characters)">
-                <Textarea value={profile.full_bio} onChange={v => set('full_bio', v)}
-                  placeholder="Tell potential clients your story — your background, philosophy, what makes you unique..." maxLength={1000} rows={5} />
-              </Field>
+      {section === 'about' && (
+        <SettingsPanel title="About you" bodyClassName="divide-y-0 pb-4">
+          <div className="space-y-5 pt-2">
+            <Field label="Short bio" hint="One line on the client app. 150 characters.">
+              <Textarea value={profile.short_bio} onChange={v => set('short_bio', v)}
+                placeholder="How you coach, in one sentence" maxLength={150} rows={2} />
+            </Field>
+            <Field label="Full bio" hint="Shown on your package pages. 1,000 characters.">
+              <Textarea value={profile.full_bio} onChange={v => set('full_bio', v)}
+                placeholder="Your background, how you coach, and who you work best with" maxLength={1000} rows={5} />
+            </Field>
 
-              <Field label="Specialties">
-                <ChipSelector options={SPECIALTIES} selected={profile.specialties || []} onChange={v => set('specialties', v)} />
-              </Field>
+            <Field label="Specialties">
+              <ChipSelector options={SPECIALTIES} selected={profile.specialties || []} onChange={v => set('specialties', v)} />
+            </Field>
 
-              <Field label="Certifications">
-                <div className="space-y-2 mb-3">
-                  {(profile.certifications || []).map((cert, i) => (
-                    <CertificationRow key={i} cert={cert} onChange={v => updateCert(i, v)} onRemove={() => removeCert(i)} />
-                  ))}
-                </div>
-                <button onClick={addCert}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-                  <Plus className="w-4 h-4" /> Add Certification
-                </button>
-              </Field>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Years of Experience">
-                  <Select value={profile.years_experience} onChange={v => set('years_experience', v)}
-                    options={YEARS_EXP} placeholder="Select experience" />
-                </Field>
-                <Field label="Languages Spoken">
-                  <ChipSelector options={LANGUAGES} selected={profile.languages || []} onChange={v => set('languages', v)} />
-                </Field>
+            <Field label="Certifications">
+              <div className="space-y-2">
+                {(profile.certifications || []).map((cert, i) => (
+                  <CertificationRow key={i} cert={cert} onChange={v => updateCert(i, v)} onRemove={() => removeCert(i)} />
+                ))}
+                <Button variant="outline" onClick={addCert}><Plus /> Add certification</Button>
               </div>
-            </div>
-          </SectionCard>
-        </div>
+            </Field>
 
-        {/* SECTION 4 — Public Profile Preview */}
-        <div ref={sectionRefs.preview}>
-          <SectionCard icon={Eye} title="Public Profile Preview">
-            <p className="text-sm text-muted-foreground mb-5">This is how your profile appears to clients on package landing pages. Updates live as you edit.</p>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Field label="Years coaching">
+                <Select value={profile.years_experience} onChange={v => set('years_experience', v)}
+                  options={YEARS_EXP} placeholder="Choose" />
+              </Field>
+              <Field label="Languages">
+                <ChipSelector options={LANGUAGES} selected={profile.languages || []} onChange={v => set('languages', v)} />
+              </Field>
+            </div>
+          </div>
+        </SettingsPanel>
+      )}
+
+      {section === 'preview' && (
+        <SettingsPanel
+          title="Public preview"
+          subtitle="How your profile appears on package pages. Updates as you type."
+          bodyClassName="divide-y-0 pb-4"
+        >
+          <div className="pt-2">
             <ProfilePreviewCard profile={profile} />
-            <div className="flex justify-center mt-5">
-              <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-primary border border-primary bg-accent hover:bg-accent transition-colors">
-                <ExternalLink className="w-4 h-4" /> View Public Profile
-              </button>
+            <div className="mt-5 flex justify-center">
+              <Button variant="outline"><ExternalLink /> View public profile</Button>
             </div>
-          </SectionCard>
-        </div>
+          </div>
+        </SettingsPanel>
+      )}
 
-        {/* SECTION 5 — Completion */}
-        <CompletionBar profile={profile} onJump={jumpTo} />
-
-        {/* Bottom save */}
-        <div className="flex justify-end pb-8">
-          <button onClick={() => save()}
-            disabled={saving}
-            className="px-8 py-3 rounded-xl font-bold text-primary-foreground flex items-center gap-2 disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-            {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check className="w-4 h-4" />}
-            Save Changes
-          </button>
-        </div>
+      <div className="flex justify-end">
+        <SaveButton onClick={() => save()} saving={saving} saved={!!savedAt} dirty={isDirty} />
       </div>
-    </div>
+    </SettingsShell>
   );
 }

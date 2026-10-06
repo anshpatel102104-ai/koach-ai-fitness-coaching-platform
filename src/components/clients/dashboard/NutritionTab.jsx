@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Apple, Utensils, CheckCircle2, Plus, X } from 'lucide-react';
+import { Utensils, CheckCircle2, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
 import NutritionPlanDetailModal from '@/components/nutrition/NutritionPlanDetailModal';
@@ -17,7 +16,7 @@ function MacroChip({ label, value, unit = 'g', color }) {
   return (
     <div className={cn('flex flex-col items-center px-3 py-2 rounded-xl text-center', color)}>
       <span className="text-sm font-bold tabular-nums leading-tight">{value ?? '—'}{unit === 'kcal' ? '' : unit}</span>
-      <span className="text-[10px] opacity-70 mt-0.5">{label}{unit === 'kcal' ? ' kcal' : ''}</span>
+      <span className="text-[11px] opacity-70 mt-0.5">{label}{unit === 'kcal' ? ' kcal' : ''}</span>
     </div>
   );
 }
@@ -26,12 +25,7 @@ function Bar({ value, max, color = 'bg-primary' }) {
   const p = pct(value, max);
   return (
     <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-      <motion.div
-        className={cn('h-full rounded-full', color)}
-        initial={{ width: 0 }}
-        animate={{ width: `${p}%` }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      />
+      <div className={cn('h-full rounded-full', color)} style={{ width: `${p}%` }} />
     </div>
   );
 }
@@ -57,15 +51,12 @@ function AssignDialog({ clientId, allPlans, onClose }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative bg-card rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+      <div
+        className="relative bg-card rounded-xl w-full max-w-sm overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="text-sm font-bold text-foreground">Assign Nutrition Plan</h3>
+          <h3 className="text-[18px] text-foreground">Assign nutrition plan</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground p-1"><X className="w-4 h-4" /></button>
         </div>
 
@@ -84,11 +75,11 @@ function AssignDialog({ clientId, allPlans, onClose }) {
                   : 'border-border hover:border-primary hover:bg-muted'
               )}
             >
-              <span className="text-xl">{plan.emoji || '🥗'}</span>
+              <span className="text-xl">{plan.emoji || ''}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{plan.title}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {plan.tracking_mode === 'habits' ? 'Habit Mode' : 'Macro Tracking'}
+                <p className="text-[11px] text-muted-foreground">
+                  {plan.tracking_mode === 'habits' ? 'Habit mode' : 'Macro tracking'}
                   {plan.calories ? ` · ${plan.calories} kcal` : ''}
                 </p>
               </div>
@@ -108,12 +99,12 @@ function AssignDialog({ clientId, allPlans, onClose }) {
             onClick={assign}
             disabled={!selected || saving}
             className="flex-1 px-3 py-2 rounded-lg text-xs font-semibold text-primary-foreground disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, var(--kc-00d4ff), var(--tc-primary))' }}
+            style={{ background: 'var(--tc-brand)' }}
           >
-            {saving ? 'Assigning...' : 'Assign Plan'}
+            {saving ? 'Assigning...' : 'Assign plan'}
           </button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -153,9 +144,6 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
   if (!assignedPlan) return (
     <>
       <div className="bg-card rounded-xl border border-border p-5 flex flex-col items-center text-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-muted border border-border flex items-center justify-center">
-          <Apple className="w-5 h-5 text-border" />
-        </div>
         <div>
           <p className="text-sm font-semibold text-foreground">No nutrition plan assigned yet</p>
           <p className="text-xs text-muted-foreground mt-0.5">Assign an existing plan or create a new one</p>
@@ -165,21 +153,21 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
           <button
             onClick={() => setShowDialog(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-primary-foreground"
-            style={{ background: 'linear-gradient(135deg, var(--kc-00d4ff), var(--tc-primary))' }}
+            style={{ background: 'var(--tc-brand)' }}
           >
-            <Plus className="w-3.5 h-3.5" /> Assign Existing Plan
+            <Plus className="w-3.5 h-3.5" /> Assign existing plan
           </button>
           <button
             onClick={createPlan}
             disabled={creating}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold text-muted-foreground border border-border hover:bg-muted disabled:opacity-50"
           >
-            <Plus className="w-3.5 h-3.5" /> {creating ? 'Creating...' : 'Create New Plan'}
+            <Plus className="w-3.5 h-3.5" /> {creating ? 'Creating...' : 'Create new plan'}
           </button>
         </div>
       </div>
 
-      <AnimatePresence>
+      <>
         {showDialog && (
           <AssignDialog
             clientId={client.id}
@@ -187,7 +175,7 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
             onClose={() => setShowDialog(false)}
           />
         )}
-      </AnimatePresence>
+      </>
     </>
   );
 
@@ -197,7 +185,7 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
     <div className="bg-card rounded-xl border border-border p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <span className="text-2xl">{assignedPlan.emoji || '🥗'}</span>
+          <span className="text-2xl">{assignedPlan.emoji || ''}</span>
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">{assignedPlan.title}</p>
             {assignedPlan.description && (
@@ -206,16 +194,16 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
           </div>
         </div>
         <span className={cn(
-          'text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0',
+          'text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0',
           isHabits ? 'bg-ai/10 text-ai border-ai' : 'bg-success/10 text-success border-success'
         )}>
-          {isHabits ? 'Habit Mode' : 'Macro Tracking'}
+          {isHabits ? 'Habit mode' : 'Macro tracking'}
         </span>
       </div>
 
       {!isHabits && (assignedPlan.calories ?? assignedPlan.daily_calories ?? 0) > 0 && (
         <div className="flex gap-2">
-          <MacroChip label="Calories" value={assignedPlan.calories ?? assignedPlan.daily_calories} unit="kcal" color="bg-orange-50 text-orange-700" />
+          <MacroChip label="Calories" value={assignedPlan.calories ?? assignedPlan.daily_calories} unit="kcal" color="bg-warning-soft text-warning" />
           {(assignedPlan.protein_g ?? assignedPlan.protein ?? 0) > 0 && <MacroChip label="Protein" value={assignedPlan.protein_g ?? assignedPlan.protein} color="bg-accent text-primary" />}
           {(assignedPlan.carbs_g   ?? assignedPlan.carbs   ?? 0) > 0 && <MacroChip label="Carbs"   value={assignedPlan.carbs_g   ?? assignedPlan.carbs}   color="bg-warning/10 text-warning" />}
           {(assignedPlan.fats_g    ?? assignedPlan.fats    ?? 0) > 0 && <MacroChip label="Fats"    value={assignedPlan.fats_g    ?? assignedPlan.fats}    color="bg-destructive/10 text-destructive" />}
@@ -241,13 +229,13 @@ function AssignedPlanSection({ client, allPlans, assignedPlan, onRefetch }) {
           onClick={() => setShowPlanDetail(true)}
           className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
         >
-          View Full Plan
+          View full plan
         </button>
         <button
           onClick={() => setShowDialog(true)}
           className="flex-1 py-2 rounded-xl bg-secondary text-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors"
         >
-          Edit Plan
+          Edit plan
         </button>
       </div>
 
@@ -297,9 +285,9 @@ function TodayFoodLog({ client, assignedPlan }) {
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Utensils className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-bold text-foreground uppercase tracking-wide">Today's Food Log</span>
+          <span className="text-xs font-semibold text-foreground">Today's Food Log</span>
         </div>
-        <span className="text-[10px] text-muted-foreground">{format(new Date(), 'MMM d')}</span>
+        <span className="text-[11px] text-muted-foreground">{format(new Date(), 'MMM d')}</span>
       </div>
 
       {/* Totals bar */}
@@ -309,7 +297,7 @@ function TodayFoodLog({ client, assignedPlan }) {
             <span className="text-muted-foreground">Calories</span>
             <span className="font-semibold text-foreground tabular-nums">{totalCals} / {targetCals} kcal</span>
           </div>
-          <Bar value={totalCals} max={targetCals} color="bg-orange-400" />
+          <Bar value={totalCals} max={targetCals} color="bg-partial" />
           {targetProtein > 0 && (
             <>
               <div className="flex justify-between text-xs mt-1">
@@ -335,17 +323,17 @@ function TodayFoodLog({ client, assignedPlan }) {
               <div key={mealName}>
                 <div className="flex items-center justify-between px-4 py-2 bg-muted">
                   <span className="text-xs font-semibold text-muted-foreground">{mealName}</span>
-                  {mealCals > 0 && <span className="text-[10px] font-semibold text-orange-500 tabular-nums">{mealCals} kcal</span>}
+                  {mealCals > 0 && <span className="text-[11px] font-semibold text-warning tabular-nums">{mealCals} kcal</span>}
                 </div>
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-2">
                     <div className="flex-1 min-w-0">
                       <span className="text-xs text-foreground font-medium">{item.food_name}</span>
                       {item.serving_quantity && (
-                        <span className="text-[10px] text-muted-foreground ml-1.5">{item.serving_quantity}{item.serving_unit || ''}</span>
+                        <span className="text-[11px] text-muted-foreground ml-1.5">{item.serving_quantity}{item.serving_unit || ''}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] font-semibold shrink-0 ml-2">
+                    <div className="flex items-center gap-2 text-[11px] font-semibold shrink-0 ml-2">
                       {item.protein > 0  && <span className="text-primary">{item.protein}P</span>}
                       {item.carbs > 0    && <span className="text-warning">{item.carbs}C</span>}
                       {item.fats > 0     && <span className="text-destructive">{item.fats}F</span>}
@@ -405,7 +393,7 @@ function WeeklyAdherenceGrid({ client }) {
   return (
     <div className="bg-card rounded-xl border border-border p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-foreground uppercase tracking-wide">7-Day Adherence</span>
+        <span className="text-xs font-semibold text-foreground">7-Day Adherence</span>
         <span className={cn(
           'text-xs font-bold tabular-nums',
           adherencePct >= 80 ? 'text-success' : adherencePct >= 50 ? 'text-warning' : 'text-muted-foreground'
@@ -419,24 +407,21 @@ function WeeklyAdherenceGrid({ client }) {
           const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
           return (
             <div key={i} className="flex flex-col items-center gap-1 flex-1">
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: i * 0.05 }}
+              <div
                 className={cn(
-                  'w-full aspect-square rounded-lg',
+                  'w-full h-10 rounded-md',
                   COLOR[dayStatuses[i]],
                   isToday && 'ring-2 ring-primary ring-offset-1'
                 )}
               />
-              <span className="text-[9px] text-muted-foreground font-medium">{format(day, 'EEE')}</span>
-              <span className="text-[8px] text-border">{format(day, 'd')}</span>
+              <span className="text-[11px] text-muted-foreground font-medium">{format(day, 'EEE')}</span>
+              <span className="text-[11px] text-border">{format(day, 'd')}</span>
             </div>
           );
         })}
       </div>
 
-      <div className="flex gap-3 text-[10px] text-muted-foreground flex-wrap">
+      <div className="flex gap-3 text-[11px] text-muted-foreground flex-wrap">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-success inline-block" /> Logged</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-warning inline-block" /> Missed target</span>
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-border inline-block" /> Nothing logged</span>

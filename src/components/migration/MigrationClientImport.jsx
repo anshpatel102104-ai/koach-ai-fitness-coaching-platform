@@ -71,7 +71,7 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
     }
     setResults({ ok, fail });
     setImporting(false);
-    if (ok.length > 0) toast.success(`${ok.length} clients imported!`);
+    if (ok.length > 0) toast.success(`${ok.length} clients imported`);
     onComplete(ok);
   };
 
@@ -86,15 +86,15 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
   if (results) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3 p-4 bg-success/10 border border-success rounded-xl">
+        <div className="flex items-center gap-3 p-4 bg-success-soft rounded-lg">
           <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
           <div>
-            <p className="font-semibold text-success text-sm">{results.ok.length} clients imported</p>
-            {results.fail.length > 0 && <p className="text-xs text-success mt-0.5">{results.fail.length} failed (duplicate emails)</p>}
+            <p className="font-semibold text-foreground text-sm">{results.ok.length} clients imported</p>
+            {results.fail.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">{results.fail.length} failed (duplicate emails)</p>}
           </div>
         </div>
-        <button onClick={() => onComplete(results.ok)} className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-          Continue to Workouts →
+        <button onClick={() => onComplete(results.ok)} className="w-full h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">
+          Continue to Workouts
         </button>
       </div>
     );
@@ -110,8 +110,8 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
           onDrop={handleDrop}
           onClick={() => fileRef.current?.click()}
           className={cn(
-            'border-2 border-dashed rounded-2xl px-6 py-10 flex flex-col items-center text-center cursor-pointer transition-all',
-            dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-secondary/20'
+            'border-2 border-dashed rounded-xl px-6 py-10 flex flex-col items-center text-center cursor-pointer transition-all',
+            dragOver ? 'border-foreground bg-accent' : 'border-border hover:border-input hover:bg-secondary/20'
           )}
         >
           <Upload className={cn('w-10 h-10 mb-3', dragOver ? 'text-primary' : 'text-muted-foreground')} />
@@ -120,12 +120,12 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={e => handleFile(e.target.files[0])} />
         </div>
       ) : (
-        <div className="border border-success bg-success/10 rounded-2xl p-4">
+        <div className="bg-secondary rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-success" />
-              <span className="text-sm font-semibold text-success">{fileName}</span>
-              <span className="text-xs text-success">· {parsed.length} clients found</span>
+              <span className="text-sm font-semibold text-foreground">{fileName}</span>
+              <span className="text-xs text-muted-foreground">· {parsed.length} clients found</span>
             </div>
             <button onClick={() => { setParsed(null); setFileName(''); }} className="text-muted-foreground hover:text-destructive transition-colors">
               <X className="w-4 h-4" />
@@ -146,7 +146,7 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
           </button>
           {showPreview && (
             <div className="border border-border rounded-xl overflow-hidden">
-              <div className="grid grid-cols-3 bg-secondary/50 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="grid grid-cols-3 bg-secondary/50 px-4 py-2 text-xs font-semibold text-muted-foreground">
                 <span>Name</span><span>Email</span><span>Phone</span>
               </div>
               <div className="divide-y divide-border max-h-48 overflow-y-auto">
@@ -170,19 +170,19 @@ export default function MigrationClientImport({ onComplete, onSkip }) {
       <div className="flex items-center gap-2 p-3 bg-secondary/40 rounded-xl">
         <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
         <p className="text-xs text-muted-foreground flex-1">Need a template? Download our sample CSV</p>
-        <button onClick={downloadSample} className="text-xs text-primary font-semibold hover:underline">Download</button>
+        <button onClick={downloadSample} className="text-sm text-foreground font-semibold underline underline-offset-4">Download</button>
       </div>
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button onClick={onSkip} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
+        <button onClick={onSkip} className="flex-1 h-11 rounded-lg border border-input bg-card text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
           Skip this step
         </button>
         {parsed?.length > 0 && (
           <button
             onClick={doImport}
             disabled={importing}
-            className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {importing ? (
               <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Importing...</>

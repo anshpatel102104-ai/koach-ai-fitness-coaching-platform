@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Salad, CheckCircle2, Plus } from 'lucide-react';
+import { Salad, CheckCircle2, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
@@ -62,7 +62,7 @@ export default function MigrationNutrition({ onComplete, onSkip }) {
     }
     setImporting(false);
     setDone(true);
-    toast.success(`${count} nutrition plan${count !== 1 ? 's' : ''} imported!`);
+    toast.success(`${count} nutrition plan${count !== 1 ? 's' : ''} imported`);
     setTimeout(() => onComplete(), 1000);
   };
 
@@ -70,8 +70,8 @@ export default function MigrationNutrition({ onComplete, onSkip }) {
     return (
       <div className="flex flex-col items-center py-6 gap-3">
         <CheckCircle2 className="w-10 h-10 text-success" />
-        <p className="font-semibold text-foreground">{selected.size} plans imported!</p>
-        <button onClick={onComplete} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">Continue →</button>
+        <p className="font-semibold text-foreground">{selected.size} plans imported</p>
+        <button onClick={onComplete} className="px-6 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">Continue</button>
       </div>
     );
   }
@@ -91,27 +91,27 @@ export default function MigrationNutrition({ onComplete, onSkip }) {
               onClick={() => toggle(i)}
               className={cn(
                 'w-full text-left p-4 rounded-xl border-2 transition-all',
-                sel ? 'border-success bg-success/10' : 'border-border hover:border-success bg-card'
+                sel ? 'border-foreground bg-accent' : 'border-border hover:border-input bg-card'
               )}
             >
               <div className="flex items-start gap-3">
-                <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', sel ? 'bg-success' : 'bg-secondary')}>
-                  <Salad className={cn('w-4 h-4', sel ? 'text-white' : 'text-muted-foreground')} />
+                <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', sel ? 'bg-primary' : 'bg-secondary')}>
+                  <Salad className={cn('w-4 h-4', sel ? 'text-primary-foreground' : 'text-muted-foreground')} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">{plan.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>
                   <div className="flex gap-3 mt-2">
-                    {plan.protein_g && <span className="text-[10px] font-medium text-primary bg-accent px-2 py-0.5 rounded-full">{plan.protein_g}g protein</span>}
-                    {plan.carbs_g && <span className="text-[10px] font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full">{plan.carbs_g}g carbs</span>}
-                    {plan.fats_g && <span className="text-[10px] font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">{plan.fats_g}g fats</span>}
+                    {plan.protein_g && <span className="text-xs font-medium text-foreground bg-accent px-2 py-0.5 rounded-full">{plan.protein_g}g protein</span>}
+                    {plan.carbs_g && <span className="text-xs font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full">{plan.carbs_g}g carbs</span>}
+                    {plan.fats_g && <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">{plan.fats_g}g fats</span>}
                   </div>
                 </div>
                 <div className={cn(
                   'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all',
-                  sel ? 'bg-success border-success' : 'border-border'
+                  sel ? 'bg-primary border-primary' : 'border-border'
                 )}>
-                  {sel && <span className="text-[10px] text-white font-bold">✓</span>}
+                  {sel && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
                 </div>
               </div>
             </button>
@@ -120,14 +120,14 @@ export default function MigrationNutrition({ onComplete, onSkip }) {
       </div>
 
       <div className="flex gap-3">
-        <button onClick={onSkip} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
+        <button onClick={onSkip} className="flex-1 h-11 rounded-lg border border-input bg-card text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
           Skip this step
         </button>
         {selected.size > 0 && (
           <button
             onClick={doImport}
             disabled={importing}
-            className="flex-1 py-2.5 bg-success text-white rounded-xl text-sm font-semibold hover:bg-success transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/85 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {importing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Importing...</>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { PLAN_PRICES, clientLimitLabel, aiLimitLabel } from '@/lib/planPricing';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/kit';
 import { TIERS, TIER_ORDER, getUserTier } from '@/lib/subscription';
 import UpgradeCompareModal from './UpgradeCompareModal';
 import DowngradeModal from './DowngradeModal';
@@ -13,142 +15,94 @@ import { toast } from 'sonner';
 const TIER_FEATURES = {
   starter: {
     inherited: [],
-    unique: [`✨ ${aiLimitLabel('starter')} — program & meal plan builders`, 'Unlimited workout programs', 'Unlimited nutrition plans', 'Scheduling & calendar', 'In-app messaging', 'Client mobile app access', 'Basic progress tracking', 'Email support'],
+    unique: [`${aiLimitLabel('starter')} for program and meal plan builders`, 'Unlimited workout programs', 'Unlimited nutrition plans', 'Scheduling and calendar', 'In-app messaging', 'Client mobile app', 'Basic progress tracking', 'Email support'],
   },
   pro: {
     inherited: ['Everything in Starter'],
-    unique: [`✨ ${aiLimitLabel('pro')} — program & meal plan builders`, '✨ AI Onboarding — auto-generate a starting program & meal plan for any client', 'Progress analytics & graphs', 'Check-in review system', 'AI check-in summaries & AI-drafted replies', 'Adherence scoring', 'Voice & video messages', 'Client mobile dashboard', 'Custom branding (logo)', 'Priority email support'],
+    unique: [`${aiLimitLabel('pro')} for program and meal plan builders`, 'AI onboarding: a starting program and meal plan for any new client', 'Progress analytics and graphs', 'Check-in review', 'AI check-in summaries and drafted replies', 'Adherence scoring', 'Voice and video messages', 'Client mobile dashboard', 'Your logo on the client app', 'Priority email support'],
   },
   elite: {
     inherited: ['Everything in Pro'],
-    unique: [`✨ ${aiLimitLabel('elite')} — program & meal plan builders`, '🤖 Full AI Assistant — auto progression, check-in analysis, AI check-in responses & calorie suggestions', 'Sales pipeline CRM', 'Revenue dashboard', 'White-label branding', 'Community module', 'Zapier integrations', 'Chat support'],
+    unique: [`${aiLimitLabel('elite')} for program and meal plan builders`, 'Full AI assistant: progression, check-in analysis, replies and calorie suggestions', 'Sales pipeline', 'Revenue dashboard', 'White-label branding', 'Community', 'Zapier', 'Chat support'],
   },
   enterprise: {
     inherited: ['Everything in Elite'],
-    unique: [`✨ ${aiLimitLabel('enterprise')}`, '🤖 Everything in Elite, including the Full AI Assistant', '🤖 Team-wide AI access for all your coaches', '🔌 API access', 'White-label branding & custom domain', '🏢 Team accounts for multi-coach businesses (coming soon)', 'Early access to all new features', 'Priority email & chat support'],
+    unique: [aiLimitLabel('enterprise'), 'The full AI assistant for every coach on your team', 'API access', 'White-label branding and your own domain', 'Team accounts for multi-coach businesses (coming soon)', 'Early access to new features', 'Priority email and chat support'],
   },
-};
-
-const CARD_CONFIG = {
-  starter:    { accentColor: 'var(--tc-muted-foreground)', checkColor: 'text-muted-foreground', btnClass: 'border-border text-sidebar-foreground hover:bg-foreground/50 bg-transparent', badge: null },
-  pro:        { accentColor: 'var(--tc-primary)', checkColor: 'text-primary',  btnClass: 'bg-primary hover:bg-primary text-primary-foreground border-0', badge: { label: 'MOST POPULAR', cls: 'bg-primary/20 text-primary border border-primary/30' } },
-  elite:      { accentColor: 'var(--tc-ai)', checkColor: 'text-ai', btnClass: '', badge: { label: '⭐ RECOMMENDED', cls: 'bg-gradient-to-r from-primary/20 to-ai/20 text-ai border border-ai/30' } },
-  enterprise: { accentColor: 'var(--tc-warning)', checkColor: 'text-warning', btnClass: 'border-warning/50 text-warning hover:bg-warning/10 bg-transparent', badge: { label: 'ENTERPRISE', cls: 'bg-warning/10 text-warning border border-warning/30' } },
 };
 
 function PlanCard({ tierKey, billing, isCurrent, isUpgrade, noPlan, busy, onSelect }) {
   const tier = TIERS[tierKey];
-  const config = CARD_CONFIG[tierKey];
   const features = TIER_FEATURES[tierKey];
   const prices = PLAN_PRICES[tierKey];
   const price = billing === 'annual' ? prices.annual : prices.monthly;
-  const isElite = tierKey === 'elite';
-  const label = busy ? 'Opening checkout…' : noPlan ? `Subscribe to ${tier.name} →` : isUpgrade ? `Upgrade to ${tier.name} →` : `Switch to ${tier.name}`;
+  const label = busy ? 'Opening checkout…' : noPlan ? `Start ${tier.name}` : isUpgrade ? `Upgrade to ${tier.name}` : `Switch to ${tier.name}`;
+  const ink = isCurrent;
 
   return (
     <div className={cn(
-      'relative flex flex-col rounded-2xl border border-white/10 overflow-hidden transition-all duration-300 hover:-translate-y-1',
-      isElite
-        ? 'bg-gradient-to-b from-[var(--kc-1a1040)] to-[var(--kc-120c35)] hover:shadow-[0_0_40px_color-mix(in srgb, var(--tc-ai) 25%, transparent)] md:scale-[1.03] z-10'
-        : 'bg-[var(--kc-0f1117)] hover:shadow-[0_8px_32px_color-mix(in srgb, black 50%, transparent)]',
+      'relative flex flex-col rounded-xl overflow-hidden',
+      ink ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground shadow-[0_0_0_1px_rgb(var(--border)/0.8)]'
     )}>
-      {/* Top accent border */}
-      {isElite ? (
-        <div className="h-[3px] w-full" style={{ background: 'linear-gradient(to right, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 12px color-mix(in srgb, var(--tc-ai) 60%, transparent)' }} />
-      ) : (
-        <div className="h-[3px] w-full" style={{ background: config.accentColor }} />
-      )}
-
-      {/* Badge row */}
-      <div className="flex justify-center pt-3 min-h-[32px]">
-        {isCurrent ? (
-          <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-success/10 text-success border border-success/30">
-            ✓ Your Current Plan
-          </span>
-        ) : config.badge ? (
-          <span className={cn('text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full', config.badge.cls)}>
-            {config.badge.label}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Price section */}
-      <div className="p-6 pb-4">
-        <p className="font-bold text-sm mb-3" style={{ color: config.accentColor }}>{tier.name}</p>
-        <p className="inline-block text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[var(--kc-w-5)] text-muted-foreground border border-white/10 mb-4">
-          {clientLimitLabel(tierKey)}
-        </p>
-        <div className="flex items-end gap-2 mb-2">
-          {billing === 'annual' && (
-            <span className="text-xl text-muted-foreground line-through mb-1">${prices.monthly}</span>
-          )}
-          <span className="text-5xl font-bold text-white leading-none">${price}</span>
-          <span className="text-muted-foreground text-sm mb-1">/mo</span>
+      <div className="px-6 pt-6 pb-5">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="text-[24px]">{tier.name}</h3>
+          {isCurrent ? (
+            <span className="text-[13px] font-semibold text-primary-foreground/80">Your plan</span>
+          ) : tier.popular ? (
+            <span className="text-[13px] text-muted-foreground">Most coaches pick this</span>
+          ) : null}
         </div>
-        {billing === 'annual' ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-block text-[11px] font-semibold text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full">
-              Save ${prices.annualSave}/year
-            </span>
-            <span className="text-[11px] text-muted-foreground">${prices.yearly.toLocaleString('en-US')} billed yearly</span>
-          </div>
-        ) : (
-          <p className="text-[11px] text-muted-foreground">or ${prices.annual}/mo billed annually</p>
-        )}
+        <p className={cn('text-[13px] mt-1', ink ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{clientLimitLabel(tierKey)}</p>
+
+        <div className="flex items-baseline gap-2 mt-4">
+          {billing === 'annual' && (
+            <span className={cn('text-lg line-through', ink ? 'text-primary-foreground/50' : 'text-muted-foreground')}>${prices.monthly}</span>
+          )}
+          <span className="num text-[44px] leading-none">${price}</span>
+          <span className={cn('text-sm', ink ? 'text-primary-foreground/70' : 'text-muted-foreground')}>/ month</span>
+        </div>
+        <p className={cn('text-[13px] mt-2', ink ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+          {billing === 'annual'
+            ? `$${prices.yearly.toLocaleString('en-US')} billed yearly, saves $${prices.annualSave}`
+            : `or $${prices.annual} a month billed yearly`}
+        </p>
       </div>
 
-      <div className="mx-6 border-t border-white/10" />
+      <div className={cn('mx-6 border-t', ink ? 'border-primary-foreground/15' : 'border-border')} />
 
-      {/* Features */}
-      <div className="p-6 flex-1 space-y-2.5">
-        {features.inherited.length > 0 && (
-          <>
-            {features.inherited.map(f => (
-              <div key={f} className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                <span className="text-[12px] text-muted-foreground">{f}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-2 pt-1 pb-0.5">
-              <div className="flex-1 h-px bg-[var(--kc-w-5)]" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Also includes</span>
-              <div className="flex-1 h-px bg-[var(--kc-w-5)]" />
-            </div>
-          </>
-        )}
-        {features.unique.map(f => (
-          <div key={f} className="flex items-start gap-2">
-            <Check className={cn('w-3.5 h-3.5 flex-shrink-0 mt-0.5', config.checkColor)} />
-            <span className="text-[12px] text-sidebar-foreground font-medium leading-snug">{f}</span>
-          </div>
+      <ul className="px-6 py-5 flex-1 space-y-2.5">
+        {features.inherited.map(f => (
+          <li key={f} className={cn('text-[13px] font-semibold', ink ? 'text-primary-foreground' : 'text-foreground')}>{f}, plus:</li>
         ))}
-      </div>
+        {features.unique.map(f => (
+          <li key={f} className="flex items-start gap-2.5">
+            <Check className={cn('w-3.5 h-3.5 flex-shrink-0 mt-[3px]', ink ? 'text-primary-foreground/70' : 'text-muted-foreground')} />
+            <span className={cn('text-[13px] leading-snug', ink ? 'text-primary-foreground/90' : 'text-foreground/85')}>{f}</span>
+          </li>
+        ))}
+      </ul>
 
-      {/* CTA button */}
-      <div className="p-6 pt-0 space-y-2">
+      <div className="px-6 pb-6 space-y-2">
         {isCurrent ? (
-          <div className="w-full text-center py-2 text-sm font-semibold text-success border border-success/30 rounded-xl bg-success/5">
-            ✓ Your Current Plan
-          </div>
-        ) : isElite ? (
-          <button
-            onClick={() => onSelect(tierKey)}
-            className="w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(to right, var(--tc-primary), var(--tc-ai))', boxShadow: '0 0 20px color-mix(in srgb, var(--tc-ai) 40%, transparent)' }}
-          >
-            {label}
-          </button>
+          <p className="h-10 flex items-center justify-center rounded-md border border-primary-foreground/20 text-sm font-semibold text-primary-foreground/80">
+            You're on {tier.name}
+          </p>
         ) : (
-          <button
+          <Button
+            className="w-full"
+            variant={noPlan || isUpgrade ? 'default' : 'outline'}
             onClick={() => onSelect(tierKey)}
-            className={cn('w-full py-2.5 rounded-xl text-sm font-semibold border transition-all', config.btnClass)}
+            disabled={busy}
           >
             {label}
-          </button>
+          </Button>
         )}
         {tierKey === 'enterprise' && (
-          <p className="text-center text-[11px] text-muted-foreground">
-            <a href="mailto:support@koachai.net" className="hover:text-warning transition-colors">Talk to Sales →</a>
+          <p className="text-center">
+            <a href="mailto:support@koachai.net" className={cn('text-[13px] font-semibold underline underline-offset-4 decoration-1', ink ? 'text-primary-foreground' : 'text-foreground')}>
+              Talk to sales
+            </a>
           </p>
         )}
       </div>
@@ -188,48 +142,22 @@ export default function PricingCards({ user, onUserUpdate, clientCount = 0, hasP
     }
   };
 
-  const orderedMobile = ['elite', 'pro', 'starter', 'enterprise'];
-
   return (
     <div>
-      {/* Billing toggle */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="flex items-center bg-[var(--kc-w-5)] rounded-full p-1 border border-white/10">
-          {['monthly', 'annual'].map(b => (
-            <button
-              key={b}
-              onClick={() => setBilling(b)}
-              className={cn(
-                'px-5 py-2 rounded-full text-sm font-semibold flex items-center gap-2 transition-all duration-200 capitalize',
-                billing === b ? 'bg-gradient-to-r from-primary to-ai text-white shadow-lg' : 'text-muted-foreground hover:text-white'
-              )}
-            >
-              {b === 'annual' ? 'yearly' : b}
-              {b === 'annual' && (
-                <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', billing === 'annual' ? 'bg-[var(--kc-w-20)] text-white' : 'bg-success/20 text-success')}>
-                  -20%
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">Billed via Stripe · Cancel anytime · No setup fees</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-5">
+        <Segmented
+          value={billing}
+          onChange={setBilling}
+          options={[
+            { value: 'monthly', label: 'Monthly' },
+            { value: 'annual', label: 'Yearly, save 20%' },
+          ]}
+        />
+        <p className="text-[13px] text-muted-foreground">Billed through Stripe. Cancel any time. No setup fees.</p>
       </div>
 
-      {/* Desktop grid */}
-      <div className="hidden md:grid md:grid-cols-4 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch">
         {TIER_ORDER.map(tierKey => (
-          <PlanCard key={tierKey} tierKey={tierKey} billing={billing}
-            isCurrent={hasPlan && userTier.key === tierKey}
-            isUpgrade={TIER_ORDER.indexOf(tierKey) > currentTierIndex}
-            noPlan={!hasPlan} busy={busyTier === tierKey}
-            onSelect={handleSelect} />
-        ))}
-      </div>
-
-      {/* Mobile */}
-      <div className="md:hidden flex flex-col gap-4">
-        {orderedMobile.map(tierKey => (
           <PlanCard key={tierKey} tierKey={tierKey} billing={billing}
             isCurrent={hasPlan && userTier.key === tierKey}
             isUpgrade={TIER_ORDER.indexOf(tierKey) > currentTierIndex}

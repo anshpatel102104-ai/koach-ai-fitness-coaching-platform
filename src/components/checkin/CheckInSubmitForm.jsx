@@ -5,49 +5,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import {
-  CheckCircle2, Loader2, Upload, X, TrendingDown, TrendingUp,
-  Minus, ChevronLeft, ChevronRight
-} from 'lucide-react';
+import { Loader2, X, Camera, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 /* ── Steps config ── */
 const STEPS = [
-  { id: 'weight',     emoji: '⚖️',  title: 'Body Weight' },
-  { id: 'feeling',    emoji: '📊',  title: 'How Are You Feeling?' },
-  { id: 'compliance', emoji: '✅',  title: 'This Week\'s Compliance' },
-  { id: 'photos',     emoji: '📸',  title: 'Progress Photos' },
-  { id: 'notes',      emoji: '📝',  title: 'Notes for Your Coach' },
+  { id: 'weight',     label: 'Weight',   title: 'Body weight',        sub: 'Same scale, first thing in the morning if you can.' },
+  { id: 'feeling',    label: 'Feeling',  title: 'How you felt',       sub: 'Mood, sleep, energy and stress across the week.' },
+  { id: 'compliance', label: 'Week',     title: 'How the week went',  sub: 'Rough is fine. Honest numbers help more than good ones.' },
+  { id: 'photos',     label: 'Photos',   title: 'Progress photos',    sub: 'Same spot and lighting as last time. Only you and your coach can see these.' },
+  { id: 'notes',      label: 'Notes',    title: 'Anything else',      sub: 'Wins, struggles, questions. Your coach reads every word.' },
 ];
 
 const MOODS = [
-  { key: 'great',    emoji: '😄', label: 'Great' },
-  { key: 'good',     emoji: '🙂', label: 'Good' },
-  { key: 'okay',     emoji: '😐', label: 'Okay' },
-  { key: 'tired',    emoji: '😴', label: 'Tired' },
-  { key: 'stressed', emoji: '😰', label: 'Stressed' },
+  { key: 'great',    label: 'Great' },
+  { key: 'good',     label: 'Good' },
+  { key: 'okay',     label: 'Okay' },
+  { key: 'tired',    label: 'Tired' },
+  { key: 'stressed', label: 'Stressed' },
 ];
 
 /* ── Reusable Slider ── */
-function Slider({ label, emoji, value, onChange, min = 1, max = 10, step = 1, lowLabel, highLabel }) {
+function Slider({ label, value, onChange, min = 1, max = 10, step = 1, lowLabel, highLabel, unit = '' }) {
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-base font-semibold">
-          {emoji && <span className="mr-1.5">{emoji}</span>}
-          {label}
-        </label>
-        <span className="text-2xl font-bold text-primary tabular-nums">{value}</span>
+    <div className="space-y-2.5">
+      <div className="flex items-baseline justify-between">
+        <label className="text-[15px] font-semibold text-foreground">{label}</label>
+        <span className="num text-[26px] leading-none text-foreground">{value}{unit}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-4 rounded-full accent-primary cursor-pointer"
+        className="w-full h-2 cursor-pointer accent-[rgb(var(--primary))]"
         style={{ touchAction: 'none' }}
+        aria-label={label}
       />
       {(lowLabel || highLabel) && (
-        <div className="flex justify-between text-xs text-foreground">
+        <div className="flex justify-between text-[13px] text-muted-foreground">
           <span>{lowLabel}</span>
           <span>{highLabel}</span>
         </div>
@@ -60,60 +55,54 @@ function Slider({ label, emoji, value, onChange, min = 1, max = 10, step = 1, lo
 function PhotoSlot({ label, url, onUpload, onRemove, uploading }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <p className="text-xs font-medium text-foreground text-center">{label}</p>
       <label className={cn(
-        'relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed cursor-pointer transition-all aspect-[3/4]',
-        uploading ? 'border-primary/50 bg-primary/5' :
-        url ? 'border-transparent' :
-        'border-border bg-secondary/30 hover:border-primary/40 active:scale-[0.97]'
+        'relative flex flex-col items-center justify-center rounded-xl cursor-pointer transition-colors aspect-[3/4] overflow-hidden',
+        url ? 'bg-secondary' : 'border-[1.5px] border-dashed border-input bg-secondary/60 hover:border-foreground'
       )}>
         <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onUpload} disabled={uploading} />
         {uploading ? (
-          <Loader2 className="w-7 h-7 animate-spin text-primary" />
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         ) : url ? (
           <>
-            <SignedImg src={url} alt={label} className="w-full h-full object-cover rounded-2xl" />
+            <SignedImg src={url} alt={label} className="w-full h-full object-cover" />
+            <span className="absolute left-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-success text-white">
+              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+            </span>
             <button
               type="button"
               onClick={e => { e.preventDefault(); onRemove(); }}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center"
+              aria-label={`Remove ${label} photo`}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[rgb(17_19_24/0.6)] flex items-center justify-center"
             >
               <X className="w-4 h-4 text-white" />
             </button>
           </>
         ) : (
-          <div className="flex flex-col items-center gap-2 py-4 px-2">
-            <Upload className="w-7 h-7 text-foreground" />
-            <span className="text-xs text-foreground text-center">Tap to add</span>
-          </div>
+          <span className="flex flex-col items-center gap-1.5">
+            <Camera className="w-5 h-5 text-foreground" />
+            <span className="text-sm font-semibold text-foreground">Add</span>
+          </span>
         )}
       </label>
+      <p className="text-sm font-semibold text-foreground text-center">{label}</p>
     </div>
   );
 }
 
-/* ── Check row ── */
-function CheckRow({ checked, onChange, label, sublabel }) {
+function QuickPicks({ value, onPick }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'w-full flex items-center gap-4 px-4 py-4 rounded-2xl border-2 transition-all active:scale-[0.98] text-left',
-        checked ? 'border-primary bg-primary/8' : 'border-border bg-secondary/30'
-      )}
-    >
-      <div className={cn(
-        'w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all',
-        checked ? 'border-primary bg-primary' : 'border-muted-foreground/40'
-      )}>
-        {checked && <CheckCircle2 className="w-4 h-4 text-white" strokeWidth={2.5} />}
-      </div>
-      <div>
-        <p className="text-base font-semibold leading-tight">{label}</p>
-        {sublabel && <p className="text-sm text-foreground mt-0.5">{sublabel}</p>}
-      </div>
-    </button>
+    <div className="flex gap-2 flex-wrap">
+      {[0, 25, 50, 75, 100].map(v => (
+        <button key={v} type="button"
+          onClick={() => onPick(v)}
+          className={cn(
+            'touch-compact h-8 px-3 rounded-md text-[13px] font-medium border transition-colors tabular-nums',
+            value === v ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-input text-foreground hover:bg-accent'
+          )}>
+          {v}%
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -166,78 +155,69 @@ export default function CheckInSubmitForm({ clientId, clientName, lastCheckIn, o
     setSaving(false);
     setSubmitted(true);
     onSuccess?.();
-    toast.success('Check-in submitted! 🎉');
+    toast.success('Check-in sent');
   };
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-5 text-center fade-up">
-        <div className="w-24 h-24 rounded-full bg-accent/20 flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-accent" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-heading font-bold">You're all set!</h2>
-          <p className="text-foreground text-sm mt-2 max-w-xs">Your coach has been notified and will review your check-in shortly. Keep up the great work 💪</p>
-        </div>
+      <div className="py-16">
+        <h2 className="text-[32px] leading-none text-foreground">Sent.</h2>
+        <p className="text-[15px] text-muted-foreground mt-3 max-w-sm">Your coach has your check-in and will reply here. Nothing else to do this week.</p>
       </div>
     );
   }
 
   const currentStep = STEPS[step];
   const isLast = step === STEPS.length - 1;
+  const nextLabel = isLast ? 'Send check-in' : `Next: ${STEPS[step + 1].label.toLowerCase()}`;
 
   return (
-    <div className="flex flex-col min-h-[75vh]">
-      {/* ── Progress bar ── */}
-      <div className="flex gap-1.5 mb-6">
+    <div className="flex flex-col min-h-[70vh]">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[15px] text-muted-foreground">
+          {clientName ? `${clientName.split(' ')[0]}'s check-in` : 'Weekly check-in'}, step {step + 1} of {STEPS.length}
+        </p>
+      </div>
+
+      {/* Progress segments with labels */}
+      <div className="grid gap-1.5 mt-3 mb-6" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
         {STEPS.map((s, i) => (
-          <div
-            key={s.id}
-            className={cn(
-              'h-1.5 flex-1 rounded-full transition-all duration-300',
-              i < step ? 'bg-primary' : i === step ? 'bg-primary/60' : 'bg-secondary'
-            )}
-          />
+          <div key={s.id}>
+            <div className={cn('h-[3px] rounded-full', i < step ? 'bg-success' : i === step ? 'bg-primary' : 'bg-border')} />
+            <p className={cn('text-[12px] mt-1.5 truncate', i <= step ? 'text-foreground font-medium' : 'text-muted-foreground')}>{s.label}</p>
+          </div>
         ))}
       </div>
 
-      {/* ── Step label ── */}
       <div className="mb-6">
-        <p className="text-2xl">{currentStep.emoji}</p>
-        <h2 className="text-xl font-heading font-bold mt-1">{currentStep.title}</h2>
-        <p className="text-sm text-foreground mt-0.5">Step {step + 1} of {STEPS.length}</p>
+        <h2 className="text-[32px] sm:text-[36px] leading-none text-foreground">{currentStep.title}</h2>
+        <p className="text-[15px] text-muted-foreground mt-2">{currentStep.sub}</p>
       </div>
 
-      {/* ── Step content ── */}
       <div className="flex-1 space-y-5">
 
-        {/* Weight */}
         {currentStep.id === 'weight' && (
-          <div className="space-y-4">
-            <Input
-              type="number"
-              inputMode="decimal"
-              placeholder="e.g. 175"
-              value={weight}
-              onChange={e => setWeight(e.target.value)}
-              className="h-20 text-3xl font-bold text-center tracking-tight rounded-2xl"
-              autoFocus
-            />
-            <p className="text-center text-sm text-foreground">Weight in lbs (optional)</p>
+          <div className="space-y-3">
+            <div className="relative">
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder="175.0"
+                value={weight}
+                onChange={e => setWeight(e.target.value)}
+                className="h-20 text-[40px] num text-center pr-12"
+                autoFocus
+                aria-label="Weight in pounds"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[15px] text-muted-foreground">lb</span>
+            </div>
+            <p className="text-[13px] text-muted-foreground text-center">Optional. Skip it if you didn't weigh in.</p>
             {lastWeight && (
-              <div className="flex items-center justify-center gap-2 text-sm bg-secondary/40 rounded-xl p-3">
-                <span className="text-foreground">Last week: <span className="font-semibold text-foreground">{lastWeight} lbs</span></span>
+              <div className="flex items-center justify-between rounded-lg bg-secondary px-4 py-3 text-sm">
+                <span className="text-muted-foreground">Last check-in <span className="font-semibold text-foreground tabular-nums">{lastWeight} lb</span></span>
                 {weightDiff !== null && (
-                  <span className={cn(
-                    'flex items-center gap-1 font-bold px-2 py-0.5 rounded-full text-xs',
-                    Number(weightDiff) < 0 ? 'bg-accent/15 text-accent' :
-                    Number(weightDiff) > 0 ? 'bg-destructive/15 text-destructive' :
-                    'bg-muted text-foreground'
-                  )}>
-                    {Number(weightDiff) < 0 ? <TrendingDown className="w-3.5 h-3.5" /> :
-                     Number(weightDiff) > 0 ? <TrendingUp className="w-3.5 h-3.5" /> :
-                     <Minus className="w-3.5 h-3.5" />}
-                    {Number(weightDiff) > 0 ? '+' : ''}{weightDiff} lbs
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {Number(weightDiff) > 0 ? '+' : Number(weightDiff) < 0 ? '−' : ''}{Math.abs(weightDiff)} lb
                   </span>
                 )}
               </div>
@@ -245,149 +225,90 @@ export default function CheckInSubmitForm({ clientId, clientName, lastCheckIn, o
           </div>
         )}
 
-        {/* Feeling */}
         {currentStep.id === 'feeling' && (
           <div className="space-y-8">
-            {/* Mood picker */}
-            <div className="space-y-3">
-              <p className="text-base font-semibold">Overall mood this week?</p>
-              <div className="grid grid-cols-5 gap-2">
+            <div className="space-y-2.5">
+              <p className="text-[15px] font-semibold text-foreground">Overall mood</p>
+              <div className="grid grid-cols-5 gap-1.5">
                 {MOODS.map(m => (
                   <button
                     key={m.key}
                     type="button"
                     onClick={() => setMood(m.key)}
+                    aria-pressed={mood === m.key}
                     className={cn(
-                      'flex flex-col items-center gap-1.5 py-3 rounded-2xl border-2 transition-all active:scale-[0.96]',
-                      mood === m.key
-                        ? 'border-primary bg-primary/8 shadow-sm'
-                        : 'border-border bg-secondary/30'
+                      'h-11 rounded-lg border text-[13px] font-medium transition-colors',
+                      mood === m.key ? 'bg-primary text-primary-foreground border-primary' : 'bg-card border-input text-foreground hover:bg-accent'
                     )}
                   >
-                    <span className="text-2xl">{m.emoji}</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground">{m.label}</span>
+                    {m.label}
                   </button>
                 ))}
               </div>
             </div>
-            <Slider emoji="😴" label="Sleep" value={sleep} onChange={setSleep}
-              min={1} max={12} step={0.5} lowLabel="1 hr" highLabel="12 hrs" />
-            <Slider emoji="⚡" label="Energy" value={energy} onChange={setEnergy}
-              min={1} max={10} lowLabel="Exhausted" highLabel="Energized" />
-            <Slider emoji="🧠" label="Stress" value={stress} onChange={setStress}
-              min={1} max={10} lowLabel="Super calm" highLabel="Very stressed" />
+            <Slider label="Sleep" unit=" h" value={sleep} onChange={setSleep}
+              min={1} max={12} step={0.5} lowLabel="1 hour" highLabel="12 hours" />
+            <Slider label="Energy" value={energy} onChange={setEnergy}
+              min={1} max={10} lowLabel="Exhausted" highLabel="Full of energy" />
+            <Slider label="Stress" value={stress} onChange={setStress}
+              min={1} max={10} lowLabel="Calm" highLabel="Very stressed" />
           </div>
         )}
 
-        {/* Compliance */}
         {currentStep.id === 'compliance' && (
           <div className="space-y-8">
-            <div className="space-y-4">
-              <Slider
-                emoji="🏋️"
-                label="Training compliance"
-                value={trainingCompliance}
-                onChange={setTrainingCompliance}
-                min={0} max={100} step={5}
-                lowLabel="0% — skipped all"
-                highLabel="100% — perfect"
-              />
-              <div className="flex justify-center gap-2 flex-wrap">
-                {[0,25,50,75,100].map(v => (
-                  <button key={v} type="button"
-                    onClick={() => setTrainingCompliance(v)}
-                    className={cn(
-                      'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-                      trainingCompliance === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'
-                    )}>
-                    {v}%
-                  </button>
-                ))}
-              </div>
+            <div className="space-y-3">
+              <Slider label="Workouts done" unit="%" value={trainingCompliance} onChange={setTrainingCompliance}
+                min={0} max={100} step={5} lowLabel="None" highLabel="Every one" />
+              <QuickPicks value={trainingCompliance} onPick={setTrainingCompliance} />
             </div>
-            <div className="space-y-4">
-              <Slider
-                emoji="🥗"
-                label="Nutrition compliance"
-                value={nutritionCompliance}
-                onChange={setNutritionCompliance}
-                min={0} max={100} step={5}
-                lowLabel="0% — off track"
-                highLabel="100% — nailed it"
-              />
-              <div className="flex justify-center gap-2 flex-wrap">
-                {[0,25,50,75,100].map(v => (
-                  <button key={v} type="button"
-                    onClick={() => setNutritionCompliance(v)}
-                    className={cn(
-                      'px-3 py-1 rounded-full text-xs font-semibold border transition-colors',
-                      nutritionCompliance === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'
-                    )}>
-                    {v}%
-                  </button>
-                ))}
-              </div>
+            <div className="space-y-3">
+              <Slider label="Ate to plan" unit="%" value={nutritionCompliance} onChange={setNutritionCompliance}
+                min={0} max={100} step={5} lowLabel="Off track" highLabel="Every meal" />
+              <QuickPicks value={nutritionCompliance} onPick={setNutritionCompliance} />
             </div>
           </div>
         )}
 
-        {/* Photos */}
         {currentStep.id === 'photos' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              {(['front', 'side', 'back']).map(slot => (
-                <PhotoSlot
-                  key={slot}
-                  label={slot.charAt(0).toUpperCase() + slot.slice(1)}
-                  url={photos[slot]}
-                  uploading={uploadingSlot === slot}
-                  onUpload={e => handlePhotoUpload(slot, e)}
-                  onRemove={() => setPhotos(p => ({ ...p, [slot]: '' }))}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-foreground text-center">Photos are private — only visible to your coach</p>
+          <div className="grid grid-cols-3 gap-3">
+            {(['front', 'side', 'back']).map(slot => (
+              <PhotoSlot
+                key={slot}
+                label={slot.charAt(0).toUpperCase() + slot.slice(1)}
+                url={photos[slot]}
+                uploading={uploadingSlot === slot}
+                onUpload={e => handlePhotoUpload(slot, e)}
+                onRemove={() => setPhotos(p => ({ ...p, [slot]: '' }))}
+              />
+            ))}
           </div>
         )}
 
-        {/* Notes */}
         {currentStep.id === 'notes' && (
           <Textarea
-            placeholder="Share wins, struggles, how you're feeling overall, or anything you want your coach to know..."
+            placeholder="What went well, what got in the way, anything you want to ask."
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={7}
-            className="text-base resize-none leading-relaxed rounded-2xl"
+            className="resize-none"
             autoFocus
           />
         )}
       </div>
 
-      {/* ── Navigation ── */}
-      <div className="flex gap-3 mt-8 pt-4 border-t border-border">
+      <div className="flex gap-3 mt-8">
         {step > 0 && (
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-14 px-5 rounded-2xl"
-            onClick={() => setStep(s => s - 1)}
-          >
-            <ChevronLeft className="w-5 h-5" />
+          <Button variant="outline" className="h-12 px-5 text-[15px]" onClick={() => setStep(s => s - 1)}>
+            Back
           </Button>
         )}
         <Button
-          size="lg"
-          className="flex-1 h-14 text-base font-bold rounded-2xl"
+          className="flex-1 h-12 text-[15px]"
           onClick={() => isLast ? handleSubmit() : setStep(s => s + 1)}
           disabled={saving || (currentStep.id === 'photos' && !!uploadingSlot)}
         >
-          {saving ? (
-            <><Loader2 className="w-5 h-5 animate-spin mr-2" />Submitting...</>
-          ) : isLast ? (
-            'Submit Check-In ✓'
-          ) : (
-            <>Next <ChevronRight className="w-5 h-5 ml-1" /></>
-          )}
+          {saving ? <><Loader2 className="animate-spin" /> Sending…</> : nextLabel}
         </Button>
       </div>
     </div>

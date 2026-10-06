@@ -4,16 +4,17 @@ import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
-  ArrowLeft, Play, Pause, RotateCcw, CheckCircle2, Circle,
-  ChevronDown, ChevronUp, Timer, Trophy
+  ArrowLeft, Play, Pause, RotateCcw, Check, Loader2,
+  ChevronDown, ChevronUp, Timer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { SignedVideo } from '@/components/shared/SignedImage';
 
-/* ── Rest Timer ── */
+/* ── Rest Timer: ink bar ── */
 function RestTimer({ seconds, onDone }) {
   const [remaining, setRemaining] = useState(seconds);
   const [running, setRunning] = useState(false);
@@ -32,43 +33,26 @@ function RestTimer({ seconds, onDone }) {
   }, [running]);
 
   const reset = () => { clearInterval(intervalRef.current); setRunning(false); setRemaining(seconds); };
-  const pct = ((seconds - remaining) / seconds) * 100;
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-sidebar rounded-2xl border border-white/10">
-      {/* Circular progress */}
-      <div className="relative w-14 h-14 flex-shrink-0">
-        <svg className="w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="24" fill="none" stroke="color-mix(in srgb, white 8%, transparent)" strokeWidth="4" />
-          <circle cx="28" cy="28" r="24" fill="none" stroke="var(--tc-primary)" strokeWidth="4"
-            strokeDasharray={`${2 * Math.PI * 24}`}
-            strokeDashoffset={`${2 * Math.PI * 24 * (1 - pct / 100)}`}
-            strokeLinecap="round" className="transition-all duration-1000" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-white font-bold text-xs">{mins}:{secs.toString().padStart(2,'0')}</span>
-        </div>
-      </div>
-      <div className="flex-1">
-        <p className="text-white text-xs font-semibold">Rest Timer</p>
-        <p className="text-white/40 text-[10px]">{seconds}s programmed</p>
-      </div>
-      <div className="flex gap-1.5">
-        <button onClick={() => setRunning(r => !r)}
-          className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
-          {running ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" fill="currentColor" />}
-        </button>
-        <button onClick={reset} className="w-9 h-9 rounded-xl bg-[var(--kc-w-10)] flex items-center justify-center text-white/60">
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      </div>
+    <div className="flex items-center gap-3 rounded-xl bg-sidebar px-4 py-3 text-white dark:ring-1 dark:ring-inset dark:ring-white/10">
+      <p className="flex-1 text-[15px] text-white/90">Rest <span className="text-white/60">({seconds} s)</span></p>
+      <span className="num text-[28px]">{mins}:{secs.toString().padStart(2, '0')}</span>
+      <button type="button" onClick={() => setRunning(r => !r)} aria-label={running ? 'Pause' : 'Start'}
+        className="touch-compact flex h-9 w-9 items-center justify-center rounded-md border border-white/25 hover:bg-white/10">
+        {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" fill="currentColor" />}
+      </button>
+      <button type="button" onClick={reset} aria-label="Reset"
+        className="touch-compact flex h-9 w-9 items-center justify-center rounded-md text-white/70 hover:bg-white/10">
+        <RotateCcw className="h-4 w-4" />
+      </button>
     </div>
   );
 }
 
-/* ── Exercise Card (client view) ── */
+/* ── Exercise card (client view) ── */
 function ExerciseCard({ ex, exIdx, log, onLogSet }) {
   const [expanded, setExpanded] = useState(true);
   const [showTimer, setShowTimer] = useState(false);
@@ -76,94 +60,88 @@ function ExerciseCard({ ex, exIdx, log, onLogSet }) {
   const allDone = completedSets === ex.sets;
 
   return (
-    <div className={cn('rounded-2xl overflow-hidden border', allDone ? 'border-success bg-success/50' : 'border-border bg-card')}>
+    <section className="panel overflow-hidden">
       {/* Header */}
-      <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left" onClick={() => setExpanded(v => !v)}>
-        <div className={cn('w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold',
-          allDone ? 'bg-success text-white' : 'bg-accent/10 text-primary')}>
-          {allDone ? <CheckCircle2 className="w-4 h-4" /> : exIdx + 1}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-foreground">{ex.name}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {ex.sets} sets × {ex.reps} reps
-            {ex.tempo && ` · Tempo ${ex.tempo}`}
-            {ex.rpe && ` · RPE ${ex.rpe}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full',
-            allDone ? 'bg-success/10 text-success' : 'bg-secondary text-muted-foreground')}>
-            {completedSets}/{ex.sets}
+      <button type="button" className="flex w-full items-center gap-3 px-4 py-3.5 text-left" onClick={() => setExpanded(v => !v)} aria-expanded={expanded}>
+        <span className={cn('flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold',
+          allDone ? 'bg-success text-white' : 'bg-secondary text-foreground')}>
+          {allDone ? <Check className="h-4 w-4" strokeWidth={3} /> : exIdx + 1}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[17px] font-bold text-foreground">{ex.name}</span>
+          <span className="block text-[13px] text-muted-foreground">
+            {ex.sets} sets of {ex.reps}
+            {ex.rpe && `, RPE ${ex.rpe}`}
+            {ex.tempo && `, tempo ${ex.tempo}`}
           </span>
-          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-        </div>
+        </span>
+        <span className="text-[13px] font-semibold tabular-nums text-muted-foreground">{completedSets}/{ex.sets}</span>
+        {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
 
       {expanded && (
-        <div className="border-t border-[var(--kc-f5f7fb)] px-4 pb-4 space-y-3">
+        <div className="space-y-3 border-t border-border px-4 pb-4 pt-3">
           {/* Video embed */}
           {(ex.video_url || ex._library_exercise?.video_url) && (
-            <div className="mt-3">
-              <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-                {(ex.video_url || '').includes('youtube') || (ex._library_exercise?.video_url || '').includes('youtube') ? (
-                  <iframe
-                    src={`https://www.youtube.com/embed/${getYouTubeId(ex.video_url || ex._library_exercise?.video_url || '')}`}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                    allowFullScreen
-                  />
-                ) : (
-                  <SignedVideo src={ex.video_url || ex._library_exercise?.video_url} controls className="w-full h-full object-cover" />
-                )}
-              </div>
+            <div className="relative aspect-video overflow-hidden rounded-xl bg-sidebar">
+              {(ex.video_url || '').includes('youtube') || (ex._library_exercise?.video_url || '').includes('youtube') ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${getYouTubeId(ex.video_url || ex._library_exercise?.video_url || '')}`}
+                  className="h-full w-full"
+                  title={`${ex.name} demo`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                  allowFullScreen
+                />
+              ) : (
+                <SignedVideo src={ex.video_url || ex._library_exercise?.video_url} controls className="h-full w-full object-cover" />
+              )}
             </div>
           )}
 
           {/* Coaching notes */}
           {ex.notes && (
-            <div className="p-3 bg-warning/10 border border-warning rounded-xl">
-              <p className="text-[10px] font-bold text-warning uppercase tracking-wider mb-1">Coach Notes</p>
-              <p className="text-xs text-foreground leading-relaxed">{ex.notes}</p>
+            <div className="rounded-lg bg-secondary px-4 py-3 text-[15px] leading-snug text-foreground">
+              <span className="font-bold">Coach note:</span> {ex.notes}
             </div>
           )}
 
           {/* Set logger */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-4 gap-2 px-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Set</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">Weight</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">Reps</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center">Done</span>
+          <div role="table" aria-label={`${ex.name} sets`}>
+            <div role="row" className="grid grid-cols-[32px_1fr_1fr_44px] items-center gap-2 pb-2 text-[13px] text-muted-foreground">
+              <span role="columnheader">Set</span>
+              <span role="columnheader">lb</span>
+              <span role="columnheader">Reps</span>
+              <span role="columnheader" className="text-right">Done</span>
             </div>
             {Array.from({ length: ex.sets }).map((_, setIdx) => {
               const setLog = log?.sets_completed?.[setIdx] || {};
               const done = !!setLog.completed;
               return (
-                <div key={setIdx} className={cn('grid grid-cols-4 gap-2 items-center p-2 rounded-xl transition-colors',
-                  done ? 'bg-success/10' : 'bg-muted')}>
-                  <span className={cn('text-sm font-bold', done ? 'text-success' : 'text-muted-foreground')}>
-                    {setIdx + 1}
-                  </span>
+                <div key={setIdx} role="row" className="grid grid-cols-[32px_1fr_1fr_44px] items-center gap-2 border-t border-border py-2">
+                  <span className="num text-[20px] text-foreground">{setIdx + 1}</span>
                   <Input
                     type="number"
-                    placeholder="lbs"
+                    inputMode="decimal"
+                    placeholder="0"
+                    aria-label={`Set ${setIdx + 1} weight`}
                     value={setLog.weight || ''}
                     onChange={e => onLogSet(exIdx, setIdx, 'weight', Number(e.target.value))}
-                    className={cn('h-8 text-center text-xs border-border p-1', done && 'border-success bg-success/10')}
+                    className="num h-11 text-center text-lg"
                   />
                   <Input
                     type="number"
-                    placeholder={ex.reps}
+                    inputMode="numeric"
+                    placeholder={String(ex.reps ?? '')}
+                    aria-label={`Set ${setIdx + 1} reps`}
                     value={setLog.reps || ''}
                     onChange={e => onLogSet(exIdx, setIdx, 'reps', Number(e.target.value))}
-                    className={cn('h-8 text-center text-xs border-border p-1', done && 'border-success bg-success/10')}
+                    className="num h-11 text-center text-lg"
                   />
-                  <button onClick={() => onLogSet(exIdx, setIdx, 'completed', !done)}
-                    className="flex justify-center">
-                    {done
-                      ? <CheckCircle2 className="w-6 h-6 text-success" />
-                      : <Circle className="w-6 h-6 text-muted-foreground" />}
+                  <button type="button" onClick={() => onLogSet(exIdx, setIdx, 'completed', !done)}
+                    aria-label={done ? `Undo set ${setIdx + 1}` : `Mark set ${setIdx + 1} done`}
+                    className={cn('touch-compact ml-auto flex h-9 w-9 items-center justify-center rounded-full',
+                      done ? 'bg-success text-white' : 'border-2 border-input hover:border-foreground')}>
+                    {done && <Check className="h-4 w-4" strokeWidth={3} />}
                   </button>
                 </div>
               );
@@ -173,22 +151,21 @@ function ExerciseCard({ ex, exIdx, log, onLogSet }) {
           {/* Rest timer */}
           {ex.rest_seconds > 0 && (
             <div>
-              <button onClick={() => setShowTimer(v => !v)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                <Timer className="w-3.5 h-3.5" />
-                Rest timer ({ex.rest_seconds}s)
-                {showTimer ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              <button type="button" onClick={() => setShowTimer(v => !v)}
+                className="flex items-center gap-1.5 text-sm font-semibold text-foreground underline underline-offset-4">
+                <Timer className="h-4 w-4" />
+                {showTimer ? 'Hide rest timer' : `Rest timer, ${ex.rest_seconds} s`}
               </button>
               {showTimer && (
                 <div className="mt-2">
-                  <RestTimer seconds={ex.rest_seconds} onDone={() => toast.success('Rest done! Start your next set 💪')} />
+                  <RestTimer seconds={ex.rest_seconds} onDone={() => toast.success('Rest is up. Start your next set.')} />
                 </div>
               )}
             </div>
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -197,54 +174,38 @@ function getYouTubeId(url = '') {
   return m ? m[1] : '';
 }
 
-/* ── Session Complete Modal ── */
+/* ── Session complete sheet ── */
 function CompleteModal({ open, onClose, onSubmit }) {
   const [rating, setRating] = useState(7);
   const [note, setNote] = useState('');
   return open ? (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-sm bg-card rounded-3xl p-6 space-y-5 shadow-2xl">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3">
-            <Trophy className="w-8 h-8 text-success" />
-          </div>
-          <h2 className="font-bold text-xl text-foreground">Session Complete!</h2>
-          <p className="text-sm text-muted-foreground mt-1">Great work. Log how it felt.</p>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
+      <div className="w-full max-w-[480px] rounded-t-xl bg-card p-5 sm:rounded-xl" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 20px)' }}>
+        <h2 className="text-[28px] text-foreground">Finish session</h2>
+        <p className="mt-1 text-[15px] text-muted-foreground">Rate the effort and leave your coach a note.</p>
+
+        <p className="mt-5 text-[13px] text-muted-foreground">How hard was it? <span className="font-semibold text-foreground">{rating} of 10</span></p>
+        <div className="mt-2 grid grid-cols-5 gap-1.5">
+          {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+            <button key={n} type="button" onClick={() => setRating(n)} aria-pressed={n === rating}
+              className={cn('touch-compact num h-11 rounded-lg text-xl transition-colors',
+                n === rating ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground hover:bg-accent')}>
+              {n}
+            </button>
+          ))}
         </div>
 
-        {/* Rating */}
-        <div>
-          <p className="text-sm font-semibold text-foreground mb-2 text-center">How hard was today? <span className="text-primary">{rating}/10</span></p>
-          <div className="flex gap-1.5 justify-center flex-wrap">
-            {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-              <button key={n} onClick={() => setRating(n)}
-                className={cn('w-9 h-9 rounded-xl text-sm font-bold border transition-all',
-                  n === rating ? 'bg-primary text-primary-foreground border-primary' :
-                  n <= 3 ? 'border-success text-success hover:bg-success/10' :
-                  n <= 7 ? 'border-warning text-warning hover:bg-warning/10' :
-                  'border-destructive text-destructive hover:bg-destructive/10')}>
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Textarea
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="How did it feel? Any PRs? Anything hurt?"
+          rows={3}
+          className="mt-4 text-base"
+        />
 
-        {/* Note */}
-        <div>
-          <textarea
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="Session note (optional) — how did it feel? any PRs?"
-            rows={3}
-            className="w-full px-3 py-2.5 text-sm rounded-xl border border-border resize-none focus:outline-none focus:border-primary/40 text-foreground"
-          />
-        </div>
-
-        <div className="flex gap-3">
-          <Button variant="outline" className="flex-1" onClick={onClose}>Skip</Button>
-          <Button className="flex-1 gap-2" onClick={() => onSubmit(rating, note)}>
-            <CheckCircle2 className="w-4 h-4" /> Save Session
-          </Button>
+        <div className="mt-4 flex gap-2">
+          <Button variant="outline" size="lg" className="flex-1" onClick={onClose}>Not yet</Button>
+          <Button size="lg" className="flex-1" onClick={() => onSubmit(rating, note)}>Save session</Button>
         </div>
       </div>
     </div>
@@ -287,7 +248,7 @@ export default function ClientWorkoutView() {
     mutationFn: (data) => db.entities.WorkoutSession.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workout_sessions'] });
-      toast.success('Session logged! 🔥');
+      toast.success('Session logged');
       navigate(-1);
     },
   });
@@ -308,7 +269,7 @@ export default function ClientWorkoutView() {
   const progress = totalSets > 0 ? doneSets / totalSets : 0;
 
   const handleComplete = (rating, note) => {
-    if (!myClient?.id) { toast.error('Still loading your profile — try again in a moment'); return; }
+    if (!myClient?.id) { toast.error('Still loading your profile. Try again in a moment.'); return; }
     const durationMinutes = Math.round((Date.now() - startTime) / 60000);
     saveMutation.mutate({
       client_id: myClient.id,
@@ -328,59 +289,53 @@ export default function ClientWorkoutView() {
   };
 
   if (!program || !workout) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">Loading workout…</p>
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading workout</p>
     </div>
   );
 
+  const exDone = (i) => ((exerciseLogs[i]?.sets_completed || []).filter(x => x.completed).length) >= (exercises[i]?.sets || 0);
+
   return (
-    <div className="min-h-screen bg-muted">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border shadow-sm">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-secondary">
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-sm text-foreground truncate">{workout.day_name}</p>
-            <p className="text-xs text-muted-foreground">{program.title} · {exercises.length} exercises</p>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto min-h-screen max-w-[560px] bg-background">
+        {/* Top bar */}
+        <div className="sticky top-0 z-10 border-b border-border bg-card px-4 pb-3" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => navigate(-1)} aria-label="Back"
+              className="touch-compact flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground hover:bg-accent">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[17px] font-bold text-foreground">{workout.day_name}</p>
+              <p className="truncate text-[13px] text-muted-foreground">{program.title}, {exercises.length} exercises</p>
+            </div>
+            <p className="num text-[24px] text-foreground">{doneSets}<span className="text-muted-foreground">/{totalSets}</span></p>
           </div>
-          <button onClick={() => setShowComplete(true)}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all',
-              progress === 1 ? 'bg-success text-white' : 'bg-primary text-primary-foreground')}>
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            {progress === 1 ? 'Finish!' : 'Complete'}
-          </button>
+          <div className="mt-3 flex gap-1.5">
+            {exercises.map((ex, i) => (
+              <span key={i} className={cn('h-1.5 flex-1 rounded-full', exDone(i) ? 'bg-foreground' : 'bg-secondary')} />
+            ))}
+          </div>
         </div>
-        {/* Progress bar */}
-        <div className="h-1 bg-accent/10">
-          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${progress * 100}%` }} />
-        </div>
-        <div className="px-4 py-1.5 flex items-center justify-between">
-          <span className="text-[10px] text-muted-foreground">{doneSets} of {totalSets} sets done</span>
-          <span className="text-[10px] font-semibold text-primary">{Math.round(progress * 100)}%</span>
-        </div>
-      </div>
 
-      {/* Exercises */}
-      <div className="max-w-lg mx-auto px-4 py-4 space-y-3">
-        {exercises.map((ex, exIdx) => (
-          <ExerciseCard
-            key={exIdx}
-            ex={ex}
-            exIdx={exIdx}
-            log={exerciseLogs[exIdx]}
-            onLogSet={logSet}
-          />
-        ))}
+        {/* Exercises */}
+        <div className="space-y-3 px-4 py-4">
+          {exercises.map((ex, exIdx) => (
+            <ExerciseCard
+              key={exIdx}
+              ex={ex}
+              exIdx={exIdx}
+              log={exerciseLogs[exIdx]}
+              onLogSet={logSet}
+            />
+          ))}
+        </div>
 
-        {/* Finish CTA */}
-        <div className="pt-2 pb-8">
-          <Button className="w-full h-12 text-base gap-2 rounded-2xl" onClick={() => setShowComplete(true)}>
-            <Trophy className="w-5 h-5" /> Finish Session
+        {/* Finish */}
+        <div className="sticky bottom-0 border-t border-border bg-card px-4 pt-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+          <Button variant="brand" size="lg" className="h-[52px] w-full text-base font-bold" onClick={() => setShowComplete(true)}>
+            {progress === 1 ? 'Finish session' : `Finish session (${Math.round(progress * 100)}% logged)`}
           </Button>
         </div>
       </div>

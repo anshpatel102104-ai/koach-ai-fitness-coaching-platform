@@ -1,141 +1,130 @@
-import React, { useState } from 'react';
-import { X, Edit2, UserPlus } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Page, PageHeader, Segmented } from '@/components/kit';
 import OverviewTab from './detail/OverviewTab';
-import MealPlanTab from './detail/MealPlanTab';
+import MealPlanTab, { CalorieSummary } from './detail/MealPlanTab';
 import AlternativesTab from './detail/AlternativesTab';
 import ShoppingListTab from './detail/ShoppingListTab';
 import PlanDetailSidebar from './detail/PlanDetailSidebar';
+import GroceryListModal, { groceryCount } from './GroceryListModal';
+import { planClients, goalLabel } from './planUtils';
 
 const TABS = [
-  { key: 'overview',      label: 'Overview' },
-  { key: 'meals',         label: 'Meal Plan' },
-  { key: 'alternatives',  label: 'Alternatives' },
-  { key: 'shopping',      label: 'Shopping List' },
+  { value: 'meals',        label: 'Meals' },
+  { value: 'overview',     label: 'Guidance' },
+  { value: 'alternatives', label: 'Swaps' },
+  { value: 'shopping',     label: 'Shopping list' },
 ];
 
+/**
+ * Full-screen plan view (reference: Meal plan). Calorie headline and macro
+ * bar, the day's meals as a timeline, and a right column with the allergy
+ * check, supplements and grocery list. Sits over the content area and leaves
+ * the sidebar visible on desktop.
+ */
 export default function NutritionPlanDetailModal({ open, onOpenChange, plan, onEdit, onAssign }) {
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState('meals');
+  const [dayType, setDayType] = useState('training');
+  const [groceryOpen, setGroceryOpen] = useState(false);
+
+  const { data: allClients = [] } = useQuery({
+    queryKey: ['clients-sidebar'],
+    queryFn: () => db.entities.Client.list(),
+    enabled: !!plan?.id && open,
+  });
+
+  const close = () => onOpenChange(false);
+
+  // Escape closes; lock page scroll behind the sheet.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !groceryOpen) onOpenChange(false); };
+    window.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, groceryOpen, onOpenChange]);
+
+  const assignedClients = useMemo(() => planClients(plan, allClients), [plan, allClients]);
+  const hasRestDay = (plan?.rest_day_meals || []).length > 0;
+  const allMeals = useMemo(() => [...(plan?.meals || []), ...(plan?.rest_day_meals || [])], [plan]);
 
   if (!plan || !open) return null;
 
-  const isHabits = plan.tracking_mode === 'habits';
+  const meals = hasRestDay && dayType === 'rest' ? plan.rest_day_meals : (plan.meals || []);
+  const client = assignedClients[0];
+  const goal = goalLabel(plan, client);
+  const eyebrow = [client?.name || (plan.is_template ? 'Template' : 'Not assigned'), goal].filter(Boolean).join(', ');
+  const count = groceryCount(allMeals);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={() => onOpenChange(false)} />
+    <div
+      className="fixed inset-0 lg:left-[248px] z-40 bg-background overflow-y-auto overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-label={plan.title || 'Meal plan'}
+    >
+      <Page>
+        <button
+          onClick={close}
+          className="touch-compact mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-4 h-4" /> All meal plans
+        </button>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97 }}
-        transition={{ duration: 0.18 }}
-        className="relative w-full h-[95dvh] sm:h-[90vh] sm:max-w-[90vw] bg-card sm:rounded-xl rounded-t-2xl flex flex-col overflow-hidden border border-border"
-        style={{ maxWidth: 1100 }}
-      >
-        {/* ── Clean header ── */}
-        <div className="flex-shrink-0 border-b border-border bg-card">
-          {/* Top row */}
-          <div className="flex items-center justify-between gap-4 px-6 pt-4 pb-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <span className={cn(
-                  'text-xs font-medium px-2.5 py-0.5 rounded-full border',
-                  isHabits
-                    ? 'bg-muted text-foreground border-border'
-                    : 'bg-muted text-foreground border-border'
-                )}>
-                  {isHabits ? 'Habit Mode' : 'Macro Tracking'}
-                </span>
-                {plan.is_template && (
-                  <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-muted text-foreground border border-border">Template</span>
-                )}
-              </div>
-              <h2 className="text-lg font-semibold text-foreground leading-tight truncate">{plan.title}</h2>
-              {plan.description && (
-                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</p>
+        <PageHeader
+          eyebrow={eyebrow}
+          title={plan.title || 'Meal plan'}
+          subtitle={plan.tracking_mode === 'habits' ? 'Habit mode. Clients check off habits instead of logging macros.' : null}
+          actions={
+            <>
+              {hasRestDay && (
+                <Segmented
+                  value={dayType}
+                  onChange={setDayType}
+                  options={[{ value: 'training', label: 'Training day' }, { value: 'rest', label: 'Rest day' }]}
+                />
               )}
+              <Button variant="outline" onClick={onEdit}>Edit plan</Button>
+              <Button onClick={onAssign}>{client ? 'Assign clients' : 'Assign to client'}</Button>
+              <Button variant="ghost" size="icon" onClick={close} aria-label="Close plan" className="hidden sm:inline-flex">
+                <X />
+              </Button>
+            </>
+          }
+        />
+
+        <div className="space-y-5">
+          <CalorieSummary plan={plan} meals={meals} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_344px] gap-5 items-start">
+            <div className="space-y-4 min-w-0">
+              <Segmented size="sm" value={tab} onChange={setTab} options={TABS} />
+              {tab === 'meals'        && <MealPlanTab plan={plan} meals={meals} />}
+              {tab === 'overview'     && <OverviewTab plan={plan} />}
+              {tab === 'alternatives' && <AlternativesTab plan={plan} />}
+              {tab === 'shopping'     && <ShoppingListTab plan={plan} meals={meals} />}
             </div>
 
-            {/* Macro stats inline */}
-            {!isHabits && (
-              <div className="hidden md:flex items-center gap-5 px-4 py-2 bg-background border border-border rounded-lg">
-                {[
-                  { label: 'Calories', value: plan.calories, unit: 'kcal' },
-                  { label: 'Protein',  value: plan.protein_g, unit: 'g' },
-                  { label: 'Carbs',    value: plan.carbs_g,   unit: 'g' },
-                  { label: 'Fats',     value: plan.fats_g,    unit: 'g' },
-                ].filter(m => m.value).map(m => (
-                  <div key={m.label} className="text-center">
-                    <p className="text-sm font-semibold text-foreground">{m.value}<span className="text-xs text-muted-foreground ml-0.5">{m.unit}</span></p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{m.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Button size="sm" className="gap-1.5 text-xs h-8 bg-sidebar text-white hover:bg-sidebar-accent" onClick={onAssign}>
-                <UserPlus className="w-3.5 h-3.5" /> Assign
-              </Button>
-              <Button size="sm" variant="outline" className="gap-1.5 text-xs h-8 border-border text-foreground hover:bg-background" onClick={onEdit}>
-                <Edit2 className="w-3.5 h-3.5" /> Edit
-              </Button>
-              <button onClick={() => onOpenChange(false)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Tab bar */}
-          <div className="flex gap-0 overflow-x-auto px-6">
-            {TABS.map(t => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={cn(
-                  'relative px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
-                  tab === t.key ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {t.label}
-                {tab === t.key && (
-                  <motion.div
-                    layoutId="modal-tab-indicator"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full"
-                  />
-                )}
-              </button>
-            ))}
+            <PlanDetailSidebar
+              plan={plan}
+              meals={allMeals}
+              assignedClients={assignedClients}
+              groceryCount={count}
+              onAssign={onAssign}
+              onOpenGrocery={() => setGroceryOpen(true)}
+            />
           </div>
         </div>
+      </Page>
 
-        {/* ── Two-column body ── */}
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0 bg-background">
-        <div className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 py-5">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tab}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.12 }}
-              >
-                {tab === 'overview'     && <OverviewTab plan={plan} />}
-                {tab === 'meals'        && <MealPlanTab plan={plan} />}
-                {tab === 'alternatives' && <AlternativesTab plan={plan} />}
-                {tab === 'shopping'     && <ShoppingListTab plan={plan} />}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          <div className="flex-shrink-0 overflow-y-auto px-5 py-5 border-t lg:border-t-0 lg:border-l border-border bg-card hidden lg:block" style={{ width: 280 }}>
-            <PlanDetailSidebar plan={plan} onAssign={onAssign} />
-          </div>
-        </div>
-      </motion.div>
+      <GroceryListModal open={groceryOpen} onOpenChange={setGroceryOpen} plan={plan} meals={allMeals} />
     </div>
   );
 }

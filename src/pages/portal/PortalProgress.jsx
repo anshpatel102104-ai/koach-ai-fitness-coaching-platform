@@ -2,9 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO, differenceInWeeks } from 'date-fns';
-import { Scale, Plus, X
-} from 'lucide-react';
+import { format, parseISO, differenceInWeeks, startOfWeek, subWeeks, addDays } from 'date-fns';
+import { Plus, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Stat, Segmented, ComplianceStrip, complianceState } from '@/components/kit';
+import { cn } from '@/lib/utils';
+import { PortalScreen, PortalHeader, Sheet, Bar } from '@/components/portal/PortalUI';
 import AIProgressAnalyzer from '@/components/progress/AIProgressAnalyzer';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceLine } from 'recharts';
 
@@ -27,14 +30,19 @@ function calcScore(client, checkIns, sessions) {
 }
 
 function scoreLabel(s) {
-  if (s >= 80) return 'Crushing it! 🔥';
-  if (s >= 60) return 'Great momentum! 💪';
-  if (s >= 40) return 'Building habits 📈';
-  return 'Every journey starts here 🌱';
+  if (s >= 80) return 'On a roll. Keep doing what you are doing.';
+  if (s >= 60) return 'Good momentum. Consistency is paying off.';
+  if (s >= 40) return 'Habits are forming. Stack a few good weeks.';
+  return 'Just getting started. Every check-in counts.';
 }
 
-/* ── Weight chart ── */
+/* ── Weight chart: ink line, dashed goal, brand dot on the latest weigh-in ── */
 const TIME_RANGES = ['4W', '8W', '3M', '6M', 'All'];
+
+function LastDot({ cx, cy, index, dataLength }) {
+  if (index !== dataLength - 1 || cx == null) return null;
+  return <circle cx={cx} cy={cy} r={5} fill="rgb(var(--brand))" stroke="rgb(var(--card))" strokeWidth={2} />;
+}
 
 function WeightChart({ checkIns, client }) {
   const [range, setRange] = useState('8W');
@@ -51,149 +59,74 @@ function WeightChart({ checkIns, client }) {
   const startW = checkIns.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date))[0]?.weight;
   const currentW = checkIns.filter(c => c.weight).sort((a, b) => new Date(b.date) - new Date(a.date))[0]?.weight;
   const goalW = client?.target_weight;
-
-  if (!data.length) return (
-    <div className="p-8 text-center">
-      <Scale className="w-10 h-10 text-border mx-auto mb-3" />
-      <p className="text-muted-foreground text-sm font-semibold">Log your starting weight to begin tracking! 💪</p>
-    </div>
-  );
+  const change = startW && currentW ? currentW - startW : null;
 
   return (
     <div>
-      <div className="flex gap-1.5 mb-4 overflow-x-auto scrollbar-hide">
-        {TIME_RANGES.map(r => (
-          <button key={r} onClick={() => setRange(r)}
-            className="px-3 py-1 rounded-full text-xs font-bold flex-shrink-0 transition-all"
-            style={{
-              background: range === r ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' : 'rgb(var(--muted))',
-              color: range === r ? 'white' : 'rgb(var(--muted-foreground))',
-              border: range === r ? 'none' : '1px solid rgb(var(--muted))',
-            }}>
-            {r}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-3">
+        <Stat label="Start" value={startW ? Number(startW).toFixed(1) : '–'} unit={startW ? 'lb' : ''} />
+        <Stat label="Now" value={currentW ? Number(currentW).toFixed(1) : '–'} unit={currentW ? 'lb' : ''}
+          sub={change !== null ? `${change > 0 ? '+' : ''}${change.toFixed(1)} lb` : null} />
+        <Stat label="Goal" value={goalW || '–'} unit={goalW ? 'lb' : ''}
+          sub={goalW && currentW ? `${Math.abs(currentW - goalW).toFixed(1)} lb to go` : null} />
       </div>
-      <ResponsiveContainer width="100%" height={160}>
-        <LineChart data={data} margin={{ left: -20, right: 10 }}>
-          <XAxis dataKey="date" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 9 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 9 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
-          <Tooltip contentStyle={{ background: 'rgb(var(--card))', border: '1px solid rgb(var(--border))', borderRadius: 12, color: 'rgb(var(--foreground))', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
-          {goalW && <ReferenceLine y={goalW} stroke="rgb(var(--success) / 0.4)" strokeDasharray="4 4" />}
-          <Line type="monotone" dataKey="weight" stroke="rgb(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'rgb(var(--primary))' }} />
-        </LineChart>
-      </ResponsiveContainer>
-      <div className="flex items-center justify-between mt-4 text-xs">
-        <div className="text-center">
-          <p className="text-muted-foreground">Start</p>
-          <p className="text-foreground font-black">{startW ? `${startW} lbs` : '—'}</p>
-        </div>
-        <div className="flex-1 flex items-center justify-center gap-1">
-          <div className="h-px flex-1 bg-border" />
-          {startW && currentW && (
-            <span className={`text-xs font-black px-2 ${currentW < startW ? 'text-success' : 'text-destructive'}`}>
-              {currentW < startW ? '↓' : '↑'} {Math.abs(currentW - startW).toFixed(1)} lbs
-            </span>
-          )}
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="text-center">
-          <p className="text-muted-foreground">Now</p>
-          <p className="text-primary font-black">{currentW ? `${Number(currentW).toFixed(1)} lbs` : '—'}</p>
-        </div>
-        {goalW && (
-          <>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-border text-xs px-1">→</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <div className="text-center">
-              <p className="text-muted-foreground">Goal</p>
-              <p className="text-success font-black">{goalW} lbs</p>
-            </div>
-          </>
-        )}
-      </div>
-      {goalW && currentW && (
-        <p className="text-muted-foreground text-xs text-center mt-2 font-semibold">
-          {Math.abs(currentW - goalW).toFixed(1)} lbs to go
+
+      {!data.length ? (
+        <p className="mt-4 rounded-lg bg-secondary px-4 py-3 text-sm text-muted-foreground">
+          No weigh-ins in this range. Log your weight to start the line.
         </p>
-      )}
-    </div>
-  );
-}
-
-/* ── Score Ring ── */
-function ScoreRing({ score }) {
-  const r = 52; const circ = 2 * Math.PI * r;
-  const dash = (score / 100) * circ;
-  const color = score >= 80 ? 'rgb(var(--success))' : score >= 60 ? 'rgb(var(--primary))' : score >= 40 ? 'rgb(var(--warning))' : 'rgb(var(--destructive))';
-  const trackColor = score >= 80 ? 'rgb(var(--success))' : score >= 60 ? 'rgb(var(--accent))' : score >= 40 ? 'rgb(var(--warning))' : 'rgb(var(--destructive))';
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-32 h-32">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r={r} fill="none" stroke={trackColor} strokeWidth="10" />
-          <motion.circle cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="10"
-            strokeLinecap="round" strokeDasharray={circ}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: circ - dash }}
-            transition={{ duration: 1.2, ease: 'easeOut' }} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-3xl font-black text-foreground">{score}</span>
-          <span className="text-muted-foreground text-[9px]">/100</span>
+      ) : (
+        <div className="mt-4">
+          <ResponsiveContainer width="100%" height={170}>
+            <LineChart data={data} margin={{ left: -18, right: 8, top: 8, bottom: 0 }}>
+              <XAxis dataKey="date" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={16} />
+              <YAxis tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} />
+              <Tooltip
+                contentStyle={{ background: 'rgb(var(--card))', border: '1px solid rgb(var(--border))', borderRadius: 8, color: 'rgb(var(--foreground))', fontSize: 13 }}
+                formatter={(v) => [`${v} lb`, 'Weight']}
+              />
+              {goalW && <ReferenceLine y={goalW} stroke="rgb(var(--muted-foreground))" strokeDasharray="4 4" label={{ value: 'Goal', position: 'insideTopRight', fill: 'rgb(var(--muted-foreground))', fontSize: 11 }} />}
+              <Line type="monotone" dataKey="weight" stroke="rgb(var(--foreground))" strokeWidth={2}
+                dot={({ key, ...props }) => <LastDot key={key ?? props.index} {...props} dataLength={data.length} />}
+                activeDot={{ r: 4, fill: 'rgb(var(--foreground))' }} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-      <p className="text-muted-foreground text-sm font-semibold mt-2">{scoreLabel(score)}</p>
+      )}
+
+      <Segmented size="sm" className="mt-3 w-full [&>button]:flex-1 [&>button]:justify-center" value={range} onChange={setRange}
+        options={TIME_RANGES.map(r => ({ value: r, label: r === 'All' ? 'All' : r.replace('W', ' wk').replace('M', ' mo') }))} />
     </div>
   );
 }
 
-/* ── Stat Chip ── */
-function StatChip({ emoji, value, label, sub }) {
-  return (
-    <div className="flex-shrink-0 bg-card p-4 rounded-2xl min-w-[100px] text-center"
-      style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
-      <div className="text-xl mb-1">{emoji}</div>
-      <p className="text-foreground font-black text-base leading-none">{value}</p>
-      {sub && <p className="text-primary text-[9px] mt-0.5 font-semibold">{sub}</p>}
-      <p className="text-muted-foreground text-[9px] mt-0.5">{label}</p>
-    </div>
-  );
-}
-
-/* ── Achievement Badge ── */
+/* ── Achievements ── */
 const ACHIEVEMENTS = [
-  { id: 'first_checkin', emoji: '📋', name: 'First Check-in', desc: 'Submitted first check-in', req: (cis) => cis.length >= 1 },
-  { id: '5_checkins', emoji: '📋', name: '5 Check-ins', desc: 'Submitted 5 check-ins', req: (cis) => cis.length >= 5 },
-  { id: '10_checkins', emoji: '🏆', name: '10 Check-ins', desc: 'Submitted 10 check-ins', req: (cis) => cis.length >= 10 },
-  { id: 'first_workout', emoji: '💪', name: 'First Workout', desc: 'Completed first workout', req: (_, sessions) => sessions.length >= 1 },
-  { id: '10_workouts', emoji: '💪', name: '10 Workouts', desc: 'Completed 10 workouts', req: (_, sessions) => sessions.length >= 10 },
-  { id: '50_workouts', emoji: '🔥', name: '50 Workouts', desc: 'Completed 50 workouts', req: (_, sessions) => sessions.length >= 50 },
-  { id: 'first_lb', emoji: '⚖️', name: 'First Pound', desc: 'Lost first pound', req: (cis, _, client) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[sorted.length - 1].weight < sorted[0].weight; } },
-  { id: '5_lbs', emoji: '⚖️', name: '5 lbs Lost', desc: 'Lost 5 lbs', req: (cis) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[0].weight - sorted[sorted.length - 1].weight >= 5; } },
-  { id: '10_lbs', emoji: '🏆', name: '10 lbs Lost', desc: 'Lost 10 lbs', req: (cis) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[0].weight - sorted[sorted.length - 1].weight >= 10; } },
+  { id: 'first_checkin', name: 'First check-in', desc: 'Sent your first weekly check-in.', req: (cis) => cis.length >= 1 },
+  { id: '5_checkins', name: '5 check-ins', desc: 'Sent five weekly check-ins.', req: (cis) => cis.length >= 5 },
+  { id: '10_checkins', name: '10 check-ins', desc: 'Sent ten weekly check-ins.', req: (cis) => cis.length >= 10 },
+  { id: 'first_workout', name: 'First workout', desc: 'Logged your first session.', req: (_, sessions) => sessions.length >= 1 },
+  { id: '10_workouts', name: '10 workouts', desc: 'Logged ten sessions.', req: (_, sessions) => sessions.length >= 10 },
+  { id: '50_workouts', name: '50 workouts', desc: 'Logged fifty sessions.', req: (_, sessions) => sessions.length >= 50 },
+  { id: 'first_lb', name: 'First pound', desc: 'Your latest weigh-in is below your first.', req: (cis) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[sorted.length - 1].weight < sorted[0].weight; } },
+  { id: '5_lbs', name: '5 lb down', desc: 'Down five pounds from your first weigh-in.', req: (cis) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[0].weight - sorted[sorted.length - 1].weight >= 5; } },
+  { id: '10_lbs', name: '10 lb down', desc: 'Down ten pounds from your first weigh-in.', req: (cis) => { const sorted = cis.filter(c => c.weight).sort((a, b) => new Date(a.date) - new Date(b.date)); return sorted.length >= 2 && sorted[0].weight - sorted[sorted.length - 1].weight >= 10; } },
 ];
 
 function AchievementBadge({ badge, earned, onClick }) {
   return (
-    <motion.button whileTap={{ scale: 0.93 }} onClick={() => onClick(badge)}
-      className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-card border"
-      style={{
-        borderColor: earned ? 'rgb(var(--warning))' : 'rgb(var(--muted))',
-        background: earned ? 'rgb(var(--warning))' : 'rgb(var(--card))',
-        boxShadow: earned ? '0 2px 12px rgb(var(--warning) / 0.15)' : '0 1px 4px rgba(0,0,0,0.05)',
-        filter: earned ? 'none' : 'grayscale(1) opacity(0.5)',
-      }}>
-      <span className="text-2xl">{badge.emoji}</span>
-      <p className="text-muted-foreground text-[9px] font-bold text-center leading-tight">{badge.name}</p>
-    </motion.button>
+    <button type="button" onClick={() => onClick(badge)}
+      className={cn('flex min-h-[64px] flex-col items-start justify-between gap-1 rounded-lg px-3 py-2.5 text-left transition-colors',
+        earned ? 'bg-card shadow-[inset_0_0_0_1.5px_rgb(var(--foreground))]' : 'bg-secondary')}>
+      <span className={cn('text-[13px] font-semibold leading-tight', earned ? 'text-foreground' : 'text-muted-foreground')}>{badge.name}</span>
+      {earned
+        ? <span className="flex h-5 w-5 items-center justify-center rounded-full bg-success text-white"><Check className="h-3 w-3" strokeWidth={3} /></span>
+        : <span className="text-[12px] text-muted-foreground">Not yet</span>}
+    </button>
   );
 }
 
-/* ── Log Modal ── */
+/* ── Log sheet ── */
 function LogModal({ client, onClose, onSaved }) {
   const [tab, setTab] = useState('weight');
   const [weight, setWeight] = useState('');
@@ -210,55 +143,32 @@ function LogModal({ client, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" style={{ background: 'rgba(0,0,0,0.4)' }}>
-      <motion.div initial={{ y: 300 }} animate={{ y: 0 }} exit={{ y: 300 }}
-        className="w-full rounded-t-3xl p-5 pb-8 bg-card" style={{ boxShadow: '0 -8px 32px rgba(0,0,0,0.1)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-foreground font-black text-base">Log Update</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
+    <Sheet open onClose={onClose} title="Log an update"
+      footer={<Button size="lg" className="h-[52px] w-full text-base font-bold" onClick={save}>Save</Button>}>
+      <Segmented className="w-full [&>button]:flex-1 [&>button]:justify-center" value={tab} onChange={setTab}
+        options={[{ value: 'weight', label: 'Weight' }, { value: 'measurements', label: 'Measurements' }]} />
+      {tab === 'weight' && (
+        <div className="mt-4 flex items-end gap-2">
+          <input type="number" inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)}
+            placeholder="0" aria-label="Weight in lb"
+            className="num h-20 w-44 rounded-xl border-2 border-foreground bg-card text-center text-[44px] text-foreground focus:outline-none" />
+          <span className="pb-3 text-lg font-semibold text-muted-foreground">lb</span>
         </div>
-        <div className="flex gap-2 mb-4">
-          {['weight', 'measurements'].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className="px-4 py-2 rounded-2xl text-xs font-bold capitalize transition-all"
-              style={{
-                background: tab === t ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' : 'rgb(var(--muted))',
-                color: tab === t ? 'white' : 'rgb(var(--muted-foreground))',
-                border: tab === t ? 'none' : '1.5px solid rgb(var(--muted))',
-              }}>
-              {t}
-            </button>
+      )}
+      {tab === 'measurements' && (
+        <div className="mt-3 divide-y divide-border">
+          {['chest', 'waist', 'hips', 'arms', 'thighs'].map(f => (
+            <label key={f} className="flex items-center gap-3 py-2.5">
+              <span className="flex-1 text-[15px] font-semibold capitalize text-foreground">{f}</span>
+              <input type="number" inputMode="decimal" value={measurements[f] || ''} placeholder="–"
+                onChange={e => setMeasurements(prev => ({ ...prev, [f]: e.target.value ? Number(e.target.value) : null }))}
+                className="num h-11 w-24 rounded-lg border border-input bg-card text-center text-xl text-foreground focus:outline-none focus:border-foreground" />
+              <span className="w-5 text-[13px] text-muted-foreground">in</span>
+            </label>
           ))}
         </div>
-        {tab === 'weight' && (
-          <div className="space-y-3">
-            <input type="number" value={weight} onChange={e => setWeight(e.target.value)}
-              placeholder="Enter weight (lbs)"
-              className="w-full px-4 py-4 rounded-2xl text-foreground bg-muted border border-border outline-none text-center text-2xl font-black placeholder-border focus:border-primary" />
-          </div>
-        )}
-        {tab === 'measurements' && (
-          <div className="space-y-2">
-            {['chest', 'waist', 'hips', 'arms', 'thighs'].map(f => (
-              <div key={f} className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-muted border border-border">
-                <span className="text-muted-foreground text-sm capitalize w-16 font-semibold">{f}</span>
-                <input type="number" value={measurements[f] || ''} placeholder="—"
-                  onChange={e => setMeasurements(prev => ({ ...prev, [f]: e.target.value ? Number(e.target.value) : null }))}
-                  className="flex-1 bg-transparent text-foreground text-sm text-right outline-none font-bold" />
-                <span className="text-muted-foreground text-xs">in</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <button onClick={save}
-          className="w-full py-4 rounded-2xl font-black text-white text-sm mt-4"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 4px 16px rgb(var(--primary) / 0.3)' }}>
-          Save Update
-        </button>
-      </motion.div>
-    </div>
+      )}
+    </Sheet>
   );
 }
 
@@ -320,165 +230,149 @@ export default function PortalProgress({ user }) {
   const nutritionAdh = sorted.length ? sorted.slice(0, 4).reduce((s, ci) => s + (ci.compliance_nutrition || 70), 0) / Math.min(4, sorted.length) : 0;
   const ciAdh = sorted.length > 0 ? Math.min(100, (sorted.length / Math.max(1, differenceInWeeks(new Date(), firstCI ? parseISO(firstCI.date) : new Date()) + 1)) * 100) : 0;
 
+  // Last 8 weeks from weekly check-ins (oldest first)
+  const last8 = (() => {
+    const thisWeek = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return Array.from({ length: 8 }, (_, idx) => {
+      const ws = subWeeks(thisWeek, 7 - idx);
+      const we = addDays(ws, 7);
+      const ci = sorted.find(c => { const d = parseISO(c.date); return d >= ws && d < we; });
+      if (!ci) return idx === 7 ? 'none' : (firstCI && we <= parseISO(firstCI.date) ? 'none' : 'missed');
+      const parts = [ci.compliance_training, ci.compliance_nutrition].filter(v => typeof v === 'number');
+      return parts.length ? complianceState(parts.reduce((x, y) => x + y, 0) / parts.length) : 'on';
+    });
+  })();
+
+  const breakdown = [
+    { label: 'Training', pct: Math.min(100, sessions.length * 2) },
+    { label: 'Nutrition', pct: Math.round(nutritionAdh) },
+    { label: 'Consistency', pct: Math.round(ciAdh) },
+    { label: 'Energy', pct: sorted.length ? Math.round(sorted.slice(0, 4).reduce((s, ci) => s + (ci.energy_level || 5) * 10, 0) / Math.min(4, sorted.length)) : 50 },
+  ];
+
+  const goalW = myClient?.target_weight;
+  const headline = totalLost > 0 && Math.abs(totalLost) < 200
+    ? `Down ${totalLost.toFixed(1)} lb since your first check-in.${goalW && lastCI?.weight ? ` ${Math.abs(lastCI.weight - goalW).toFixed(1)} lb to your goal.` : ''}`
+    : sorted.length ? `${sorted.length} check-in${sorted.length === 1 ? '' : 's'} and ${sessions.length} workout${sessions.length === 1 ? '' : 's'} so far.` : 'Your weigh-ins, workouts and check-ins add up here.';
+
   return (
-    <div className="pb-28 space-y-5" style={{ background: 'rgb(var(--muted))', minHeight: '100vh' }}>
-      {/* Header */}
-      <div className="bg-card px-5 pt-14 pb-4 flex items-center justify-between" style={{ boxShadow: '0 1px 0 rgb(var(--muted))' }}>
-        <div>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">Progress</p>
-          <h1 className="text-foreground text-2xl font-black mt-0.5">My Progress</h1>
-        </div>
-        <button onClick={() => setShowLog(true)}
-          className="px-4 py-2.5 rounded-2xl text-sm font-bold text-white flex items-center gap-1.5"
-          style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 4px 12px rgb(var(--primary) / 0.25)' }}>
-          <Plus className="w-4 h-4" /> Log Update
-        </button>
-      </div>
+    <PortalScreen>
+      <PortalHeader
+        title="Progress"
+        subtitle={headline}
+        right={<Button size="sm" onClick={() => setShowLog(true)}><Plus /> Log</Button>}
+      />
 
-      <div className="px-5 space-y-5">
+      <div className="space-y-3">
+        {/* Weight */}
+        <section className="panel p-4">
+          <h2 className="mb-3 text-xl text-foreground">Weight</h2>
+          <WeightChart checkIns={sorted} client={myClient} />
+        </section>
 
-      {/* Score Card */}
-      <div className="bg-card p-5 rounded-3xl" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
-        <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-4">Overall Score</p>
-        <div className="flex items-center justify-between">
-          <ScoreRing score={score} />
-          <div className="flex-1 ml-6 space-y-2.5">
-            {[
-              { label: 'Fitness', pct: Math.min(100, sessions.length * 2) },
-              { label: 'Nutrition', pct: Math.round(nutritionAdh) },
-              { label: 'Consistency', pct: Math.round(ciAdh) },
-              { label: 'Mindset', pct: sorted.length ? Math.round(sorted.slice(0, 4).reduce((s, ci) => s + (ci.energy_level || 5) * 10, 0) / Math.min(4, sorted.length)) : 50 },
-            ].map(({ label, pct }) => (
-              <div key={label}>
-                <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5 font-semibold">
-                  <span>{label}</span><span>{pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden bg-muted">
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8 }}
-                    className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, rgb(var(--primary)), rgb(var(--ai)))' }} />
-                </div>
+        {/* Last 8 weeks + consistency */}
+        <section className="panel p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xl text-foreground">Your last 8 weeks</h2>
+            <span className="text-[13px] font-semibold text-success">{last8.filter(w => w === 'on').length} on plan</span>
+          </div>
+          <ComplianceStrip weeks={last8} className="mt-3 w-full [&>span]:w-auto [&>span]:flex-1" />
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3">
+            <Stat size="sm" label="Workouts" value={`${Math.round(trainingAdh)}%`} />
+            <Stat size="sm" label="Nutrition" value={`${Math.round(nutritionAdh)}%`} />
+            <Stat size="sm" label="Check-ins" value={`${Math.round(ciAdh)}%`} />
+          </div>
+          <p className="mt-2 text-[13px] text-muted-foreground">Averages from your last four check-ins.</p>
+        </section>
+
+        {/* Numbers */}
+        <section className="panel grid grid-cols-3 gap-px overflow-hidden bg-border">
+          {[
+            { label: 'Change', value: totalLost > 0 ? `−${totalLost.toFixed(1)}` : totalLost < 0 ? `+${Math.abs(totalLost).toFixed(1)}` : '–', unit: totalLost ? 'lb' : '' },
+            { label: 'Streak', value: streak, unit: streak === 1 ? 'day' : 'days' },
+            { label: 'Workouts', value: sessions.length },
+            { label: 'Check-ins', value: sorted.length },
+            { label: 'Badges', value: `${achievements.filter(a => a.earned).length}/${achievements.length}` },
+            { label: 'Current', value: lastCI?.weight && lastCI.weight < 999 ? Number(lastCI.weight).toFixed(1) : '–', unit: lastCI?.weight ? 'lb' : '' },
+          ].map(st => (
+            <div key={st.label} className="bg-card px-4 py-3">
+              <Stat size="sm" label={st.label} value={st.value} unit={st.unit} />
+            </div>
+          ))}
+        </section>
+
+        {/* Score */}
+        <section className="panel p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-xl text-foreground">Progress score</h2>
+            <p className="num text-[32px] text-foreground">{score}<span className="text-lg text-muted-foreground">/100</span></p>
+          </div>
+          <p className="text-[13px] text-muted-foreground">{scoreLabel(score)}</p>
+          <div className="mt-3 space-y-2.5">
+            {breakdown.map(({ label, pct }) => (
+              <div key={label} className="grid grid-cols-[96px_1fr_40px] items-center gap-3">
+                <span className="text-[13px] text-muted-foreground">{label}</span>
+                <Bar pct={pct} />
+                <span className="text-right text-[13px] font-semibold tabular-nums text-foreground">{pct}%</span>
               </div>
             ))}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Stats Row */}
-      <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-        <StatChip emoji="⚖️" value={lastCI?.weight && lastCI.weight < 999 ? `${Number(lastCI.weight).toFixed(1)} lbs` : '—'} label="Current" sub={totalLost !== 0 && Math.abs(totalLost) < 200 ? `${totalLost > 0 ? '−' : '+'}${Math.abs(totalLost).toFixed(1)} lbs` : ''} />
-        <StatChip emoji="📉" value={totalLost > 0 ? `−${totalLost.toFixed(1)}` : totalLost < 0 ? `+${Math.abs(totalLost).toFixed(1)}` : '—'} label="lbs total" />
-        <StatChip emoji="🔥" value={`${streak}d`} label="Streak" />
-        <StatChip emoji="💪" value={sessions.length} label="Workouts" />
-        <StatChip emoji="📋" value={sorted.length} label="Check-ins" />
-        <StatChip emoji="🏆" value={achievements.filter(a => a.earned).length} label="Badges" />
-      </div>
-
-      {/* Weight Journey */}
-      <div className="bg-card p-5 rounded-3xl" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-foreground font-bold text-sm">⚖️ Weight Journey</p>
-          <button onClick={() => setShowLog(true)} className="text-primary text-xs font-semibold flex items-center gap-1">
-            <Plus className="w-3 h-3" /> Log
-          </button>
-        </div>
-        <WeightChart checkIns={sorted} client={myClient} />
-      </div>
-
-      {/* Consistency */}
-      <div className="bg-card p-5 rounded-3xl" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
-        <p className="text-foreground font-bold text-sm mb-4">📊 My Consistency</p>
-        <div className="flex justify-around">
-          {[
-            { label: 'Workouts', pct: Math.round(trainingAdh), color: 'rgb(var(--primary))', track: 'rgb(var(--accent))' },
-            { label: 'Nutrition', pct: Math.round(nutritionAdh), color: 'rgb(var(--success))', track: 'rgb(var(--success))' },
-            { label: 'Check-ins', pct: Math.round(ciAdh), color: 'rgb(var(--ai))', track: 'rgb(var(--ai))' },
-          ].map(({ label, pct, color, track }) => {
-            const r = 28; const circ = 2 * Math.PI * r;
-            return (
-              <div key={label} className="flex flex-col items-center gap-2">
-                <div className="relative w-16 h-16">
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
-                    <circle cx="32" cy="32" r={r} fill="none" stroke={track} strokeWidth="6" />
-                    <motion.circle cx="32" cy="32" r={r} fill="none" stroke={color} strokeWidth="6"
-                      strokeLinecap="round" strokeDasharray={circ}
-                      initial={{ strokeDashoffset: circ }}
-                      animate={{ strokeDashoffset: circ - (pct / 100) * circ }}
-                      transition={{ duration: 1 }} />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-foreground text-xs font-black">{pct}%</span>
-                  </div>
-                </div>
-                <p className="text-muted-foreground text-[10px] font-semibold">{label}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Program */}
-      {myProgram && (
-        <div className="bg-card p-5 rounded-3xl" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
-          <p className="text-foreground font-bold text-sm mb-3">💪 My Program</p>
-          <p className="text-foreground text-sm font-semibold">{myProgram.title}</p>
-          <p className="text-muted-foreground text-xs mb-3">{myProgram.duration_weeks} week program</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 h-2 rounded-full overflow-hidden bg-muted">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(100, (sessions.length / Math.max(1, (myProgram.workouts?.length || 4) * (myProgram.duration_weeks || 8))) * 100)}%`, background: 'linear-gradient(90deg, rgb(var(--primary)), rgb(var(--ai)))' }} />
+        {/* Program */}
+        {myProgram && (
+          <section className="panel p-4">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="truncate text-xl text-foreground">{myProgram.title}</h2>
+              <span className="flex-shrink-0 text-[13px] text-muted-foreground">{myProgram.duration_weeks} weeks</span>
             </div>
-            <span className="text-muted-foreground text-xs">{sessions.length} sessions</span>
+            <Bar className="mt-3" pct={Math.min(100, (sessions.length / Math.max(1, (myProgram.workouts?.length || 4) * (myProgram.duration_weeks || 8))) * 100)} />
+            <p className="mt-2 text-[13px] text-muted-foreground">{sessions.length} sessions logged on this program</p>
+          </section>
+        )}
+
+        {/* AI Progress Insights */}
+        <AIProgressAnalyzer
+          client={myClient}
+          checkIns={sorted}
+          workoutSessions={sessions}
+          program={myProgram}
+          isClientFacing={true}
+        />
+
+        {/* Achievements */}
+        <section className="panel p-4">
+          <h2 className="text-xl text-foreground">Milestones</h2>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {achievements.map(a => (
+              <AchievementBadge key={a.id} badge={a} earned={a.earned} onClick={setBadgeDetail} />
+            ))}
           </div>
-        </div>
-      )}
-
-      {/* AI Progress Insights */}
-      <AIProgressAnalyzer
-        client={myClient}
-        checkIns={sorted}
-        workoutSessions={sessions}
-        program={myProgram}
-        isClientFacing={true}
-      />
-
-      {/* Achievements */}
-      <div>
-        <p className="text-foreground font-bold text-sm mb-3">🏆 My Achievements</p>
-        <div className="grid grid-cols-4 gap-2">
-          {achievements.map(a => (
-            <AchievementBadge key={a.id} badge={a} earned={a.earned} onClick={setBadgeDetail} />
-          ))}
-        </div>
+        </section>
       </div>
 
-      </div>{/* end px-5 wrapper */}
-
-      {/* Badge detail popup */}
+      {/* Badge detail */}
       <AnimatePresence>
         {badgeDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-8" style={{ background: 'rgba(0,0,0,0.7)' }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-8"
             onClick={() => setBadgeDetail(null)}>
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-              className="p-6 rounded-3xl text-center max-w-xs w-full bg-card"
-              style={{ boxShadow: '0 16px 48px rgba(0,0,0,0.15)' }}
-              onClick={e => e.stopPropagation()}>
-              <div className="text-5xl mb-3">{badgeDetail.emoji}</div>
-              <p className="text-foreground font-black text-base">{badgeDetail.name}</p>
-              <p className="text-muted-foreground text-sm mt-1">{badgeDetail.desc}</p>
-              {badgeDetail.earned
-                ? <p className="text-success text-xs mt-3 font-bold">✓ Earned!</p>
-                : <p className="text-border text-xs mt-3">Keep going to unlock this!</p>
-              }
-            </motion.div>
-          </div>
+            <div className="panel w-full max-w-xs p-5" onClick={e => e.stopPropagation()} role="dialog">
+              <h2 className="text-[22px] text-foreground">{badgeDetail.name}</h2>
+              <p className="mt-1 text-[15px] text-muted-foreground">{badgeDetail.desc}</p>
+              <p className={cn('mt-3 text-sm font-semibold', badgeDetail.earned ? 'text-success' : 'text-muted-foreground')}>
+                {badgeDetail.earned ? 'Earned' : 'Not earned yet'}
+              </p>
+              <Button variant="outline" className="mt-4 w-full" onClick={() => setBadgeDetail(null)}>Close</Button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Log Modal */}
-      <AnimatePresence>
-        {showLog && myClient && (
-          <LogModal client={myClient} onClose={() => setShowLog(false)} onSaved={() => setShowLog(false)} />
-        )}
-      </AnimatePresence>
-    </div>
+      {/* Log sheet */}
+      {showLog && myClient && (
+        <LogModal client={myClient} onClose={() => setShowLog(false)} onSaved={() => setShowLog(false)} />
+      )}
+    </PortalScreen>
   );
 }

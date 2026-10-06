@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Bell, BellOff, Check, Clock, Mail, Smartphone, Monitor, History } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import {
+  Bell, Check, History, Users, MessageSquare, CreditCard, TrendingUp, Brain, CalendarClock, MessagesSquare, Settings2, Newspaper,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { NToggle } from '@/components/notifications/NotifsHelpers';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { SettingsShell, SettingsPanel, SettingsRow, SettingsSwitchRow, fieldClass } from '@/components/settings/SettingsLayout';
 import NotifsClientActivity from '@/components/notifications/NotifsClientActivity';
 import NotifsMessages from '@/components/notifications/NotifsMessages';
 import NotifsPayments from '@/components/notifications/NotifsPayments';
@@ -50,6 +53,7 @@ export default function NotificationSettings() {
   const [settingsId, setSettingsId] = useState(null);
   const [saved, setSaved] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [section, setSection] = useState('delivery');
   const saveTimer = useRef(null);
 
   const { data: user } = useQuery({ queryKey: ['me'], queryFn: () => me() });
@@ -93,163 +97,113 @@ export default function NotificationSettings() {
 
   const allOff = !s.all_notifications_enabled;
 
+  const NAV = [
+    { items: [{ id: 'delivery', label: 'Delivery and quiet hours', icon: Bell }] },
+    {
+      label: 'What you hear about',
+      items: [
+        { id: 'client_activity', label: 'Client activity', icon: Users },
+        { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'payments', label: 'Payments', icon: CreditCard },
+        { id: 'leads', label: 'Leads', icon: TrendingUp },
+        { id: 'ai', label: 'AI insights', icon: Brain },
+        { id: 'scheduling', label: 'Scheduling', icon: CalendarClock },
+        { id: 'community', label: 'Community', icon: MessagesSquare },
+        { id: 'system', label: 'Account and system', icon: Settings2 },
+        { id: 'digest', label: 'Daily and weekly digest', icon: Newspaper },
+      ],
+    },
+  ];
+
+  const pushBlocked = typeof Notification !== 'undefined' && Notification.permission !== 'granted' && s.push_enabled;
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-border transition-colors">
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-foreground">Notification Settings</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Control every alert you receive from KOACH AI</p>
-          </div>
-        </div>
-        <AnimatePresence>
-          {saved && (
-            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-1.5 text-sm text-success font-semibold">
-              <Check className="w-4 h-4" /> Saved ✓
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+    <SettingsShell
+      backTo="/settings"
+      title="Notifications"
+      subtitle="Choose what reaches you, where, and when. Changes save as you go."
+      nav={NAV}
+      active={section}
+      onSelect={setSection}
+      actions={saved ? <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><Check className="h-4 w-4 text-success" /> Saved</span> : null}
+      aside={
+        <Button variant="outline" className="w-full" onClick={() => setShowHistory(true)}>
+          <History /> Last 30 days of notifications
+        </Button>
+      }
+    >
+      {section === 'delivery' && (
+        <>
+          <SettingsPanel tone={allOff ? 'danger' : undefined}>
+            <SettingsSwitchRow
+              label="All notifications"
+              help={allOff ? 'Everything is muted. You will not hear about check-ins or messages.' : 'On. The settings below decide what reaches you.'}
+              checked={s.all_notifications_enabled}
+              onCheckedChange={v => set('all_notifications_enabled', v)}
+            />
+          </SettingsPanel>
 
-      <div className="space-y-5">
-
-        {/* ── MASTER TOGGLE ── */}
-        <div className="bg-card rounded-2xl border-2 p-5 flex items-center justify-between"
-          style={{
-            borderColor: allOff ? 'var(--tc-destructive)' : 'var(--tc-border)',
-            background: allOff ? 'var(--kc-fff5f5)' : 'white',
-            boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)',
-          }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: allOff ? 'var(--tc-destructive)' : 'linear-gradient(135deg, var(--tc-accent), var(--tc-ai))' }}>
-              {allOff ? <BellOff className="w-5 h-5 text-destructive" /> : <Bell className="w-5 h-5 text-primary" />}
-            </div>
-            <div>
-              <p className="font-bold text-foreground text-sm">All Notifications</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {allOff ? '⚠️ All notifications are muted' : 'Receiving notifications normally'}
-              </p>
-            </div>
-          </div>
-          <NToggle value={s.all_notifications_enabled} onChange={v => set('all_notifications_enabled', v)} />
-        </div>
-
-        {/* ── GLOBAL DELIVERY ── */}
-        <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{ boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)' }}>
-          <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/60">
-            <span className="text-base">📬</span>
-            <h2 className="font-bold text-foreground text-sm">Global Delivery Preferences</h2>
-          </div>
-          <div className="p-6 space-y-4">
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Default delivery for all notifications</p>
-            <div className="space-y-3">
-              {[
-                { key: 'push_enabled', icon: Smartphone, label: 'Push Notifications', desc: 'Sent to your mobile device', color: 'var(--tc-ai)' },
-                { key: 'email_enabled', icon: Mail, label: 'Email Notifications', desc: `Sent to ${user?.email || 'your business email'}`, color: 'var(--tc-primary)' },
-                { key: 'inapp_enabled', icon: Monitor, label: 'In-App Notifications', desc: 'Always on — cannot be disabled', color: 'var(--tc-success)', locked: true },
-              ].map(({ key, icon: Icon, label, desc, color, locked }) => (
-                <div key={key} className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}15` }}>
-                      <Icon className="w-4 h-4" style={{ color }} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-foreground">{label}</p>
-                        {locked && <span className="text-[10px] bg-muted text-muted-foreground font-bold px-2 py-0.5 rounded-full">Always on</span>}
-                      </div>
-                      <p className="text-xs text-muted-foreground">{desc}</p>
-                    </div>
-                  </div>
-                  <NToggle value={s[key] !== false} onChange={v => set(key, v)} disabled={locked} />
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm font-bold text-foreground">Quiet Hours</p>
-                </div>
-                <NToggle value={s.quiet_hours_enabled} onChange={v => set('quiet_hours_enabled', v)} />
-              </div>
-              {s.quiet_hours_enabled && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden">
-                  <div className="p-4 rounded-xl bg-muted border border-border space-y-3">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-muted-foreground">From</span>
-                        <input type="time" value={s.quiet_hours_start || '22:00'} onChange={e => set('quiet_hours_start', e.target.value)}
-                          className="px-2.5 py-1.5 rounded-lg border border-border text-sm font-semibold text-foreground focus:outline-none focus:border-primary" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-muted-foreground">To</span>
-                        <input type="time" value={s.quiet_hours_end || '07:00'} onChange={e => set('quiet_hours_end', e.target.value)}
-                          className="px-2.5 py-1.5 rounded-lg border border-border text-sm font-semibold text-foreground focus:outline-none focus:border-primary" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      🔕 Push notifications silenced during quiet hours. Emails still send.
-                    </p>
-                    <p className="text-xs text-primary font-medium">🌍 Your timezone: America/New_York</p>
-                  </div>
-                </motion.div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── PUSH PERMISSION BANNER ── */}
-        {typeof Notification !== 'undefined' && Notification.permission !== 'granted' && s.push_enabled && (
-          <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-warning bg-warning/10">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📱</span>
+          {pushBlocked && (
+            <div className="panel flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div>
-                <p className="text-sm font-bold text-warning">Enable Push Notifications</p>
-                <p className="text-xs text-warning mt-0.5">Allow browser notifications to receive push alerts</p>
+                <p className="text-[15px] font-semibold text-foreground">This browser is blocking push notifications</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">Allow them so check-ins and messages reach you here.</p>
               </div>
+              <Button
+                onClick={() => Notification.requestPermission().then(p => { if (p === 'granted') toast.success('Push notifications are on'); })}
+                className="flex-shrink-0"
+              >
+                Allow notifications
+              </Button>
             </div>
-            <button onClick={() => Notification.requestPermission().then(p => { if (p === 'granted') toast.success('Push notifications enabled!'); })}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--tc-warning), var(--tc-warning))' }}>
-              Enable
-            </button>
+          )}
+
+          <div className={allOff ? 'opacity-40 pointer-events-none select-none' : ''}>
+            <SettingsPanel title="Where they go" subtitle="The default for every notification. Each category can override it.">
+              <SettingsSwitchRow label="Push" help="Sent to your phone and this browser." checked={s.push_enabled !== false} onCheckedChange={v => set('push_enabled', v)} />
+              <SettingsSwitchRow label="Email" help={`Sent to ${user?.email || 'your business email'}.`} checked={s.email_enabled !== false} onCheckedChange={v => set('email_enabled', v)} />
+              <SettingsSwitchRow label="In the app" help="The bell at the top of KOACH." badge={<Badge variant="secondary">Always on</Badge>} checked={s.inapp_enabled !== false} onCheckedChange={v => set('inapp_enabled', v)} disabled />
+            </SettingsPanel>
           </div>
-        )}
 
-        {/* ── SECTIONS (dimmed when all off) ── */}
-        <div className={`space-y-5 transition-opacity ${allOff ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-          <NotifsClientActivity s={s} set={set} />
-          <NotifsMessages s={s} set={set} />
-          <NotifsPayments s={s} set={set} />
-          <NotifsLeads s={s} set={set} />
-          <NotifsAI s={s} set={set} />
-          <NotifsScheduling s={s} set={set} />
-          <NotifsCommunity s={s} set={set} />
-          <NotifsSystem s={s} set={set} />
-          <NotifsDigest s={s} setField={set} />
+          <div className={allOff ? 'opacity-40 pointer-events-none select-none' : ''}>
+            <SettingsPanel title="Quiet hours" subtitle="Push stays silent overnight. Emails still send.">
+              <SettingsSwitchRow label="Quiet hours" checked={s.quiet_hours_enabled} onCheckedChange={v => set('quiet_hours_enabled', v)} />
+              {s.quiet_hours_enabled && (
+                <SettingsRow label="Silent between" help="Times are in America/New_York.">
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={s.quiet_hours_start || '22:00'} onChange={e => set('quiet_hours_start', e.target.value)} className={`${fieldClass} tabular-nums`} aria-label="Quiet hours start" />
+                    <span className="text-sm text-muted-foreground">and</span>
+                    <input type="time" value={s.quiet_hours_end || '07:00'} onChange={e => set('quiet_hours_end', e.target.value)} className={`${fieldClass} tabular-nums`} aria-label="Quiet hours end" />
+                  </div>
+                </SettingsRow>
+              )}
+            </SettingsPanel>
+          </div>
+        </>
+      )}
+
+      {section !== 'delivery' && allOff && (
+        <p className="text-sm text-muted-foreground">All notifications are muted. Turn them back on under Delivery and quiet hours.</p>
+      )}
+      {section !== 'delivery' && (
+        <div className={`transition-opacity ${allOff ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+          {section === 'client_activity' && <NotifsClientActivity s={s} set={set} />}
+          {section === 'messages' && <NotifsMessages s={s} set={set} />}
+          {section === 'payments' && <NotifsPayments s={s} set={set} />}
+          {section === 'leads' && <NotifsLeads s={s} set={set} />}
+          {section === 'ai' && <NotifsAI s={s} set={set} />}
+          {section === 'scheduling' && <NotifsScheduling s={s} set={set} />}
+          {section === 'community' && <NotifsCommunity s={s} set={set} />}
+          {section === 'system' && <NotifsSystem s={s} set={set} />}
+          {section === 'digest' && <NotifsDigest s={s} setField={set} />}
         </div>
-
-        {/* ── HISTORY BUTTON ── */}
-        <button onClick={() => setShowHistory(true)}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border-2 border-dashed border-border text-muted-foreground font-semibold text-sm hover:border-primary hover:text-primary transition-colors">
-          <History className="w-4 h-4" /> View Notification History (Last 30 Days)
-        </button>
-
-        <div className="pb-8" />
-      </div>
+      )}
 
       {/* History Modal */}
       <AnimatePresence>
         {showHistory && <NotifsHistory onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
-    </div>
+    </SettingsShell>
   );
 }

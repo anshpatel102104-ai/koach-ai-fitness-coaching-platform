@@ -1,39 +1,44 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Copy, Eye } from 'lucide-react';
+import { Copy, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Panel, PanelHeader, KeyValue } from '@/components/kit';
 import { toast } from 'sonner';
 
 const TEMPLATES = [
   {
     type: 'newsletter',
-    name: 'Monthly Newsletter',
-    subject: 'Your Monthly Coaching Update',
-    use: 'Monthly update with wins and tips',
+    name: 'Monthly newsletter',
+    subject: 'Your monthly coaching update',
+    use: 'Client wins, one tip, what is coming next month',
   },
   {
     type: 'launch',
-    name: 'New Package Launch',
-    subject: 'I\'ve Created Something Exciting For You',
-    use: 'Announce new package or program',
+    name: 'New package launch',
+    subject: 'A new way to work with me',
+    use: 'Announce a new package or program',
   },
   {
     type: 'limited_spots',
-    name: 'Limited Spots Available',
-    subject: 'Last Spots Open - [Package Name]',
-    use: 'Create urgency with limited capacity',
+    name: 'Limited spots',
+    subject: 'Last spots open for [package name]',
+    use: 'When you have a few places left',
   },
   {
     type: 'consultation_offer',
-    name: 'Free Consultation Offer',
-    subject: 'Let\'s Find the Right Plan For You',
-    use: 'Reach out to prospects',
+    name: 'Free consultation offer',
+    subject: 'Let\'s find the right plan for you',
+    use: 'For people who asked but have not signed up',
   },
   {
     type: 'reengagement',
-    name: 'Re-engagement Campaign',
-    subject: 'We Miss You! Here\'s What\'s New',
-    use: 'Win back inactive clients',
+    name: 'Re-engagement',
+    subject: 'Here\'s what changed since you left',
+    use: 'For past clients who went quiet',
   },
 ];
 
@@ -83,7 +88,7 @@ export default function EmailTemplateLibrary({ coachId }) {
 
   const handleSaveTemplate = () => {
     if (!editData.template_name || !editData.subject_line) {
-      toast.error('Please fill all required fields');
+      toast.error('Add a name and a subject line');
       return;
     }
     saveMutation.mutate(editData);
@@ -94,103 +99,71 @@ export default function EmailTemplateLibrary({ coachId }) {
     toast.success('HTML copied to clipboard');
   };
 
-  return (
-    <div className="space-y-6">
-      {!selectedTemplate ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  if (!selectedTemplate) {
+    return (
+      <Panel>
+        <PanelHeader title="Email templates" subtitle="Starting points for the emails coaches send most. Save one to make it yours." />
+        <ul className="divide-y divide-border px-5 sm:px-6 pb-1">
           {TEMPLATES.map((template) => {
             const exists = userTemplates.find(t => t.template_type === template.type);
             return (
-              <button key={template.type} onClick={() => handleSelectTemplate(template)}
-                className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                  exists
-                    ? 'border-success bg-success/10'
-                    : 'border-border bg-card hover:border-primary'
-                }`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-foreground">{template.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{template.use}</p>
-                    <p className="text-xs text-muted-foreground font-mono mt-2 line-clamp-1">{template.subject}</p>
-                  </div>
-                  {exists && <span className="text-xs font-bold text-success whitespace-nowrap ml-2">✓ Saved</span>}
+              <li key={template.type} className="flex flex-col sm:flex-row sm:items-center gap-3 py-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-semibold text-foreground">{template.name}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{template.use}</p>
+                  <p className="text-[13px] text-muted-foreground mt-1">Subject: {exists?.subject_line || template.subject}</p>
                 </div>
-              </button>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {exists && <span className="text-sm font-medium text-success">Saved</span>}
+                  <Button size="sm" variant="outline" onClick={() => handleSelectTemplate(template)}>{exists ? 'Open' : 'Use'}</Button>
+                </div>
+              </li>
             );
           })}
+        </ul>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel className="p-5 sm:p-6">
+      <button onClick={() => setSelectedTemplate(null)} className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground mb-3">
+        <ArrowLeft className="w-4 h-4" /> All templates
+      </button>
+
+      {editMode ? (
+        <div className="space-y-4 max-w-3xl">
+          <h2 className="text-[22px] text-foreground">{editData?.template_name || 'Template'}</h2>
+          <div>
+            <Label htmlFor="et-name">Template name</Label>
+            <Input id="et-name" className="mt-1.5" value={editData?.template_name || ''} onChange={(e) => setEditData({ ...editData, template_name: e.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor="et-subject">Subject line</Label>
+            <Input id="et-subject" className="mt-1.5" value={editData?.subject_line || ''} onChange={(e) => setEditData({ ...editData, subject_line: e.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor="et-html">HTML</Label>
+            <Textarea id="et-html" className="mt-1.5 font-mono text-[13px]" rows={12} value={editData?.html_content || ''} onChange={(e) => setEditData({ ...editData, html_content: e.target.value })} />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleSaveTemplate} disabled={saveMutation.isPending}>Save template</Button>
+            <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
+          </div>
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-border p-6">
-          <button onClick={() => setSelectedTemplate(null)}
-            className="text-sm font-bold text-primary hover:text-primary mb-4">
-            ← Back to Templates
-          </button>
-
-          {editMode ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-1">Template Name</label>
-                <input
-                  type="text"
-                  value={editData?.template_name || ''}
-                  onChange={(e) => setEditData({ ...editData, template_name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-1">Subject Line</label>
-                <input
-                  type="text"
-                  value={editData?.subject_line || ''}
-                  onChange={(e) => setEditData({ ...editData, subject_line: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-foreground mb-1">HTML Content</label>
-                <textarea
-                  value={editData?.html_content || ''}
-                  onChange={(e) => setEditData({ ...editData, html_content: e.target.value })}
-                  rows={10}
-                  className="w-full px-3 py-2 rounded-lg border border-border text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={handleSaveTemplate} disabled={saveMutation.isPending}
-                  className="px-6 py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary disabled:opacity-50">
-                  Save Template
-                </button>
-                <button onClick={() => setEditMode(false)}
-                  className="px-6 py-2 rounded-lg bg-border text-foreground font-bold hover:bg-border">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <h3 className="font-bold text-foreground">{selectedTemplate.template_name}</h3>
-              <p className="text-sm text-muted-foreground">{selectedTemplate.use_case}</p>
-              <div className="p-4 rounded-lg bg-muted border border-border">
-                <p className="text-xs text-muted-foreground font-bold mb-2">Subject: </p>
-                <p className="text-sm text-foreground">{selectedTemplate.subject_line}</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleCopyHtml(selectedTemplate.html_content)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground font-bold hover:bg-muted">
-                  <Copy className="w-4 h-4" /> Copy HTML
-                </button>
-                <button onClick={() => setEditMode(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:bg-primary">
-                  <Eye className="w-4 h-4" /> Edit Template
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="space-y-4 max-w-3xl">
+          <div>
+            <h2 className="text-[22px] text-foreground">{selectedTemplate.template_name}</h2>
+            {selectedTemplate.use_case && <p className="text-sm text-muted-foreground mt-1">{selectedTemplate.use_case}</p>}
+          </div>
+          <KeyValue label="Subject" value={selectedTemplate.subject_line} />
+          <div className="flex gap-2">
+            <Button onClick={() => { setEditData(selectedTemplate); setEditMode(true); }}>Edit template</Button>
+            <Button variant="outline" onClick={() => handleCopyHtml(selectedTemplate.html_content)}><Copy /> Copy HTML</Button>
+          </div>
         </div>
       )}
-    </div>
+    </Panel>
   );
 }

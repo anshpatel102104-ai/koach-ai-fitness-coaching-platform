@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
 import { compositeAdherenceScore } from '@/lib/adherence';
-import { Dumbbell, TrendingUp, Clock, X, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Dumbbell, TrendingUp, Clock, X } from 'lucide-react';
 import NoProgramPanel from '@/components/clients/NoProgramPanel';
 import QuickMessageModal from '@/components/clients/QuickMessageModal';
 
@@ -19,23 +19,22 @@ function isDismissed(key) {
   return until ? Date.now() < until : false;
 }
 
-function InsightCard({ icon: Icon, label, sub, actions, onDismiss }) {
+function InsightCard({ label, sub, actions, onDismiss }) {
   return (
-    <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-3.5 py-3 min-w-0">
-      <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+    <div className="flex min-w-0 items-center gap-3 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-tight text-foreground">{label}</p>
+        {sub && <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{sub}</p>}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-foreground leading-tight">{label}</p>
-        {sub && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
-      </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-1">
         {actions}
         <button
           onClick={onDismiss}
-          className="w-6 h-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-label="Hide for a day"
+          title="Hide for a day"
+          className="touch-compact flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
-          <X className="w-3 h-3" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </div>
@@ -83,9 +82,9 @@ export default function IntelligenceBar({ clients = [], checkIns = [] }) {
       actions: (
         <button
           onClick={() => setShowNoProgramPanel(true)}
-          className="flex items-center gap-1 text-[11px] font-medium text-foreground bg-muted hover:bg-border px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          className="touch-compact h-8 whitespace-nowrap rounded-md border border-input bg-card px-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-accent"
         >
-          <Dumbbell className="w-3 h-3" /> Assign
+          Assign
         </button>
       ),
     },
@@ -94,13 +93,13 @@ export default function IntelligenceBar({ clients = [], checkIns = [] }) {
       show: inactive.length > 0,
       icon: Clock,
       label: `${inactive.length} inactive client${inactive.length > 1 ? 's' : ''}`,
-      sub: inactive.slice(0, 2).map(c => c.name).join(', ') + (inactive.length > 2 ? ` +${inactive.length - 2} more` : '') + ' — no check-in in 14+ days',
+      sub: inactive.slice(0, 2).map(c => c.name).join(', ') + (inactive.length > 2 ? ` +${inactive.length - 2} more` : '') + ', no check-in in 14+ days',
       actions: (
         <button
           onClick={() => setShowInactiveMessage(true)}
-          className="flex items-center gap-1 text-[11px] font-medium text-foreground bg-muted hover:bg-border px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+          className="touch-compact h-8 whitespace-nowrap rounded-md border border-input bg-card px-3 text-[13px] font-semibold text-foreground transition-colors hover:bg-accent"
         >
-          Message <ChevronRight className="w-3 h-3" />
+          Message
         </button>
       ),
     },
@@ -109,7 +108,7 @@ export default function IntelligenceBar({ clients = [], checkIns = [] }) {
       show: readyForProgression.length > 0,
       icon: TrendingUp,
       label: `${readyForProgression.length} client${readyForProgression.length > 1 ? 's' : ''} ready for progression`,
-      sub: readyForProgression.slice(0, 2).map(c => c.name).join(', ') + (readyForProgression.length > 2 ? ` +${readyForProgression.length - 2} more` : '') + ' — 80%+ adherence',
+      sub: readyForProgression.slice(0, 2).map(c => c.name).join(', ') + (readyForProgression.length > 2 ? ` +${readyForProgression.length - 2} more` : '') + ', 80%+ adherence',
       actions: null,
     },
   ];
@@ -118,16 +117,13 @@ export default function IntelligenceBar({ clients = [], checkIns = [] }) {
 
   return (
     <>
-      <div className="px-5 pt-3 flex-shrink-0">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2">Insights</p>
+      <div className="flex-shrink-0 px-5 pt-3">
+        <p className="mb-1 text-[13px] text-muted-foreground">Worth a look</p>
 
         {visible.length === 0 ? (
-          <div className="flex items-center gap-2.5 bg-card border border-border rounded-xl px-3.5 py-3">
-            <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-            <p className="text-xs font-medium text-foreground">All clients are on track</p>
-          </div>
+          <p className="py-2 text-sm text-foreground">Every active client has a program and a recent check-in.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-border">
             {visible.map(insight => (
               <InsightCard key={insight.key} {...insight} onDismiss={() => dismiss(insight.key)} />
             ))}

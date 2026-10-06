@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { Star, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MINDSET_OPTIONS = [
-  { score: 1, emoji: '😴', label: 'Tired' },
-  { score: 2, emoji: '😕', label: 'Low' },
-  { score: 3, emoji: '😐', label: 'Okay' },
-  { score: 4, emoji: '😊', label: 'Good' },
-  { score: 5, emoji: '🔥', label: 'On fire' },
+  { score: 1, label: 'Tired' },
+  { score: 2, label: 'Low' },
+  { score: 3, label: 'Okay' },
+  { score: 4, label: 'Good' },
+  { score: 5, label: 'Great' },
 ];
 
 const WIN_PROMPTS = [
   "What's one thing you're proud of today?",
-  "Name one small win from today...",
+  "Name one small win from today.",
   "What did you do well today?",
   "One positive thing that happened today?",
 ];
@@ -22,44 +21,27 @@ export default function WinOfDay({ win = '', mindsetScore = 0, onWinChange, onMi
   const prompt = WIN_PROMPTS[new Date().getDay() % WIN_PROMPTS.length];
 
   return (
-    <div className="bg-gradient-to-br from-primary/5 via-card to-accent/5 border border-primary/15 rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Trophy className="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h3 className="font-heading font-semibold text-sm">Win of the Day</h3>
-          <p className="text-[11px] text-muted-foreground">Celebrate every step forward</p>
-        </div>
+    <section className="panel p-5">
+      <h2 className="text-xl text-foreground">Win of the day</h2>
+      <p className="text-[13px] text-muted-foreground">One line is enough. Your coach can see it.</p>
+
+      <p className="mt-4 mb-2 text-[13px] text-muted-foreground">How's your energy today?</p>
+      <div className="grid grid-cols-5 gap-1.5">
+        {MINDSET_OPTIONS.map(opt => (
+          <button
+            key={opt.score}
+            type="button"
+            onClick={() => onMindsetChange(opt.score)}
+            aria-pressed={mindsetScore === opt.score}
+            className={cn('touch-compact rounded-lg py-2.5 text-[13px] font-semibold',
+              mindsetScore === opt.score ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground hover:bg-accent')}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
-      {/* Mindset score */}
-      <div className="mb-4">
-        <p className="text-xs text-muted-foreground mb-2">How's your energy today?</p>
-        <div className="flex gap-2">
-          {MINDSET_OPTIONS.map(opt => (
-            <button
-              key={opt.score}
-              onClick={() => onMindsetChange(opt.score)}
-              className={cn(
-                "flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border transition-all text-xs",
-                mindsetScore === opt.score
-                  ? "border-primary bg-primary/10 scale-105 shadow-sm"
-                  : "border-border hover:border-primary/40 bg-secondary/20"
-              )}
-            >
-              <span className="text-lg">{opt.emoji}</span>
-              <span className={cn("text-[9px]", mindsetScore === opt.score ? "text-primary font-semibold" : "text-muted-foreground")}>{opt.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Win text input */}
-      <div className={cn(
-        "rounded-xl border transition-all p-3",
-        focused ? "border-primary bg-background shadow-sm" : "border-border bg-secondary/20"
-      )}>
+      <div className={cn('mt-4 rounded-lg border p-3', focused ? 'border-foreground' : 'border-input')}>
         <textarea
           value={win}
           onChange={e => onWinChange(e.target.value)}
@@ -67,15 +49,10 @@ export default function WinOfDay({ win = '', mindsetScore = 0, onWinChange, onMi
           onBlur={() => setFocused(false)}
           placeholder={prompt}
           rows={2}
-          className="w-full text-sm bg-transparent outline-none resize-none placeholder:text-muted-foreground/60"
+          className="w-full resize-none bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
         />
-        {win && (
-          <div className="flex items-center gap-1 mt-1 pt-2 border-t border-border/50">
-            <Star className="w-3 h-3 text-warning fill-warning" />
-            <span className="text-[10px] text-warning font-medium">Saved</span>
-          </div>
-        )}
+        {win && <p className="mt-1 border-t border-border pt-2 text-[13px] text-muted-foreground">Saved</p>}
       </div>
-    </div>
+    </section>
   );
 }

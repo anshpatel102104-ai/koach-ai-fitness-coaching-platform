@@ -1,16 +1,21 @@
 import React, { useRef } from 'react';
-import { Palette, ExternalLink } from 'lucide-react';
+import { Palette } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '@/api/supabaseClient';
-import { BSSection, BSRow, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { BSSection, BSRow, BSInput, BSTextarea, BSGroup } from './BSSection';
 import { SignedImg } from '@/components/shared/SignedImage';
 
-const BRAND_COLORS = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-destructive)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--kc-0891b2)', 'var(--kc-db2777)', 'var(--tc-foreground)'];
+// Brand colour choices are data (the coach's own brand), so they are stored as hex.
+const BRAND_COLORS = ['#0A5CFF', '#111318', '#1E7A4D', '#CD2626', '#C2410C', '#0E7490', '#5E6470'];
 
 const DEFAULTS = {
-  brand_color: 'var(--tc-primary)', logo_url: '',
+  brand_color: '#0A5CFF', logo_url: '',
   email_signature: '', reply_to_email: '',
 };
+
+const isHex = (c) => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c);
 
 export default function BSBranding({ s, set }) {
   const logoRef = useRef();
@@ -23,52 +28,42 @@ export default function BSBranding({ s, set }) {
   };
 
   return (
-    <BSSection icon={Palette} title="Branding & Appearance" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Coach Dashboard Branding</p>
-      <BSRow label="Business logo">
-        <div className="flex items-center gap-4">
+    <BSSection icon={Palette} title="Branding" subtitle="Your logo and colour, and how your emails are signed." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+      <BSGroup>Coach dashboard branding</BSGroup>
+      <BSRow label="Business logo" hint="PNG or SVG on a transparent background works best.">
+        <div className="flex flex-wrap items-center gap-3">
           {s.logo_url && (
-            <SignedImg src={s.logo_url} alt="logo" className="h-12 w-auto rounded-xl border border-border object-contain bg-card p-1" />
+            <SignedImg src={s.logo_url} alt="logo" className="h-12 w-auto rounded-lg border border-border object-contain bg-card p-1" />
           )}
-          <button onClick={() => logoRef.current?.click()}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-            {s.logo_url ? 'Change Logo' : 'Upload Logo'}
-          </button>
+          <Button variant="outline" onClick={() => logoRef.current?.click()}>
+            {s.logo_url ? 'Change logo' : 'Upload logo'}
+          </Button>
           {s.logo_url && (
-            <button onClick={() => set('logo_url', '')} className="text-xs text-destructive hover:text-destructive font-medium">Remove</button>
+            <Button variant="link" className="text-destructive" onClick={() => set('logo_url', '')}>Remove</Button>
           )}
           <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
         </div>
       </BSRow>
-      <BSRow label="Primary brand color" hint="Used for accents in your dashboard">
-        <div className="flex items-center gap-3 flex-wrap">
+      <BSRow label="Brand colour" hint="One colour for accents in your dashboard.">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {BRAND_COLORS.map(c => (
-            <button key={c} onClick={() => set('brand_color', c)}
-              className="w-8 h-8 rounded-full transition-all"
-              style={{ background: c, boxShadow: s.brand_color === c ? `0 0 0 3px white, 0 0 0 5px ${c}` : 'none' }} />
+            <button key={c} type="button" onClick={() => set('brand_color', c)} aria-label={`Use ${c}`}
+              className={cn('touch-compact h-8 w-8 rounded-full transition-shadow',
+                s.brand_color?.toLowerCase() === c.toLowerCase() && 'ring-2 ring-foreground ring-offset-2 ring-offset-card')}
+              style={{ background: c }} />
           ))}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full border-2 border-border overflow-hidden">
-              <input type="color" value={s.brand_color || 'var(--tc-primary)'} onChange={e => set('brand_color', e.target.value)}
-                className="w-full h-full scale-125 cursor-pointer border-none outline-none" />
-            </div>
-            <span className="text-xs text-muted-foreground font-mono">{s.brand_color || 'var(--tc-primary)'}</span>
-          </div>
+          <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-card pl-1.5 pr-3">
+            <input type="color" value={isHex(s.brand_color) ? s.brand_color : '#0A5CFF'} onChange={e => set('brand_color', e.target.value)}
+              className="h-7 w-7 cursor-pointer rounded border-none bg-transparent p-0" aria-label="Custom colour" />
+            <span className="font-mono text-[13px] text-muted-foreground">{isHex(s.brand_color) ? s.brand_color.toUpperCase() : 'Custom'}</span>
+          </label>
         </div>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Client Portal Branding</p>
-      <BSRow label="White label settings" hint="Full branding customization for your client portal">
-        <Link to="/white-label"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-          <ExternalLink className="w-4 h-4" /> Open White Label Settings
-        </Link>
-        <p className="text-xs text-warning mt-2 font-medium">⚡ Full white label branding available on Elite plan and above</p>
+      <BSGroup>Client portal branding</BSGroup>
+      <BSRow label="White label" hint="Your name, logo and colours on the client app. Elite plan and above.">
+        <Button asChild variant="outline"><Link to="/white-label">Open white label settings</Link></Button>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Branding</p>
+      <BSGroup>Email branding</BSGroup>
       <BSRow label="Email signature">
         <BSTextarea value={s.email_signature} onChange={v => set('email_signature', v)}
           placeholder="[Coach Name] | [Business Name] | [Website]" rows={3} />

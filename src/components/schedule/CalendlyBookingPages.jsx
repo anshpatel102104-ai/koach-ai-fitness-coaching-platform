@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { getEventTypes } from '@/lib/calendly';
-import { Copy, Check, ExternalLink, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Check, ExternalLink, ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function CalendlyBookingPages() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [copiedId, setCopiedId] = useState(null);
 
   const { data: settingsList = [] } = useQuery({
@@ -30,63 +31,60 @@ export default function CalendlyBookingPages() {
   const copyLink = (id, url) => {
     navigator.clipboard.writeText(url);
     setCopiedId(id);
-    toast.success('Booking link copied!');
+    toast.success('Booking link copied');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden mb-4">
+    <div className="rounded-lg bg-card text-sm shadow-[0_0_0_1px_rgb(var(--border)/0.6)] overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-background transition-colors"
+        type="button"
+        className="touch-compact w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-accent/50 transition-colors"
         onClick={() => setCollapsed(v => !v)}
+        aria-expanded={!collapsed}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-[var(--kc-006bff)]/10 flex items-center justify-center">
-            <Calendar className="w-3.5 h-3.5 text-[var(--kc-006bff)]" />
-          </div>
-          <span className="text-sm font-semibold text-foreground">My Booking Pages</span>
-          <span className="text-[10px] font-semibold text-[var(--kc-006bff)] bg-accent/10 px-2 py-0.5 rounded-full">
-            Calendly · {eventTypes.length}
-          </span>
-        </div>
-        {collapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
+        <span className="h-2 w-2 rounded-full flex-shrink-0 bg-[var(--kc-006bff)]" aria-hidden="true" />
+        <span className="flex-1 min-w-0 truncate text-muted-foreground">
+          <span className="font-medium text-foreground">Calendly is connected.</span>{' '}
+          {isLoading ? 'Loading your booking pages…' : `${eventTypes.length} booking page${eventTypes.length === 1 ? '' : 's'} clients can book from.`}
+        </span>
+        <span className="flex items-center gap-1 text-sm font-semibold text-foreground flex-shrink-0">
+          {collapsed ? 'Show' : 'Hide'}
+          <ChevronDown className={cn('h-4 w-4 transition-transform', !collapsed && 'rotate-180')} />
+        </span>
       </button>
 
       {!collapsed && (
-        <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="border-t border-border divide-y divide-border">
           {isLoading ? (
-            [1, 2].map(i => <div key={i} className="h-28 bg-muted rounded-xl animate-pulse" />)
+            <p className="px-4 py-3 text-muted-foreground">Loading…</p>
           ) : eventTypes.length === 0 ? (
-            <p className="text-xs text-muted-foreground col-span-3 py-2">No active event types found in Calendly.</p>
+            <p className="px-4 py-3 text-muted-foreground">No active event types in Calendly.</p>
           ) : (
             eventTypes.map(event => (
-              <div key={event.uri} className="bg-card border border-border rounded-xl p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ background: event.color || 'var(--kc-006bff)' }} />
-                    <p className="font-semibold text-sm text-foreground truncate">{event.name}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">{event.duration} min</span>
+              <div key={event.uri} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
+                <div className="flex-1 min-w-[180px]">
+                  <p className="font-semibold text-foreground truncate">{event.name}</p>
+                  <p className="text-[13px] text-muted-foreground truncate">
+                    {event.duration} min{event.description_plain ? ` · ${event.description_plain}` : ''}
+                  </p>
                 </div>
-                {event.description_plain && (
-                  <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{event.description_plain}</p>
-                )}
-                <div className="flex gap-2 mt-2">
+                <div className="flex items-center gap-4">
                   <button
+                    type="button"
                     onClick={() => copyLink(event.uri, event.scheduling_url)}
-                    className="flex-1 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-background transition-colors flex items-center justify-center gap-1"
+                    className="touch-compact inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2"
                   >
-                    {copiedId === event.uri ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
-                    {copiedId === event.uri ? 'Copied!' : 'Copy Link'}
+                    {copiedId === event.uri ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedId === event.uri ? 'Copied' : 'Copy link'}
                   </button>
                   <a
                     href={event.scheduling_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex-1 py-1.5 bg-sidebar text-white rounded-lg text-xs font-semibold text-center hover:bg-sidebar-accent transition-colors flex items-center justify-center gap-1"
+                    className="touch-compact inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2"
                   >
-                    <ExternalLink className="w-3 h-3" /> Preview
+                    <ExternalLink className="h-3.5 w-3.5" /> Preview
                   </a>
                 </div>
               </div>

@@ -1,36 +1,34 @@
 import React, { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Dumbbell, Salad, Users, Package, Layers, EyeOff, Star, Edit, Eye, ShoppingCart, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import { SignedImg } from '@/components/shared/SignedImage';
+import { Button } from '@/components/ui/button';
 
-const CATEGORY_STYLES = {
-  workout:   { badge: 'bg-accent/10 text-primary',   icon: Dumbbell, gradient: 'from-accent/10 to-accent/10' },
-  nutrition: { badge: 'bg-success/10 text-success',   icon: Salad,    gradient: 'from-success/10 to-success/10' },
-  coaching:  { badge: 'bg-warning/10 text-warning',   icon: Users,    gradient: 'from-warning/10 to-warning/10' },
-  bundle:    { badge: 'bg-ai/10 text-ai',   icon: Layers,   gradient: 'from-ai/10 to-ai/10' },
-  other:     { badge: 'bg-muted text-foreground',   icon: Package,  gradient: 'from-muted to-border' },
-};
-
-const TYPE_LABEL = {
-  workout_program: 'Workout',
-  nutrition_plan: 'Nutrition',
-  coaching_package: 'Coaching',
+export const TYPE_LABEL = {
+  workout_program: 'Workout program',
+  nutrition_plan: 'Nutrition plan',
+  coaching_package: 'Coaching package',
   guide_ebook: 'Ebook',
-  video_course: 'Course',
+  video_course: 'Video course',
   bundle: 'Bundle',
   custom: 'Product',
 };
 
+const CATEGORY_LABEL = { workout: 'Workout', nutrition: 'Nutrition', coaching: 'Coaching', bundle: 'Bundle', other: 'Other' };
+
+export const billingSuffix = (listing) =>
+  listing.payment_type === 'subscription'
+    ? `/${listing.billing_frequency === 'monthly' ? 'mo' : listing.billing_frequency === 'annual' ? 'yr' : 'qtr'}`
+    : '';
+
 export default function StoreProductCard({ listing, onEdit, onView }) {
   const [buyingOut, setBuyingOut] = useState(false);
-  const cat = CATEGORY_STYLES[listing.category] || CATEGORY_STYLES.other;
-  const CatIcon = cat.icon;
   const isDiscounted = listing.original_price && Number(listing.original_price) > Number(listing.price);
-  const typeLabel = TYPE_LABEL[listing.product_type] || listing.category;
+  const typeLabel = TYPE_LABEL[listing.product_type] || CATEGORY_LABEL[listing.category] || 'Product';
 
-  const handleBuyNow = async () => {
+  const handleBuyNow = async (e) => {
+    e.stopPropagation();
     setBuyingOut(true);
     const res = await db.functions.invoke('storeCheckout', {
       listing_id: listing.id,
@@ -45,122 +43,66 @@ export default function StoreProductCard({ listing, onEdit, onView }) {
     setBuyingOut(false);
   };
 
+  const status = [
+    listing.is_published ? 'Published' : 'Draft',
+    listing.sales_count > 0 ? `${listing.sales_count} sold` : null,
+    listing.rating ? `${listing.rating} rating${listing.rating_count > 0 ? ` (${listing.rating_count})` : ''}` : null,
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all duration-200 group relative flex flex-col">
-      {/* Thumbnail */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: '16/9' }}>
+    <article className="panel overflow-hidden flex flex-col">
+      <button
+        type="button"
+        onClick={() => onView(listing)}
+        className="relative block w-full bg-secondary overflow-hidden text-left"
+        style={{ aspectRatio: '16/9' }}
+        aria-label={`Open ${listing.title}`}
+      >
         {listing.image_url ? (
-          <SignedImg src={listing.image_url} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <SignedImg src={listing.image_url} alt={listing.title} className="w-full h-full object-cover" />
         ) : (
-          <div className={cn('w-full h-full flex items-center justify-center bg-gradient-to-br', cat.gradient)}>
-            <CatIcon className="w-12 h-12 opacity-15" />
-          </div>
-        )}
-
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
-          <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full capitalize', cat.badge)}>
-            {typeLabel}
+          <span className="absolute inset-0 flex items-end p-4">
+            <span className="display text-[28px] text-foreground/15 leading-none line-clamp-2">{listing.title}</span>
           </span>
-          {listing.is_free && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/10 text-success">FREE</span>
-          )}
-          {!listing.is_published && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex items-center gap-1">
-              <EyeOff className="w-2.5 h-2.5" /> Draft
-            </span>
-          )}
-          {listing.payment_type === 'subscription' && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-ai/10 text-ai">Subscription</span>
-          )}
-        </div>
+        )}
+      </button>
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <button
-            onClick={() => onView(listing)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-card text-foreground rounded-lg text-xs font-semibold hover:bg-muted transition-colors"
-          >
-            <Eye className="w-3.5 h-3.5" /> View
-          </button>
-          <button
-            onClick={() => onEdit(listing)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-sidebar text-white rounded-lg text-xs font-semibold hover:bg-black transition-colors"
-          >
-            <Edit className="w-3.5 h-3.5" /> Edit
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-bold text-foreground text-sm leading-tight">{listing.title}</h3>
+      <div className="p-5 flex flex-col flex-1">
+        <p className="text-[13px] text-muted-foreground">
+          {typeLabel}{listing.payment_type === 'subscription' ? ', subscription' : ''}
+        </p>
+        <h3 className="text-xl text-foreground leading-tight mt-1">
+          <button type="button" onClick={() => onView(listing)} className="text-left hover:underline underline-offset-4 decoration-1">{listing.title}</button>
+        </h3>
         {listing.description && (
-          <p className="text-xs text-muted-foreground mt-1 line-clamp-2 leading-relaxed">{listing.description}</p>
+          <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{listing.description}</p>
         )}
 
-        {listing.features?.length > 0 && (
-          <div className="mt-2.5 space-y-1">
-            {listing.features.slice(0, 3).map((f, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className="w-1 h-1 rounded-full bg-muted-foreground flex-shrink-0" />
-                <p className="text-xs text-muted-foreground truncate">{f}</p>
-              </div>
-            ))}
-            {listing.features.length > 3 && (
-              <p className="text-[11px] text-muted-foreground">+{listing.features.length - 3} more</p>
+        <div className="mt-auto pt-4 flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            {listing.is_free ? (
+              <p className="num text-[26px] leading-none text-foreground">Free</p>
+            ) : (
+              <p className="leading-none">
+                <span className="num text-[26px] text-foreground">${listing.price}</span>
+                {billingSuffix(listing) && <span className="num text-base text-foreground">{billingSuffix(listing)}</span>}
+                {isDiscounted && <span className="text-sm text-muted-foreground line-through ml-2">${listing.original_price}</span>}
+              </p>
             )}
+            <p className={listing.is_published ? 'text-[13px] text-muted-foreground mt-1.5' : 'text-[13px] font-semibold text-warning mt-1.5'}>{status}</p>
           </div>
-        )}
+        </div>
 
-        <div className="mt-auto pt-3">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-baseline gap-1.5">
-              {listing.is_free ? (
-                <span className="text-lg font-bold text-success">Free</span>
-              ) : (
-                <>
-                  <span className="text-lg font-bold text-foreground">${listing.price}</span>
-                  {listing.payment_type === 'subscription' && (
-                    <span className="text-[11px] text-muted-foreground">/{listing.billing_frequency === 'monthly' ? 'mo' : listing.billing_frequency === 'annual' ? 'yr' : 'qtr'}</span>
-                  )}
-                  {isDiscounted && (
-                    <span className="text-xs text-muted-foreground line-through">${listing.original_price}</span>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {listing.rating && (
-                <span className="flex items-center gap-0.5 font-semibold text-foreground">
-                  <Star className="w-3 h-3 fill-warning text-warning" /> {listing.rating}
-                  {listing.rating_count > 0 && <span className="text-muted-foreground font-normal">({listing.rating_count})</span>}
-                </span>
-              )}
-              {listing.sales_count > 0 && (
-                <span>{listing.sales_count} sold</span>
-              )}
-            </div>
-          </div>
-
-          {/* Buy Now button — only show for published products with price */}
+        <div className="mt-4 pt-4 border-t border-border flex items-center gap-4">
+          <button type="button" onClick={() => onEdit(listing)} className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">Edit</button>
+          <button type="button" onClick={() => onView(listing)} className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">Details</button>
           {listing.is_published && !listing.is_free && listing.price > 0 && (
-            <button
-              onClick={handleBuyNow}
-              disabled={buyingOut}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold text-primary-foreground transition-all disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg,var(--tc-primary),var(--tc-ai))' }}
-            >
-              {buyingOut ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><ShoppingCart className="w-3.5 h-3.5" /> Buy Now — ${listing.price}</>}
-            </button>
-          )}
-          {listing.is_free && listing.is_published && (
-            <button className="w-full py-2 rounded-xl text-xs font-bold text-success bg-success/10 border border-success hover:bg-success/10 transition-colors">
-              Get for Free
-            </button>
+            <Button size="sm" variant="outline" className="ml-auto" onClick={handleBuyNow} disabled={buyingOut}>
+              {buyingOut ? <Loader2 className="animate-spin" /> : 'Open checkout'}
+            </Button>
           )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }

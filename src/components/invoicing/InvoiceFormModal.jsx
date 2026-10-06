@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import { db } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { X } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { money } from '@/components/business/ui';
 
 const today = () => format(new Date(), 'yyyy-MM-dd');
 const nextMonth = () => {
@@ -56,122 +62,119 @@ export default function InvoiceFormModal({ invoice, onClose, onSave, existingInv
     onSave({ ...form, amount: Number(form.amount) });
   };
 
-  const inputStyle = {
-    width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
-    background: 'var(--tc-background)', color: 'var(--tc-foreground)', border: '1.5px solid var(--tc-border)',
-    outline: 'none', boxSizing: 'border-box',
-  };
-
-  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5, display: 'block' };
+  const canSave = !!form.client_id && !!form.amount;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb, black 50%, transparent)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--tc-card)', borderRadius: 20, width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px color-mix(in srgb, black 20%, transparent)' }}>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="p-0 sm:p-0 sm:max-w-[560px] sm:flex sm:flex-col sm:gap-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--tc-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--tc-foreground)', margin: 0 }}>{isEdit ? 'Edit Invoice' : 'New Invoice'}</h2>
-            <p style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', margin: '2px 0 0' }}>{form.invoice_number}</p>
+            <p className="text-[13px] text-muted-foreground">{form.invoice_number}</p>
+            <DialogTitle className="text-[26px] text-foreground leading-tight">{isEdit ? "Edit invoice" : "New invoice"}</DialogTitle>
           </div>
-          <button onClick={onClose} style={{ background: 'var(--tc-muted)', border: 'none', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
-            <X size={16} color="var(--tc-muted-foreground)" />
-          </button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          <div style={{ display: 'grid', gap: 16 }}>
-            {/* Client */}
-            <div>
-              <label style={labelStyle}>Client *</label>
-              <select value={form.client_id} onChange={e => handleClientChange(e.target.value)} style={inputStyle}>
-                <option value="">Select client…</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="grid gap-4">
+            <div className="space-y-1.5">
+              <Label>Bill to</Label>
+              <Select value={form.client_id || undefined} onValueChange={handleClientChange}>
+                <SelectTrigger><SelectValue placeholder="Choose a client" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {form.client_email && <p className="text-[13px] text-muted-foreground">{form.client_email}</p>}
             </div>
 
-            {/* Description */}
-            <div>
-              <label style={labelStyle}>Description</label>
-              <input value={form.description} onChange={e => set('description', e.target.value)} placeholder="e.g. Monthly Coaching — June 2026" style={inputStyle} />
+            <div className="space-y-1.5">
+              <Label>For</Label>
+              <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Monthly coaching, November" />
             </div>
 
-            {/* Amount + Type */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Amount (USD) *</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 14 }}>$</span>
-                  <input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0.00" style={{ ...inputStyle, paddingLeft: 28 }} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Amount (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <Input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="0.00" className="pl-7 tabular-nums" />
                 </div>
               </div>
-              <div>
-                <label style={labelStyle}>Type</label>
-                <select value={form.type} onChange={e => set('type', e.target.value)} style={inputStyle}>
-                  <option value="one_time">One Time</option>
-                  <option value="recurring">Recurring</option>
-                  <option value="package">Package</option>
-                </select>
+              <div className="space-y-1.5">
+                <Label>Billing</Label>
+                <Select value={form.type} onValueChange={v => set('type', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="one_time">One-off</SelectItem>
+                    <SelectItem value="recurring">Recurring</SelectItem>
+                    <SelectItem value="package">Package</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {form.type === 'recurring' && (
-              <div>
-                <label style={labelStyle}>Recurring Interval</label>
-                <select value={form.recurring_interval} onChange={e => set('recurring_interval', e.target.value)} style={inputStyle}>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+              <div className="space-y-1.5">
+                <Label>Repeats</Label>
+                <Select value={form.recurring_interval} onValueChange={v => set('recurring_interval', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
-            {/* Dates */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Issue Date</label>
-                <input type="date" value={form.issue_date} onChange={e => set('issue_date', e.target.value)} style={inputStyle} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Issued</Label>
+                <Input type="date" value={form.issue_date} onChange={e => set('issue_date', e.target.value)} />
               </div>
-              <div>
-                <label style={labelStyle}>Due Date *</label>
-                <input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} style={inputStyle} />
+              <div className="space-y-1.5">
+                <Label>Due</Label>
+                <Input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} />
               </div>
             </div>
 
-            {/* Status */}
-            <div>
-              <label style={labelStyle}>Status</label>
-              <select value={form.status} onChange={e => set('status', e.target.value)} style={inputStyle}>
-                <option value="draft">Draft</option>
-                <option value="sent">Sent</option>
-                <option value="viewed">Viewed</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={v => set('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="sent">Sent</SelectItem>
+                  <SelectItem value="viewed">Viewed</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Notes */}
-            <div>
-              <label style={labelStyle}>Notes (optional)</label>
-              <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any additional notes…" rows={3}
-                style={{ ...inputStyle, resize: 'none' }} />
+            <div className="space-y-1.5">
+              <Label>Note on the invoice <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Payment terms, thanks, anything else" rows={3} />
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--tc-muted)', display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'var(--tc-muted)', color: 'var(--tc-foreground)', border: 'none', cursor: 'pointer' }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={!form.client_id || !form.amount}
-            style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: (!form.client_id || !form.amount) ? 'var(--tc-border)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', color: (!form.client_id || !form.amount) ? 'var(--tc-muted-foreground)' : 'var(--tc-primary-foreground)', border: 'none', cursor: (!form.client_id || !form.amount) ? 'not-allowed' : 'pointer' }}>
-            {isEdit ? 'Save Changes' : 'Create Invoice'}
-          </button>
+        {/* Footer: total + actions */}
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          <div className="mr-auto">
+            <p className="text-[13px] text-muted-foreground">Total</p>
+            <p className="num text-[24px] leading-none text-foreground">{money(form.amount || 0, { cents: true })}</p>
+          </div>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={!canSave}>
+            {isEdit ? 'Save changes' : 'Create invoice'}
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

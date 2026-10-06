@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { AlertCircle, Lightbulb } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function SmartSuggestions({ selectedClients, program, allClients }) {
   const suggestions = useMemo(() => {
@@ -11,13 +11,13 @@ export default function SmartSuggestions({ selectedClients, program, allClients 
     const clientData = allClients.filter((c) => selectedClients.includes(c.id));
 
     // Check for Lead clients
-    if (clientData.some((c) => c.lifecycle_status === 'lead')) {
+    const leads = clientData.filter((c) => c.lifecycle_status === 'lead');
+    if (leads.length > 0) {
       tips.push({
         id: 'lead-kickoff',
         type: 'tip',
-        icon: Lightbulb,
-        title: 'Schedule an onboarding call',
-        message: '💡 Consider scheduling an onboarding call before the program starts to set expectations and answer questions.',
+        title: 'Book an onboarding call first',
+        message: `${leads.length === 1 ? `${leads[0].name} is` : `${leads.length} of these clients are`} still a lead. A quick call before week 1 sets expectations.`,
       });
     }
 
@@ -28,9 +28,8 @@ export default function SmartSuggestions({ selectedClients, program, allClients 
         tips.push({
           id: 'difficulty-mismatch',
           type: 'warning',
-          icon: AlertCircle,
-          title: 'Difficulty level mismatch',
-          message: `⚠️ This program is rated Advanced — ${beginnerClients.length === 1 ? `${beginnerClients[0].name}` : 'these clients'} may not be the right fit.`,
+          title: 'This is an advanced program',
+          message: `${beginnerClients.length === 1 ? beginnerClients[0].name : 'Some of these clients'} may not be ready for it.`,
         });
       }
     }
@@ -40,10 +39,9 @@ export default function SmartSuggestions({ selectedClients, program, allClients 
       if (client.notes && client.notes.toLowerCase().includes('injury')) {
         tips.push({
           id: `injury-${client.id}`,
-          type: 'warning',
-          icon: AlertCircle,
-          title: 'Client has injury notes',
-          message: `⚠️ ${client.name} has noted an injury — make sure this program accounts for that.`,
+          type: 'injury',
+          title: `${client.name} has an injury on file`,
+          message: 'Check the program against it before they start.',
         });
       }
     });
@@ -54,36 +52,23 @@ export default function SmartSuggestions({ selectedClients, program, allClients 
   if (suggestions.length === 0) return null;
 
   return (
-    <div className="space-y-2 mt-6 pt-6 border-t border-border">
-      {suggestions.map((suggestion) => (
-        <motion.div
-          key={suggestion.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`flex gap-3 p-3 rounded-lg border ${
-            suggestion.type === 'warning'
-              ? 'bg-warning/10 border-warning'
-              : 'bg-accent border-primary'
-          }`}
+    <div className="mt-6 space-y-2 border-t border-border pt-5">
+      {suggestions.map((s) => (
+        <div
+          key={s.id}
+          className={cn(
+            'flex gap-3 rounded-lg px-3.5 py-3',
+            s.type === 'injury' ? 'bg-destructive/10' : s.type === 'warning' ? 'bg-warning-soft' : 'bg-secondary'
+          )}
         >
-          <suggestion.icon
-            className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
-              suggestion.type === 'warning' ? 'text-warning' : 'text-primary'
-            }`}
-          />
+          {s.type !== 'tip' && (
+            <AlertTriangle className={cn('mt-0.5 h-4 w-4 flex-shrink-0', s.type === 'injury' ? 'text-destructive' : 'text-warning')} />
+          )}
           <div>
-            <p className={`text-sm font-semibold ${
-              suggestion.type === 'warning' ? 'text-warning' : 'text-primary'
-            }`}>
-              {suggestion.title}
-            </p>
-            <p className={`text-xs mt-0.5 ${
-              suggestion.type === 'warning' ? 'text-warning' : 'text-primary'
-            }`}>
-              {suggestion.message}
-            </p>
+            <p className={cn('text-sm font-semibold', s.type === 'injury' ? 'text-destructive' : 'text-foreground')}>{s.title}</p>
+            <p className="mt-0.5 text-[13px] text-foreground/80">{s.message}</p>
           </div>
-        </motion.div>
+        </div>
       ))}
     </div>
   );

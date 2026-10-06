@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ArrowRight, Users, Dumbbell, Salad, Send, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Page, PageHeader, Panel, PanelHeader } from '@/components/kit';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import MigrationClientImport from '@/components/migration/MigrationClientImport';
 import MigrationWorkouts from '@/components/migration/MigrationWorkouts';
@@ -7,10 +10,10 @@ import MigrationNutrition from '@/components/migration/MigrationNutrition';
 import MigrationInvites from '@/components/migration/MigrationInvites';
 
 const STEPS = [
-  { id: 'clients',  label: 'Import Clients',    icon: Users,    desc: 'Upload your client list from any app' },
-  { id: 'workouts', label: 'Workout Templates',  icon: Dumbbell, desc: 'Import or create workout programs' },
-  { id: 'nutrition',label: 'Meal Plans',         icon: Salad,    desc: 'Bring over nutrition plans' },
-  { id: 'invites',  label: 'Invite Clients',     icon: Send,     desc: 'Bulk-invite everyone at once' },
+  { id: 'clients',  label: 'Import your clients',  desc: 'Upload a CSV exported from Trainerize, Everfit or a spreadsheet.' },
+  { id: 'workouts', label: 'Bring your programs',   desc: 'Import workout templates or start from ours.' },
+  { id: 'nutrition',label: 'Bring your meal plans', desc: 'Import nutrition plans or skip for now.' },
+  { id: 'invites',  label: 'Invite everyone',       desc: 'One email to every imported client with their login link.' },
 ];
 
 export default function Migration() {
@@ -21,91 +24,80 @@ export default function Migration() {
   const markDone = (id) => setDone(d => ({ ...d, [id]: true }));
   const allDone = STEPS.every(s => done[s.id]);
 
+  const doneCount = STEPS.filter(s => done[s.id]).length;
+
   if (allDone) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-5">
-          <CheckCircle2 className="w-10 h-10 text-success" />
-        </div>
-        <h2 className="text-2xl font-heading font-black text-foreground mb-2">You're all set! 🎉</h2>
-        <p className="text-muted-foreground text-sm max-w-sm">
-          Your clients, workouts, and meal plans have been imported. Your clients have been invited and are ready to go.
+      <Page className="max-w-2xl">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success text-white">
+          <Check className="h-6 w-6" strokeWidth={3} />
+        </span>
+        <h1 className="mt-5 text-[32px] text-foreground sm:text-[40px]">You're moved over.</h1>
+        <p className="mt-2 max-w-md text-[15px] text-muted-foreground">
+          Your clients, programs and meal plans are in, and your clients have their invites. Their first check-ins will show up on Today.
         </p>
-        <a href="/clients" className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold text-sm hover:bg-primary/90 transition-colors">
-          Go to Clients <ArrowRight className="w-4 h-4" />
-        </a>
-      </div>
+        <Button asChild className="mt-6">
+          <Link to="/clients">Go to clients</Link>
+        </Button>
+      </Page>
     );
   }
 
+  const current = STEPS[step];
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <span className="text-xs font-semibold text-primary uppercase tracking-wider">Migration Wizard</span>
+    <Page>
+      <PageHeader
+        title="Move to KOACH"
+        subtitle="Four steps. Bring your clients, programs and meal plans, then invite everyone at once."
+      />
+
+      <div className="mb-5 flex max-w-xl items-center gap-4">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-border">
+          <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${(doneCount / STEPS.length) * 100}%` }} />
         </div>
-        <h1 className="text-2xl font-heading font-black text-foreground">Switch to FitForge in minutes</h1>
-        <p className="text-muted-foreground text-sm mt-1">Import your clients, programs, and plans — then invite everyone at once.</p>
+        <p className="text-sm font-semibold tabular-nums text-foreground">{doneCount} of {STEPS.length} done</p>
       </div>
 
-      {/* Step progress */}
-      <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
-        {STEPS.map((s, i) => {
-          const isDone = done[s.id];
-          const isActive = i === step;
-          const Icon = s.icon;
-          return (
-            <React.Fragment key={s.id}>
-              <button
-                onClick={() => setStep(i)}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition-all shrink-0',
-                  isDone ? 'bg-success/10 border-success text-success'
-                    : isActive ? 'bg-primary/10 border-primary/30 text-primary'
-                    : 'bg-card border-border text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {isDone
-                  ? <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  : <Icon className="w-3.5 h-3.5" />
-                }
-                <span className="hidden sm:inline">{s.label}</span>
-                <span className="sm:hidden">{i + 1}</span>
-              </button>
-              {i < STEPS.length - 1 && (
-                <div className={cn('h-px flex-1 min-w-[12px] shrink-0', isDone ? 'bg-success' : 'bg-border')} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      {/* Step panel */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-        {/* Panel header */}
-        <div className="px-6 py-5 border-b border-border flex items-center gap-4">
-          {(() => {
-            const s = STEPS[step];
-            const Icon = s.icon;
+      <div className="grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
+        {/* Step cards */}
+        <ol className="space-y-2.5">
+          {STEPS.map((s, i) => {
+            const isDone = done[s.id];
+            const isActive = i === step;
             return (
-              <>
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-heading font-bold text-base text-foreground">{s.label}</h2>
-                  <p className="text-xs text-muted-foreground">{s.desc}</p>
-                </div>
-                <div className="ml-auto text-xs text-muted-foreground shrink-0">Step {step + 1} of {STEPS.length}</div>
-              </>
+              <li key={s.id}>
+                <button
+                  onClick={() => setStep(i)}
+                  aria-current={isActive ? 'step' : undefined}
+                  className={cn(
+                    'panel flex w-full items-center gap-4 p-4 text-left transition-shadow',
+                    isActive && 'shadow-[inset_0_0_0_2px_rgb(var(--foreground))]'
+                  )}
+                >
+                  {isDone ? (
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-success text-white"><Check className="h-4 w-4" strokeWidth={3} /></span>
+                  ) : (
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border-[1.5px] border-foreground text-[15px] font-bold text-foreground">{i + 1}</span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold text-foreground">{s.label}</span>
+                    <span className="block text-sm text-muted-foreground">{isDone ? 'Done' : s.desc}</span>
+                  </span>
+                </button>
+              </li>
             );
-          })()}
-        </div>
+          })}
+        </ol>
 
-        {/* Panel content */}
-        <div className="p-6">
+        {/* Step panel */}
+        <Panel>
+          <PanelHeader
+            title={current.label}
+            subtitle={current.desc}
+            right={<span className="text-sm text-muted-foreground">Step {step + 1} of {STEPS.length}</span>}
+          />
+          <div className="px-5 pb-6 sm:px-6">
           {step === 0 && (
             <MigrationClientImport
               onComplete={(clients) => { setImportedClients(clients); markDone('clients'); setStep(1); }}
@@ -131,8 +123,9 @@ export default function Migration() {
               onSkip={() => markDone('invites')}
             />
           )}
-        </div>
+          </div>
+        </Panel>
       </div>
-    </div>
+    </Page>
   );
 }

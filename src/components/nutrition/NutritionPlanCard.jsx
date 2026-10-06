@@ -1,154 +1,160 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { MoreHorizontal, Pencil, Users, Copy, Trash2, ArrowRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { MoreHorizontal, Pencil, Users, Copy, Trash2, Eye } from 'lucide-react';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Initials } from '@/components/kit';
 import NutritionPlanDetailModal from './NutritionPlanDetailModal';
-import { getFoodImageUrl } from '@/lib/foodImages';
+import { fmtInt, planStatus, goalLabel } from './planUtils';
 
-function PlanBadge({ plan }) {
-  const label = plan.is_template ? 'Template' : plan.tracking_mode === 'habits' ? 'Habit Mode' : 'Macro Tracking';
-  return (
-    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-muted text-foreground border border-border">
-      {label}
-    </span>
-  );
-}
+// Desktop column template, shared by the head row and every plan row.
+const COLS = 'lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1.5fr)_88px_minmax(0,1.2fr)_96px_104px_40px] lg:items-center lg:gap-4';
 
-function MacroRow({ plan }) {
-  if (plan.tracking_mode === 'habits') return null;
-  const items = [
-    { label: 'kcal',    value: plan.calories },
-    { label: 'protein', value: plan.protein_g, unit: 'g' },
-    { label: 'carbs',   value: plan.carbs_g,   unit: 'g' },
-    { label: 'fats',    value: plan.fats_g,    unit: 'g' },
-  ].filter(i => i.value);
-  if (!items.length) return null;
+export function PlanTableHead() {
   return (
-    <div className="flex items-center justify-between bg-background border border-border rounded-lg px-3 py-2">
-      {items.map((item, i) => (
-        <React.Fragment key={item.label}>
-          {i > 0 && <div className="w-px h-4 bg-border" />}
-          <div className="flex flex-col items-center">
-            <span className="text-xs font-semibold text-foreground">{item.value}{item.unit || ''}</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{item.label}</span>
-          </div>
-        </React.Fragment>
-      ))}
+    <div className={`hidden ${COLS} border-y border-border px-5 py-2.5 text-[13px] text-muted-foreground`} role="row">
+      <span role="columnheader">Client</span>
+      <span role="columnheader">Plan</span>
+      <span role="columnheader" className="text-right">Calories</span>
+      <span role="columnheader">Macros</span>
+      <span role="columnheader">Status</span>
+      <span role="columnheader">Updated</span>
+      <span role="columnheader" className="sr-only">Actions</span>
     </div>
   );
 }
 
-function DropdownMenu({ onEdit, onAssign, onDuplicate, onDelete, onClose }) {
+function macroText(plan) {
+  if (plan.tracking_mode === 'habits') return 'No macro targets';
+  const parts = [
+    plan.protein_g ? `${fmtInt(plan.protein_g)} g P` : null,
+    plan.carbs_g ? `${fmtInt(plan.carbs_g)} g C` : null,
+    plan.fats_g ? `${fmtInt(plan.fats_g)} g F` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'No macro targets set';
+}
+
+function updatedText(plan) {
+  const d = plan.updated_date || plan.created_date;
+  if (!d) return '—';
+  try { return `${formatDistanceToNowStrict(new Date(d))} ago`; } catch { return '—'; }
+}
+
+function RowMenu({ onOpen, onEdit, onAssign, onDuplicate, onDelete }) {
   return (
-    <div
-      className="absolute top-8 right-0 z-20 w-44 bg-card border border-border rounded-xl shadow-sm py-1 overflow-hidden"
-      onMouseLeave={onClose}
-    >
-      {[
-        { icon: Pencil, label: 'Edit Plan',      action: onEdit,      style: '' },
-        { icon: Users,  label: 'Assign Clients', action: onAssign,    style: '' },
-        { icon: Copy,   label: 'Duplicate',       action: onDuplicate, style: '' },
-        { icon: Trash2, label: 'Delete',          action: onDelete,    style: 'text-destructive' },
-      ].map(({ icon: Icon, label, action, style }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <button
-          key={label}
-          onClick={(e) => { e.stopPropagation(); action(); onClose(); }}
-          className={cn('flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-medium hover:bg-background transition-colors text-left', style || 'text-foreground')}
+          onClick={e => e.stopPropagation()}
+          className="touch-compact inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          aria-label="Plan actions"
         >
-          <Icon className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-          {label}
+          <MoreHorizontal className="w-4 h-4" />
         </button>
-      ))}
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44" onClick={e => e.stopPropagation()}>
+        <DropdownMenuItem onClick={onOpen}><Eye className="w-4 h-4" /> Open plan</DropdownMenuItem>
+        <DropdownMenuItem onClick={onEdit}><Pencil className="w-4 h-4" /> Edit plan</DropdownMenuItem>
+        <DropdownMenuItem onClick={onAssign}><Users className="w-4 h-4" /> Assign clients</DropdownMenuItem>
+        <DropdownMenuItem onClick={onDuplicate}><Copy className="w-4 h-4" /> Duplicate</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive"><Trash2 className="w-4 h-4" /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
-export default function NutritionPlanCard({ plan, index, onEdit, onDuplicate, onDelete, onAssign }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const clientCount = (plan.assigned_clients || []).length;
+/**
+ * One meal plan as a table row (Clients-list pattern). Clicking the row opens
+ * the full plan view. Kept the historical name so callers don't change.
+ */
+export default function NutritionPlanCard({ plan, clients = [], autoOpen = false, onEdit, onDuplicate, onDelete, onAssign }) {
+  const [detailOpen, setDetailOpen] = useState(!!autoOpen);
+  const status = planStatus(plan);
+  const primary = clients[0];
+  const extra = clients.length - 1;
+  const goal = goalLabel(plan, primary);
+  const mealCount = (plan.meals || []).length;
+
+  const clientName = primary ? primary.name : plan.is_template ? 'Template' : 'Unassigned';
+  const clientLine = primary
+    ? [extra > 0 ? `+${extra} more` : null, goal].filter(Boolean).join(', ') || 'Assigned'
+    : plan.is_template ? 'Reusable for any client' : 'Not sent to anyone yet';
+
+  const planLine = plan.tracking_mode === 'habits'
+    ? 'Habit mode'
+    : `${mealCount} meal${mealCount === 1 ? '' : 's'} a day${(plan.rest_day_meals || []).length ? ', training and rest days' : ''}`;
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2, delay: index * 0.04 }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => { setHovered(false); setMenuOpen(false); }}
-        className="relative bg-card border border-border rounded-xl overflow-hidden hover:border-muted-foreground transition-colors duration-150 flex flex-col"
+      <div
+        role="row"
+        tabIndex={0}
+        onClick={() => setDetailOpen(true)}
+        onKeyDown={e => { if (e.key === 'Enter') setDetailOpen(true); }}
+        className={`group relative flex flex-col gap-2 border-b border-border px-4 py-3.5 last:border-b-0 sm:px-5 cursor-pointer hover:bg-accent/60 focus-visible:bg-accent/60 outline-none transition-colors ${COLS}`}
       >
-        {/* Body */}
-        <div className="p-4 flex flex-col gap-3 flex-1">
-          {/* Top row */}
-          <div className="flex items-start justify-between">
-            <PlanBadge plan={plan} />
-            <div className="relative">
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: hovered || menuOpen ? 1 : 0 }}
-                onClick={(e) => { e.stopPropagation(); setMenuOpen(o => !o); }}
-                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </motion.button>
-              {menuOpen && (
-                <DropdownMenu
-                  onEdit={onEdit}
-                  onAssign={onAssign}
-                  onDuplicate={onDuplicate}
-                  onDelete={onDelete}
-                  onClose={() => setMenuOpen(false)}
-                />
-              )}
-            </div>
+        {/* Client */}
+        <div className="flex items-center gap-3 min-w-0 pr-10 lg:pr-0" role="cell">
+          {primary
+            ? <Initials name={primary.name} src={primary.avatar_url} size={36} tone={primary.lifecycle_status === 'at_risk' ? 'alert' : 'default'} />
+            : <span className="h-9 w-9 flex-shrink-0 rounded-full border border-dashed border-input" aria-hidden />}
+          <div className="min-w-0">
+            <p className={`text-[15px] font-semibold truncate ${primary ? 'text-foreground' : 'text-muted-foreground'}`}>{clientName}</p>
+            <p className="text-[13px] text-muted-foreground truncate">{clientLine}</p>
           </div>
-
-          {/* Title + description */}
-          <div>
-            <h3 className="font-semibold text-sm text-foreground leading-tight line-clamp-1">{plan.title}</h3>
-            {plan.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{plan.description}</p>
-            )}
-          </div>
-
-          <MacroRow plan={plan} />
         </div>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-border flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>{clientCount} {clientCount === 1 ? 'client' : 'clients'}</span>
-            {plan.meals?.[0]?.foods?.slice(0, 3).map((food, i) => (
-              <img
-                key={i}
-                src={getFoodImageUrl(food.name || food.food_name, 32)}
-                alt={food.name || food.food_name}
-                loading="lazy"
-                className="w-5 h-5 rounded-full object-cover border border-white -ml-1 first:ml-1"
-                onError={e => { e.target.style.display = 'none'; }}
-              />
-            ))}
-          </div>
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: hovered ? 1 : 0 }}
-            transition={{ duration: 0.12 }}
-            onClick={() => setDetailOpen(true)}
-            className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary transition-colors"
-          >
-            View <ArrowRight className="w-3 h-3" />
-          </motion.button>
+        {/* Plan */}
+        <div className="min-w-0 pl-12 lg:pl-0" role="cell">
+          <p className="text-[15px] text-foreground truncate">{plan.title || 'Untitled plan'}</p>
+          <p className="text-[13px] text-muted-foreground truncate">{planLine}</p>
         </div>
-      </motion.div>
+
+        {/* Calories */}
+        <div className="hidden lg:block text-right" role="cell">
+          {plan.tracking_mode !== 'habits' && plan.calories
+            ? <span className="num text-xl text-foreground">{fmtInt(plan.calories)}</span>
+            : <span className="text-muted-foreground">—</span>}
+        </div>
+
+        {/* Macros */}
+        <div className={`pl-12 lg:pl-0 text-[13px] text-muted-foreground tabular-nums truncate ${plan.tracking_mode === 'habits' ? 'hidden lg:block' : ''}`} role="cell">
+          <span className="lg:hidden">
+            {plan.tracking_mode !== 'habits' && plan.calories ? <span className="font-semibold text-foreground">{fmtInt(plan.calories)} kcal · </span> : null}
+          </span>
+          {macroText(plan)}
+        </div>
+
+        {/* Status */}
+        <div className="pl-12 lg:pl-0 flex items-center gap-2" role="cell">
+          <Badge variant={status.variant}>{status.label}</Badge>
+          <span className="lg:hidden text-[13px] text-muted-foreground">Updated {updatedText(plan)}</span>
+        </div>
+
+        {/* Updated */}
+        <div className="hidden lg:block text-[13px] text-muted-foreground" role="cell">{updatedText(plan)}</div>
+
+        {/* Menu */}
+        <div className="absolute right-3 top-3 lg:static lg:flex lg:justify-end" role="cell">
+          <RowMenu
+            onOpen={() => setDetailOpen(true)}
+            onEdit={onEdit}
+            onAssign={onAssign}
+            onDuplicate={onDuplicate}
+            onDelete={onDelete}
+          />
+        </div>
+      </div>
 
       <NutritionPlanDetailModal
         open={detailOpen}
         onOpenChange={setDetailOpen}
         plan={plan}
-        onEdit={onEdit}
+        onEdit={() => { setDetailOpen(false); onEdit?.(); }}
+        onAssign={() => { setDetailOpen(false); onAssign?.(); }}
       />
     </>
   );

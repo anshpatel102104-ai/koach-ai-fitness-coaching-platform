@@ -1,86 +1,112 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Play, CheckCircle2, Moon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Bell, Check } from 'lucide-react';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-export default function TodayHeroCard({ program, todayWorkout, workoutDone, onStartWorkout }) {
-  const navigate = useNavigate();
+/** Rough session length from the prescribed sets (about 2.5 min a set, 30 min floor). */
+export function estimateMinutes(exercises = []) {
+  const sets = exercises.reduce((t, ex) => t + (Number(ex.sets) || 3), 0);
+  return Math.max(30, Math.round((sets * 2.5) / 5) * 5);
+}
 
-  if (!program) {
-    return (
-      <div className="mx-5 rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-1">Today's Plan</p>
-        <p className="text-white font-bold text-lg">Your program is being set up 💪</p>
-        <p className="text-white/40 text-sm mt-1">Your coach will assign your training plan soon.</p>
-      </div>
-    );
-  }
+function HeroIconButton({ onClick, label, children, className }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={cn('touch-compact relative inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/15 transition-colors', className)}
+    >
+      {children}
+    </button>
+  );
+}
 
-  const isRestDay = !todayWorkout;
+/**
+ * Client Today hero — the graphite block at the top of the client app.
+ * Holds the logo, the date, today's session and the one action that matters
+ * (brand blue). Always dark, in both themes.
+ */
+export default function TodayHeroCard({
+  program,
+  todayWorkout,
+  workoutDone,
+  onStartWorkout,
+  weekNumber,
+  unreadNotifications = 0,
+  onNotifications,
+  userName,
+  onProfile,
+  logoUrl,
+}) {
+  const exercises = todayWorkout?.exercises || [];
+  const isRest = !todayWorkout || (todayWorkout?.day_name || '').toLowerCase().includes('rest');
+  const dateLine = `${format(new Date(), 'EEEE')}${weekNumber ? `, week ${weekNumber}` : `, ${format(new Date(), 'MMMM d')}`}`;
+  const initial = (userName || '').trim()[0]?.toUpperCase();
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-      className="mx-5 rounded-2xl overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #1E3A5F 0%, rgb(var(--foreground)) 100%)', border: '1px solid rgb(var(--primary) / 0.25)' }}>
-      {/* Program badge */}
-      <div className="px-5 pt-4 pb-3">
-        <p className="text-primary text-[10px] font-bold uppercase tracking-widest mb-2">{program.title}</p>
+    <section
+      className="rounded-b-[20px] bg-sidebar px-5 pb-6 text-white md:mx-4 md:mt-4 md:rounded-[20px]"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 18px)' }}
+    >
+      {/* Top row: logo, date, bell, profile */}
+      <div className="flex items-center gap-2">
+        <img src={logoUrl || '/koach-logo-white.png'} alt="KOACH AI" className="h-6 w-auto" />
+        <p className="ml-auto mr-1 text-sm text-white/70 truncate">{dateLine}</p>
+        {onNotifications && (
+          <HeroIconButton onClick={onNotifications} label={unreadNotifications > 0 ? `${unreadNotifications} unread notifications` : 'Notifications'}>
+            <Bell className="h-[18px] w-[18px]" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold tabular-nums text-brand-foreground">
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </span>
+            )}
+          </HeroIconButton>
+        )}
+        {onProfile && (
+          <HeroIconButton onClick={onProfile} label="Your profile" className="rounded-full text-[13px] font-semibold">
+            {initial || '?'}
+          </HeroIconButton>
+        )}
+      </div>
 
-        {isRestDay ? (
+      {/* Today's session */}
+      <div className="mt-7">
+        {!program ? (
           <>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                <Moon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-white font-bold text-lg">Rest Day 🛌</p>
-                <p className="text-white/50 text-xs">Recovery is part of the plan</p>
-              </div>
-            </div>
-            <div className="bg-white/5 rounded-xl px-4 py-3">
-              <p className="text-white/60 text-xs leading-relaxed">💡 Focus on hydration, sleep, and light movement today. Your muscles grow during rest.</p>
-            </div>
+            <p className="text-base text-white/80">Today's training</p>
+            <h1 className="mt-1 text-[40px] text-white">Program coming</h1>
+            <p className="mt-1.5 text-[15px] text-white/70">Your coach is building your plan. It will show up here when it's ready.</p>
           </>
-        ) : workoutDone ? (
+        ) : isRest ? (
           <>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgb(var(--success) / 0.15)' }}>
-                <CheckCircle2 className="w-5 h-5 text-success" />
-              </div>
-              <div>
-                <p className="text-white font-bold text-lg">Workout Complete ✅</p>
-                <p className="text-success text-xs font-semibold">Great work today!</p>
-              </div>
-            </div>
-            <p className="text-white/50 text-sm">{todayWorkout.day_name} — {todayWorkout.exercises?.length || 0} exercises</p>
+            <p className="text-base text-white/80">Today's training</p>
+            <h1 className="mt-1 text-[44px] text-white">Rest day</h1>
+            <p className="mt-1.5 text-[15px] text-white/70">Nothing scheduled. Walk, stretch and get to bed on time.</p>
           </>
         ) : (
           <>
-            <div className="mb-4">
-              <p className="text-white font-bold text-xl leading-tight">{todayWorkout.day_name || 'Today\'s Workout'}</p>
-              <p className="text-white/50 text-sm mt-0.5">
-                {todayWorkout.exercises?.length || 0} exercises
-                {todayWorkout.exercises?.length > 0 && ' · ~' + Math.round((todayWorkout.exercises.length * 3.5)) + ' min'}
-              </p>
-            </div>
-            {/* Exercise preview */}
-            {todayWorkout.exercises?.slice(0, 3).map((ex, i) => (
-              <div key={i} className="flex items-center gap-2 mb-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                <p className="text-white/60 text-xs">{ex.name} · {ex.sets}×{ex.reps}</p>
-              </div>
-            ))}
-            {(todayWorkout.exercises?.length || 0) > 3 && (
-              <p className="text-white/30 text-xs mt-1">+{todayWorkout.exercises.length - 3} more exercises</p>
-            )}
-            <button onClick={onStartWorkout}
-              className="mt-4 w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary)))', boxShadow: '0 0 20px rgb(var(--primary) / 0.4)' }}>
-              <Play className="w-4 h-4" fill="white" /> Start Workout
-            </button>
+            <p className="text-base text-white/80">Today's training</p>
+            <h1 className="mt-1 text-[44px] text-white break-words">{todayWorkout.day_name || 'Workout'}</h1>
+            <p className="mt-1.5 text-[15px] text-white/70">
+              {exercises.length} exercise{exercises.length === 1 ? '' : 's'}, about {estimateMinutes(exercises)} minutes
+            </p>
           </>
         )}
       </div>
-    </motion.div>
+
+      {program && !isRest && (
+        workoutDone ? (
+          <div className="mt-5 flex h-12 items-center justify-center gap-2 rounded-lg bg-white/10 text-[15px] font-semibold">
+            <Check className="h-4 w-4" strokeWidth={3} /> Done for today
+          </div>
+        ) : (
+          <Button variant="brand" size="lg" className="mt-5 h-[52px] w-full text-base font-bold" onClick={onStartWorkout}>
+            Start workout
+          </Button>
+        )
+      )}
+    </section>
   );
 }

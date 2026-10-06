@@ -1,3 +1,4 @@
+import { Palette } from 'lucide-react';
 import React, { useState } from 'react';
 import ProfileSectionCard from './ProfileSectionCard';
 
@@ -7,15 +8,15 @@ export default function ProfileAppearance() {
   const [weekStart, setWeekStart] = useState('sunday');
 
   const Row = ({ label, options, value, onChange }) => (
-    <div className="py-3 border-b border-white/5 last:border-0">
-      <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">{label}</p>
-      <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+    <div className="py-3 border-b border-border last:border-0">
+      <p className="text-muted-foreground text-xs mb-2">{label}</p>
+      <div className="flex gap-1 p-1 rounded-xl" style={{ background: 'rgb(var(--secondary))' }}>
         {options.map(o => (
           <button key={o.value} onClick={() => onChange(o.value)}
             className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
             style={{
-              background: value === o.value ? 'rgb(var(--primary) / 0.3)' : 'transparent',
-              color: value === o.value ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.3)',
+              background: value === o.value ? 'rgb(var(--primary))' : 'transparent',
+              color: value === o.value ? 'rgb(var(--primary-foreground))' : 'rgb(var(--muted-foreground))',
             }}>
             {o.label}
           </button>
@@ -25,7 +26,7 @@ export default function ProfileAppearance() {
   );
 
   return (
-    <ProfileSectionCard icon="🎨" title="Appearance & Preferences">
+    <ProfileSectionCard icon={Palette} title="Appearance & Preferences">
       <div className="pt-1">
         <Row label="Theme" value={theme} onChange={setTheme}
           options={[{ label: 'Dark', value: 'dark' }, { label: 'Light', value: 'light' }, { label: 'System', value: 'system' }]} />
@@ -35,11 +36,11 @@ export default function ProfileAppearance() {
           options={[{ label: 'Sunday', value: 'sunday' }, { label: 'Monday', value: 'monday' }]} />
 
         <div className="py-3">
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">Language</p>
+          <p className="text-muted-foreground text-xs mb-1.5">Language</p>
           <div className="flex items-center justify-between">
-            <p className="text-white/60 text-sm">English</p>
-            <span className="text-[10px] px-2 py-1 rounded-full font-bold"
-              style={{ background: 'rgb(var(--warning) / 0.15)', color: '#FBB724' }}>Coming Soon</span>
+            <p className="text-foreground text-sm">English</p>
+            <span className="text-[12px] px-2 py-1 rounded-full font-bold"
+              style={{ background: 'rgb(var(--warning) / 0.15)', color: 'rgb(var(--warning))' }}>Coming Soon</span>
           </div>
         </div>
       </div>

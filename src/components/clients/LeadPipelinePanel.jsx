@@ -11,12 +11,12 @@ import { CalendarClock, MessageCircle, PhoneCall, Send, FileText, Save } from 'l
 import { format } from 'date-fns';
 
 const PIPELINE_STAGES = [
-  { key: 'new_lead', label: 'New Lead', color: 'bg-muted text-muted-foreground border-border' },
-  { key: 'dmd', label: "DM'd", color: 'bg-accent text-primary border-accent', icon: MessageCircle },
-  { key: 'call_booked', label: 'Call Booked', color: 'bg-warning/10 text-warning border-warning', icon: PhoneCall },
-  { key: 'proposal_sent', label: 'Proposal Sent', color: 'bg-ai/10 text-ai border-ai', icon: Send },
-  { key: 'closed', label: 'Closed 🎉', color: 'bg-success/10 text-success border-success' },
-  { key: 'lost', label: 'Lost', color: 'bg-destructive/10 text-destructive border-destructive' },
+  { key: 'new_lead', label: 'New lead' },
+  { key: 'dmd', label: 'Messaged', icon: MessageCircle },
+  { key: 'call_booked', label: 'Call booked', icon: PhoneCall },
+  { key: 'proposal_sent', label: 'Proposal sent', icon: Send },
+  { key: 'closed', label: 'Closed' },
+  { key: 'lost', label: 'Lost' },
 ];
 
 export default function LeadPipelinePanel({ client, onUpdate }) {
@@ -46,18 +46,20 @@ export default function LeadPipelinePanel({ client, onUpdate }) {
     <div className="space-y-4">
       {/* Pipeline stage selector */}
       <div>
-        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Pipeline Stage</Label>
+        <Label className="text-sm font-semibold text-foreground mb-2 block">Pipeline stage</Label>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
           {PIPELINE_STAGES.map(s => (
             <button
               key={s.key}
               onClick={() => setStage(s.key)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all',
-                stage === s.key ? s.color : 'bg-card text-muted-foreground border-border hover:border-muted-foreground'
+                'flex items-center gap-1.5 px-3 h-9 rounded-md border text-[13px] font-medium transition-colors',
+                stage === s.key
+                  ? (s.key === 'lost' ? 'bg-destructive text-destructive-foreground border-destructive' : 'bg-primary text-primary-foreground border-primary')
+                  : 'bg-card text-foreground/80 border-border hover:bg-accent'
               )}
             >
-              {s.icon && <s.icon className="w-3 h-3" />}
+              {s.icon && <s.icon className="w-3.5 h-3.5" />}
               {s.label}
             </button>
           ))}
@@ -66,32 +68,32 @@ export default function LeadPipelinePanel({ client, onUpdate }) {
 
       {/* Follow-up date */}
       <div>
-        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block flex items-center gap-1.5">
-          <CalendarClock className="w-3 h-3" /> Follow-up Reminder
+        <Label className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+          <CalendarClock className="w-3.5 h-3.5" /> Follow up on
         </Label>
         <Input
           type="date"
           value={followUp}
           onChange={e => setFollowUp(e.target.value)}
-          className={cn('h-9 text-sm', isOverdue ? 'border-destructive text-destructive focus-visible:ring-destructive' : '')}
+          className={cn('h-10 text-sm', isOverdue ? 'border-destructive text-destructive focus-visible:ring-destructive' : '')}
         />
         {isOverdue && (
-          <p className="text-xs text-destructive mt-1 flex items-center gap-1">⚠️ Follow-up overdue since {format(new Date(followUp), 'MMM d')}</p>
+          <p className="text-[13px] text-destructive mt-1">Follow-up overdue since {format(new Date(followUp), 'MMM d')}</p>
         )}
         {followUp && !isOverdue && (
-          <p className="text-xs text-muted-foreground mt-1">Scheduled for {format(new Date(followUp), 'EEEE, MMM d, yyyy')}</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Scheduled for {format(new Date(followUp), 'EEEE, MMM d, yyyy')}</p>
         )}
       </div>
 
       {/* Notes */}
       <div>
-        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block flex items-center gap-1.5">
-          <FileText className="w-3 h-3" /> CRM Notes
+        <Label className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5" /> Lead notes
         </Label>
         <Textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          placeholder="Add notes about this lead: source, interests, objections, what they said on the call..."
+          placeholder="Where they came from, what they want, objections, what they said on the call"
           rows={4}
           className="text-sm"
         />
@@ -99,7 +101,7 @@ export default function LeadPipelinePanel({ client, onUpdate }) {
 
       <Button onClick={save} disabled={saving} className="w-full gap-2">
         <Save className="w-3.5 h-3.5" />
-        {saving ? 'Saving…' : 'Save Lead Info'}
+        {saving ? 'Saving' : 'Save lead'}
       </Button>
     </div>
   );

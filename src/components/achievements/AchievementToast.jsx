@@ -1,36 +1,21 @@
 import React from 'react';
-import { BADGE_CONFIG, TIER_STYLES } from '@/lib/badges';
+import { Check } from 'lucide-react';
+import { BADGE_CONFIG } from '@/lib/badges';
 
 export default function AchievementToast({ badge, clientName }) {
-  const tier = TIER_STYLES[badge.tier] || TIER_STYLES.bronze;
   return (
-    <div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl"
-      style={{
-        background: 'var(--tc-sidebar)',
-        border: `1px solid ${tier.accent}40`,
-        boxShadow: `0 4px 24px color-mix(in srgb, black 50%, transparent), 0 0 12px ${tier.glow}`,
-        minWidth: 260,
-        maxWidth: 320,
-      }}
-    >
-      <span className="text-3xl leading-none flex-shrink-0">{badge.emoji}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: `${tier.accent}99` }}>
-          Achievement Unlocked!
-        </p>
-        <p className="text-sm font-black text-white leading-tight">{badge.label}</p>
+    <div className="flex min-w-[260px] max-w-[320px] items-center gap-3 rounded-xl bg-ai px-4 py-3 text-ai-foreground shadow-md">
+      <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-success text-white">
+        <Check className="h-4 w-4" strokeWidth={3} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] text-ai-foreground/70">Milestone reached</p>
+        <p className="text-[15px] font-semibold leading-tight">{badge.label}</p>
         {clientName && (
-          <p className="text-xs mt-0.5 truncate" style={{ color: `${tier.accent}80` }}>
-            {clientName} · {badge.desc}
+          <p className="mt-0.5 truncate text-[13px] text-ai-foreground/70">
+            {clientName}{badge.desc ? `, ${badge.desc}` : ''}
           </p>
         )}
-      </div>
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-base"
-        style={{ background: `${tier.accent}20`, border: `1px solid ${tier.accent}40` }}
-      >
-        🏅
       </div>
     </div>
   );

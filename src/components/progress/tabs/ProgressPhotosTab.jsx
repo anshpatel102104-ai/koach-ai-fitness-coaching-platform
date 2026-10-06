@@ -24,7 +24,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.entities.CheckIn.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['checkins'] }); toast.success('Photo added!'); setShowUpload(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['checkins'] }); toast.success('Photo added'); setShowUpload(false); },
   });
 
   const allPhotos = useMemo(() => {
@@ -51,7 +51,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       } else {
         await db.entities.CheckIn.create({ client_id: client.id, client_name: client.name, date: format(new Date(), 'yyyy-MM-dd'), photo_urls: [file_url] });
         queryClient.invalidateQueries({ queryKey: ['checkins'] });
-        toast.success('Photo added!');
+        toast.success('Photo added');
         setShowUpload(false);
       }
     } catch (e) {
@@ -76,7 +76,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
           {VIEWS.map(v => (
             <button key={v} onClick={() => setActiveView(v)}
               className={cn('px-3 py-1 rounded-md text-xs font-semibold transition-all',
-                activeView === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>
+                activeView === v ? 'bg-card text-foreground' : 'text-muted-foreground')}>
               {v}
             </button>
           ))}
@@ -88,7 +88,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
         </button>
         <button onClick={() => setShowUpload(true)}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90">
-          <ImagePlus className="w-3.5 h-3.5" /> Add Photos
+          <ImagePlus className="w-3.5 h-3.5" /> Add photos
         </button>
       </div>
 
@@ -96,7 +96,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       {compareMode && compareA && compareB && (
         <div className="bg-card border border-border rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Before / After Comparison</h3>
+            <h3 className="text-[18px] text-foreground">Before / after comparison</h3>
             <button onClick={() => { setCompareA(null); setCompareB(null); }} className="text-muted-foreground hover:text-foreground">
               <X className="w-4 h-4" />
             </button>
@@ -114,16 +114,16 @@ export default function ProgressPhotosTab({ client, checkIns }) {
               <SignedImg src={compareA.url} alt="before" className="absolute inset-0 h-full object-cover" style={{ width: `${100 / (sliderPos / 100)}%` }} />
             </div>
             {/* Divider */}
-            <div className="absolute top-0 bottom-0 w-0.5 bg-card shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
-              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-card rounded-full shadow-lg flex items-center justify-center">
+            <div className="absolute top-0 bottom-0 w-0.5 bg-card z-10" style={{ left: `${sliderPos}%` }}>
+              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-card rounded-full flex items-center justify-center">
                 <ArrowLeftRight className="w-4 h-4 text-foreground" />
               </div>
             </div>
             {/* Labels */}
-            <div className="absolute bottom-2 left-2 text-[10px] text-white font-bold bg-black/50 px-2 py-0.5 rounded z-20">
+            <div className="absolute bottom-2 left-2 text-[11px] text-white font-bold bg-black/50 px-2 py-0.5 rounded z-20">
               {format(parseISO(compareA.date), 'MMM d, yyyy')}
             </div>
-            <div className="absolute bottom-2 right-2 text-[10px] text-white font-bold bg-black/50 px-2 py-0.5 rounded z-20">
+            <div className="absolute bottom-2 right-2 text-[11px] text-white font-bold bg-black/50 px-2 py-0.5 rounded z-20">
               {format(parseISO(compareB.date), 'MMM d, yyyy')}
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       {/* Compare selection prompt */}
       {compareMode && !(compareA && compareB) && (
         <div className="bg-accent border border-accent rounded-xl px-4 py-3 text-xs text-primary font-medium">
-          {!compareA ? '👆 Select the first photo (Before)' : '👆 Now select the second photo (After)'}
+          {!compareA ? 'Select the first photo (Before)' : 'Now select the second photo (After)'}
         </div>
       )}
 
@@ -144,12 +144,12 @@ export default function ProgressPhotosTab({ client, checkIns }) {
           <p className="text-sm text-foreground font-medium">No progress photos yet</p>
           <p className="text-xs text-muted-foreground">Upload photos to start tracking visual transformation</p>
           <button onClick={() => setShowUpload(true)} className="mt-2 px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-primary-foreground">
-            Add First Photo
+            Add first photo
           </button>
         </div>
       ) : (
         <div className="bg-card border border-border rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Photo Timeline</h3>
+          <h3 className="text-[18px] text-foreground mb-3">Photo timeline</h3>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {allPhotos.map((photo, i) => {
               const selA = compareMode && compareA === photo;
@@ -170,9 +170,9 @@ export default function ProgressPhotosTab({ client, checkIns }) {
                     selA ? 'ring-2 ring-primary' : selB ? 'ring-2 ring-ai' : compareMode ? 'ring-2 ring-transparent hover:ring-primary' : 'hover:scale-[1.02]'
                   )}>
                   <SignedImg src={photo.url} alt="progress" className="w-full aspect-square object-cover" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                    <p className="text-[9px] text-white font-semibold">{format(parseISO(photo.date), 'MMM d, yy')}</p>
-                    {photo.weight && <p className="text-[8px] text-white/70">{photo.weight} lbs</p>}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/55 p-2">
+                    <p className="text-[11px] text-white font-semibold">{format(parseISO(photo.date), 'MMM d, yy')}</p>
+                    {photo.weight && <p className="text-[11px] text-white/70">{photo.weight} lbs</p>}
                   </div>
                   {!compareMode && (
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
@@ -180,7 +180,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
                     </div>
                   )}
                   {(selA || selB) && (
-                    <div className={cn('absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded',
+                    <div className={cn('absolute top-1 right-1 text-[11px] font-bold px-1.5 py-0.5 rounded',
                       selA ? 'bg-primary text-primary-foreground' : 'bg-ai text-ai-foreground')}>
                       {selA ? 'Before' : 'After'}
                     </div>
@@ -196,7 +196,7 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       {expanded && (
         <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4" onClick={() => setExpanded(null)}>
           <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
-            <SignedImg src={expanded.url} alt="expanded" className="w-full rounded-xl shadow-2xl" />
+            <SignedImg src={expanded.url} alt="expanded" className="w-full rounded-xl" />
             <div className="absolute bottom-4 left-4 text-white">
               <p className="text-sm font-semibold">{format(parseISO(expanded.date), 'MMMM d, yyyy')}</p>
               {expanded.weight && <p className="text-xs opacity-70">{expanded.weight} lbs</p>}
@@ -211,9 +211,9 @@ export default function ProgressPhotosTab({ client, checkIns }) {
       {/* Upload modal */}
       {showUpload && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40">
-          <div className="bg-card rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
+          <div className="bg-card rounded-xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground">Add Progress Photos</h3>
+              <h3 className="font-semibold text-foreground">Add progress photos</h3>
               <button onClick={() => setShowUpload(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
             </div>
             <div

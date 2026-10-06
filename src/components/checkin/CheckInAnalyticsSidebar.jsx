@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseISO, startOfWeek, subWeeks } from 'date-fns';
-import { TrendingUp, TrendingDown, Minus, MessageSquare, Moon, Smile } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { cn } from '@/lib/utils';
+import { Panel, Stat, PersonRow, TextLink } from '@/components/kit';
 import { checkInScore } from '@/lib/adherence';
 
 const MOOD_SCORE = { great: 5, good: 4, okay: 3, tired: 2, stressed: 1 };
@@ -17,13 +16,6 @@ function weekRange(weeksAgo) {
 function avg(arr) {
   if (!arr.length) return null;
   return Math.round(arr.reduce((s, v) => s + v, 0) / arr.length);
-}
-
-function barColor(val) {
-  if (val == null) return 'var(--tc-muted-foreground)';
-  if (val >= 75) return 'var(--tc-success)';
-  if (val >= 50) return 'var(--tc-warning)';
-  return 'var(--tc-destructive)';
 }
 
 export default function CheckInAnalyticsSidebar({ checkIns, clients, latestPerClient, clientMap }) {
@@ -67,7 +59,7 @@ export default function CheckInAnalyticsSidebar({ checkIns, clients, latestPerCl
 
   // ── Section B: 4-week trend ──
   const weeklyTrend = useMemo(() => {
-    return [3, 2, 1, 0].map((weeksAgo, i) => {
+    return [3, 2, 1, 0].map((weeksAgo) => {
       const { start, end } = weekRange(weeksAgo);
       const wCIs = checkIns.filter(ci => {
         const d = parseISO(ci.date);
@@ -76,7 +68,7 @@ export default function CheckInAnalyticsSidebar({ checkIns, clients, latestPerCl
       const vals = wCIs
         .map(ci => avg([ci.compliance_training, ci.compliance_nutrition].filter(v => v != null)))
         .filter(v => v != null);
-      return { name: `Wk ${i + 1}`, value: avg(vals) ?? 0 };
+      return { name: weeksAgo === 0 ? 'This week' : `${weeksAgo} wk ago`, value: avg(vals) ?? 0 };
     });
   }, [checkIns]);
 
@@ -119,136 +111,92 @@ export default function CheckInAnalyticsSidebar({ checkIns, clients, latestPerCl
       .slice(0, 3);
   }, [latestPerClient, clientMap, checkIns]);
 
-  const TrendIcon = ({ val }) => {
-    if (val === null) return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
-    if (val > 0) return <TrendingUp className="w-3.5 h-3.5 text-success" />;
-    if (val < 0) return <TrendingDown className="w-3.5 h-3.5 text-destructive" />;
-    return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
-  };
+  const changeText = weeklyStats.countChange === null
+    ? null
+    : weeklyStats.countChange === 0
+      ? 'Same as last week'
+      : `${weeklyStats.countChange > 0 ? 'Up' : 'Down'} ${Math.abs(weeklyStats.countChange)}% on last week`;
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 lg:grid-cols-2">
 
-      {/* ── Section A: Weekly Overview ── */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">This Week</h3>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <TrendIcon val={weeklyStats.countChange} />
-            {weeklyStats.countChange !== null && (
-              <span className={cn(weeklyStats.countChange > 0 ? 'text-success' : weeklyStats.countChange < 0 ? 'text-destructive' : '')}>
-                {weeklyStats.countChange > 0 ? '+' : ''}{weeklyStats.countChange}%
-              </span>
-            )}
-          </div>
+      {/* ── This week ── */}
+      <Panel className="p-5 sm:p-6">
+        <h2 className="text-[20px] text-foreground">This week</h2>
+        {changeText && <p className="text-sm text-muted-foreground mt-1">{changeText}</p>}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 mt-5">
+          <Stat label="Check-ins" value={weeklyStats.ciCount} sub={weeklyStats.lastCount > 0 ? `${weeklyStats.lastCount} last week` : undefined} />
+          <Stat label="Average compliance" value={weeklyStats.avgCompliance != null ? `${weeklyStats.avgCompliance}%` : '–'} />
+          <Stat label="Average sleep" value={weeklyStats.avgSleep ?? '–'} unit={weeklyStats.avgSleep ? 'h' : undefined} size="sm" />
+          <Stat label="Average mood" value={weeklyStats.avgMood ?? '–'} unit={weeklyStats.avgMood ? 'of 5' : undefined} size="sm" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="border border-border rounded-lg p-3 text-center">
-            <p className="text-2xl font-semibold text-foreground">{weeklyStats.ciCount}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Check-ins</p>
-            {weeklyStats.lastCount > 0 && (
-              <p className="text-xs text-muted-foreground">vs {weeklyStats.lastCount} last wk</p>
-            )}
-          </div>
-          <div className="border border-border rounded-lg p-3 text-center">
-            <p className="text-2xl font-semibold text-foreground">
-              {weeklyStats.avgCompliance ?? '–'}{weeklyStats.avgCompliance != null && '%'}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">Compliance</p>
-          </div>
-          <div className="flex items-center gap-2 border border-border rounded-lg p-2.5">
-            <Moon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-foreground">{weeklyStats.avgSleep ?? '–'}<span className="text-xs font-normal text-muted-foreground"> hrs</span></p>
-              <p className="text-xs text-muted-foreground">Avg Sleep</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 border border-border rounded-lg p-2.5">
-            <Smile className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-foreground">{weeklyStats.avgMood ?? '–'}<span className="text-xs font-normal text-muted-foreground">/5</span></p>
-              <p className="text-xs text-muted-foreground">Avg Mood</p>
-            </div>
-          </div>
+      </Panel>
+
+      {/* ── 4-week compliance trend ── */}
+      <Panel className="p-5 sm:p-6">
+        <h2 className="text-[20px] text-foreground">Compliance, last 4 weeks</h2>
+        <p className="text-sm text-muted-foreground mt-1">Average of training and nutrition across every check-in.</p>
+        <div className="mt-4">
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={weeklyTrend} barCategoryGap="30%">
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'rgb(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: 'rgb(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={30} />
+              <Tooltip
+                cursor={{ fill: 'rgb(var(--accent))' }}
+                contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid rgb(var(--border))', boxShadow: 'none', background: 'rgb(var(--card))', color: 'rgb(var(--foreground))' }}
+                formatter={(v) => [`${v}%`, 'Compliance']}
+              />
+              <Bar dataKey="value" radius={[3, 3, 0, 0]} fill="rgb(var(--primary))" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-      </div>
+      </Panel>
 
-      {/* ── Section B: 4-Week Compliance Trend ── */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Compliance Trend</h3>
-        <ResponsiveContainer width="100%" height={110}>
-          <BarChart data={weeklyTrend} barCategoryGap="25%">
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--tc-muted-foreground)' }} axisLine={false} tickLine={false} width={28} />
-            <Tooltip
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--tc-border)', boxShadow: 'none' }}
-              formatter={(v) => [`${v}%`, 'Compliance']}
-            />
-            <Bar dataKey="value" radius={[3, 3, 0, 0]} fill="var(--tc-primary)" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* ── Section C: At-Risk Clients ── */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-foreground mb-3">At-Risk</h3>
+      {/* ── Needs a look ── */}
+      <Panel className="p-5 sm:p-6">
+        <h2 className="text-[20px] text-foreground">Needs a look</h2>
         {atRiskClients.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-3">All clients on track</p>
+          <p className="text-sm text-muted-foreground mt-2">Everyone's latest check-in looks on track.</p>
         ) : (
-          <div className="space-y-1">
+          <div className="mt-2">
             {atRiskClients.map(({ ci, client, score, flags }) => (
-              <div key={ci.id} className="flex items-center gap-2.5 py-2 border-b border-muted last:border-0">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground font-medium text-xs shrink-0">
-                  {(client?.name || ci.client_name || '?')[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{client?.name || ci.client_name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{flags.slice(0, 2).join(' · ')}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {score !== null && (
-                    <span className="text-xs font-medium text-destructive">{score}%</span>
-                  )}
-                  <button
-                    onClick={() => navigate(`/messages?clientId=${ci.client_id}`)}
-                    className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
+              <PersonRow
+                key={ci.id}
+                name={client?.name || ci.client_name || 'Client'}
+                detail={flags.slice(0, 2).join(', ') || 'Low score'}
+                tone="alert"
+                className="border-b border-border last:border-b-0"
+                right={
+                  <span className="flex items-center gap-3 flex-shrink-0">
+                    {score !== null && <span className="num text-[17px] text-destructive">{score}%</span>}
+                    <TextLink onClick={() => navigate(`/messages?clientId=${ci.client_id}`)}>Message</TextLink>
+                  </span>
+                }
+              />
             ))}
           </div>
         )}
-      </div>
+      </Panel>
 
-      {/* ── Section D: Top Performers ── */}
-      <div className="bg-card border border-border rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Top Performers</h3>
+      {/* ── Doing well ── */}
+      <Panel className="p-5 sm:p-6">
+        <h2 className="text-[20px] text-foreground">Doing well</h2>
         {topPerformers.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-3">No top performers yet this week</p>
+          <p className="text-sm text-muted-foreground mt-2">No one is above 75% yet this week.</p>
         ) : (
-          <div className="space-y-1">
-            {topPerformers.map(({ ci, client, score, streak }, idx) => (
-              <div key={ci.id} className="flex items-center gap-2.5 py-2 border-b border-muted last:border-0">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground font-medium text-xs shrink-0">
-                  {(client?.name || ci.client_name || '?')[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{client?.name || ci.client_name}</p>
-                  {streak > 1 && <p className="text-[10px] text-muted-foreground">{streak}-check streak</p>}
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {idx === 0 && <span className="text-xs">🏆</span>}
-                  {score !== null && (
-                    <span className="text-xs font-medium text-success">{score}%</span>
-                  )}
-                </div>
-              </div>
+          <div className="mt-2">
+            {topPerformers.map(({ ci, client, score, streak }) => (
+              <PersonRow
+                key={ci.id}
+                name={client?.name || ci.client_name || 'Client'}
+                detail={streak > 1 ? `${streak} strong check-ins in a row` : 'Strong latest check-in'}
+                className="border-b border-border last:border-b-0"
+                right={score !== null ? <span className="num text-[17px] text-success flex-shrink-0">{score}%</span> : null}
+              />
             ))}
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

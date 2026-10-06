@@ -3,6 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { Copy, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Panel, PanelHeader, InkPanel, EmptyState } from '@/components/kit';
 
 export default function AffiliateLinksSection({ profile }) {
   const queryClient = useQueryClient();
@@ -44,96 +48,67 @@ export default function AffiliateLinksSection({ profile }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Default link */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="font-bold text-foreground mb-3">Your Affiliate Link</h3>
-        <div className="flex items-center gap-3 p-4 rounded-lg bg-muted border border-border">
-          <code className="flex-1 text-sm text-muted-foreground font-mono truncate">{profile.affiliate_url}</code>
-          <button onClick={() => handleCopy(profile.affiliate_url)}
-            className="p-2 hover:bg-border rounded-lg transition-colors">
-            <Copy className="w-4 h-4 text-muted-foreground" />
-          </button>
+    <div className="space-y-5">
+      <InkPanel title="Your affiliate link">
+        <p>Every coach who signs up through it is credited to you.</p>
+        <div className="mt-4 flex items-center gap-2">
+          <code className="flex-1 min-w-0 h-11 px-4 rounded-md bg-ai-foreground/10 font-mono text-sm flex items-center truncate">{profile.affiliate_url}</code>
+          <Button className="h-11 bg-ai-foreground text-ai hover:bg-ai-foreground/90" onClick={() => handleCopy(profile.affiliate_url)}><Copy /> Copy</Button>
         </div>
-      </div>
+      </InkPanel>
 
-      {/* Custom links */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground">Custom Tracking Links</h3>
-          <button onClick={() => setShowCreateForm(!showCreateForm)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary">
-            <Plus className="w-4 h-4" /> Create Link
-          </button>
-        </div>
+      <Panel>
+        <PanelHeader
+          title="Tracking links"
+          subtitle="One per place you post, so you can see which one converts."
+          right={<Button size="sm" variant={showCreateForm ? 'outline' : 'default'} onClick={() => setShowCreateForm(!showCreateForm)}>{showCreateForm ? 'Close' : <><Plus /> New link</>}</Button>}
+        />
 
         {showCreateForm && (
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            createMutation.mutate(newLink);
-          }} className="mb-6 p-4 rounded-lg bg-muted border border-border space-y-3">
-            <input
-              type="text"
-              placeholder="Link name (e.g., Instagram Bio)"
-              value={newLink.link_name}
-              onChange={(e) => setNewLink({ ...newLink, link_name: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-            <input
-              type="text"
-              placeholder="UTM source (e.g., instagram)"
-              value={newLink.utm_source}
-              onChange={(e) => setNewLink({ ...newLink, utm_source: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <input
-              type="text"
-              placeholder="UTM campaign (optional)"
-              value={newLink.utm_campaign}
-              onChange={(e) => setNewLink({ ...newLink, utm_campaign: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <div className="flex gap-2">
-              <button type="submit" className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary">
-                Create
-              </button>
-              <button type="button" onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 rounded-lg bg-border text-foreground text-sm font-bold hover:bg-border">
-                Cancel
-              </button>
+          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(newLink); }}
+            className="mx-5 sm:mx-6 mb-5 p-4 rounded-lg bg-secondary grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label htmlFor="al-name">Name</Label>
+              <Input id="al-name" className="mt-1.5 bg-card" placeholder="Instagram bio" value={newLink.link_name} onChange={(e) => setNewLink({ ...newLink, link_name: e.target.value })} required />
+            </div>
+            <div>
+              <Label htmlFor="al-src">Source</Label>
+              <Input id="al-src" className="mt-1.5 bg-card" placeholder="instagram" value={newLink.utm_source} onChange={(e) => setNewLink({ ...newLink, utm_source: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="al-camp">Campaign <span className="text-muted-foreground font-normal">optional</span></Label>
+              <Input id="al-camp" className="mt-1.5 bg-card" placeholder="spring-launch" value={newLink.utm_campaign} onChange={(e) => setNewLink({ ...newLink, utm_campaign: e.target.value })} />
+            </div>
+            <div className="sm:col-span-3 flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
+              <Button type="submit">Create link</Button>
             </div>
           </form>
         )}
 
-        {/* Links table */}
         {links.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="text-left py-3 px-3 font-bold text-foreground">Name</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Clicks</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Signups</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Earnings</th>
-                  <th className="text-center py-3 px-3">Actions</th>
+              <thead className="border-y border-border">
+                <tr className="text-[13px] text-muted-foreground">
+                  <th className="text-left font-medium py-3 pl-5 sm:pl-6 pr-3">Link</th>
+                  <th className="text-right font-medium py-3 px-3">Clicks</th>
+                  <th className="text-right font-medium py-3 px-3">Sign-ups</th>
+                  <th className="text-right font-medium py-3 px-3">Earned</th>
+                  <th className="py-3 pr-5 sm:pr-6 pl-3"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {links.map((link) => (
-                  <tr key={link.id} className="border-b border-border hover:bg-muted">
-                    <td className="py-3 px-3 font-semibold text-foreground">{link.link_name}</td>
-                    <td className="py-3 px-3 text-right text-muted-foreground">{link.clicks}</td>
-                    <td className="py-3 px-3 text-right text-muted-foreground">{link.signups}</td>
-                    <td className="py-3 px-3 text-right font-bold text-success">${link.earnings.toFixed(2)}</td>
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => handleCopy(link.full_url)} className="text-primary hover:text-primary" title="Copy">
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteMutation.mutate(link.id)} className="text-destructive hover:text-destructive" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                  <tr key={link.id}>
+                    <td className="py-3 pl-5 sm:pl-6 pr-3 text-[15px] font-semibold text-foreground">{link.link_name}</td>
+                    <td className="py-3 px-3 text-right"><span className="num text-base">{link.clicks}</span></td>
+                    <td className="py-3 px-3 text-right"><span className="num text-base">{link.signups}</span></td>
+                    <td className="py-3 px-3 text-right"><span className="num text-base">${Number(link.earnings || 0).toFixed(2)}</span></td>
+                    <td className="py-3 pr-5 sm:pr-6 pl-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => handleCopy(link.full_url)} aria-label="Copy link"><Copy /></Button>
+                        <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => deleteMutation.mutate(link.id)} aria-label="Delete link"><Trash2 /></Button>
                       </div>
                     </td>
                   </tr>
@@ -142,9 +117,9 @@ export default function AffiliateLinksSection({ profile }) {
             </table>
           </div>
         ) : (
-          <p className="text-center text-muted-foreground py-8">No custom links yet. Create one to start tracking!</p>
+          <EmptyState className="border-t border-border" title="No tracking links yet" body="Your main link above works on its own. Add more when you post in more than one place." />
         )}
-      </div>
+      </Panel>
     </div>
   );
 }

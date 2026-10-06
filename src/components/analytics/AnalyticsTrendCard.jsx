@@ -1,41 +1,32 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { Panel } from '@/components/kit';
 import TrendChart from './TrendChart';
 
-export default function AnalyticsTrendCard({ title, subtitle, data, unit, color, referenceValue, formatter, badge, badgeColor, className }) {
+/** Panel: title, latest value as a big number, change vs last month, line chart. */
+export default function AnalyticsTrendCard({ title, subtitle, data, unit, color, referenceValue, formatter, badge, badgeColor, className, lowerIsBetter }) {
   const last = data?.[data.length - 1]?.value;
   const prev = data?.[data.length - 2]?.value;
   const delta = last != null && prev != null ? last - prev : null;
+  const fmt = (v) => (typeof formatter === 'function' ? formatter(v) : `${Math.round(v * 10) / 10}${unit || ''}`);
+  const bad = delta != null && (lowerIsBetter ? delta > 0 : delta < 0);
+  const danger = badgeColor && badgeColor.includes('destructive');
 
   return (
-    <div className={cn('bg-card border border-border rounded-2xl p-5 shadow-sm', className)}>
-      <div className="flex items-start justify-between mb-1">
-        <div>
-          <p className="text-xs font-semibold tracking-wider uppercase text-foreground">{title}</p>
-          {subtitle && <p className="text-xs text-foreground mt-0.5">{subtitle}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          {badge && (
-            <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', badgeColor || 'bg-accent/10 text-primary')}>
-              {badge}
-            </span>
-          )}
-          {delta != null && Math.abs(delta) >= 1 && (
-            <span className={cn(
-              'text-xs font-semibold px-2 py-0.5 rounded-full',
-              delta > 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'
-            )}>
-              {delta > 0 ? '+' : ''}{typeof formatter === 'function' ? formatter(delta) : `${Math.round(delta * 10) / 10}${unit || ''}`}
-            </span>
-          )}
-        </div>
-      </div>
-      {last != null && (
-        <p className="stat-number text-2xl font-heading font-bold mt-2 mb-3 text-foreground">
-          {typeof formatter === 'function' ? formatter(last) : `${last}${unit || ''}`}
+    <Panel className={cn('px-5 pt-5 pb-3 sm:px-6 sm:pt-6', className)}>
+      <h2 className="text-[20px] text-foreground">{title}</h2>
+      {subtitle && <p className="text-[13px] text-muted-foreground mt-0.5">{subtitle}</p>}
+      <div className="flex items-baseline gap-3 mt-3 mb-2">
+        <p className={cn('num text-[34px] leading-none', danger ? 'text-destructive' : 'text-foreground')}>
+          {last != null ? fmt(last) : (badge || '—')}
         </p>
-      )}
+        {delta != null && Math.abs(delta) >= 1 && (
+          <p className={cn('text-[13px]', bad ? 'text-destructive' : 'text-muted-foreground')}>
+            {delta > 0 ? '+' : ''}{fmt(delta)} on last month
+          </p>
+        )}
+      </div>
       <TrendChart data={data} unit={unit} color={color} referenceValue={referenceValue} formatter={formatter} />
-    </div>
+    </Panel>
   );
 }

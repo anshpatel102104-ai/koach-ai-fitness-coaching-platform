@@ -6,12 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, X, Check, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Initials } from '@/components/kit';
 import { SignedImg } from '@/components/shared/SignedImage';
 
-function avatarColor(name) {
-  const colors = ['bg-accent text-primary', 'bg-ai/10 text-ai', 'bg-success/10 text-success', 'bg-warning/10 text-warning', 'bg-destructive/10 text-destructive'];
-  return colors[(name?.charCodeAt(0) || 0) % colors.length];
-}
 
 export default function GroupFormModal({ open, onOpenChange, group, currentUser }) {
   const queryClient = useQueryClient();
@@ -83,41 +81,39 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-foreground font-semibold">
-            {isEdit ? 'Edit Group' : 'Create Community'}
-          </DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit group' : 'New group'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5 mt-1">
           {/* Name */}
           <div>
-            <Label className="text-xs font-semibold text-foreground">Group Name *</Label>
-            <Input className="mt-1" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. HYROX Crew, Fat Loss Group" />
+            <Label>Name</Label>
+            <Input className="mt-1" required value={name} onChange={e => setName(e.target.value)} placeholder="HYROX crew" />
           </div>
 
           {/* Description */}
           <div>
-            <Label className="text-xs font-semibold text-foreground">Description</Label>
-            <Input className="mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="What's this group about?" />
+            <Label>Description</Label>
+            <Input className="mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="Who it's for, in one line" />
           </div>
 
           {/* Cover image */}
           <div>
-            <Label className="text-xs font-semibold text-foreground">Cover Image (optional)</Label>
+            <Label>Cover image, optional</Label>
             <div className="mt-1 flex items-center gap-3">
               {coverUrl ? (
                 <div className="relative w-20 h-12 rounded-lg overflow-hidden flex-shrink-0">
                   <SignedImg src={coverUrl} alt="cover" className="w-full h-full object-cover" />
                   <button type="button" onClick={() => setCoverUrl('')}
-                    className="absolute top-1 right-1 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center">
-                    <X className="w-2.5 h-2.5 text-white" />
+                    className="absolute top-1 right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center" aria-label="Remove cover">
+                    <X className="w-3 h-3 text-primary-foreground" />
                   </button>
                 </div>
               ) : (
-                <div className="w-20 h-12 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                <div className="w-20 h-12 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                   <ImageIcon className="w-5 h-5 text-muted-foreground" />
                 </div>
               )}
-              <label className="flex-1 cursor-pointer text-xs font-semibold text-primary hover:text-primary">
+              <label className="cursor-pointer text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
                 {uploading ? 'Uploading…' : 'Upload photo'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
               </label>
@@ -127,11 +123,9 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
           {/* Member picker */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <Label className="text-xs font-semibold text-foreground">Members</Label>
+              <Label>Members</Label>
               {selectedIds.length > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent/10 text-primary">
-                  {selectedIds.length} selected
-                </span>
+                <span className="text-[13px] text-muted-foreground">{selectedIds.length} selected</span>
               )}
             </div>
             <div className="relative mb-2">
@@ -139,27 +133,25 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search clients…"
-                className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-lg bg-background outline-none focus:border-primary transition-colors"
+                placeholder="Find a client"
+                className="w-full h-10 pl-8 pr-3 text-sm border border-input rounded-md bg-card outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
-            <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg bg-card p-2">
+            <div className="max-h-56 overflow-y-auto divide-y divide-border border border-border rounded-lg bg-card">
               {filtered.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No clients found</p>
+                <p className="text-sm text-muted-foreground px-3 py-4">No client matches that.</p>
               ) : filtered.map(c => {
                 const selected = selectedIds.includes(c.id);
                 return (
                   <button key={c.id} type="button" onClick={() => toggle(c.id)}
-                    className={cn('w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left',
-                      selected ? 'bg-accent/10 border border-accent' : 'hover:bg-background border border-transparent')}>
-                    <div className={cn('w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0', avatarColor(c.name))}>
-                      {c.name?.[0]?.toUpperCase()}
-                    </div>
+                    className={cn('w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left',
+                      selected ? 'bg-accent' : 'hover:bg-accent/50')} aria-pressed={selected}>
+                    <Initials name={c.name || ''} size={30} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                      <p className="text-[11px] text-muted-foreground truncate">{c.email}</p>
+                      <p className="text-[13px] text-muted-foreground truncate">{c.email}</p>
                     </div>
-                    {selected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                    {selected && <Check className="w-4 h-4 text-foreground flex-shrink-0" />}
                   </button>
                 );
               })}
@@ -167,16 +159,11 @@ export default function GroupFormModal({ open, onOpenChange, group, currentUser 
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2 border-t border-border">
-            <button type="button" onClick={() => onOpenChange(false)}
-              className="px-4 py-2 border border-border text-sm font-semibold text-foreground rounded-lg hover:bg-background transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={saveMutation.isPending || !name.trim()}
-              className="px-4 py-2 text-sm font-semibold text-primary-foreground rounded-lg transition-colors disabled:opacity-40"
-              style={{ background: 'var(--tc-primary)' }}>
-              {saveMutation.isPending ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Group'}
-            </button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={saveMutation.isPending || !name.trim()}>
+              {saveMutation.isPending ? 'Saving' : isEdit ? 'Save changes' : 'Create group'}
+            </Button>
           </div>
         </form>
       </DialogContent>

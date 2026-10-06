@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Plus, Edit2, Copy, Trash2, ClipboardList, Calendar, Users } from 'lucide-react';
+import { Plus, Edit2, Copy, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Panel, EmptyState } from '@/components/kit';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import CheckInFormEditor from './CheckInFormEditor';
@@ -13,60 +13,34 @@ const FREQ_LABELS = {
   monthly: 'Monthly', custom: 'Custom'
 };
 
-function FormCard({ form, clients, onEdit, onDuplicate, onDelete }) {
+function FormRow({ form, clients, onEdit, onDuplicate, onDelete }) {
   const assignedCount = form.assign_to === 'all'
     ? clients.filter(c => c.lifecycle_status === 'active' || c.status === 'active').length
     : (form.assigned_client_ids?.length || 0);
+  const qCount = form.questions?.length || 0;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 shadow-sm hover:border-muted-foreground hover:shadow-md transition-all">
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-sm text-foreground truncate">{form.name}</h3>
-          {form.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{form.description}</p>}
+    <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:gap-6 sm:px-6 border-b border-border last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="text-[15px] font-semibold text-foreground truncate">{form.name}</p>
+          {!form.is_active && <span className="text-[13px] text-muted-foreground">Paused</span>}
         </div>
-        <span className={cn(
-          'text-[10px] font-bold px-2 py-1 rounded-full border flex-shrink-0',
-          form.is_active ? 'bg-success/10 text-success border-success' : 'bg-muted text-muted-foreground border-border'
-        )}>
-          {form.is_active ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <div className="bg-background rounded-lg p-2.5 text-center">
-          <ClipboardList className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-1" />
-          <p className="text-sm font-bold text-foreground">{form.questions?.length || 0}</p>
-          <p className="text-[10px] text-muted-foreground">Questions</p>
-        </div>
-        <div className="bg-background rounded-lg p-2.5 text-center">
-          <Users className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-1" />
-          <p className="text-sm font-bold text-foreground">{assignedCount}</p>
-          <p className="text-[10px] text-muted-foreground">Clients</p>
-        </div>
-        <div className="bg-background rounded-lg p-2.5 text-center">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground mx-auto mb-1" />
-          <p className="text-sm font-bold text-foreground">{FREQ_LABELS[form.frequency] || 'Weekly'}</p>
-          <p className="text-[10px] text-muted-foreground">Frequency</p>
-        </div>
-      </div>
-
-      {form.last_submission_date && (
-        <p className="text-[10px] text-muted-foreground mb-4">
-          Last submission: {format(parseISO(form.last_submission_date), 'MMM d, yyyy')}
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {qCount} question{qCount !== 1 ? 's' : ''} · {FREQ_LABELS[form.frequency] || 'Weekly'} · {assignedCount} client{assignedCount !== 1 ? 's' : ''}
+          {form.last_submission_date && <> · last answered {format(parseISO(form.last_submission_date), 'MMM d')}</>}
         </p>
-      )}
-
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={() => onEdit(form)} className="flex-1 gap-1.5">
-          <Edit2 className="w-3 h-3" /> Edit
+        {form.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{form.description}</p>}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Button variant="outline" size="sm" onClick={() => onEdit(form)}>
+          <Edit2 /> Edit
         </Button>
-        <Button variant="outline" size="sm" onClick={() => onDuplicate(form)} className="gap-1.5">
-          <Copy className="w-3 h-3" />
+        <Button variant="ghost" size="sm" onClick={() => onDuplicate(form)} aria-label="Duplicate form">
+          <Copy />
         </Button>
-        <Button variant="outline" size="sm" onClick={() => onDelete(form)}
-          className="gap-1.5 border-destructive text-destructive hover:bg-destructive/10">
-          <Trash2 className="w-3 h-3" />
+        <Button variant="ghost" size="sm" onClick={() => onDelete(form)} aria-label="Delete form" className="text-destructive hover:text-destructive">
+          <Trash2 />
         </Button>
       </div>
     </div>
@@ -95,7 +69,7 @@ export default function FormBuilderTab({ clients }) {
     mutationFn: (form) => db.entities.CheckInForm.create({
       ...form,
       id: undefined,
-      name: `${form.name} (Copy)`,
+      name: `${form.name} (copy)`,
       created_date: undefined,
       updated_date: undefined,
     }),
@@ -133,34 +107,27 @@ export default function FormBuilderTab({ clients }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between gap-3 mb-4">
         <p className="text-sm text-muted-foreground">{forms.length} form{forms.length !== 1 ? 's' : ''}</p>
-        <Button onClick={handleNew} className="gap-2" style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-          <Plus className="w-4 h-4" /> New Form
+        <Button onClick={handleNew}>
+          <Plus /> New form
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        </div>
-      ) : forms.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-            <ClipboardList className="w-8 h-8 text-muted-foreground" />
+      <Panel className="overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-5 h-5 border-2 border-border border-t-foreground rounded-full animate-spin" />
           </div>
-          <div className="text-center">
-            <p className="font-semibold text-foreground mb-1">No check-in forms yet</p>
-            <p className="text-sm text-muted-foreground">Create your first form to start collecting client check-ins</p>
-          </div>
-          <Button onClick={handleNew} className="gap-2 mt-2" style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-            <Plus className="w-4 h-4" /> Create Your First Form
-          </Button>
-        </div>
-      ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {forms.map(form => (
-            <FormCard
+        ) : forms.length === 0 ? (
+          <EmptyState
+            title="No check-in forms yet."
+            body="Make one form with the questions you ask every week. Clients get it on the day you choose."
+            action={<Button onClick={handleNew}><Plus /> Create a form</Button>}
+          />
+        ) : (
+          forms.map(form => (
+            <FormRow
               key={form.id}
               form={form}
               clients={clients}
@@ -170,9 +137,9 @@ export default function FormBuilderTab({ clients }) {
                 if (confirm(`Delete "${f.name}"?`)) deleteMutation.mutate(f.id);
               }}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </Panel>
     </div>
   );
 }

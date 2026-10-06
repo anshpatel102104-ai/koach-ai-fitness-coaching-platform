@@ -9,18 +9,18 @@ import TagInput from './TagInput';
 import { Mail } from 'lucide-react';
 
 const goals = [
-  { value: 'weight_loss', label: 'Weight Loss' },
-  { value: 'muscle_gain', label: 'Muscle Gain' },
+  { value: 'weight_loss', label: 'Weight loss' },
+  { value: 'muscle_gain', label: 'Muscle gain' },
   { value: 'strength', label: 'Strength' },
   { value: 'endurance', label: 'Endurance' },
   { value: 'flexibility', label: 'Flexibility' },
-  { value: 'general_fitness', label: 'General Fitness' },
+  { value: 'general_fitness', label: 'General fitness' },
 ];
 
 const lifecycleStatuses = [
   { value: 'lead',      label: 'Lead' },
   { value: 'active',    label: 'Active' },
-  { value: 'at_risk',   label: 'At Risk' },
+  { value: 'at_risk',   label: 'At risk' },
   { value: 'completed', label: 'Completed' },
   { value: 'alumni',    label: 'Alumni' },
 ];
@@ -58,12 +58,12 @@ export default function ClientForm({ open, onOpenChange, onSubmit, client }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading">{client ? 'Edit Client' : 'Add New Client'}</DialogTitle>
+          <DialogTitle>{client ? `Edit ${client.name || 'client'}` : 'Invite a client'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label>Full Name *</Label>
+              <Label>Full name *</Label>
               <Input value={form.name} onChange={e => set('name', e.target.value)} required />
             </div>
             <div>
@@ -77,7 +77,7 @@ export default function ClientForm({ open, onOpenChange, onSubmit, client }) {
 
             {/* Lifecycle Status */}
             <div>
-              <Label>Lifecycle Status</Label>
+              <Label>Lifecycle status</Label>
               <Select value={form.lifecycle_status} onValueChange={v => set('lifecycle_status', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -96,19 +96,19 @@ export default function ClientForm({ open, onOpenChange, onSubmit, client }) {
             </div>
 
             <div>
-              <Label>Start Date</Label>
+              <Label>Start date</Label>
               <Input type="date" value={form.start_date || ''} onChange={e => set('start_date', e.target.value)} />
             </div>
             <div>
-              <Label>Monthly Rate ($)</Label>
+              <Label>Monthly rate ($)</Label>
               <Input type="number" value={form.monthly_rate} onChange={e => set('monthly_rate', e.target.value)} />
             </div>
             <div>
-              <Label>Current Weight (lbs)</Label>
+              <Label>Current weight (lbs)</Label>
               <Input type="number" value={form.current_weight} onChange={e => set('current_weight', e.target.value)} />
             </div>
             <div>
-              <Label>Target Weight (lbs)</Label>
+              <Label>Target weight (lbs)</Label>
               <Input type="number" value={form.target_weight} onChange={e => set('target_weight', e.target.value)} />
             </div>
           </div>
@@ -117,15 +117,15 @@ export default function ClientForm({ open, onOpenChange, onSubmit, client }) {
           <div>
             <Label className="mb-1.5 block">Tags</Label>
             <TagInput tags={form.tags} onChange={v => set('tags', v)} />
-            <p className="text-[11px] text-muted-foreground mt-1">Press Enter or comma to add a tag</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Press enter or comma to add a tag</p>
           </div>
 
           <div>
-            <Label>Coach Notes</Label>
+            <Label>Coach notes</Label>
             <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} />
           </div>
           <div>
-            <Label>Journey Notes</Label>
+            <Label>Journey notes</Label>
             <Textarea value={form.lifecycle_notes || ''} onChange={e => set('lifecycle_notes', e.target.value)} rows={2} placeholder="Notes about this client's progress and status changes..." />
           </div>
 
@@ -150,7 +150,7 @@ export default function ClientForm({ open, onOpenChange, onSubmit, client }) {
 
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">{client ? 'Update' : sendInvite ? 'Add & Invite Client' : 'Add Client'}</Button>
+            <Button type="submit">{client ? 'Update' : sendInvite ? 'Add and send invite' : 'Add client'}</Button>
           </div>
         </form>
       </DialogContent>

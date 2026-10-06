@@ -33,7 +33,7 @@ export default function SaveTemplateModal({ form, onSaved, onClose }) {
       payload.fat_target      = form.fat_target      !== '' ? Number(form.fat_target)      : null;
     }
     await db.entities.GoalTemplate.create(payload);
-    toast.success('Template saved!');
+    toast.success('Template saved');
     setSaving(false);
     onSaved();
   };
@@ -41,11 +41,11 @@ export default function SaveTemplateModal({ form, onSaved, onClose }) {
   return (
     <div className="fixed inset-0 z-[210] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
-      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+      <div className="relative bg-card rounded-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <LayoutTemplate className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-foreground">Save as Template</h3>
+            <h3 className="text-[18px] text-foreground">Save as template</h3>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />
@@ -65,7 +65,7 @@ export default function SaveTemplateModal({ form, onSaved, onClose }) {
           <button onClick={onClose} className="text-sm font-semibold text-muted-foreground px-4 py-2 rounded-lg border border-border">Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary px-4 py-2 rounded-lg disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save Template'}
+            {saving ? 'Saving…' : 'Save template'}
           </button>
         </div>
       </div>

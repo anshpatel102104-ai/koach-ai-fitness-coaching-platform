@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays } from 'date-fns';
 import {
-  ChevronLeft, ChevronRight, Trash2, Plus, Save, Loader2, UtensilsCrossed,
+  ChevronLeft, ChevronRight, Trash2, Plus, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Page, PageHeader, Panel, EmptyState } from '@/components/kit';
 import FoodSearchModal from '@/components/nutrition/FoodSearchModal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -16,23 +16,21 @@ function sum(logs, field) {
   return Math.round(logs.reduce((s, l) => s + (parseFloat(l[field]) || 0), 0) * 10) / 10;
 }
 
-function MacroBar({ label, consumed, target, color }) {
+function MacroBar({ label, consumed, target }) {
   const pct = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
   const over = target > 0 && consumed > target * 1.1;
-  const near = target > 0 && consumed >= target * 0.9 && consumed <= target * 1.1;
-  const barColor = over ? 'bg-destructive' : near ? 'bg-success' : 'bg-warning';
 
   return (
-    <div className="flex-1 min-w-0">
-      <div className="flex justify-between text-[10px] font-semibold mb-1">
-        <span className={color}>{label}</span>
-        <span className="text-muted-foreground">{consumed}g {target > 0 ? `/ ${target}g` : ''}</span>
+    <div className="py-2.5 border-b border-border last:border-b-0">
+      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="text-sm tabular-nums">
+          <span className={cn('font-semibold', over ? 'text-destructive' : 'text-foreground')}>{consumed} g</span>
+          {target > 0 && <span className="text-muted-foreground"> of {target} g</span>}
+        </span>
       </div>
-      <div className="h-2 rounded-full bg-secondary overflow-hidden">
-        <div
-          className={cn('h-full rounded-full transition-all duration-500', barColor)}
-          style={{ width: `${pct}%` }}
-        />
+      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+        <div className={cn('h-full rounded-full transition-[width] duration-300', over ? 'bg-destructive' : 'bg-foreground')} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -53,40 +51,35 @@ function DailySummary({ logs, plan }) {
   const calPct  = tCal > 0 ? Math.min((totCal / tCal) * 100, 100) : 0;
   const calOver = tCal > 0 && totCal > tCal * 1.1;
   const calNear = tCal > 0 && totCal >= tCal * 0.9 && totCal <= tCal * 1.1;
-  const calBarColor = calOver ? 'bg-destructive' : calNear ? 'bg-success' : 'bg-warning';
+  const calBarColor = calOver ? 'bg-destructive' : calNear ? 'bg-success' : 'bg-foreground';
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-      {/* Calories */}
-      <div className="flex items-end justify-between">
+    <Panel className="p-5 sm:p-6">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Calories</p>
-          <p className="text-3xl font-bold text-foreground leading-none mt-0.5">
-            {totCal}
-            {tCal > 0 && <span className="text-base font-normal text-muted-foreground ml-1">/ {tCal} kcal</span>}
+          <p className="num text-[44px] leading-none text-foreground">{Math.round(totCal).toLocaleString()}</p>
+          <p className="text-sm text-muted-foreground mt-1.5">
+            {tCal > 0 ? `of ${Math.round(tCal).toLocaleString()} calories` : 'calories logged, no plan target'}
           </p>
         </div>
         {tCal > 0 && (
-          <span className={cn(
-            'text-xs font-bold px-2.5 py-1 rounded-full',
-            calOver ? 'bg-destructive/10 text-destructive' : calNear ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
-          )}>
-            {calOver ? 'Over target' : calNear ? 'On target' : 'Under target'}
+          <span className={cn('text-sm font-semibold', calOver ? 'text-destructive' : calNear ? 'text-success' : 'text-muted-foreground')}>
+            {calOver ? 'Over target' : calNear ? 'On target' : `${Math.round(tCal - totCal).toLocaleString()} to go`}
           </span>
         )}
       </div>
 
-      <div className="h-3 rounded-full bg-secondary overflow-hidden">
-        <div className={cn('h-full rounded-full transition-all duration-500', calBarColor)} style={{ width: `${calPct}%` }} />
+      <div className="h-2.5 rounded-full bg-secondary overflow-hidden mt-4">
+        <div className={cn('h-full rounded-full transition-[width] duration-300', calBarColor)} style={{ width: `${calPct}%` }} />
       </div>
 
-      {/* Macros */}
-      <div className="flex gap-4">
-        <MacroBar label="Protein"  consumed={totPro}  target={tPro}  color="text-primary" />
-        <MacroBar label="Carbs"    consumed={totCarb} target={tCarb} color="text-warning" />
-        <MacroBar label="Fats"     consumed={totFat}  target={tFat}  color="text-destructive" />
+      <div className="mt-4">
+        <MacroBar label="Protein" consumed={totPro}  target={tPro} />
+        <MacroBar label="Carbs"   consumed={totCarb} target={tCarb} />
+        <MacroBar label="Fat"     consumed={totFat}  target={tFat} />
       </div>
-    </div>
+      {plan?.title && <p className="text-[13px] text-muted-foreground mt-3">Targets from {plan.title}.</p>}
+    </Panel>
   );
 }
 
@@ -120,57 +113,44 @@ function MealGroup({ mealName, logs, clientId, date, onDelete }) {
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+    <section className="border-b border-border last:border-b-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-secondary/30">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-foreground">{mealName}</span>
+      <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pt-4 pb-2">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-[20px] text-foreground">{mealName}</h2>
           {logs.length > 0 && (
-            <span className="text-xs font-semibold text-muted-foreground">{mealCal} kcal</span>
+            <span className="text-[13px] text-muted-foreground tabular-nums">{mealCal} kcal</span>
           )}
         </div>
-        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setFoodSearchOpen(true)}>
-          <Plus className="w-3 h-3" /> Log Food
+        <Button size="sm" variant="outline" onClick={() => setFoodSearchOpen(true)}>
+          <Plus /> Log food
         </Button>
       </div>
 
       {/* Entries */}
-      <div className="divide-y divide-border">
-        <AnimatePresence initial={false}>
-          {logs.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">No foods logged yet</p>
-          ) : (
-            logs.map(log => (
-              <motion.div
-                key={log.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.15 }}
-                className="flex items-center gap-3 px-5 py-3"
+      <div className="px-5 sm:px-6 pb-3">
+        {logs.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Nothing logged.</p>
+        ) : (
+          logs.map(log => (
+            <div key={log.id} className="flex items-center gap-3 py-2.5 border-b border-border last:border-b-0">
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-foreground truncate">{log.food_name}</p>
+                <p className="text-[13px] text-muted-foreground tabular-nums">
+                  {log.serving_quantity} × {log.serving_unit ?? 'serving'} · {log.protein} g P · {log.carbs} g C · {log.fats} g F
+                </p>
+              </div>
+              <span className="num text-lg text-foreground shrink-0">{log.calories}</span>
+              <button
+                onClick={() => onDelete(log.id)}
+                className="touch-compact p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent transition-colors shrink-0"
+                aria-label={`Remove ${log.food_name}`}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{log.food_name}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {log.serving_quantity} × {log.serving_unit ?? 'serving'}
-                  </p>
-                </div>
-                <div className="flex gap-3 text-[10px] font-semibold shrink-0">
-                  <span className="text-orange-600">{log.calories} kcal</span>
-                  <span className="text-primary">P {log.protein}g</span>
-                  <span className="text-warning">C {log.carbs}g</span>
-                  <span className="text-destructive">F {log.fats}g</span>
-                </div>
-                <button
-                  onClick={() => onDelete(log.id)}
-                  className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
       <FoodSearchModal
@@ -179,7 +159,7 @@ function MealGroup({ mealName, logs, clientId, date, onDelete }) {
         mealName={mealName}
         onAddFood={handleAddFood}
       />
-    </div>
+    </section>
   );
 }
 
@@ -219,31 +199,33 @@ function CoachNotes({ clientId, date, existingNote }) {
   React.useEffect(() => { setNotes(existingNote ?? ''); }, [existingNote]);
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-      <h3 className="text-sm font-bold text-foreground">Coach Notes</h3>
+    <Panel className="p-5 sm:p-6 space-y-3">
+      <div>
+        <h2 className="text-[22px] text-foreground">Coach note</h2>
+        <p className="text-sm text-muted-foreground mt-1">The client sees this on their food log for the day.</p>
+      </div>
       <textarea
         value={notes}
         onChange={e => setNotes(e.target.value)}
-        placeholder="Leave daily nutrition feedback for this client..."
+        placeholder="Protein was short again. Add the shake after training."
         rows={3}
-        className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
       />
       <div className="flex justify-end">
         <Button
           size="sm"
-          className="gap-2"
           onClick={() => saveNotes.mutate()}
           disabled={saveNotes.isPending}
         >
           {saveNotes.isPending
-            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ? <><Loader2 className="animate-spin" /> Saving</>
             : saved
-            ? '✓ Saved'
-            : <><Save className="w-3.5 h-3.5" /> Save Notes</>
+            ? 'Saved'
+            : 'Save note'
           }
         </Button>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -298,68 +280,67 @@ export default function FoodLogPage() {
     setDate(format(d, 'yyyy-MM-dd'));
   }
 
+  const dateLabel = format(new Date(date + 'T12:00:00'), 'EEEE, MMMM d');
+
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-foreground font-heading flex-1">Food Log</h1>
+    <Page>
+      <PageHeader
+        eyebrow={selectedClient ? selectedClient.name : null}
+        title="Food log"
+        subtitle={selectedClient
+          ? `${dateLabel}. ${foodLogs.length} item${foodLogs.length === 1 ? '' : 's'} logged.`
+          : 'Pick a client to see what they ate, log food for them, and leave a note.'}
+        actions={
+          <>
+            <select
+              value={clientId}
+              onChange={e => setClientId(e.target.value)}
+              className="h-10 rounded-md border border-input bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring min-w-[180px]"
+              aria-label="Client"
+            >
+              <option value="">Select a client</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
 
-        {/* Client selector */}
-        <select
-          value={clientId}
-          onChange={e => setClientId(e.target.value)}
-          className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring min-w-[180px]"
-        >
-          <option value="">Select client…</option>
-          {clients.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="icon" onClick={() => changeDay(-1)} aria-label="Previous day">
+                <ChevronLeft />
+              </Button>
+              <Input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-40 text-sm"
+                aria-label="Date"
+              />
+              <Button variant="outline" size="icon" onClick={() => changeDay(1)} aria-label="Next day">
+                <ChevronRight />
+              </Button>
+            </div>
+          </>
+        }
+      />
 
-        {/* Date navigator */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => changeDay(-1)}
-            className="p-1.5 rounded-lg border border-input bg-background hover:bg-secondary transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <Input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="w-40 text-sm text-center"
-          />
-          <button
-            onClick={() => changeDay(1)}
-            className="p-1.5 rounded-lg border border-input bg-background hover:bg-secondary transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* No client selected */}
       {!clientId && (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <UtensilsCrossed className="w-12 h-12 text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">Select a client to view their food log</p>
-        </div>
+        <Panel>
+          <EmptyState
+            title="No client selected."
+            body="Choose a client above to open their log for the day."
+          />
+        </Panel>
       )}
 
       {clientId && (
-        <>
-          {/* Daily Summary */}
-          <DailySummary logs={foodLogs} plan={assignedPlan} />
-
-          {/* Meals */}
-          {logsLoading ? (
-            <div className="flex justify-center py-10">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {mealNames.map(mealName => (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-5 items-start">
+          <Panel className="overflow-hidden lg:order-1 order-2">
+            {logsLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              mealNames.map(mealName => (
                 <MealGroup
                   key={mealName}
                   mealName={mealName}
@@ -368,18 +349,20 @@ export default function FoodLogPage() {
                   date={date}
                   onDelete={id => deleteLog.mutate(id)}
                 />
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </Panel>
 
-          {/* Coach Notes */}
-          <CoachNotes
-            clientId={clientId}
-            date={date}
-            existingNote={notesEntry?.coach_daily_notes}
-          />
-        </>
+          <div className="space-y-5 lg:order-2 order-1">
+            <DailySummary logs={foodLogs} plan={assignedPlan} />
+            <CoachNotes
+              clientId={clientId}
+              date={date}
+              existingNote={notesEntry?.coach_daily_notes}
+            />
+          </div>
+        </div>
       )}
-    </div>
+    </Page>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Send, ArrowDown } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isToday, isYesterday, format } from 'date-fns';
 import MessageBubble, { DateSeparator } from '../components/messages/MessageBubble';
@@ -11,18 +11,21 @@ import ConversationHeader from '../components/messages/ConversationHeader';
 import ConversationEmpty from '../components/messages/ConversationEmpty';
 import ComposeBar from '../components/messages/ComposeBar.jsx';
 import BroadcastModal from '../components/messages/BroadcastModal';
+import ClientInfoSidebar from '../components/messages/ClientInfoSidebar';
+import { EmptyState } from '@/components/kit';
 
 
 export default function Messages() {
   const urlParams = new URLSearchParams(window.location.search);
   const paramClientId = urlParams.get('clientId');
   const paramMessage  = urlParams.get('message');
+  const paramBroadcast = urlParams.get('broadcast') === '1';
 
   const [selectedClientId, setSelectedClientId] = useState(paramClientId || null);
   const [mobileView, setMobileView] = useState(paramClientId ? 'chat' : 'list');
   const [newMessage, setNewMessage] = useState(paramMessage ? decodeURIComponent(paramMessage) : '');
   const [selectedTag, setSelectedTag] = useState('general');
-  const [showBroadcast, setShowBroadcast] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(paramBroadcast);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -163,12 +166,11 @@ export default function Messages() {
   const clientCheckIns = checkIns.filter(ci => ci.client_id === selectedClientId);
 
   return (
-    <div className="h-[calc(100dvh-56px-64px)] md:h-[calc(100dvh-0px)] flex overflow-hidden bg-background">
-      {/* ── Left: Conversation list (280px) ── */}
+    <div className="flex overflow-hidden bg-background h-[calc(100dvh-120px-env(safe-area-inset-bottom))] -mb-24 lg:mb-0 lg:h-[calc(100dvh-76px)]">
+      {/* ── Left: conversation list ── */}
       <div className={cn(
-        'flex-shrink-0 flex-col border-r border-border',
-        mobileView === 'chat' ? 'hidden' : 'flex',
-        'md:flex w-full md:w-[280px]'
+        'flex-shrink-0 flex-col border-r border-border w-full lg:w-[320px] xl:w-[340px]',
+        mobileView === 'chat' ? 'hidden lg:flex' : 'flex'
       )}>
         <ClientListSidebar
           clients={clients}
@@ -180,11 +182,10 @@ export default function Messages() {
         />
       </div>
 
-      {/* ── Center: Chat area ── */}
+      {/* ── Center: thread on the canvas ── */}
       <div className={cn(
         'flex-1 flex-col min-w-0 relative',
-        mobileView === 'list' ? 'hidden' : 'flex',
-        'md:flex'
+        mobileView === 'list' ? 'hidden lg:flex' : 'flex'
       )}>
         {selectedClient ? (
           <>
@@ -200,7 +201,7 @@ export default function Messages() {
             <div
               ref={messagesContainerRef}
               onScroll={handleScroll}
-              className="flex-1 overflow-y-auto px-5 py-4 space-y-0.5 bg-background"
+              className="flex-1 overflow-y-auto px-4 lg:px-6 py-4 bg-background"
             >
               {clientMessages.length === 0 ? (
                 <ConversationEmpty client={selectedClient} onSelect={(text) => setNewMessage(text)} />
@@ -227,9 +228,9 @@ export default function Messages() {
             {showJumpToLatest && (
               <button
                 onClick={scrollToBottom}
-                className="absolute bottom-24 right-5 flex items-center gap-1.5 bg-sidebar text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg hover:bg-black transition-all z-10"
+                className="absolute bottom-36 right-6 z-10 flex items-center gap-1.5 rounded-lg bg-primary px-3 h-9 text-[13px] font-semibold text-primary-foreground"
               >
-                <ArrowDown className="w-3.5 h-3.5" /> Jump to latest
+                <ArrowDown className="w-3.5 h-3.5" /> Latest
               </button>
             )}
 
@@ -246,15 +247,27 @@ export default function Messages() {
             />
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 bg-background">
-            <div className="w-16 h-16 rounded-2xl bg-accent/10 flex items-center justify-center">
-              <Send className="w-7 h-7 text-primary" />
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">Select a conversation to start messaging</p>
+          <div className="flex-1 flex items-center justify-center p-6">
+            <EmptyState
+              className="max-w-sm"
+              title="Pick a conversation."
+              body="People waiting on a reply are at the top of the list."
+            />
           </div>
         )}
       </div>
 
+      {/* ── Right: about the client (wide screens) ── */}
+      {selectedClient && (
+        <div className="hidden xl:block w-[300px] flex-shrink-0">
+          <ClientInfoSidebar
+            client={selectedClient}
+            checkIns={clientCheckIns}
+            allMessages={allMessages}
+            onInsertMessage={(text) => setNewMessage(text)}
+          />
+        </div>
+      )}
 
       {showBroadcast && (
         <BroadcastModal

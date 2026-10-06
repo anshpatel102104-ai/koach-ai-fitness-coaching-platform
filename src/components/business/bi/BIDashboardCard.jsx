@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { BarChart2, TrendingUp, Users, DollarSign, ArrowRight } from 'lucide-react';
+import { Panel } from '@/components/kit';
+import { money } from '@/components/business/ui';
+import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { parseISO, startOfMonth } from 'date-fns';
 
@@ -20,32 +22,28 @@ export default function BIDashboardCard() {
   }).length;
 
   const metrics = [
-    { label: 'MRR', value: `$${mrr.toLocaleString()}`, icon: DollarSign, color: 'var(--tc-primary)' },
-    { label: 'Active', value: activeClients.length, icon: Users, color: 'var(--tc-success)' },
-    { label: 'At Risk', value: atRisk, icon: TrendingUp, color: atRisk > 0 ? 'var(--tc-destructive)' : 'var(--tc-muted-foreground)' },
-    { label: 'New', value: `+${newThisMonth}`, icon: TrendingUp, color: 'var(--tc-ai)' },
+    { label: 'Monthly recurring', value: money(mrr) },
+    { label: 'Active', value: activeClients.length },
+    { label: 'At risk', value: atRisk, danger: atRisk > 0 },
+    { label: 'New this month', value: newThisMonth },
   ];
 
   return (
-    <div className="bg-card rounded-2xl border border-border shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-bold text-foreground">Business Intelligence</h3>
-        </div>
-        <Link to="/business" className="flex items-center gap-1 text-xs text-primary font-semibold hover:opacity-70 transition-opacity">
-          View all <ArrowRight className="w-3 h-3" />
+    <Panel className="px-5 py-5 sm:px-6">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h2 className="text-[22px] text-foreground">Business</h2>
+        <Link to="/business" className="text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+          Open insights
         </Link>
       </div>
-
-      <div className="grid grid-cols-4 gap-2">
-        {metrics.map(m => (
-          <div key={m.label} className="text-center p-2 rounded-xl bg-muted">
-            <p className="text-sm font-bold" style={{ color: m.color }}>{m.value}</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5 font-medium">{m.label}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-3 sm:divide-x divide-border">
+        {metrics.map((m, i) => (
+          <div key={m.label} className={cn('min-w-0', i > 0 && 'sm:pl-4')}>
+            <p className="text-[13px] text-muted-foreground truncate">{m.label}</p>
+            <p className={cn('num text-[24px] leading-none mt-1', m.danger ? 'text-destructive' : 'text-foreground')}>{m.value}</p>
           </div>
         ))}
       </div>
-    </div>
+    </Panel>
   );
 }

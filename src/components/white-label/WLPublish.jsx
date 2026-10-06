@@ -1,73 +1,52 @@
 import React from 'react';
-import { Rocket, Save, RotateCcw, Eye, History } from 'lucide-react';
+import { RotateCcw, Eye, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Panel, PanelHeader } from '@/components/kit';
+import { Button } from '@/components/ui/button';
 
 export default function WLPublish({ s, onPublish, onSaveDraft, onRollback, onPreview, publishing, saving }) {
   const history = s.publish_history || [];
 
   return (
-    <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{ boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)' }}>
-      <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/60">
-        <span className="text-base">🚀</span>
-        <h2 className="font-bold text-foreground text-sm">Publish Settings</h2>
-      </div>
-      <div className="p-6 space-y-4">
-        {s.is_published && s.published_at && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success">
-            <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            <p className="text-xs font-semibold text-success">
-              Live since {format(new Date(s.published_at), 'MMM d, yyyy h:mm a')}
-            </p>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={onPublish} disabled={publishing}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-primary-foreground text-sm disabled:opacity-60"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: '0 4px 16px color-mix(in srgb, var(--tc-primary) 25%, transparent)' }}>
-            {publishing
-              ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <Rocket className="w-4 h-4" />
-            }
-            Publish Changes
-          </button>
-          <button onClick={onSaveDraft} disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-foreground border border-border text-sm hover:bg-muted transition-colors disabled:opacity-60">
-            {saving ? <div className="w-4 h-4 border-2 border-border border-t-slate-600 rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-            Save as Draft
-          </button>
+    <Panel>
+      <PanelHeader
+        title="Publish"
+        subtitle={s.is_published && s.published_at
+          ? `Live since ${format(new Date(s.published_at), 'MMM d, yyyy h:mm a')}. Clients see the last published version.`
+          : 'Nothing is live yet. Clients see KOACH defaults until you publish.'}
+      />
+      <div className="space-y-4 px-5 pb-5 sm:px-6">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button onClick={onPublish} disabled={publishing} className="sm:flex-1">
+            {publishing && <Loader2 className="animate-spin" />} Publish changes
+          </Button>
+          <Button variant="outline" onClick={onSaveDraft} disabled={saving} className="sm:flex-1">
+            {saving && <Loader2 className="animate-spin" />} Save as draft
+          </Button>
+          <Button variant="outline" onClick={onPreview} className="lg:hidden">
+            <Eye /> Preview
+          </Button>
         </div>
 
-        <button onClick={onPreview}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-primary border border-primary bg-accent text-sm hover:bg-accent transition-colors">
-          <Eye className="w-4 h-4" /> Preview Before Publishing
-        </button>
-
         {history.length > 0 && (
-          <>
-            <div className="border-t border-border pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <History className="w-4 h-4 text-muted-foreground" />
-                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Version History</p>
-              </div>
-              <div className="space-y-2">
-                {history.slice(0, 5).map((v, i) => (
-                  <div key={v.version || i} className="flex items-center justify-between p-2.5 rounded-lg bg-muted border border-border">
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">Version {v.version}</p>
-                      <p className="text-[10px] text-muted-foreground">{v.published_at ? format(new Date(v.published_at), 'MMM d, h:mm a') : 'Draft'}</p>
-                    </div>
-                    <button onClick={() => onRollback(v)}
-                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors">
-                      <RotateCcw className="w-3 h-3" /> Restore
-                    </button>
+          <div className="border-t border-border pt-4">
+            <p className="mb-1 text-[13px] font-semibold text-muted-foreground">Version history</p>
+            <div className="divide-y divide-border">
+              {history.slice(0, 5).map((v, i) => (
+                <div key={v.version || i} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Version {v.version}</p>
+                    <p className="text-[13px] text-muted-foreground">{v.published_at ? format(new Date(v.published_at), 'MMM d, h:mm a') : 'Draft'}</p>
                   </div>
-                ))}
-              </div>
+                  <Button variant="link" size="sm" onClick={() => onRollback(v)}>
+                    <RotateCcw /> Restore
+                  </Button>
+                </div>
+              ))}
             </div>
-          </>
+          </div>
         )}
       </div>
-    </div>
+    </Panel>
   );
 }

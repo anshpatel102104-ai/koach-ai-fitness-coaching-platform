@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, CheckCircle, Dumbbell, Salad, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
+import { ChevronLeft, CheckCircle, ChevronDown, ChevronUp, Edit3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Segmented } from '@/components/kit';
 
 export default function AIOnboardingReview({ client, program: initialProgram, mealPlan: initialMealPlan, onApprove, onBack }) {
   const [program, setProgram] = useState(initialProgram);
@@ -23,24 +26,16 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
   return (
     <div className="h-full flex flex-col">
       {/* Sub-nav */}
-      <div className="flex items-center gap-1 px-6 pt-4 pb-0 border-b border-border flex-shrink-0 bg-card">
-        {[
-          { key: 'program', label: 'Training Program', icon: Dumbbell },
-          { key: 'nutrition', label: 'Meal Plan', icon: Salad },
-        ].map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setActiveTab(key)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all"
-            style={{
-              borderBottomColor: activeTab === key ? 'var(--tc-primary)' : 'transparent',
-              color: activeTab === key ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)',
-            }}>
-            <Icon className="w-4 h-4" /> {label}
-          </button>
-        ))}
+      <div className="px-5 sm:px-6 pt-4 pb-3 border-b border-border flex-shrink-0 bg-card">
+        <Segmented
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[{ value: 'program', label: 'Training program' }, { value: 'nutrition', label: 'Meal plan' }]}
+        />
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto" style={{ background: 'var(--tc-muted)' }}>
+      <div className="flex-1 overflow-y-auto bg-background">
         {activeTab === 'program' && (
           <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
             {/* Program header */}
@@ -56,36 +51,29 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
                     className="flex-1 text-base font-bold text-foreground border-b-2 border-primary outline-none bg-transparent"
                   />
                 ) : (
-                  <h3 className="text-base font-bold text-foreground flex-1">{programTitle}</h3>
+                  <h3 className="text-[20px] text-foreground flex-1">{programTitle}</h3>
                 )}
-                <button onClick={() => setEditingTitle(t => !t)} className="text-muted-foreground hover:text-primary">
+                <button onClick={() => setEditingTitle(t => !t)} className="text-muted-foreground hover:text-foreground" aria-label="Rename program">
                   <Edit3 className="w-4 h-4" />
                 </button>
               </div>
               <p className="text-sm text-muted-foreground mb-3">{program.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { label: program.difficulty, color: 'var(--tc-ai)', bg: 'var(--tc-ai)' },
-                  { label: `${program.duration_weeks}w`, color: 'var(--tc-primary)', bg: 'var(--tc-accent)' },
-                  { label: `${program.days_per_week}x/week`, color: 'var(--tc-success)', bg: 'var(--tc-success)' },
-                  { label: program.category, color: 'var(--tc-warning)', bg: 'var(--tc-warning)' },
-                ].map((tag, i) => (
-                  <span key={i} className="text-[11px] font-bold px-2.5 py-1 rounded-full"
-                    style={{ background: tag.bg, color: tag.color }}>{tag.label}</span>
-                ))}
+              <div className="flex flex-wrap gap-1.5">
+                {[program.difficulty, program.duration_weeks ? `${program.duration_weeks} weeks` : null, program.days_per_week ? `${program.days_per_week} days a week` : null, program.category]
+                  .filter(Boolean).map((label, i) => <Badge key={i} variant="secondary">{label}</Badge>)}
               </div>
               {program.coach_rationale && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">AI Rationale</p>
-                  <p className="text-xs text-muted-foreground italic">{program.coach_rationale.split}</p>
+                <div className="mt-4 rounded-lg bg-ai text-ai-foreground p-4">
+                  <p className="text-[13px] text-ai-foreground/60 mb-1">Why this split</p>
+                  <p className="text-sm text-ai-foreground/90">{program.coach_rationale.split}</p>
                 </div>
               )}
             </div>
 
             {/* Workouts */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Training Days ({program.workouts?.length || 0})
+              <p className="text-[13px] text-muted-foreground">
+                Training days, {program.workouts?.length || 0}
               </p>
               {(program.workouts || []).map((workout, di) => (
                 <div key={di} className="bg-card rounded-xl border border-border overflow-hidden">
@@ -100,7 +88,7 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-semibold text-muted-foreground">{workout.exercises?.length || 0} exercises</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">{workout.exercises?.length || 0} exercises</span>
                       {expandedDay === di ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                     </div>
                   </button>
@@ -113,15 +101,14 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
                             <div className="flex items-center gap-2">
                               <p className="text-sm font-semibold text-foreground truncate">{ex.name}</p>
                               {ex.section && ex.section !== 'main' && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase"
-                                  style={{ background: 'var(--tc-success)', color: 'var(--tc-success)' }}>{ex.section}</span>
+                                <Badge variant="secondary">{ex.section}</Badge>
                               )}
                             </div>
                             {ex.notes && <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{ex.notes}</p>}
                           </div>
                           <div className="flex-shrink-0 text-right">
-                            <p className="text-xs font-bold text-foreground">{ex.sets} × {ex.reps}</p>
-                            {ex.rpe && <p className="text-[10px] text-muted-foreground">RPE {ex.rpe}</p>}
+                            <p className="text-sm font-bold text-foreground tabular-nums">{ex.sets} × {ex.reps}</p>
+                            {ex.rpe && <p className="text-[11px] text-muted-foreground">RPE {ex.rpe}</p>}
                           </div>
                         </div>
                       ))}
@@ -137,20 +124,20 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
           <div className="max-w-2xl mx-auto px-6 py-6 space-y-5">
             {/* Meal plan header */}
             <div className="bg-card rounded-xl border border-border p-5">
-              <h3 className="text-base font-bold text-foreground mb-1">{client.name} — AI Meal Plan</h3>
+              <h3 className="text-[20px] text-foreground mb-1">Meal plan for {client.name}</h3>
               {coachNotes.why_these_calories && (
                 <p className="text-sm text-muted-foreground mb-3">{coachNotes.why_these_calories}</p>
               )}
               {mealPlan?.weekly_overview && (
                 <div className="grid grid-cols-3 gap-3 mt-3">
                   {[
-                    { label: 'Avg Daily', value: `${mealPlan.weekly_overview.avg_daily_calories} kcal` },
+                    { label: 'Average a day', value: `${mealPlan.weekly_overview.avg_daily_calories} kcal` },
                     { label: 'Training days', value: mealPlan.weekly_overview.training_days },
                     { label: 'Weekly protein', value: `${mealPlan.weekly_overview.weekly_protein_target}g` },
                   ].map((s, i) => (
-                    <div key={i} className="text-center p-3 rounded-xl" style={{ background: 'var(--tc-muted)' }}>
-                      <p className="text-base font-bold text-foreground">{s.value}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{s.label}</p>
+                    <div key={i}>
+                      <p className="text-[13px] text-muted-foreground">{s.label}</p>
+                      <p className="num text-[20px] text-foreground mt-0.5">{s.value}</p>
                     </div>
                   ))}
                 </div>
@@ -159,8 +146,8 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
 
             {/* Training day meals */}
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Training Day Meals ({trainingMeals.length})
+              <p className="text-[13px] text-muted-foreground">
+                Training day meals, {trainingMeals.length}
               </p>
               {trainingMeals.map((meal, mi) => (
                 <div key={mi} className="bg-card rounded-xl border border-border p-4">
@@ -172,7 +159,7 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
                     <div className="flex items-center gap-3 text-right">
                       <div>
                         <p className="text-sm font-bold text-foreground">{meal.calories} kcal</p>
-                        <p className="text-[10px] text-muted-foreground">P:{meal.protein}g · C:{meal.carbs}g · F:{meal.fats}g</p>
+                        <p className="text-[11px] text-muted-foreground">P:{meal.protein}g · C:{meal.carbs}g · F:{meal.fats}g</p>
                       </div>
                     </div>
                   </div>
@@ -191,9 +178,9 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
             </div>
 
             {coachNotes.first_2_weeks && (
-              <div className="bg-accent border border-accent rounded-xl p-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1">First 2 Weeks</p>
-                <p className="text-xs text-primary">{coachNotes.first_2_weeks}</p>
+              <div className="rounded-xl bg-ai text-ai-foreground p-4">
+                <p className="text-[13px] text-ai-foreground/60 mb-1">First two weeks</p>
+                <p className="text-sm text-ai-foreground/90">{coachNotes.first_2_weeks}</p>
               </div>
             )}
           </div>
@@ -201,22 +188,16 @@ export default function AIOnboardingReview({ client, program: initialProgram, me
       </div>
 
       {/* Approve footer */}
-      <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-t border-border bg-card">
-        <button onClick={onBack}
-          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground px-4 py-2 rounded-lg border border-border bg-card transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Edit Questionnaire
-        </button>
+      <div className="flex-shrink-0 flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-t border-border bg-card">
+        <Button variant="outline" onClick={onBack}>
+          <ChevronLeft className="w-4 h-4" /> Back to questions
+        </Button>
         <div className="flex items-center gap-3">
-          <p className="text-xs text-muted-foreground hidden sm:block">Review both tabs, then approve to save</p>
-          <button
-            onClick={handleApprove}
-            disabled={saving}
-            className="flex items-center gap-2 text-sm font-bold text-white px-6 py-2.5 rounded-xl transition-all disabled:opacity-50"
-            style={{ background: saving ? 'var(--tc-muted-foreground)' : 'linear-gradient(135deg, var(--tc-success), var(--tc-primary))' }}
-          >
+          <p className="text-[13px] text-muted-foreground hidden md:block">Check both tabs, then approve.</p>
+          <Button onClick={handleApprove} disabled={saving}>
             <CheckCircle className="w-4 h-4" />
-            {saving ? 'Saving…' : 'Approve & Save to Client'}
-          </button>
+            {saving ? 'Saving' : 'Approve and save'}
+          </Button>
         </div>
       </div>
     </div>

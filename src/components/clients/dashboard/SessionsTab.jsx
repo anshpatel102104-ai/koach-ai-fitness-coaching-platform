@@ -13,7 +13,7 @@ const STATUS_CONFIG = {
   scheduled:  { label: 'Upcoming',   className: 'bg-accent text-primary border-accent' },
   completed:  { label: 'Completed',  className: 'bg-success/10 text-success border-success' },
   cancelled:  { label: 'Cancelled',  className: 'bg-muted text-muted-foreground border-border' },
-  no_show:    { label: 'No Show',    className: 'bg-destructive/10 text-destructive border-destructive' },
+  no_show:    { label: 'No show',    className: 'bg-destructive/10 text-destructive border-destructive' },
 };
 
 const TYPE_LABELS = {
@@ -31,7 +31,7 @@ function CopyButton({ text, label }) {
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success(`${label} copied!`);
+    toast.success(`${label} copied`);
     setTimeout(() => setCopied(false), 2000);
   };
   return (
@@ -40,7 +40,7 @@ function CopyButton({ text, label }) {
       className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
     >
       {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'Copied!' : label}
+      {copied ? 'Copied' : label}
     </button>
   );
 }
@@ -73,9 +73,9 @@ function SessionRow({ session }) {
         {/* Zoom icon or type icon */}
         <div className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-          hasZoom ? 'bg-[var(--kc-2d8cff)]/10' : 'bg-muted'
+          hasZoom ? 'bg-[var(--tc-brand)]/10' : 'bg-muted'
         )}>
-          <Video className={cn('w-4 h-4', hasZoom ? 'text-[var(--kc-2d8cff)]' : 'text-muted-foreground')} />
+          <Video className={cn('w-4 h-4', hasZoom ? 'text-[var(--tc-brand)]' : 'text-muted-foreground')} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -98,20 +98,20 @@ function SessionRow({ session }) {
                 href={session.zoom_start_url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 bg-[var(--kc-2d8cff)] text-white rounded-lg hover:bg-[var(--kc-2681f2)] transition-colors"
+                className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 bg-brand text-brand-foreground rounded-lg hover:bg-[var(--tc-brand)] transition-colors"
               >
-                <Video className="w-3 h-3" /> Start Meeting
+                <Video className="w-3 h-3" /> Start meeting
               </a>
-              <CopyButton text={session.zoom_join_url} label="Copy Client Link" />
+              <CopyButton text={session.zoom_join_url} label="Copy client link" />
               {session.zoom_password && (
-                <CopyButton text={session.zoom_password} label="Copy Password" />
+                <CopyButton text={session.zoom_password} label="Copy password" />
               )}
             </div>
           )}
 
           {/* Notes */}
           {session.notes && !showNotes && (
-            <p className="text-xs text-muted-foreground mt-2 italic line-clamp-2">📝 {session.notes}</p>
+            <p className="text-xs text-muted-foreground mt-2 italic line-clamp-2">{session.notes}</p>
           )}
         </div>
 
@@ -139,7 +139,7 @@ function SessionRow({ session }) {
             <Button size="sm" variant="outline" onClick={() => setShowNotes(false)}>Cancel</Button>
             <Button size="sm" onClick={() => updateMutation.mutate({ notes: notesValue })}
               disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Saving...' : 'Save Notes'}
+              {updateMutation.isPending ? 'Saving...' : 'Save notes'}
             </Button>
           </div>
         </div>
@@ -168,9 +168,6 @@ export default function SessionsTab({ client }) {
         </div>
       ) : sessions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
-            <Video className="w-5 h-5 text-muted-foreground" />
-          </div>
           <p className="text-sm font-semibold text-foreground">No sessions yet</p>
           <p className="text-xs text-muted-foreground mt-1">Sessions will appear here once booked</p>
         </div>
@@ -178,7 +175,7 @@ export default function SessionsTab({ client }) {
         <>
           {upcoming.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
                 Upcoming ({upcoming.length})
               </p>
               <div className="space-y-2">
@@ -188,7 +185,7 @@ export default function SessionsTab({ client }) {
           )}
           {past.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
                 Past ({past.length})
               </p>
               <div className="space-y-2">

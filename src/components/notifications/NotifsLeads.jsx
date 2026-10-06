@@ -19,9 +19,9 @@ export default function NotifsLeads({ s, set }) {
   const upd = (key, val) => set('leads', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Leads & Sales" emoji="📈"
+    <NSection title="Leads and sales"
       onReset={() => set('leads', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Leads')}>
+      onTest={() => toast.success('Test notification sent for leads')}>
 
       <NRow enabled={d.new_lead.enabled} onToggle={v => upd('new_lead', { enabled: v })}
         title="New lead added"
@@ -37,7 +37,7 @@ export default function NotifsLeads({ s, set }) {
       </NRow>
 
       <NRow enabled={d.lead_converted.enabled} onToggle={v => upd('lead_converted', { enabled: v })}
-        title="Lead converted to client 🎉"
+        title="Lead converted to client"
         description="Celebrate when a lead becomes a paying client">
         <NDelivery value={d.lead_converted.delivery} onChange={v => upd('lead_converted', { delivery: v })} />
       </NRow>

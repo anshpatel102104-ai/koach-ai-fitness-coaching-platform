@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { X, RefreshCcw } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { money } from '@/components/business/ui';
 
 const REFUND_REASONS = [
   'Client request',
@@ -19,89 +26,84 @@ export default function RefundModal({ payment, onClose, onConfirm }) {
   const refundAmt = type === 'full' ? Number(payment.amount) : Number(partialAmt || 0);
   const valid = reason && (type === 'full' || (partialAmt && Number(partialAmt) > 0 && Number(partialAmt) <= Number(payment.amount)));
 
-  const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', outline: 'none', boxSizing: 'border-box', color: 'var(--tc-foreground)' };
-  const labelStyle = { display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 };
-
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb, black 50%, transparent)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--tc-card)', borderRadius: 18, width: '100%', maxWidth: 460, overflow: 'hidden', boxShadow: '0 20px 60px color-mix(in srgb, black 20%, transparent)' }}>
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--tc-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="p-0 sm:p-0 sm:max-w-[460px] sm:flex sm:flex-col sm:gap-0 flex flex-col overflow-hidden">
+        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-border">
           <div>
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--tc-foreground)', margin: 0 }}>Process Refund</h2>
-            <p style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', margin: '2px 0 0' }}>{payment.client_name} · ${Number(payment.amount).toFixed(2)}</p>
+            <DialogTitle className="text-[22px] text-foreground">Refund {payment.client_name?.split(" ")[0]}</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-0.5">{payment.client_name} paid {money(payment.amount, { cents: true })}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'var(--tc-muted)', border: 'none', borderRadius: 8, padding: 7, cursor: 'pointer' }}>
-            <X size={15} color="var(--tc-muted-foreground)" />
-          </button>
         </div>
 
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Full / Partial toggle */}
-          <div>
-            <label style={labelStyle}>Refund Type</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {[['full', 'Full Refund', `$${Number(payment.amount).toFixed(2)}`], ['partial', 'Partial Refund', 'Custom amount']].map(([v, label, sub]) => (
-                <button key={v} onClick={() => setType(v)}
-                  style={{ padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${type === v ? 'var(--tc-primary)' : 'var(--tc-border)'}`, background: type === v ? 'var(--tc-accent)' : 'var(--tc-card)', cursor: 'pointer', textAlign: 'left' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: type === v ? 'var(--tc-primary)' : 'var(--tc-foreground)' }}>{label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>{sub}</div>
-                </button>
-              ))}
-            </div>
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-2">
+            {[['full', 'Full refund', money(payment.amount, { cents: true })], ['partial', 'Part refund', 'Choose an amount']].map(([v, label, sub]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setType(v)}
+                className={cn(
+                  'touch-compact rounded-lg border px-3 py-2.5 text-left transition-colors',
+                  type === v ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card text-foreground hover:bg-accent'
+                )}
+              >
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className={cn('block text-[13px]', type === v ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{sub}</span>
+              </button>
+            ))}
           </div>
 
           {type === 'partial' && (
-            <div>
-              <label style={labelStyle}>Refund Amount</label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)' }}>$</span>
-                <input type="number" value={partialAmt} onChange={e => setPartialAmt(e.target.value)}
-                  placeholder={`Max $${Number(payment.amount).toFixed(2)}`}
-                  style={{ ...inputStyle, paddingLeft: 26 }} />
+            <div className="space-y-1.5">
+              <Label>Amount</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input type="number" value={partialAmt} onChange={e => setPartialAmt(e.target.value)}
+                  placeholder={`Up to ${Number(payment.amount).toFixed(2)}`} className="pl-7" />
               </div>
             </div>
           )}
 
-          <div>
-            <label style={labelStyle}>Reason *</label>
-            <select value={reason} onChange={e => setReason(e.target.value)} style={inputStyle}>
-              <option value="">Select reason…</option>
-              {REFUND_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          <div className="space-y-1.5">
+            <Label>Reason</Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger><SelectValue placeholder="Choose a reason" /></SelectTrigger>
+              <SelectContent>
+                {REFUND_REASONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {reason === 'Other' && (
-            <div>
-              <label style={labelStyle}>Specify Reason</label>
-              <input value={otherReason} onChange={e => setOtherReason(e.target.value)} placeholder="Describe the reason…" style={inputStyle} />
+            <div className="space-y-1.5">
+              <Label>What happened</Label>
+              <Input value={otherReason} onChange={e => setOtherReason(e.target.value)} placeholder="One line is enough" />
             </div>
           )}
 
-          <div>
-            <label style={labelStyle}>Internal Note (optional)</label>
-            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Only visible to you…" rows={2}
-              style={{ ...inputStyle, resize: 'none' }} />
+          <div className="space-y-1.5">
+            <Label>Note to self <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Only you see this" rows={2} />
           </div>
 
-          <div style={{ background: 'var(--tc-destructive)', borderRadius: 10, padding: '10px 14px' }}>
-            <div style={{ fontSize: 12, color: 'var(--tc-destructive)', fontWeight: 600 }}>
-              Refunding ${refundAmt.toFixed(2)} — this action cannot be undone.
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)', marginTop: 3 }}>Client will be notified by email. Processing may take 5–10 business days.</div>
-          </div>
+          <p className="text-[13px] text-muted-foreground border-l-2 border-destructive pl-3">
+            <span className="text-destructive font-semibold">Refunding {money(refundAmt, { cents: true })} can't be undone.</span>{' '}
+            The client is emailed, and banks take 5 to 10 business days.
+          </p>
         </div>
 
-        <div style={{ padding: '0 24px 20px', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'var(--tc-muted)', color: 'var(--tc-foreground)', border: 'none', cursor: 'pointer' }}>
-            Cancel
-          </button>
-          <button onClick={() => valid && onConfirm({ type, amount: refundAmt, reason: reason === 'Other' ? otherReason : reason, note })}
+        <div className="flex justify-end gap-2 px-6 pb-6">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            variant="destructive"
             disabled={!valid}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: valid ? 'var(--tc-destructive)' : 'var(--tc-border)', color: valid ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)', border: 'none', cursor: valid ? 'pointer' : 'not-allowed' }}>
-            <RefreshCcw size={14} /> Process Refund
-          </button>
+            onClick={() => valid && onConfirm({ type, amount: refundAmt, reason: reason === 'Other' ? otherReason : reason, note })}
+          >
+            Refund {money(refundAmt, { cents: true })}
+          </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

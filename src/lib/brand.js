@@ -1,10 +1,10 @@
 import { track } from '@/lib/telemetry';
 
 /**
- * White-label runtime theming. A coach's brand color overrides the `--primary`
- * token family at runtime, so rebranding is a token swap rather than a
- * find-replace. Works in both light and dark mode because everything downstream
- * reads `rgb(var(--primary))`.
+ * White-label runtime theming. A coach's brand color overrides the `--brand`
+ * accent family at runtime (active nav, badges, focus rings, the client app's
+ * main call to action), so rebranding is a token swap rather than a
+ * find-replace. Primary actions stay ink so any brand color reads well.
  */
 
 /** Parse "#rrggbb" / "#rgb" into a "r g b" triplet string, or null if invalid. */
@@ -27,7 +27,7 @@ function readableForeground(triplet) {
   return L > 0.5 ? '17 24 39' : '255 255 255';
 }
 
-const BRAND_VARS = ['--primary', '--sidebar-primary', '--ring', '--sidebar-ring', '--chart-1'];
+const BRAND_VARS = ['--brand', '--sidebar-primary', '--ring', '--sidebar-ring', '--chart-1'];
 
 /**
  * Apply a coach brand color across the app. Pass a falsy value to clear the
@@ -40,12 +40,12 @@ export function applyBrandColor(hex) {
 
   if (!triplet) {
     for (const v of BRAND_VARS) root.style.removeProperty(v);
-    root.style.removeProperty('--primary-foreground');
+    root.style.removeProperty('--brand-foreground');
     return false;
   }
 
   for (const v of BRAND_VARS) root.style.setProperty(v, triplet);
-  root.style.setProperty('--primary-foreground', readableForeground(triplet));
+  root.style.setProperty('--brand-foreground', readableForeground(triplet));
   track('brand.apply', { color: hex });
   return true;
 }

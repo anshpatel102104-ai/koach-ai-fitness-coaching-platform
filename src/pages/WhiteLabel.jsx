@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Check, Lock, Eye, Download, QrCode, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, Lock, Eye, Download, QrCode, RotateCcw, Loader2 } from 'lucide-react';
+import { Page, PageHeader, Panel, PanelHeader } from '@/components/kit';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import WLBrandIdentity from '@/components/white-label/WLBrandIdentity';
 import WLColorSystem from '@/components/white-label/WLColorSystem';
@@ -18,16 +20,17 @@ import WLPublish from '@/components/white-label/WLPublish';
 const EMPTY = {
   business_name: '', app_name: '',
   logo_primary_url: '', logo_dark_url: '', logo_light_url: '', favicon_url: '', app_icon_url: '',
-  app_icon_bg_color: 'var(--tc-primary)',
-  primary_color: 'var(--tc-primary)', secondary_color: 'var(--tc-ai)', gradient_direction: '135deg', gradient_angle: 135,
-  bg_color: 'var(--tc-muted)', card_color: 'var(--tc-primary-foreground)', nav_color: 'var(--tc-primary-foreground)',
-  text_primary: 'var(--tc-foreground)', text_secondary: 'var(--tc-muted-foreground)', link_color: 'var(--tc-primary)',
+  // Client-app brand values are data (the coach's colours), stored as hex.
+  app_icon_bg_color: '#0A5CFF',
+  primary_color: '#0A5CFF', secondary_color: '#111318', gradient_direction: '135deg', gradient_angle: 135,
+  bg_color: '#EEEFF1', card_color: '#FFFFFF', nav_color: '#FFFFFF',
+  text_primary: '#111318', text_secondary: '#5E6470', link_color: '#0A5CFF',
   font_primary: 'Inter', font_heading_weight: '700',
   portal_show_logo: true, portal_hide_koach_badge: false, portal_nav_style: 'bottom', portal_nav_bg: 'white',
-  splash_enabled: true, splash_bg_color: 'var(--tc-primary)', splash_animation: 'spinner',
-  login_bg_type: 'gradient', login_bg_color: 'var(--tc-primary)', login_show_logo: true, login_headline: '', login_subtitle: '',
+  splash_enabled: true, splash_bg_color: '#111318', splash_animation: 'spinner',
+  login_bg_type: 'gradient', login_bg_color: '#0A5CFF', login_show_logo: true, login_headline: '', login_subtitle: '',
   custom_domain: '', custom_domain_status: 'pending',
-  email_show_logo: true, email_header_bg: 'var(--tc-primary)', email_header_height: 'standard',
+  email_show_logo: true, email_header_bg: '#111318', email_header_height: 'standard',
   email_footer_social: false, email_footer_social_links: {},
   email_hide_koach_badge: false,
   terms_url: '', terms_text: '', privacy_url: '', privacy_text: '',
@@ -104,7 +107,7 @@ export default function WhiteLabel() {
     setSaving(true);
     await persist(s);
     setSaving(false);
-    toast.success('Draft saved ✓');
+    toast.success('Draft saved');
   };
 
   const handlePublish = async () => {
@@ -119,15 +122,15 @@ export default function WhiteLabel() {
     setS(updated);
     await persist(updated, { silent: true });
     setPublishing(false);
-    toast.success('🚀 Changes published to live client portal!');
+    toast.success('Published. Clients see the new branding next time they open the app.');
   };
 
   const handleRollback = async (version) => {
-    toast.success(`Rolled back to Version ${version.version}`);
+    toast.success(`Restored version ${version.version}`);
   };
 
   const handleResetDefaults = async () => {
-    if (!confirm('Reset all branding to KOACH AI defaults? This cannot be undone.')) return;
+    if (!confirm('Reset all branding to the KOACH defaults? This cannot be undone.')) return;
     const reset = { ...EMPTY, coach_id: user?.email };
     setS(reset);
     await persist(reset);
@@ -137,66 +140,53 @@ export default function WhiteLabel() {
   const sharedProps = { s, set };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <Link to="/settings" className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center hover:bg-border transition-colors">
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-black text-foreground">White Label Branding</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Fully brand the client portal as your own coaching app</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <AnimatePresence>
+    <Page>
+      <Link to="/settings" className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-4 w-4" /> Settings
+      </Link>
+      <PageHeader
+        title="White label"
+        subtitle="Put your name, logo and colour on the client app. Edits save as a draft; clients see them when you publish."
+        actions={
+          <>
             {saved && (
-              <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
-                className="flex items-center gap-1.5 text-sm text-success font-semibold">
-                <Check className="w-4 h-4" /> Saved ✓
-              </motion.div>
+              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                <Check className="h-4 w-4 text-success" /> Saved
+              </span>
             )}
-          </AnimatePresence>
-          {/* Mobile preview button */}
-          <button onClick={() => setShowPreview(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-foreground border border-border bg-card hover:bg-muted transition-colors lg:hidden">
-            <Eye className="w-4 h-4" /> Preview
-          </button>
-          <button onClick={handleSaveDraft} disabled={saving}
-            className="px-5 py-2.5 rounded-xl font-bold text-foreground text-sm border border-border bg-card hover:bg-muted transition-colors disabled:opacity-60">
-            Save Draft
-          </button>
-          <button onClick={handlePublish} disabled={publishing || isLocked}
-            className="px-5 py-2.5 rounded-xl font-bold text-white text-sm flex items-center gap-2 disabled:opacity-60"
-            style={{ background: isLocked ? 'var(--tc-muted-foreground)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', boxShadow: isLocked ? 'none' : '0 4px 16px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}>
-            {publishing ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
-            {isLocked ? <><Lock className="w-3.5 h-3.5" /> Publish</> : 'Publish Changes'}
-          </button>
-        </div>
-      </div>
+            {/* Mobile preview button */}
+            <Button variant="outline" onClick={() => setShowPreview(true)} className="lg:hidden">
+              <Eye /> Preview
+            </Button>
+            <Button variant="outline" onClick={handleSaveDraft} disabled={saving}>Save draft</Button>
+            <Button onClick={handlePublish} disabled={publishing || isLocked}>
+              {publishing && <Loader2 className="animate-spin" />}
+              {isLocked && <Lock />}
+              Publish
+            </Button>
+          </>
+        }
+      />
 
       {/* Plan gate banner */}
       {isLocked && (
-        <div className="mb-6 flex items-center justify-between p-4 rounded-2xl border-2 border-warning bg-warning/10">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⭐</span>
+        <Panel className="mb-5 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-start gap-3">
+            <Lock className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
             <div>
-              <p className="font-bold text-warning">White Label requires Elite or Enterprise plan</p>
-              <p className="text-xs text-warning mt-0.5">You can preview settings below, but changes won't apply until you upgrade</p>
+              <p className="text-[15px] font-semibold text-foreground">White label is on the Elite and Enterprise plans</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">You can try settings and see the preview. Nothing reaches clients until you upgrade.</p>
             </div>
           </div>
-          <Link to="/subscription"
-            className="flex-shrink-0 px-5 py-2.5 rounded-xl font-bold text-white text-sm"
-            style={{ background: 'linear-gradient(135deg, var(--tc-warning), var(--tc-warning))', boxShadow: '0 4px 12px color-mix(in srgb, var(--tc-warning) 30%, transparent)' }}>
-            Upgrade to Unlock
-          </Link>
-        </div>
+          <Button asChild variant="outline" className="flex-shrink-0">
+            <Link to="/subscription">See plans</Link>
+          </Button>
+        </Panel>
       )}
 
-      <div className="flex gap-6">
-        {/* Main content */}
-        <div className="flex-1 min-w-0 space-y-5">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-10">
+        {/* Settings form */}
+        <div className="min-w-0 space-y-5">
           <WLBrandIdentity {...sharedProps} locked={isLocked} />
           <WLColorSystem {...sharedProps} locked={isLocked} />
           <WLTypography {...sharedProps} locked={isLocked} enterpriseLocked={isEnterpriseLocked} />
@@ -204,33 +194,21 @@ export default function WhiteLabel() {
           <WLEmailBranding {...sharedProps} locked={isLocked} eliteLocked={isEliteLocked} />
           <WLCustomContent {...sharedProps} locked={isLocked} enterpriseLocked={isEnterpriseLocked} />
 
-          {/* Brand Assets & QR */}
-          <div className="bg-card rounded-2xl border border-border overflow-hidden" style={{ boxShadow: '0 1px 8px color-mix(in srgb, black 5%, transparent)' }}>
-            <div className="flex items-center gap-2 px-6 py-4 border-b border-border bg-muted/60">
-              <span className="text-base">📦</span>
-              <h2 className="font-bold text-foreground text-sm">Brand Assets & QR Code</h2>
+          {/* Brand assets & QR */}
+          <Panel>
+            <PanelHeader title="Brand kit" subtitle="Files to share your app with clients." />
+            <div className="flex flex-wrap gap-2 px-5 pb-5 sm:px-6">
+              <Button variant="outline" onClick={() => toast.success("We'll email your brand kit in a few minutes")}>
+                <Download /> Download brand kit
+              </Button>
+              <Button variant="outline" onClick={() => toast.success('QR code download is coming soon')}>
+                <QrCode /> QR code
+              </Button>
+              <Button variant="ghost" className="text-destructive" onClick={handleResetDefaults}>
+                <RotateCcw /> Reset to KOACH defaults
+              </Button>
             </div>
-            <div className="p-6 flex flex-wrap gap-4">
-              <button
-                onClick={() => toast.success("We'll email your brand kit within a few minutes ✓")}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-foreground border border-border bg-muted hover:bg-muted transition-colors">
-                <Download className="w-4 h-4 text-muted-foreground" />
-                Download Brand Kit (PNG, SVG, PDF)
-              </button>
-              <button
-                onClick={() => toast.success("QR code download coming soon ✓")}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-foreground border border-border bg-muted hover:bg-muted transition-colors">
-                <QrCode className="w-4 h-4 text-muted-foreground" />
-                Generate QR Code
-              </button>
-              <button
-                onClick={handleResetDefaults}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-destructive border border-destructive bg-destructive/10 hover:bg-destructive/10 transition-colors">
-                <RefreshCw className="w-4 h-4" />
-                Reset to KOACH AI Defaults
-              </button>
-            </div>
-          </div>
+          </Panel>
 
           <WLPublish
             s={s}
@@ -241,20 +219,18 @@ export default function WhiteLabel() {
             publishing={publishing}
             saving={saving}
           />
-
-          <div className="pb-8" />
         </div>
 
-        {/* Desktop live preview — sticky sidebar */}
-        <div className="hidden lg:block w-72 flex-shrink-0">
+        {/* Desktop live preview, sticky */}
+        <aside className="hidden lg:block">
           <WLLivePreview s={s} />
-        </div>
+        </aside>
       </div>
 
       {/* Mobile preview modal */}
       <AnimatePresence>
         {showPreview && <WLLivePreview s={s} modal onClose={() => setShowPreview(false)} />}
       </AnimatePresence>
-    </div>
+    </Page>
   );
 }

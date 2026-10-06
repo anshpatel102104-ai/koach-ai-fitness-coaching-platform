@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const EQUIPMENT_OPTIONS = [
   'No Equipment', 'Dumbbells', 'Barbell', 'Cables', 'Machines',
@@ -14,13 +13,14 @@ const EQUIPMENT_OPTIONS = [
 ];
 
 const ChipSelect = ({ value, onChange, options, single = false }) => (
-  <div className="flex flex-wrap gap-2">
+  <div className="flex flex-wrap gap-1.5">
     {options.map(opt => {
       const isActive = single ? value === opt : (Array.isArray(value) && value.includes(opt));
       return (
         <button
           key={opt}
           type="button"
+          aria-pressed={isActive}
           onClick={() => {
             if (single) {
               onChange(opt);
@@ -29,12 +29,10 @@ const ChipSelect = ({ value, onChange, options, single = false }) => (
               onChange(isActive ? arr.filter(o => o !== opt) : [...arr, opt]);
             }
           }}
-          className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-          style={{
-            background: isActive ? 'var(--tc-primary)' : 'var(--tc-muted)',
-            color: isActive ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-            border: isActive ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-border)',
-          }}
+          className={cn(
+            'h-8 rounded-md px-3 text-[13px] font-medium transition-colors',
+            isActive ? 'bg-primary text-primary-foreground' : 'border border-input bg-card text-foreground hover:bg-accent'
+          )}
         >
           {opt}
         </button>
@@ -44,8 +42,8 @@ const ChipSelect = ({ value, onChange, options, single = false }) => (
 );
 
 const FieldLabel = ({ children, optional }) => (
-  <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">
-    {children} {optional && <span className="normal-case tracking-normal font-normal text-[var(--tc-muted-foreground)]">— optional</span>}
+  <p className="mb-1.5 text-[13px] text-muted-foreground">
+    {children}{optional && <span className="text-muted-foreground/70">, optional</span>}
   </p>
 );
 
@@ -94,20 +92,15 @@ export default function AIProfileStep({ onSubmit }) {
   const isComplete = form.goal && form.fitness_level && form.days_per_week && form.session_length;
 
   const PRIORITY_MUSCLES = ['Chest', 'Back', 'Shoulders', 'Arms', 'Quads', 'Hamstrings', 'Glutes', 'Core', 'Calves'];
-  const SPLIT_OPTIONS = ['Full Body', 'Upper / Lower', 'Push / Pull / Legs', 'Body Part Split', 'Let AI decide'];
+  const SPLIT_OPTIONS = ['Full body', 'Upper / lower', 'Push / pull / legs', 'Body part split', 'Let AI decide'];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-5"
-    >
+    <div className="space-y-5">
       {/* Client picker */}
       <div>
-        <FieldLabel optional>Auto-fill from existing client</FieldLabel>
+        <FieldLabel optional>Fill in from a client</FieldLabel>
         <Select value={selectedClient} onValueChange={handleClientSelect}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select client (optional)" /></SelectTrigger>
+          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Pick a client" /></SelectTrigger>
           <SelectContent>
             {clients.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
@@ -117,27 +110,27 @@ export default function AIProfileStep({ onSubmit }) {
       {/* Goal + Level */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <FieldLabel>Primary Goal</FieldLabel>
+          <FieldLabel>Main goal</FieldLabel>
           <Select value={form.goal} onValueChange={v => u('goal', v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="fat_loss">Fat Loss</SelectItem>
-              <SelectItem value="muscle_gain">Muscle Gain / Hypertrophy</SelectItem>
+              <SelectItem value="fat_loss">Fat loss</SelectItem>
+              <SelectItem value="muscle_gain">Muscle gain</SelectItem>
               <SelectItem value="strength">Strength</SelectItem>
-              <SelectItem value="athletic">Athletic Performance</SelectItem>
+              <SelectItem value="athletic">Athletic performance</SelectItem>
               <SelectItem value="endurance">Endurance</SelectItem>
-              <SelectItem value="general">General Fitness</SelectItem>
+              <SelectItem value="general">General fitness</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <FieldLabel>Experience Level</FieldLabel>
+          <FieldLabel>Training age</FieldLabel>
           <Select value={form.fitness_level} onValueChange={v => u('fitness_level', v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="complete_beginner">Complete Beginner (&lt;6 months)</SelectItem>
-              <SelectItem value="beginner">Beginner (6–18 months)</SelectItem>
-              <SelectItem value="intermediate">Intermediate (1.5–4 years)</SelectItem>
+              <SelectItem value="complete_beginner">Brand new (under 6 months)</SelectItem>
+              <SelectItem value="beginner">Beginner (6 to 18 months)</SelectItem>
+              <SelectItem value="intermediate">Intermediate (1.5 to 4 years)</SelectItem>
               <SelectItem value="advanced">Advanced (4+ years)</SelectItem>
             </SelectContent>
           </Select>
@@ -147,7 +140,7 @@ export default function AIProfileStep({ onSubmit }) {
       {/* Years lifting + Age + Gender */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <FieldLabel optional>Years Lifting</FieldLabel>
+          <FieldLabel optional>Years lifting</FieldLabel>
           <Input
             type="number" min="0" max="50"
             value={form.years_lifting}
@@ -181,25 +174,24 @@ export default function AIProfileStep({ onSubmit }) {
       {/* Days + Session Length */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <FieldLabel>Days / Week</FieldLabel>
+          <FieldLabel>Days a week</FieldLabel>
           <div className="flex gap-1.5 flex-wrap mt-1">
             {[2, 3, 4, 5, 6].map(d => (
               <button
                 key={d}
                 type="button"
+                aria-pressed={form.days_per_week === d}
                 onClick={() => u('days_per_week', d)}
-                className="w-9 h-9 rounded-lg text-sm font-semibold transition-all"
-                style={{
-                  background: form.days_per_week === d ? 'var(--tc-primary)' : 'var(--tc-muted)',
-                  color: form.days_per_week === d ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-                  border: form.days_per_week === d ? '1px solid var(--tc-primary)' : '0.5px solid var(--tc-border)',
-                }}
+                className={cn(
+                  'h-9 w-9 rounded-md text-sm font-semibold tabular-nums transition-colors',
+                  form.days_per_week === d ? 'bg-primary text-primary-foreground' : 'border border-input bg-card text-foreground hover:bg-accent'
+                )}
               >{d}</button>
             ))}
           </div>
         </div>
         <div>
-          <FieldLabel>Session Length</FieldLabel>
+          <FieldLabel>Session length</FieldLabel>
           <Select value={form.session_length} onValueChange={v => u('session_length', v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
@@ -215,53 +207,53 @@ export default function AIProfileStep({ onSubmit }) {
 
       {/* Equipment */}
       <div>
-        <FieldLabel>Equipment Available</FieldLabel>
+        <FieldLabel>Equipment they have</FieldLabel>
         <ChipSelect value={form.equipment} onChange={v => u('equipment', v)} options={EQUIPMENT_OPTIONS} />
       </div>
 
       {/* Preferred Split */}
       <div>
-        <FieldLabel optional>Preferred Training Split</FieldLabel>
+        <FieldLabel optional>Split</FieldLabel>
         <ChipSelect value={form.preferred_split} onChange={v => u('preferred_split', v)} options={SPLIT_OPTIONS} single />
       </div>
 
       {/* Priority muscles */}
       <div>
-        <FieldLabel optional>Priority Muscle Groups</FieldLabel>
+        <FieldLabel optional>Muscles to prioritise</FieldLabel>
         <ChipSelect value={form.priority_muscles} onChange={v => u('priority_muscles', v)} options={PRIORITY_MUSCLES} />
       </div>
 
       {/* Injuries */}
       <div>
-        <FieldLabel optional>Injuries or Movement Limitations</FieldLabel>
+        <FieldLabel optional>Injuries or limitations</FieldLabel>
         <Textarea
           value={form.injuries}
           onChange={e => u('injuries', e.target.value)}
           rows={2}
-          placeholder="e.g. left knee pain on deep squats, avoid overhead pressing"
+          placeholder="Left knee pain on deep squats, no overhead pressing"
           className="text-sm"
         />
       </div>
 
       {/* Movements to avoid */}
       <div>
-        <FieldLabel optional>Specific Lifts to Avoid</FieldLabel>
+        <FieldLabel optional>Lifts to leave out</FieldLabel>
         <Textarea
           value={form.movements_to_avoid}
           onChange={e => u('movements_to_avoid', e.target.value)}
           rows={1}
-          placeholder="e.g. behind-the-neck press, barbell upright row"
+          placeholder="Behind-the-neck press, barbell upright row"
           className="text-sm"
         />
       </div>
 
       {/* Strength numbers */}
       <div>
-        <FieldLabel optional>Current Strength Benchmarks (1RM or working weight)</FieldLabel>
+        <FieldLabel optional>Current lifts (1RM or working weight)</FieldLabel>
         <div className="grid grid-cols-2 gap-2 mt-1">
           {[
             { key: 'current_squat', label: 'Squat' },
-            { key: 'current_bench', label: 'Bench Press' },
+            { key: 'current_bench', label: 'Bench' },
             { key: 'current_deadlift', label: 'Deadlift' },
             { key: 'current_ohp', label: 'OHP' },
           ].map(({ key, label }) => (
@@ -279,16 +271,10 @@ export default function AIProfileStep({ onSubmit }) {
         </div>
       </div>
 
-      <div className="flex justify-end pt-2">
-        <Button
-          onClick={handleSubmit}
-          disabled={!isComplete}
-          className="gap-2 text-sm font-semibold"
-          style={{ background: 'var(--tc-primary)' }}
-        >
-          Next <ChevronRight className="w-4 h-4" />
-        </Button>
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+        <p className="text-[13px] text-muted-foreground">{isComplete ? 'Next: how long it runs and how it progresses.' : 'Goal, training age, days and session length are needed.'}</p>
+        <Button onClick={handleSubmit} disabled={!isComplete}>Next</Button>
       </div>
-    </motion.div>
+    </div>
   );
 }

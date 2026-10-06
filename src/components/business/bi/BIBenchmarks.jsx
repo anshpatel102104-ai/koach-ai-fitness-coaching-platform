@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Panel } from '@/components/kit';
+import { cn } from '@/lib/utils';
 
 // Industry benchmarks (anonymous aggregate estimates)
 const BENCHMARKS = {
@@ -12,28 +13,14 @@ const BENCHMARKS = {
 
 function BenchmarkRow({ label, coachVal, benchmarkVal, unit, isHigherBetter = true }) {
   const diff = coachVal - benchmarkVal;
-  const pct = benchmarkVal > 0 ? Math.round((coachVal / benchmarkVal) * 100) : 100;
   const isBetter = isHigherBetter ? diff >= 0 : diff <= 0;
-  const color = isBetter ? 'var(--tc-success)' : 'var(--tc-destructive)';
-  const Icon = diff === 0 ? Minus : isBetter ? TrendingUp : TrendingDown;
+  const fmt = (v) => (unit === '$' ? `$${v}` : `${v}${unit}`);
 
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
-      <p className="text-xs text-muted-foreground flex-1">{label}</p>
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <p className="text-xs font-bold text-foreground">{unit === '$' ? `$${coachVal}` : `${coachVal}${unit}`}</p>
-          <p className="text-[9px] text-muted-foreground">You</p>
-        </div>
-        <div className="text-right opacity-50">
-          <p className="text-xs font-medium text-muted-foreground">{unit === '$' ? `$${benchmarkVal}` : `${benchmarkVal}${unit}`}</p>
-          <p className="text-[9px] text-muted-foreground">Avg</p>
-        </div>
-        <div className="flex items-center gap-1" style={{ color }}>
-          <Icon className="w-3.5 h-3.5" />
-          <span className="text-xs font-bold">{pct}%</span>
-        </div>
-      </div>
+    <div className="grid grid-cols-[1fr_auto_56px] items-baseline gap-3 py-2.5 border-b border-border last:border-0">
+      <p className="text-sm text-foreground">{label}</p>
+      <p className={cn('num text-[18px] text-right', isBetter ? 'text-foreground' : 'text-destructive')}>{fmt(coachVal)}</p>
+      <p className="text-[13px] text-muted-foreground text-right tabular-nums">{fmt(benchmarkVal)}</p>
     </div>
   );
 }
@@ -68,26 +55,24 @@ export default function BIBenchmarks({ clients, checkIns }) {
   const percentileLabel = overallPct >= 125 ? 'top 10%' : overallPct >= 110 ? 'top 25%' : overallPct >= 90 ? 'top 50%' : 'bottom 50%';
 
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <div className="flex items-center gap-2 mb-1">
-        <Award className="w-4 h-4 text-warning" />
-        <h3 className="text-sm font-bold text-foreground">Industry Benchmarks</h3>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Against other coaches</h2>
+      <p className="text-sm text-muted-foreground mt-1">
+        Overall you're in the <span className="font-semibold text-foreground">{percentileLabel}</span>. Red is below the typical coach.
+      </p>
+
+      <div className="mt-3 grid grid-cols-[1fr_auto_56px] gap-3 text-[13px] text-muted-foreground pb-1.5 border-b border-border">
+        <span />
+        <span className="text-right">You</span>
+        <span className="text-right">Typical</span>
       </div>
-      <p className="text-xs text-muted-foreground mb-4">Anonymous aggregated data from fitness coaches</p>
+      <BenchmarkRow label="Revenue per client" coachVal={mrrPerClient} benchmarkVal={BENCHMARKS.mrr_per_client.value} unit="$" />
+      <BenchmarkRow label="Retention" coachVal={retentionRate} benchmarkVal={BENCHMARKS.retention_rate.value} unit="%" />
+      <BenchmarkRow label="Check-ins reviewed" coachVal={checkinCompletionRate} benchmarkVal={BENCHMARKS.checkin_completion.value} unit="%" />
+      <BenchmarkRow label="Adherence" coachVal={avgAdherence} benchmarkVal={BENCHMARKS.adherence.value} unit="%" />
+      <BenchmarkRow label="Replies sent" coachVal={responseRate} benchmarkVal={BENCHMARKS.response_rate.value} unit="%" />
 
-      <div className="p-3 rounded-xl bg-gradient-to-r from-accent to-accent border border-accent mb-4">
-        <p className="text-xs text-primary font-semibold">
-          You're in the <span className="font-bold text-primary">{percentileLabel}</span> of coaches overall
-        </p>
-      </div>
-
-      <BenchmarkRow label="MRR per Client" coachVal={mrrPerClient} benchmarkVal={BENCHMARKS.mrr_per_client.value} unit="$" />
-      <BenchmarkRow label="Client Retention Rate" coachVal={retentionRate} benchmarkVal={BENCHMARKS.retention_rate.value} unit="%" />
-      <BenchmarkRow label="Check-in Response Rate" coachVal={checkinCompletionRate} benchmarkVal={BENCHMARKS.checkin_completion.value} unit="%" />
-      <BenchmarkRow label="Avg Adherence Score" coachVal={avgAdherence} benchmarkVal={BENCHMARKS.adherence.value} unit="%" />
-      <BenchmarkRow label="Coach Response Rate" coachVal={responseRate} benchmarkVal={BENCHMARKS.response_rate.value} unit="%" />
-
-      <p className="text-[9px] text-border text-center mt-3">Benchmarks are estimates based on industry averages</p>
-    </div>
+      <p className="text-[13px] text-muted-foreground mt-3">Typical values are industry estimates, not live data.</p>
+    </Panel>
   );
 }

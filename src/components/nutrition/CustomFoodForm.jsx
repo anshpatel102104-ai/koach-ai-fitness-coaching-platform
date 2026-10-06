@@ -57,7 +57,7 @@ export default function CustomFoodForm({ open, onOpenChange, food, onSubmit }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{food ? 'Edit Food' : 'Create Custom Food'}</DialogTitle>
+          <DialogTitle>{food ? 'Edit food' : 'Custom food'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-3">
@@ -77,8 +77,8 @@ export default function CustomFoodForm({ open, onOpenChange, food, onSubmit }) {
 
           {/* Main macros */}
           <div>
-            <Label className="mb-2 block">Nutrition Per Serving</Label>
-            <div className="grid grid-cols-4 gap-2">
+            <Label className="mb-2 block">Nutrition per serving</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { key: 'calories', label: 'Calories', placeholder: 'kcal' },
                 { key: 'protein_g', label: 'Protein (g)', placeholder: 'g' },
@@ -149,7 +149,7 @@ export default function CustomFoodForm({ open, onOpenChange, food, onSubmit }) {
 
           <div className="flex gap-3 pt-2 border-t border-border">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="flex-1">{food ? 'Update Food' : 'Save Food'}</Button>
+            <Button type="submit" className="flex-1">{food ? 'Save changes' : 'Save food'}</Button>
           </div>
         </form>
       </DialogContent>

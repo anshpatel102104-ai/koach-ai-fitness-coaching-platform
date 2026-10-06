@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { X, Search, LayoutTemplate, Sparkles } from 'lucide-react';
+import { X, Search, LayoutTemplate } from 'lucide-react';
 
 const TYPE_META = {
-  numeric:   { label: 'Numeric',   color: 'var(--tc-primary)', bg: 'var(--tc-accent)' },
-  nutrition: { label: 'Nutrition', color: 'var(--tc-success)', bg: 'var(--tc-success)' },
-  simple:    { label: 'Simple',    color: 'var(--tc-ai)', bg: 'var(--tc-ai)' },
+  numeric:   { label: 'Numeric',   color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+  nutrition: { label: 'Nutrition', color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
+  simple:    { label: 'Simple',    color: 'var(--tc-foreground)', bg: 'var(--tc-muted)' },
 };
 
 // ── Built-in starter templates ────────────────────────────────────────────────
@@ -128,15 +128,14 @@ function TemplateRow({ t, onSelect }) {
   return (
     <button
       onClick={() => onSelect(t)}
-      className="w-full text-left p-3.5 rounded-xl border transition-all hover:border-primary hover:bg-accent/40"
-      style={{ borderColor: t._builtin ? 'var(--tc-ai)' : 'var(--tc-muted)', background: t._builtin ? 'var(--tc-ai)' : 'var(--tc-card)' }}
+      className="w-full text-left p-3.5 rounded-lg border border-border bg-card transition-colors hover:bg-accent/60"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          {t._builtin && <Sparkles className="w-3 h-3 text-ai flex-shrink-0" />}
+          {t._builtin && <span className="text-[11px] text-muted-foreground flex-shrink-0">Starter</span>}
           <p className="text-sm font-semibold text-foreground truncate">{t.name}</p>
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
           style={{ background: meta.bg, color: meta.color }}>{meta.label}</span>
       </div>
       {preview && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{preview}</p>}
@@ -162,7 +161,7 @@ export default function TemplatePickerSheet({ onSelect, onClose }) {
     <div className="fixed inset-0 z-[210] flex items-end sm:items-center justify-center sm:p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
       <div
-        className="relative bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col"
+        className="relative bg-card w-full sm:max-w-md rounded-t-2xl sm:rounded-xl flex flex-col"
         style={{ maxHeight: '82vh' }}
         onClick={e => e.stopPropagation()}
       >
@@ -170,7 +169,7 @@ export default function TemplatePickerSheet({ onSelect, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <LayoutTemplate className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-foreground">Choose a Template</h3>
+            <h3 className="text-[18px] text-foreground">Choose a template</h3>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground">
             <X className="w-4 h-4" />
@@ -205,10 +204,7 @@ export default function TemplatePickerSheet({ onSelect, onClose }) {
           {/* Built-in starter templates */}
           {!isLoading && filteredBuiltin.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-ai" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Starter Templates</p>
-              </div>
+              <p className="text-[13px] text-muted-foreground">Starter templates</p>
               {filteredBuiltin.map(t => <TemplateRow key={t.id} t={t} onSelect={onSelect} />)}
             </div>
           )}
@@ -218,7 +214,7 @@ export default function TemplatePickerSheet({ onSelect, onClose }) {
             <div className="space-y-2">
               <div className="flex items-center gap-1.5">
                 <LayoutTemplate className="w-3 h-3 text-primary" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">My Templates</p>
+                <p className="text-xs font-semibold text-muted-foreground">My templates</p>
               </div>
               {filteredSaved.map(t => <TemplateRow key={t.id} t={t} onSelect={onSelect} />)}
             </div>

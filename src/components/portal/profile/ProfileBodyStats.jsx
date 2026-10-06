@@ -1,3 +1,4 @@
+import { Scale } from 'lucide-react';
 import React, { useState } from 'react';
 import { portalDb } from '@/api/supabaseClient';
 import { format, parseISO } from 'date-fns';
@@ -41,15 +42,15 @@ export default function ProfileBodyStats({ client, checkIns, queryClient }) {
   const heightUnit = units === 'imperial' ? 'ft/in' : 'cm';
 
   return (
-    <ProfileSectionCard icon="⚖️" title="Body Stats">
+    <ProfileSectionCard icon={Scale} title="Body Stats">
       {/* Unit toggle */}
-      <div className="flex gap-1 mt-3 mb-4 p-1 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+      <div className="flex gap-1 mt-3 mb-4 p-1 rounded-xl" style={{ background: 'rgb(var(--secondary))' }}>
         {['imperial', 'metric'].map(u => (
           <button key={u} onClick={() => setUnits(u)}
             className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
             style={{
-              background: units === u ? 'rgb(var(--primary) / 0.3)' : 'transparent',
-              color: units === u ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.3)',
+              background: units === u ? 'rgb(var(--primary))' : 'transparent',
+              color: units === u ? 'rgb(var(--primary-foreground))' : 'rgb(var(--muted-foreground))',
             }}>
             {u === 'imperial' ? 'Imperial' : 'Metric'}
           </button>
@@ -63,26 +64,26 @@ export default function ProfileBodyStats({ client, checkIns, queryClient }) {
           { label: `Height (${heightUnit})`, key: 'height' },
         ].map(({ label, key, note }) => (
           <div key={key}>
-            <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">{label}</p>
+            <p className="text-muted-foreground text-xs mb-1.5">{label}</p>
             <input
               type={key === 'height' ? 'text' : 'number'}
-              className="w-full bg-transparent text-white text-base outline-none border-b border-white/10 pb-1 focus:border-primary transition-colors"
+              className="w-full bg-transparent text-foreground text-base outline-none border-b border-border pb-1 focus:border-primary transition-colors"
               value={values[key]}
               placeholder={`Enter ${label.toLowerCase()}`}
               onChange={e => { setValues(p => ({ ...p, [key]: e.target.value })); setDirty(true); }}
             />
-            {note && <p className="text-white/20 text-[10px] mt-1">{note}</p>}
+            {note && <p className="text-muted-foreground text-[12px] mt-1">{note}</p>}
           </div>
         ))}
       </div>
 
       <AnimatePresence>
         {dirty && (
-          <motion.button initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          <motion.button exit={{ opacity: 0 }}
             onClick={save}
-            className="mt-5 w-full py-3 rounded-xl font-bold text-sm text-white"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary)))' }}>
-            {saved ? '✓ Saved' : 'Save Body Stats'}
+            className="mt-5 w-full py-3 rounded-xl font-bold text-sm text-primary-foreground"
+            style={{ background: 'rgb(var(--primary))' }}>
+            {saved ? 'Saved' : 'Save Body Stats'}
           </motion.button>
         )}
       </AnimatePresence>

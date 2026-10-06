@@ -3,13 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { Copy, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Panel, PanelHeader, EmptyState } from '@/components/kit';
 
 const DESTINATION_OPTIONS = [
-  { value: 'coach_profile', label: 'Coach Profile Page' },
-  { value: 'package_page', label: 'All Packages' },
-  { value: 'booking', label: 'Free Consultation' },
-  { value: 'signup', label: 'KOACH AI Signup' },
+  { value: 'coach_profile', label: 'Your coach profile' },
+  { value: 'package_page', label: 'All packages' },
+  { value: 'booking', label: 'Free consultation booking' },
+  { value: 'signup', label: 'KOACH AI sign-up' },
 ];
+
+export const selectClass = 'w-full h-10 rounded-md border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 export default function MarketingLinksSection({ coachId }) {
   const queryClient = useQueryClient();
@@ -62,112 +68,84 @@ export default function MarketingLinksSection({ coachId }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newLink.link_name || !newLink.destination_type) {
-      toast.error('Please fill required fields');
+      toast.error('Give the link a name first');
       return;
     }
     createMutation.mutate(newLink);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-black text-foreground">Smart Link Builder</h2>
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary">
-            <Plus className="w-4 h-4" /> Create Link
-          </button>
-        </div>
+    <Panel>
+      <PanelHeader
+        title="Tracked links"
+        subtitle="One link per place you post, so you can see which one brings people in."
+        right={<Button size="sm" variant={showCreateForm ? 'outline' : 'default'} onClick={() => setShowCreateForm(!showCreateForm)}>{showCreateForm ? 'Close' : <><Plus /> New link</>}</Button>}
+      />
 
-        {showCreateForm && (
-          <form onSubmit={handleSubmit} className="mb-6 p-4 rounded-lg bg-muted border border-border space-y-4">
-            <input
-              type="text"
-              placeholder="Link name (e.g., Instagram Bio)"
-              value={newLink.link_name}
-              onChange={(e) => setNewLink({ ...newLink, link_name: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-
-            <select
-              value={newLink.destination_type}
-              onChange={(e) => setNewLink({ ...newLink, destination_type: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-              {DESTINATION_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              placeholder="UTM Source (e.g., instagram)"
-              value={newLink.utm_source}
-              onChange={(e) => setNewLink({ ...newLink, utm_source: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-
-            <input
-              type="text"
-              placeholder="UTM Campaign (optional)"
-              value={newLink.utm_campaign}
-              onChange={(e) => setNewLink({ ...newLink, utm_campaign: e.target.value })}
-              className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-
-            <div className="flex gap-2">
-              <button type="submit" disabled={createMutation.isPending}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary disabled:opacity-50">
-                Create
-              </button>
-              <button type="button" onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 rounded-lg bg-border text-foreground text-sm font-bold hover:bg-border">
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Links table */}
-        {links.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border">
-                <tr>
-                  <th className="text-left py-3 px-3 font-bold text-foreground">Name</th>
-                  <th className="text-left py-3 px-3 font-bold text-foreground">URL</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Clicks</th>
-                  <th className="text-right py-3 px-3 font-bold text-foreground">Conversions</th>
-                  <th className="text-center py-3 px-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {links.map((link) => (
-                  <tr key={link.id} className="border-b border-border hover:bg-muted">
-                    <td className="py-3 px-3 font-semibold text-foreground">{link.link_name}</td>
-                    <td className="py-3 px-3 text-muted-foreground font-mono text-xs truncate">{link.full_url}</td>
-                    <td className="py-3 px-3 text-right text-foreground font-bold">{link.clicks || 0}</td>
-                    <td className="py-3 px-3 text-right text-foreground font-bold">{link.conversions || 0}</td>
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => handleCopy(link.full_url)} className="text-primary hover:text-primary" title="Copy">
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => deleteMutation.mutate(link.id)} className="text-destructive hover:text-destructive" title="Delete">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {showCreateForm && (
+        <form onSubmit={handleSubmit} className="mx-5 sm:mx-6 mb-5 p-4 rounded-lg bg-secondary grid gap-3 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="ml-name">Name</Label>
+            <Input id="ml-name" className="mt-1.5 bg-card" placeholder="Instagram bio" value={newLink.link_name}
+              onChange={(e) => setNewLink({ ...newLink, link_name: e.target.value })} required />
           </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">No links yet. Create one to start tracking!</p>
-        )}
-      </div>
-    </div>
+          <div>
+            <Label htmlFor="ml-dest">Goes to</Label>
+            <select id="ml-dest" value={newLink.destination_type} onChange={(e) => setNewLink({ ...newLink, destination_type: e.target.value })} className={`${selectClass} mt-1.5`}>
+              {DESTINATION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="ml-src">Source <span className="text-muted-foreground font-normal">utm_source</span></Label>
+            <Input id="ml-src" className="mt-1.5 bg-card" placeholder="instagram" value={newLink.utm_source}
+              onChange={(e) => setNewLink({ ...newLink, utm_source: e.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor="ml-camp">Campaign <span className="text-muted-foreground font-normal">optional</span></Label>
+            <Input id="ml-camp" className="mt-1.5 bg-card" placeholder="october-intake" value={newLink.utm_campaign}
+              onChange={(e) => setNewLink({ ...newLink, utm_campaign: e.target.value })} />
+          </div>
+          <div className="sm:col-span-2 flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>Cancel</Button>
+            <Button type="submit" disabled={createMutation.isPending}>Create link</Button>
+          </div>
+        </form>
+      )}
+
+      {links.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-y border-border">
+              <tr className="text-[13px] text-muted-foreground">
+                <th className="text-left font-medium py-3 pl-5 sm:pl-6 pr-3">Link</th>
+                <th className="text-right font-medium py-3 px-3">Clicks</th>
+                <th className="text-right font-medium py-3 px-3">Conversions</th>
+                <th className="py-3 pr-5 sm:pr-6 pl-3"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {links.map((link) => (
+                <tr key={link.id} className="hover:bg-accent/40">
+                  <td className="py-3 pl-5 sm:pl-6 pr-3 max-w-[420px]">
+                    <p className="text-[15px] font-semibold text-foreground">{link.link_name}</p>
+                    <p className="text-[13px] text-muted-foreground font-mono truncate">{link.full_url}</p>
+                  </td>
+                  <td className="py-3 px-3 text-right"><span className="num text-lg">{link.clicks || 0}</span></td>
+                  <td className="py-3 px-3 text-right"><span className="num text-lg">{link.conversions || 0}</span></td>
+                  <td className="py-3 pr-5 sm:pr-6 pl-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => handleCopy(link.full_url)} aria-label="Copy link"><Copy /></Button>
+                      <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => deleteMutation.mutate(link.id)} aria-label="Delete link"><Trash2 /></Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <EmptyState title="No links yet" body="Start with the one in your Instagram bio." />
+      )}
+    </Panel>
   );
 }

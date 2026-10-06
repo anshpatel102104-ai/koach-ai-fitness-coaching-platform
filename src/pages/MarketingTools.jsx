@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { Link as LinkIcon, Mail, MessageSquare, TrendingUp, Zap } from 'lucide-react';
+import { Page, PageHeader, Panel, Stat, Segmented } from '@/components/kit';
 import MarketingLinksSection from '@/components/marketing/MarketingLinksSection';
 import QRCodeGenerator from '@/components/marketing/QRCodeGenerator';
 import EmailTemplateLibrary from '@/components/marketing/EmailTemplateLibrary';
@@ -40,76 +40,42 @@ export default function MarketingTools() {
   });
 
   const SECTIONS = [
-    { id: 'links', label: 'Links & QR Codes', icon: LinkIcon },
-    { id: 'email', label: 'Email Templates', icon: Mail },
-    { id: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-    { id: 'campaigns', label: 'Campaigns', icon: Zap },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { value: 'links', label: 'Links and QR codes' },
+    { value: 'email', label: 'Email templates' },
+    { value: 'testimonials', label: 'Testimonials' },
+    { value: 'campaigns', label: 'Campaigns' },
+    { value: 'analytics', label: 'Analytics' },
   ];
 
+  const monthly = marketingStats?.monthlyClicks || 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted to-card">
-      {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <h1 className="text-3xl font-black text-foreground">Marketing Tools</h1>
-          <p className="text-muted-foreground mt-1">Everything you need to grow your coaching business</p>
-          
-          {/* Quick stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="p-4 rounded-lg bg-accent border border-primary">
-              <p className="text-xs text-primary font-bold">CLICKS THIS MONTH</p>
-              <p className="text-2xl font-black text-primary mt-1">{marketingStats?.monthlyClicks || 0}</p>
-            </div>
-            <div className="p-4 rounded-lg bg-success/10 border border-success">
-              <p className="text-xs text-success font-bold">TESTIMONIALS</p>
-              <p className="text-2xl font-black text-success mt-1">{marketingStats?.testimonialCount || 0}</p>
-            </div>
-            <div className="p-4 rounded-lg bg-ai/10 border border-ai">
-              <p className="text-xs text-ai font-bold">ACTIVE CAMPAIGNS</p>
-              <p className="text-2xl font-black text-ai mt-1">{marketingStats?.campaignCount || 0}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <Page>
+      <PageHeader
+        title="Marketing"
+        subtitle={monthly
+          ? `Your links were clicked ${monthly.toLocaleString()} ${monthly === 1 ? 'time' : 'times'} this month.`
+          : 'Tracked links, QR codes, email templates and testimonials in one place.'}
+      />
 
-      {/* Navigation tabs */}
-      <div className="bg-card border-b border-border sticky top-[130px] z-30">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-2 overflow-x-auto">
-            {SECTIONS.map(section => {
-              const Icon = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex items-center gap-2 px-4 py-4 font-bold border-b-2 transition-colors whitespace-nowrap ${
-                    activeSection === section.id
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}>
-                  <Icon className="w-4 h-4" />
-                  {section.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <Panel className="grid grid-cols-3 gap-px overflow-hidden bg-border mb-5 [&>*]:bg-card [&>*]:px-5 [&>*]:py-4 sm:[&>*]:px-6">
+        <Stat label="Clicks this month" value={monthly.toLocaleString()} sub={`${(marketingStats?.totalClicks || 0).toLocaleString()} all time`} />
+        <Stat label="Testimonials" value={marketingStats?.testimonialCount || 0} />
+        <Stat label="Campaigns" value={marketingStats?.campaignCount || 0} />
+      </Panel>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {activeSection === 'links' && (
-          <div className="space-y-8">
-            <MarketingLinksSection coachId={user?.id} />
-            <QRCodeGenerator coachId={user?.id} />
-          </div>
-        )}
-        {activeSection === 'email' && <EmailTemplateLibrary coachId={user?.id} />}
-        {activeSection === 'testimonials' && <TestimonialCollector coachId={user?.id} />}
-        {activeSection === 'campaigns' && <CampaignBuilder coachId={user?.id} />}
-        {activeSection === 'analytics' && <MarketingAnalytics coachId={user?.id} />}
-      </div>
-    </div>
+      <Segmented className="mb-5" options={SECTIONS} value={activeSection} onChange={setActiveSection} />
+
+      {activeSection === 'links' && (
+        <div className="space-y-5">
+          <MarketingLinksSection coachId={user?.id} />
+          <QRCodeGenerator coachId={user?.id} />
+        </div>
+      )}
+      {activeSection === 'email' && <EmailTemplateLibrary coachId={user?.id} />}
+      {activeSection === 'testimonials' && <TestimonialCollector coachId={user?.id} />}
+      {activeSection === 'campaigns' && <CampaignBuilder coachId={user?.id} />}
+      {activeSection === 'analytics' && <MarketingAnalytics coachId={user?.id} />}
+    </Page>
   );
 }

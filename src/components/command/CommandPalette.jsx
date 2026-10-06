@@ -65,11 +65,11 @@ export function CommandPaletteProvider({ children }) {
     <CommandPaletteContext.Provider value={{ open: openPalette, close, toggle }}>
       {children}
       <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Search or jump to…  (type a page, action, or client task)" />
+        <CommandInput placeholder="Jump to a page or run an action" />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>Nothing matches. Try a page name, like Clients.</CommandEmpty>
           {grouped.map(({ section, items }) => (
-            <CommandGroup key={section} heading={section}>
+            <CommandGroup key={section} heading={section} className="[&_[cmdk-group-heading]]:text-[13px] [&_[cmdk-group-heading]]:pt-3">
               {items.map(cmd => {
                 const Icon = cmd.icon;
                 return (
@@ -77,9 +77,9 @@ export function CommandPaletteProvider({ children }) {
                     key={cmd.id}
                     value={`${cmd.title} ${cmd.keywords || ''}`}
                     onSelect={() => runCommand(cmd)}
-                    className="cursor-pointer gap-3"
+                    className="group cursor-pointer gap-3 rounded-md py-2.5 text-[15px] data-[selected=true]:bg-primary data-[selected=true]:text-primary-foreground"
                   >
-                    {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                    {Icon && <Icon className="h-4 w-4 text-muted-foreground group-data-[selected=true]:text-primary-foreground" />}
                     <span>{cmd.title}</span>
                   </CommandItem>
                 );

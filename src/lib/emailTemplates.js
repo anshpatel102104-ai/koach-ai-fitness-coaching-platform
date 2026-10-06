@@ -1,109 +1,126 @@
 const APP_URL = import.meta.env.VITE_APP_URL || '';
 
+// Email-safe palette (inline hex is fine in email HTML).
+const INK = '#111318';   // headings, primary button
+const BODY = '#2B2F36';  // body copy
+const GREY = '#5E6470';  // secondary text
+const RULE = '#E2E4E8';  // hairlines
+const SOFT = '#F4F5F7';  // quiet panels
+const BLUE = '#0A5CFF';  // links
+
+const coachName = (coach, fallback = 'Your coach') => coach?.full_name || coach?.name || fallback;
+
+const wrap = (inner, extra = '') =>
+  `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;color:${BODY};${extra}">${inner}</div>`;
+
+const button = (href, label, margin = '24px 0') =>
+  `<a href="${href}" style="display:inline-block;background:${INK};color:#FFFFFF;padding:14px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:${margin};">${label}</a>`;
+
+const footer = (coach, rule = true) =>
+  `<p style="color:${GREY};font-size:14px;margin-top:32px;${rule ? `border-top:1px solid ${RULE};padding-top:16px;` : ''}">${coachName(coach)} · KOACH</p>`;
+
 export const templates = {
   welcome: (client, coach) => ({
-    subject: `Welcome to ${coach?.full_name || coach?.name || 'your'} coaching program! 🎉`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <div style="background:#111827;border-radius:12px;padding:32px;text-align:center;margin-bottom:32px;">
-        <h1 style="color:white;font-size:24px;margin:0;">Welcome, ${client.name}! 👋</h1>
-        <p style="color:rgba(255,255,255,0.6);margin:8px 0 0;">You're officially part of the program</p>
+    subject: `Welcome to ${coach?.full_name || coach?.name || 'your'} coaching program`,
+    html: wrap(`
+      <h1 style="color:${INK};font-size:26px;margin:0 0 8px;">Welcome, ${client.name}</h1>
+      <p style="color:${GREY};font-size:16px;margin:0 0 24px;">You're set up and ready to start.</p>
+      <p style="font-size:16px;line-height:1.6;">Hi ${client.name}, glad to have you on board. Here's what happens next:</p>
+      <div style="background:${SOFT};border-radius:12px;padding:20px 24px;margin:24px 0;">
+        <p style="margin:0 0 12px;"><strong style="color:${INK};">1.</strong> Complete your first check-in</p>
+        <p style="margin:0 0 12px;"><strong style="color:${INK};">2.</strong> Review your nutrition plan</p>
+        <p style="margin:0;"><strong style="color:${INK};">3.</strong> Start your first workout</p>
       </div>
-      <p style="color:#374151;font-size:16px;line-height:1.6;">Hi ${client.name}, I'm thrilled to have you on board. Here's what happens next:</p>
-      <div style="background:#F9FAFB;border-radius:12px;padding:24px;margin:24px 0;">
-        <div style="margin-bottom:16px;"><span style="font-weight:600;color:#111827;">📋 Step 1:</span><span style="color:#6B7280;"> Complete your first check-in</span></div>
-        <div style="margin-bottom:16px;"><span style="font-weight:600;color:#111827;">🥗 Step 2:</span><span style="color:#6B7280;"> Review your nutrition plan</span></div>
-        <div><span style="font-weight:600;color:#111827;">💪 Step 3:</span><span style="color:#6B7280;"> Start your first workout</span></div>
-      </div>
-      <p style="color:#374151;font-size:16px;">Any questions? Just reply to this email.<br/>Let's get to work! 🚀</p>
-      <p style="color:#6B7280;font-size:14px;margin-top:32px;border-top:1px solid #E5E7EB;padding-top:16px;">${coach?.full_name || coach?.name || 'Your Coach'} · Powered by KOACH AI</p>
-    </div>`,
+      <p style="font-size:16px;line-height:1.6;">Any questions, just reply to this email.</p>
+      ${footer(coach)}
+    `),
   }),
 
   weeklyCheckin: (client, coach) => ({
-    subject: `${client.name}, time for your weekly check-in! 📋`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <h2 style="color:#111827;">Hey ${client.name} 👋</h2>
-      <p style="color:#374151;line-height:1.6;">It's time for your weekly check-in! Take 2 minutes to log how your week went — this helps ${coach?.full_name || coach?.name || 'your coach'} personalize your plan and keep you on track.</p>
-      <a href="${APP_URL}/portal" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:24px 0;">Submit Check-in →</a>
-      <p style="color:#6B7280;font-size:14px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+    subject: `${client.name}, your weekly check-in is due`,
+    html: wrap(`
+      <h2 style="color:${INK};margin:0 0 16px;">Hi ${client.name},</h2>
+      <p style="line-height:1.6;">Your weekly check-in is due. It takes about two minutes, and it's what ${coachName(coach, 'your coach')} uses to adjust your plan for next week.</p>
+      ${button(`${APP_URL}/portal`, 'Submit check-in')}
+      ${footer(coach, false)}
+    `),
   }),
 
   lowCompliance: (client, coach, complianceScore) => ({
-    subject: `Let's get back on track, ${client.name} 💪`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <h2 style="color:#111827;">Hey ${client.name},</h2>
-      <p style="color:#374151;line-height:1.6;">${coach?.full_name || coach?.name || 'Your coach'} noticed your compliance has dropped to ${complianceScore}% this week. That's okay — everyone has tough weeks. Let's get back on track together.</p>
-      <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:20px;margin:24px 0;">
-        <p style="color:#D97706;font-weight:600;margin:0 0 8px;">Quick wins for this week:</p>
-        <ul style="color:#374151;margin:0;padding-left:20px;"><li>Hit your protein target today</li><li>Complete at least 1 workout</li><li>Submit your check-in</li></ul>
+    subject: `A few small wins for this week, ${client.name}`,
+    html: wrap(`
+      <h2 style="color:${INK};margin:0 0 16px;">Hi ${client.name},</h2>
+      <p style="line-height:1.6;">${coachName(coach)} noticed your compliance was ${complianceScore}% this week. Everyone has weeks like that. Let's pick it back up together.</p>
+      <div style="background:${SOFT};border-radius:12px;padding:20px 24px;margin:24px 0;">
+        <p style="color:${INK};font-weight:600;margin:0 0 8px;">Three small wins for this week</p>
+        <ul style="margin:0;padding-left:20px;line-height:1.7;"><li>Hit your protein target today</li><li>Complete at least one workout</li><li>Submit your check-in</li></ul>
       </div>
-      <a href="${APP_URL}/portal" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">View My Plan →</a>
-      <p style="color:#6B7280;font-size:14px;margin-top:24px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+      ${button(`${APP_URL}/portal`, 'View my plan', '0')}
+      ${footer(coach, false)}
+    `),
   }),
 
-  badgeEarned: (client, badge, coach) => ({
-    subject: `🏆 You earned the "${badge?.label || badge?.name}" badge!`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;text-align:center;">
-      <div style="background:#111827;border-radius:12px;padding:40px 32px;margin-bottom:32px;">
-        <div style="font-size:64px;margin-bottom:16px;">${badge?.emoji || '🏆'}</div>
-        <h1 style="color:white;font-size:24px;margin:0 0 8px;">Achievement Unlocked!</h1>
-        <p style="color:rgba(255,255,255,0.7);font-size:18px;margin:0;">${badge?.label || badge?.name}</p>
+  // Same argument order as the other templates: (client, coach, extra).
+  badgeEarned: (client, coach, badge) => ({
+    subject: `You earned the "${badge?.label || badge?.name}" badge`,
+    html: wrap(`
+      <div style="border:1px solid ${RULE};border-radius:12px;padding:32px;margin-bottom:32px;">
+        <p style="color:${GREY};font-size:14px;margin:0 0 8px;">New badge</p>
+        <h1 style="color:${INK};font-size:26px;margin:0;">${badge?.label || badge?.name}</h1>
+        ${badge?.desc ? `<p style="color:${GREY};font-size:16px;margin:8px 0 0;">${badge.desc}</p>` : ''}
       </div>
-      <p style="color:#374151;font-size:16px;line-height:1.6;">Congratulations ${client.name}! You earned the <strong>${badge?.label || badge?.name}</strong> badge${badge?.desc ? ` — ${badge.desc}` : ''}.</p>
-      <p style="color:#374151;font-size:16px;">Keep up the amazing work! 🚀</p>
-      <p style="color:#6B7280;font-size:14px;margin-top:32px;border-top:1px solid #E5E7EB;padding-top:16px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+      <p style="font-size:16px;line-height:1.6;">Well done, ${client.name}. You earned the <strong style="color:${INK};">${badge?.label || badge?.name}</strong> badge. Keep going.</p>
+      ${footer(coach)}
+    `),
   }),
 
   weeklyProgress: (client, coach, stats = {}) => ({
-    subject: `Your weekly progress report 📊`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <h2 style="color:#111827;">Weekly Report — ${client.name}</h2>
-      <div style="margin:24px 0;border-radius:12px;overflow:hidden;border:1px solid #E5E7EB;">
-        <div style="padding:16px 20px;display:flex;justify-content:space-between;border-bottom:1px solid #F3F4F6;"><span style="color:#6B7280;">Training Compliance</span><strong style="color:#111827;">${stats.trainingCompliance ?? 0}%</strong></div>
-        <div style="padding:16px 20px;display:flex;justify-content:space-between;border-bottom:1px solid #F3F4F6;"><span style="color:#6B7280;">Nutrition Compliance</span><strong style="color:#111827;">${stats.nutritionCompliance ?? 0}%</strong></div>
-        <div style="padding:16px 20px;display:flex;justify-content:space-between;${stats.weightChange !== undefined ? 'border-bottom:1px solid #F3F4F6;' : ''}"><span style="color:#6B7280;">Check-in Streak</span><strong style="color:#111827;">${stats.streak ?? 0} days 🔥</strong></div>
-        ${stats.weightChange !== undefined ? `<div style="padding:16px 20px;display:flex;justify-content:space-between;"><span style="color:#6B7280;">Weight Change</span><strong style="color:#111827;">${stats.weightChange > 0 ? '+' : ''}${stats.weightChange} lbs</strong></div>` : ''}
+    subject: 'Your weekly progress report',
+    html: wrap(`
+      <h2 style="color:${INK};margin:0;">Weekly report: ${client.name}</h2>
+      <div style="margin:24px 0;border-radius:12px;overflow:hidden;border:1px solid ${RULE};">
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;border-bottom:1px solid ${RULE};"><span style="color:${GREY};">Training compliance</span><strong style="color:${INK};">${stats.trainingCompliance ?? 0}%</strong></div>
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;border-bottom:1px solid ${RULE};"><span style="color:${GREY};">Nutrition compliance</span><strong style="color:${INK};">${stats.nutritionCompliance ?? 0}%</strong></div>
+        <div style="padding:16px 20px;display:flex;justify-content:space-between;${stats.weightChange !== undefined ? `border-bottom:1px solid ${RULE};` : ''}"><span style="color:${GREY};">Check-in streak</span><strong style="color:${INK};">${stats.streak ?? 0} days</strong></div>
+        ${stats.weightChange !== undefined ? `<div style="padding:16px 20px;display:flex;justify-content:space-between;"><span style="color:${GREY};">Weight change</span><strong style="color:${INK};">${stats.weightChange > 0 ? '+' : ''}${stats.weightChange} lb</strong></div>` : ''}
       </div>
-      <p style="color:#374151;line-height:1.6;">${stats.coachNote || 'Great work this week! Keep the momentum going.'}</p>
-      <a href="${APP_URL}/portal" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px;">View Full Progress →</a>
-      <p style="color:#6B7280;font-size:14px;margin-top:32px;border-top:1px solid #E5E7EB;padding-top:16px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+      <p style="line-height:1.6;">${stats.coachNote || 'Good week. Keep the same plan going.'}</p>
+      ${button(`${APP_URL}/portal`, 'View full progress', '16px 0 0')}
+      ${footer(coach)}
+    `),
   }),
 
   missedCheckin: (client, coach, daysMissed) => ({
-    subject: `We miss you, ${client.name}! 👋`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <h2 style="color:#111827;">Hey ${client.name},</h2>
-      <p style="color:#374151;line-height:1.6;">It's been ${daysMissed} days since your last check-in. ${coach?.full_name || coach?.name || 'Your coach'} wants to make sure you're doing okay and staying on track with your goals.</p>
-      <a href="${APP_URL}/portal" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:24px 0;">Submit Check-in →</a>
-      <p style="color:#6B7280;font-size:14px;margin-top:24px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+    subject: `Checking in, ${client.name}`,
+    html: wrap(`
+      <h2 style="color:${INK};margin:0 0 16px;">Hi ${client.name},</h2>
+      <p style="line-height:1.6;">It's been ${daysMissed} days since your last check-in. ${coachName(coach)} wants to make sure you're doing okay and that the plan still fits.</p>
+      ${button(`${APP_URL}/portal`, 'Submit check-in')}
+      ${footer(coach, false)}
+    `),
   }),
 
   sessionReminder: (client, coach, session) => ({
-    subject: `Reminder: Session tomorrow at ${session?.time} ⏰`,
-    html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;">
-      <h2 style="color:#111827;">Session Reminder 📅</h2>
-      <div style="background:#F9FAFB;border-radius:12px;padding:24px;margin:24px 0;">
-        <p style="margin:0 0 8px;color:#374151;"><strong>Date:</strong> ${session?.date}</p>
-        <p style="margin:0 0 8px;color:#374151;"><strong>Time:</strong> ${session?.time}</p>
-        <p style="margin:0 0 8px;color:#374151;"><strong>Coach:</strong> ${coach?.full_name || coach?.name || 'Your Coach'}</p>
-        ${session?.zoom_url ? `<p style="margin:0;color:#374151;"><strong>Zoom:</strong> <a href="${session.zoom_url}" style="color:#2563EB;">Join Meeting</a></p>` : ''}
+    subject: `Reminder: session tomorrow at ${session?.time}`,
+    html: wrap(`
+      <h2 style="color:${INK};margin:0;">Session reminder</h2>
+      <div style="background:${SOFT};border-radius:12px;padding:20px 24px;margin:24px 0;">
+        <p style="margin:0 0 8px;"><strong style="color:${INK};">Date:</strong> ${session?.date}</p>
+        <p style="margin:0 0 8px;"><strong style="color:${INK};">Time:</strong> ${session?.time}</p>
+        <p style="margin:0 0 8px;"><strong style="color:${INK};">Coach:</strong> ${coachName(coach)}</p>
+        ${session?.zoom_url ? `<p style="margin:0;"><strong style="color:${INK};">Zoom:</strong> <a href="${session.zoom_url}" style="color:${BLUE};">Join meeting</a></p>` : ''}
       </div>
-      <p style="color:#6B7280;font-size:14px;">${coach?.full_name || coach?.name || 'Your Coach'} · KOACH AI</p>
-    </div>`,
+      ${footer(coach, false)}
+    `),
   }),
 };
 
 export const TEMPLATE_OPTIONS = [
-  { key: 'welcome',        label: 'Welcome Email',          emoji: '👋', desc: 'Sent when a new client is added' },
-  { key: 'weeklyCheckin',  label: 'Weekly Check-in Nudge',  emoji: '📋', desc: 'Prompt clients to submit their check-in' },
-  { key: 'lowCompliance',  label: 'Low Compliance Alert',   emoji: '⚠️', desc: 'Re-engage clients with low compliance' },
-  { key: 'badgeEarned',    label: 'Badge Earned',           emoji: '🏆', desc: 'Celebrate client achievements' },
-  { key: 'weeklyProgress', label: 'Weekly Progress Report', emoji: '📊', desc: 'Weekly stats summary for the client' },
-  { key: 'missedCheckin',  label: 'Missed Check-in',        emoji: '👋', desc: 'Follow up on missing check-ins' },
-  { key: 'sessionReminder',label: 'Session Reminder',       emoji: '⏰', desc: 'Remind clients of upcoming sessions' },
+  { key: 'welcome',         label: 'Welcome email',          audience: 'client', desc: 'Sent when a new client is added' },
+  { key: 'weeklyCheckin',   label: 'Weekly check-in nudge',  audience: 'client', desc: 'Asks clients to submit their check-in' },
+  { key: 'lowCompliance',   label: 'Low compliance',         audience: 'client', desc: 'Re-engages clients whose compliance dropped' },
+  { key: 'badgeEarned',     label: 'Badge earned',           audience: 'client', desc: 'Tells a client they earned a badge' },
+  { key: 'weeklyProgress',  label: 'Weekly progress report', audience: 'client', desc: 'Weekly stats summary for the client' },
+  { key: 'missedCheckin',   label: 'Missed check-in',        audience: 'client', desc: 'Follows up on a missing check-in' },
+  { key: 'sessionReminder', label: 'Session reminder',       audience: 'client', desc: 'Reminds clients of an upcoming session' },
 ];

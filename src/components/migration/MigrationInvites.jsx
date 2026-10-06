@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle2, User, AlertCircle, Mail } from 'lucide-react';
+import { Send, CheckCircle2, User, AlertCircle, Mail, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
@@ -44,24 +44,24 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
 
     setSending(false);
     setResults({ ok, fail });
-    if (ok.length > 0) toast.success(`${ok.length} invite${ok.length !== 1 ? 's' : ''} sent!`);
+    if (ok.length > 0) toast.success(`${ok.length} invite${ok.length !== 1 ? 's' : ''} sent`);
   };
 
   if (results) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3 p-4 bg-success/10 border border-success rounded-xl">
+        <div className="flex items-center gap-3 p-4 bg-success-soft rounded-lg">
           <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
           <div>
-            <p className="font-semibold text-success text-sm">{results.ok.length} invites sent!</p>
-            {results.fail.length > 0 && <p className="text-xs text-success mt-0.5">{results.fail.length} failed — check emails</p>}
+            <p className="font-semibold text-foreground text-sm">{results.ok.length} invites sent</p>
+            {results.fail.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">{results.fail.length} did not send. Check those email addresses.</p>}
           </div>
         </div>
         <button
           onClick={onComplete}
           className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors"
         >
-          Finish Migration 🎉
+          Finish
         </button>
       </div>
     );
@@ -85,7 +85,7 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
             </p>
             <button
               onClick={() => setSelected(s => s.size === withEmail.length ? new Set() : new Set(withEmail.map((_, i) => i)))}
-              className="text-xs text-primary font-semibold hover:underline"
+              className="text-sm text-foreground font-semibold underline underline-offset-4"
             >
               {selected.size === withEmail.length ? 'Deselect all' : 'Select all'}
             </button>
@@ -106,10 +106,10 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
                     'w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all',
                     selected.has(i) ? 'bg-primary border-primary' : 'border-border'
                   )}>
-                    {selected.has(i) && <span className="text-[10px] text-white font-bold">✓</span>}
+                    {selected.has(i) && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <User className="w-4 h-4 text-primary" />
+                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{c.name}</p>
@@ -132,14 +132,14 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
       )}
 
       <div className="flex gap-3">
-        <button onClick={onSkip} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
+        <button onClick={onSkip} className="flex-1 h-11 rounded-lg border border-input bg-card text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
           Skip invites
         </button>
         {withEmail.length > 0 && selected.size > 0 && (
           <button
             onClick={sendInvites}
             disabled={sending}
-            className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {sending
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending...</>
@@ -148,8 +148,8 @@ export default function MigrationInvites({ importedClients = [], onComplete, onS
           </button>
         )}
         {withEmail.length === 0 && (
-          <button onClick={onComplete} className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-            Finish Migration 🎉
+          <button onClick={onComplete} className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">
+            Finish
           </button>
         )}
       </div>

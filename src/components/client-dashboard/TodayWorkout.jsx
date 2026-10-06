@@ -1,7 +1,8 @@
 import React from 'react';
-import { Dumbbell, CheckCircle2, Clock, ChevronRight, Zap } from 'lucide-react';
+import { Check, Dumbbell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Bar } from '@/components/portal/PortalUI';
 
 export default function TodayWorkout({ workout, program, done, onToggle }) {
   const navigate = useNavigate();
@@ -19,113 +20,57 @@ export default function TodayWorkout({ workout, program, done, onToggle }) {
   if (isRestDay && !program) return null;
 
   return (
-    <div className={cn(
-      'bg-card rounded-2xl border shadow-sm overflow-hidden',
-      done ? 'border-success' : 'border-border'
-    )}>
-      {/* Done banner */}
-      {done && (
-        <div className="bg-success/10 px-5 py-2.5 flex items-center gap-2 border-b border-success">
-          <CheckCircle2 className="w-4 h-4 text-success" />
-          <span className="text-sm font-semibold text-success">Workout complete — great work! 🎉</span>
+    <section className="panel p-5">
+      {program?.title && <p className="text-[13px] text-muted-foreground">{program.title}</p>}
+      <div className="mt-0.5 flex items-start justify-between gap-3">
+        <h2 className="text-[26px] text-foreground">{isRestDay ? 'Rest day' : (workout?.day_name || 'Today\'s workout')}</h2>
+        {estMinutes && !isRestDay && <span className="mt-1 text-[13px] font-semibold text-muted-foreground">About {estMinutes} min</span>}
+      </div>
+      {isRestDay && <p className="mt-1 text-[15px] text-muted-foreground">Nothing scheduled. Recovery is part of the plan.</p>}
+
+      {dayIndex > 0 && totalDays > 0 && (
+        <div className="mt-3">
+          <div className="mb-1.5 flex items-center justify-between text-[13px]">
+            <span className="text-muted-foreground">Day {dayIndex} of {totalDays}</span>
+            <span className="font-semibold text-foreground">{progressPct}%</span>
+          </div>
+          <Bar pct={progressPct} />
         </div>
       )}
 
-      <div className="p-5">
-        {/* Program pill */}
-        {program?.title && (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/10 border border-accent mb-3">
-            <Zap className="w-3 h-3 text-primary" />
-            <span className="text-[11px] font-semibold text-primary">{program.title}</span>
-          </div>
-        )}
+      {!isRestDay && preview.length > 0 && (
+        <ul className="mt-3 divide-y divide-border border-t border-border">
+          {preview.map((ex, i) => (
+            <li key={i} className="flex items-center gap-3 py-2.5">
+              <span className="num w-5 text-lg text-muted-foreground">{i + 1}</span>
+              <span className="flex-1 text-[15px] font-semibold text-foreground">{ex.name}</span>
+              {(ex.sets || ex.reps) && <span className="text-[13px] font-bold tabular-nums text-foreground">{ex.sets && `${ex.sets} × `}{ex.reps}</span>}
+            </li>
+          ))}
+          {exercises.length > 3 && <li className="py-2.5 text-[13px] text-muted-foreground">{exercises.length - 3} more exercises</li>}
+        </ul>
+      )}
 
-        {/* Workout name + time */}
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="text-xl font-bold text-foreground leading-tight" style={{ letterSpacing: '-0.02em' }}>
-              {isRestDay ? '😴 Rest Day' : (workout?.day_name || 'Today\'s Workout')}
-            </h3>
-            {isRestDay && (
-              <p className="text-sm text-muted-foreground mt-1">Recovery is part of the process.</p>
-            )}
-          </div>
-          {estMinutes && !isRestDay && (
-            <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-muted flex-shrink-0">
-              <Clock className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground">~{estMinutes}m</span>
-            </div>
+      {!program && !isRestDay && (
+        <p className="mt-3 text-sm text-muted-foreground">No program yet. Your coach will add one.</p>
+      )}
+
+      {!isRestDay && (
+        <div className="mt-4 flex gap-2">
+          {done ? (
+            <Button variant="outline" size="lg" className="flex-1" onClick={onToggle}>
+              <Check className="text-success" strokeWidth={3} /> Logged. Tap to undo
+            </Button>
+          ) : (
+            <Button variant="brand" size="lg" className="flex-1 font-bold" onClick={onToggle}>Start workout</Button>
+          )}
+          {program && (
+            <Button variant="outline" size="icon" className="h-12 w-12" onClick={() => navigate('/workout')} aria-label="Open workout logger">
+              <Dumbbell />
+            </Button>
           )}
         </div>
-
-        {/* Day progress bar */}
-        {dayIndex && totalDays > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs text-muted-foreground font-medium">Day {dayIndex} of {totalDays}</span>
-              <span className="text-xs font-bold text-foreground">{progressPct}% through program</span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPct}%` }} />
-            </div>
-          </div>
-        )}
-
-        {/* Exercise preview */}
-        {!isRestDay && preview.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {preview.map((ex, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-muted text-foreground text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                  {i + 1}
-                </span>
-                <span className="flex-1 text-sm text-foreground font-medium">{ex.name}</span>
-                {(ex.sets || ex.reps) && (
-                  <span className="text-xs font-semibold text-muted-foreground bg-background px-2 py-0.5 rounded-md">
-                    {ex.sets && `${ex.sets}×`}{ex.reps}
-                  </span>
-                )}
-              </div>
-            ))}
-            {exercises.length > 3 && (
-              <p className="text-xs text-muted-foreground pl-9 font-medium">+{exercises.length - 3} more exercises</p>
-            )}
-          </div>
-        )}
-
-        {!program && !isRestDay && (
-          <p className="text-sm text-muted-foreground italic mb-4">No program assigned yet — your coach will add one soon.</p>
-        )}
-
-        {/* Action buttons */}
-        {!isRestDay && (
-          <div className="flex gap-2">
-            <button
-              onClick={onToggle}
-              className={cn(
-                'flex-1 h-12 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2',
-                done
-                  ? 'bg-success/10 text-success border border-success'
-                  : 'text-white shadow-sm hover:shadow-md active:scale-[0.98]'
-              )}
-              style={!done ? { background: 'var(--tc-sidebar)' } : {}}
-            >
-              {done
-                ? <><CheckCircle2 className="w-4 h-4" /> Workout Logged</>
-                : <>Start Workout <ChevronRight className="w-4 h-4" /></>
-              }
-            </button>
-            {program && (
-              <button
-                onClick={() => navigate('/workout')}
-                className="w-12 h-12 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-all"
-              >
-                <Dumbbell className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </section>
   );
 }

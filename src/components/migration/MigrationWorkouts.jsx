@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, CheckCircle2, Plus } from 'lucide-react';
+import { Dumbbell, CheckCircle2, Plus, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
@@ -100,7 +100,7 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
     }
     setImporting(false);
     setDone(true);
-    toast.success(`${count} workout program${count !== 1 ? 's' : ''} imported!`);
+    toast.success(`${count} workout program${count !== 1 ? 's' : ''} imported`);
     setTimeout(() => onComplete(), 1000);
   };
 
@@ -108,9 +108,9 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
     return (
       <div className="flex flex-col items-center py-6 gap-3">
         <CheckCircle2 className="w-10 h-10 text-success" />
-        <p className="font-semibold text-foreground">{selected.size} programs imported!</p>
-        <button onClick={onComplete} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors">
-          Continue →
+        <p className="font-semibold text-foreground">{selected.size} programs imported</p>
+        <button onClick={onComplete} className="px-6 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">
+          Continue
         </button>
       </div>
     );
@@ -131,12 +131,12 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
               onClick={() => toggle(i)}
               className={cn(
                 'w-full text-left p-4 rounded-xl border-2 transition-all',
-                sel ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40 bg-card'
+                sel ? 'border-foreground bg-accent' : 'border-border hover:border-input bg-card'
               )}
             >
               <div className="flex items-start gap-3">
                 <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0', sel ? 'bg-primary' : 'bg-secondary')}>
-                  <Dumbbell className={cn('w-4 h-4', sel ? 'text-white' : 'text-muted-foreground')} />
+                  <Dumbbell className={cn('w-4 h-4', sel ? 'text-primary-foreground' : 'text-muted-foreground')} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm text-foreground">{t.title}</p>
@@ -151,7 +151,7 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
                   'w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all',
                   sel ? 'bg-primary border-primary' : 'border-border'
                 )}>
-                  {sel && <span className="text-[10px] text-white font-bold">✓</span>}
+                  {sel && <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />}
                 </div>
               </div>
             </button>
@@ -160,14 +160,14 @@ export default function MigrationWorkouts({ onComplete, onSkip }) {
       </div>
 
       <div className="flex gap-3">
-        <button onClick={onSkip} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
+        <button onClick={onSkip} className="flex-1 h-11 rounded-lg border border-input bg-card text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors">
           Skip this step
         </button>
         {selected.size > 0 && (
           <button
             onClick={importSelected}
             disabled={importing}
-            className="flex-1 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 h-11 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {importing
               ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Importing...</>

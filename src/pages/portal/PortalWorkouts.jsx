@@ -3,8 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startOfWeek, addDays, subDays, isSameDay } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Settings } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/kit';
+import { PortalScreen, PortalHeader } from '@/components/portal/PortalUI';
 import WorkoutProgramHeader from '@/components/portal/workout/WorkoutProgramHeader';
 import WeekScheduleSelector from '@/components/portal/workout/WeekScheduleSelector';
 import WorkoutCard from '@/components/portal/workout/WorkoutCard';
@@ -130,11 +132,14 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
 
   if (!myProgram) {
     return (
-      <div className="pb-24 pt-16 px-5 text-center" style={{ background: 'rgb(var(--muted))', minHeight: '100vh' }}>
-        <p className="text-5xl mb-4">🏋️</p>
-        <p className="text-foreground font-bold text-lg">No program assigned yet</p>
-        <p className="text-muted-foreground text-sm mt-2">Your coach is building something great for you 💪</p>
-      </div>
+      <PortalScreen>
+        <PortalHeader title="Train" />
+        <section className="panel px-5 py-6">
+          <p className="text-[15px] font-semibold text-foreground">No program yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">Your coach is building your training plan. It will show up here, day by day, once it's assigned.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/portal/messages')}>Message your coach</Button>
+        </section>
+      </PortalScreen>
     );
   }
 
@@ -164,66 +169,65 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
         )}
       </AnimatePresence>
 
-      <div className="pb-28 space-y-5" style={{ background: 'rgb(var(--muted))', minHeight: '100vh' }}>
-        {/* Page header */}
-        <div className="bg-card px-5 flex items-center justify-between" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)', paddingBottom: 14, boxShadow: '0 1px 0 rgb(var(--muted))' }}>
-          <h1 className="text-foreground font-black text-[28px] leading-tight">Train</h1>
-          <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgb(var(--muted))' }}>
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
+      <PortalScreen>
+        <PortalHeader
+          title="Train"
+          subtitle={todayWorkout && !isTodayDone ? `Today is ${todayWorkout.day_name}.` : isTodayDone ? 'Today\'s session is logged.' : undefined}
+          right={(
+            <Button variant="outline" size="sm" onClick={() => navigate('/portal/calendar')}>
+              <CalendarDays /> Schedule
+            </Button>
+          )}
+        />
 
-        {/* Program progress header */}
-        <WorkoutProgramHeader program={myProgram} client={myClient} sessions={sessions} />
+        <div className="space-y-3">
+          {/* Program progress header */}
+          <WorkoutProgramHeader program={myProgram} client={myClient} sessions={sessions} />
 
-        {/* Missed workout banner */}
-        {missedYesterday && !isTodayDone && (
-          <MissedWorkoutBanner
-            workoutName={yesterdayWorkout?.day_name}
-            onDoNow={() => { setSelectedWeekDayIdx(todayWeekIdx === 0 ? 6 : todayWeekIdx - 1); handleStartWorkout(); }}
-            onSkip={() => {}}
+          {/* Missed workout banner */}
+          {missedYesterday && !isTodayDone && (
+            <MissedWorkoutBanner
+              workoutName={yesterdayWorkout?.day_name}
+              onDoNow={() => { setSelectedWeekDayIdx(todayWeekIdx === 0 ? 6 : todayWeekIdx - 1); handleStartWorkout(); }}
+              onSkip={() => {}}
+            />
+          )}
+
+          {/* Tabs */}
+          <Segmented
+            className="w-full [&>button]:flex-1 [&>button]:justify-center"
+            value={activeTab}
+            onChange={setActiveTab}
+            options={[
+              { value: 'schedule', label: 'This week' },
+              { value: 'history', label: 'History', count: sessions.length || null },
+            ]}
           />
-        )}
 
-        {/* Tabs */}
-        <div className="px-4 flex gap-2">
-          {['schedule', 'history'].map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={cn('flex-1 py-3 rounded-2xl text-sm font-bold transition-all capitalize')}
-              style={{
-                background: activeTab === tab ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' : 'rgb(var(--card))',
-                color: activeTab === tab ? 'rgb(var(--card))' : 'rgb(var(--muted-foreground))',
-                border: activeTab === tab ? 'none' : '1.5px solid rgb(var(--muted))',
-                boxShadow: activeTab === tab ? '0 4px 12px rgb(var(--primary) / 0.25)' : '0 1px 4px rgba(0,0,0,0.04)',
-              }}>
-              {tab === 'schedule' ? '📅 Schedule' : '📋 History'}
-            </button>
-          ))}
+          {activeTab === 'schedule' ? (
+            <>
+              {/* Week selector */}
+              <WeekScheduleSelector
+                program={myProgram}
+                workoutSessions={sessions}
+                selectedDay={selectedWeekDayIdx}
+                onSelectDay={setSelectedWeekDayIdx}
+              />
+
+              {/* Today's / selected workout card */}
+              <WorkoutCard
+                workout={selectedWorkout}
+                isToday={isToday}
+                dayDate={selectedDay}
+                isDone={isToday && isTodayDone}
+                onStart={handleStartWorkout}
+              />
+            </>
+          ) : (
+            <WorkoutHistory sessions={sessions} />
+          )}
         </div>
-
-        {activeTab === 'schedule' ? (
-          <>
-            {/* Week selector */}
-            <WeekScheduleSelector
-              program={myProgram}
-              workoutSessions={sessions}
-              selectedDay={selectedWeekDayIdx}
-              onSelectDay={setSelectedWeekDayIdx}
-            />
-
-            {/* Today's / selected workout card */}
-            <WorkoutCard
-              workout={selectedWorkout}
-              isToday={isToday}
-              dayDate={selectedDay}
-              isDone={isToday && isTodayDone}
-              onStart={handleStartWorkout}
-            />
-          </>
-        ) : (
-          <WorkoutHistory sessions={sessions} />
-        )}
-      </div>
+      </PortalScreen>
     </>
   );
 }

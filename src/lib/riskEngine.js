@@ -34,7 +34,7 @@ const FLAGS = [
     detect: ({ clientCheckIns }) => {
       const avg = averageAdherenceScore(clientCheckIns, 3);
       // Threshold updated to 70% per requirements
-      if (avg !== null && avg < 70) return { triggered: true, detail: `Avg adherence ${avg}% (below 70%)` };
+      if (avg !== null && avg < 70) return { triggered: true, detail: `Adherence averaging ${avg}%, under 70%` };
       return { triggered: false };
     },
   },
@@ -183,18 +183,20 @@ export function getAtRiskClients(clients, checkIns) {
 
 export const SEVERITY_CONFIG = {
   high:   { color: 'text-destructive bg-destructive/10 border-destructive/20', dot: 'bg-destructive' },
-  medium: { color: 'text-amber-400 bg-amber-500/10 border-amber-500/20', dot: 'bg-amber-400' },
+  medium: { color: 'text-warning bg-warning-soft border-warning/20', dot: 'bg-partial' },
   low:    { color: 'text-muted-foreground bg-secondary border-border', dot: 'bg-muted-foreground' },
 };
 
+// Short plain-word tags for each flag's `icon` key (no emoji). Callers that
+// want a pictogram should map the key to a lucide icon themselves.
 export const FLAG_ICONS = {
-  calendar: '📅',
-  zap: '⚡',
-  moon: '😴',
-  message: '💬',
-  dumbbell: '🏋️',
-  utensils: '🥗',
-  scale: '⚖️',
-  'trending-down': '📉',
-  frown: '😟',
+  calendar: 'Check-in',
+  zap: 'Adherence',
+  moon: 'Sleep',
+  message: 'Notes',
+  dumbbell: 'Training',
+  utensils: 'Nutrition',
+  scale: 'Weight',
+  'trending-down': 'Trend',
+  frown: 'Mood',
 };

@@ -1,12 +1,12 @@
 // ── Nutrition utility helpers shared across coach + portal ─────────────────
 
 export const MEAL_DEFINITIONS = [
-  { id: 'breakfast',    name: 'Breakfast',    time: '7:00 AM',  emoji: '☀️',  targetCal: 400 },
-  { id: 'lunch',        name: 'Lunch',        time: '12:30 PM', emoji: '🌤️', targetCal: 600 },
-  { id: 'dinner',       name: 'Dinner',       time: '6:30 PM',  emoji: '🌙',  targetCal: 700 },
-  { id: 'snacks',       name: 'Snacks',       time: 'Anytime',  emoji: '🍎',  targetCal: 200 },
-  { id: 'pre_workout',  name: 'Pre-Workout',  time: 'Pre',      emoji: '⚡',  targetCal: 200 },
-  { id: 'post_workout', name: 'Post-Workout', time: 'Post',     emoji: '💪',  targetCal: 300 },
+  { id: 'breakfast',    name: 'Breakfast',    time: '7:00 AM',  targetCal: 400 },
+  { id: 'lunch',        name: 'Lunch',        time: '12:30 PM', targetCal: 600 },
+  { id: 'dinner',       name: 'Dinner',       time: '6:30 PM',  targetCal: 700 },
+  { id: 'snacks',       name: 'Snacks',       time: 'Anytime',  targetCal: 200 },
+  { id: 'pre_workout',  name: 'Pre-workout',  time: 'Pre',      targetCal: 200 },
+  { id: 'post_workout', name: 'Post-workout', time: 'Post',     targetCal: 300 },
 ];
 
 export const UNIT_MULTIPLIERS = {
@@ -46,20 +46,21 @@ export function calcDayTotals(foodLogs) {
   }), { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 });
 }
 
+// `label` values are compared by callers (e.g. 'Over Target') — keep them stable.
 export function getMealStatus(loggedCal, targetCal) {
   const pct = targetCal > 0 ? (loggedCal / targetCal) * 100 : 0;
-  if (pct === 0)   return { color: '#E5E7EB', label: 'Not Started', badge: 'bg-gray-100 text-gray-500' };
-  if (pct > 110)   return { color: '#EF4444', label: 'Over Target',  badge: 'bg-red-100 text-red-600' };
-  if (pct >= 80)   return { color: '#10B981', label: 'Complete',     badge: 'bg-green-100 text-green-600' };
-  if (pct >= 40)   return { color: '#F59E0B', label: 'In Progress',  badge: 'bg-amber-100 text-amber-600' };
-  return { color: '#3B82F6', label: 'Started', badge: 'bg-blue-100 text-blue-600' };
+  if (pct === 0)   return { color: 'rgb(var(--border))',      label: 'Not Started', badge: 'bg-secondary text-muted-foreground' };
+  if (pct > 110)   return { color: 'rgb(var(--destructive))', label: 'Over Target', badge: 'bg-destructive/10 text-destructive' };
+  if (pct >= 80)   return { color: 'rgb(var(--success))',     label: 'Complete',    badge: 'bg-success-soft text-success' };
+  if (pct >= 40)   return { color: 'rgb(var(--partial))',     label: 'In Progress', badge: 'bg-warning-soft text-warning' };
+  return { color: 'rgb(var(--muted-foreground))', label: 'Started', badge: 'bg-secondary text-foreground' };
 }
 
 export function getMacroColor(pct) {
-  if (pct > 110) return '#EF4444';
-  if (pct >= 80) return '#10B981';
-  if (pct >= 50) return '#F59E0B';
-  return '#3B82F6';
+  if (pct > 110) return 'rgb(var(--destructive))';
+  if (pct >= 80) return 'rgb(var(--success))';
+  if (pct >= 50) return 'rgb(var(--partial))';
+  return 'rgb(var(--muted-foreground))';
 }
 
 // Local search cache — last 50 queries

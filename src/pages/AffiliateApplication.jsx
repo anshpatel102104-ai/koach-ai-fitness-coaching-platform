@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
-import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Page, PageHeader, Panel, PanelHeader } from '@/components/kit';
+import { selectClass } from '@/components/marketing/MarketingLinksSection';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
@@ -20,17 +24,17 @@ const PLATFORMS = [
 
 const AUDIENCE_OPTIONS = [
   { value: 'under_1k', label: 'Under 1K' },
-  { value: '1k_10k', label: '1K - 10K' },
-  { value: '10k_50k', label: '10K - 50K' },
-  { value: '50k_100k', label: '50K - 100K' },
+  { value: '1k_10k', label: '1K to 10K' },
+  { value: '10k_50k', label: '10K to 50K' },
+  { value: '50k_100k', label: '50K to 100K' },
   { value: '100k_plus', label: '100K+' },
 ];
 
 const CONTENT_OUTPUT = [
-  { value: '1_4_posts', label: '1-4 posts per month' },
-  { value: '5_10_posts', label: '5-10 posts per month' },
-  { value: '10_20_posts', label: '10-20 posts per month' },
-  { value: '20_plus_posts', label: '20+ posts per month' },
+  { value: '1_4_posts', label: '1 to 4' },
+  { value: '5_10_posts', label: '5 to 10' },
+  { value: '10_20_posts', label: '10 to 20' },
+  { value: '20_plus_posts', label: 'More than 20' },
 ];
 
 export default function AffiliateApplication() {
@@ -64,224 +68,162 @@ export default function AffiliateApplication() {
       platforms: selectedPlatforms,
     }),
     onSuccess: () => {
-      toast.success('Application submitted! We\'ll review within 48 hours.');
+      toast.success('Application sent. We reply within 48 hours.');
     },
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!selectedPlatforms.length) {
-      toast.error('Please select at least one platform');
+      toast.error('Pick at least one that describes you');
       return;
     }
     if (!formData.website_url || !formData.audience_size || !formData.content_output_monthly) {
-      toast.error('Please fill all required fields');
+      toast.error('Fill in your link, audience size and posts a month');
       return;
     }
     appMutation.mutate(formData);
   };
+
+  const chip = (on) => `h-10 px-4 rounded-md text-sm font-semibold border transition-colors ${on ? 'bg-primary border-primary text-primary-foreground' : 'bg-card border-input text-foreground hover:bg-accent'}`;
 
   // Show status if already applied
   if (existingApp && existingApp.length > 0) {
     const app = existingApp[0];
     const statusConfig = {
       pending: {
-        icon: Clock,
-        bg: 'bg-warning/10',
-        border: 'border-warning',
-        color: 'text-warning',
-        title: 'Application Under Review',
-        msg: 'We\'ll review your application and email you within 48 hours.',
+        eyebrow: 'Applied',
+        title: 'We are reviewing your application',
+        msg: "You'll get an email from us within 48 hours.",
       },
       approved: {
-        icon: CheckCircle2,
-        bg: 'bg-success/10',
-        border: 'border-success',
-        color: 'text-success',
-        title: 'Application Approved! 🎉',
-        msg: 'Access your affiliate dashboard to start earning.',
+        eyebrow: 'Approved',
+        title: "You're in",
+        msg: 'Your affiliate dashboard has your link, assets and earnings.',
       },
       rejected: {
-        icon: XCircle,
-        bg: 'bg-destructive/10',
-        border: 'border-destructive',
-        color: 'text-destructive',
-        title: 'Application Not Approved',
-        msg: app.rejection_reason || 'We\'ll revisit as your platform grows.',
+        eyebrow: 'Not approved',
+        title: 'Not this time',
+        msg: app.rejection_reason || "We'll look again as your platform grows.",
       },
     };
-    const config = statusConfig[app.status];
-    const Icon = config.icon;
+    const config = statusConfig[app.status] || statusConfig.pending;
     return (
-      <div className="min-h-screen bg-gradient-to-b from-muted to-card flex items-center justify-center p-4">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          className={`max-w-md w-full rounded-3xl p-8 border-2 ${config.bg} ${config.border}`}>
-          <Icon className={`w-16 h-16 mx-auto mb-4 ${config.color}`} />
-          <h1 className={`text-2xl font-black text-center mb-2 ${config.color}`}>{config.title}</h1>
-          <p className={`text-center ${config.color.replace('text-', 'text-opacity-70')}`}>{config.msg}</p>
+      <Page className="max-w-xl">
+        <Panel className="p-6 sm:p-8 mt-6">
+          <p className={app.status === 'approved' ? 'text-sm font-semibold text-success' : app.status === 'rejected' ? 'text-sm font-semibold text-destructive' : 'text-sm font-semibold text-warning'}>{config.eyebrow}</p>
+          <h1 className="text-[32px] text-foreground mt-1">{config.title}</h1>
+          <p className="text-[15px] text-muted-foreground mt-2">{config.msg}</p>
           {app.status === 'approved' && (
-            <a href="/affiliate-dashboard"
-              className="block mt-6 py-3 rounded-xl font-bold text-primary-foreground text-center"
-              style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-              Go to Dashboard →
-            </a>
+            <Button asChild className="mt-6"><a href="/affiliate-dashboard">Open your dashboard</a></Button>
           )}
-        </motion.div>
-      </div>
+        </Panel>
+      </Page>
     );
   }
 
+  const BENEFITS = [
+    ['30% recurring', 'on every coach you refer, every month they stay'],
+    ['Monthly payouts', 'through Stripe Connect'],
+    ['A partner manager', 'from Gold tier up'],
+    ['Ready-made assets', 'posts, banners and email copy'],
+    ['Live tracking', 'clicks, sign-ups and earnings'],
+  ];
+
   return (
-    <div className="min-h-screen bg-card">
-      {/* Hero */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        className="py-16 px-4 text-center"
-        style={{ background: 'linear-gradient(135deg, var(--tc-primary) 0%, var(--tc-ai) 100%)' }}>
-        <h1 className="text-white font-black text-4xl mb-4">Partner with KOACH AI and earn recurring commissions 💰</h1>
-        <p className="text-white/80 text-lg max-w-2xl mx-auto">Join our affiliate program and get paid every month for every coach you refer</p>
-      </motion.div>
+    <Page className="max-w-5xl">
+      <PageHeader
+        eyebrow="Affiliate program"
+        title="Earn 30% of every coach you refer"
+        subtitle="For coaches, trainers and creators with an audience of other coaches. You're paid every month for as long as they stay."
+      />
 
-      {/* Benefits */}
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-16">
-          {[
-            { emoji: '💵', title: '30% Recurring', desc: 'Commission on every coach' },
-            { emoji: '🏦', title: 'Monthly Payouts', desc: 'Via Stripe Connect' },
-            { emoji: '👔', title: 'Dedicated Manager', desc: 'Personal support (Gold+)' },
-            { emoji: '🎨', title: 'Marketing Assets', desc: 'Ready-to-use content' },
-            { emoji: '📊', title: 'Real-time Tracking', desc: 'Dashboard + API access' },
-          ].map((b, i) => (
-            <motion.div key={i} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: i * 0.1 }}
-              className="text-center p-4 rounded-2xl bg-muted border border-border">
-              <div className="text-3xl mb-2">{b.emoji}</div>
-              <p className="font-bold text-foreground text-sm">{b.title}</p>
-              <p className="text-muted-foreground text-xs mt-1">{b.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="max-w-2xl mx-auto px-4 pb-16">
-        <h2 className="text-2xl font-black text-foreground mb-6">Apply to Join</h2>
-        <form onSubmit={handleSubmit} className="space-y-6 bg-card rounded-2xl border border-border p-8">
-
-          {/* Name & Email (pre-filled) */}
-          <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
+        <Panel as="form" onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5 order-2 lg:order-1">
+          <h2 className="text-[22px] text-foreground">Apply</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-foreground mb-2">Full Name</label>
-              <input type="text" value={user?.full_name || ''} disabled className="w-full px-4 py-2 rounded-lg bg-muted text-muted-foreground" />
+              <Label>Name</Label>
+              <Input className="mt-1.5" value={user?.full_name || ''} disabled />
             </div>
             <div>
-              <label className="block text-sm font-bold text-foreground mb-2">Email</label>
-              <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-2 rounded-lg bg-muted text-muted-foreground" />
+              <Label>Email</Label>
+              <Input className="mt-1.5" type="email" value={user?.email || ''} disabled />
             </div>
           </div>
 
-          {/* Website/URL */}
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Website or Social URL *</label>
-            <input
-              type="url"
-              placeholder="https://..."
-              value={formData.website_url}
-              onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
+            <Label htmlFor="aa-url">Website or social profile</Label>
+            <Input id="aa-url" className="mt-1.5" type="url" placeholder="https://instagram.com/yourname" value={formData.website_url}
+              onChange={(e) => setFormData({ ...formData, website_url: e.target.value })} required />
           </div>
 
-          {/* Platforms (multi-select) */}
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Your Platforms *</label>
-            <div className="grid grid-cols-2 gap-3">
+            <Label className="block mb-2">What describes you <span className="text-muted-foreground font-normal">pick all that apply</span></Label>
+            <div className="flex flex-wrap gap-2">
               {PLATFORMS.map((platform) => (
-                <button
-                  key={platform}
-                  type="button"
+                <button key={platform} type="button" aria-pressed={selectedPlatforms.includes(platform)}
                   onClick={() => setSelectedPlatforms(p => p.includes(platform) ? p.filter(x => x !== platform) : [...p, platform])}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all ${
-                    selectedPlatforms.includes(platform)
-                      ? 'bg-primary border-primary text-white'
-                      : 'bg-card border-border text-foreground hover:border-primary'
-                  }`}>
-                  {platform}
+                  className={chip(selectedPlatforms.includes(platform))}>
+                  {platform.charAt(0) + platform.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Audience size */}
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Audience Size *</label>
-            <select
-              value={formData.audience_size}
-              onChange={(e) => setFormData({ ...formData, audience_size: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required>
-              <option value="">Select...</option>
-              {AUDIENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="aa-aud">Audience size</Label>
+              <select id="aa-aud" value={formData.audience_size} onChange={(e) => setFormData({ ...formData, audience_size: e.target.value })} className={`${selectClass} mt-1.5`} required>
+                <option value="">Choose one</option>
+                {AUDIENCE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="aa-out">Posts a month</Label>
+              <select id="aa-out" value={formData.content_output_monthly} onChange={(e) => setFormData({ ...formData, content_output_monthly: e.target.value })} className={`${selectClass} mt-1.5`} required>
+                <option value="">Choose one</option>
+                {CONTENT_OUTPUT.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
           </div>
 
-          {/* Promotion plan */}
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">How will you promote KOACH AI? *</label>
-            <textarea
-              placeholder="Describe your promotion strategy..."
-              value={formData.promotion_plan}
-              onChange={(e) => setFormData({ ...formData, promotion_plan: e.target.value })}
-              rows={4}
-              className="w-full px-4 py-2 rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
+            <Label htmlFor="aa-plan">How would you promote KOACH AI?</Label>
+            <Textarea id="aa-plan" className="mt-1.5" placeholder="Where you'd post, who sees it, and how often" value={formData.promotion_plan}
+              onChange={(e) => setFormData({ ...formData, promotion_plan: e.target.value })} rows={4} required />
           </div>
 
-          {/* Content output */}
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">Monthly Content Output *</label>
-            <select
-              value={formData.content_output_monthly}
-              onChange={(e) => setFormData({ ...formData, content_output_monthly: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              required>
-              <option value="">Select...</option>
-              {CONTENT_OUTPUT.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-
-          {/* Used KOACH AI */}
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-3">Have you used KOACH AI?</label>
-            <div className="flex gap-4">
+            <Label className="block mb-2">Have you used KOACH AI?</Label>
+            <div className="flex gap-2">
               {[true, false].map(val => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, has_used_koachai: val })}
-                  className={`px-6 py-2 rounded-lg font-bold border transition-all ${
-                    formData.has_used_koachai === val
-                      ? 'bg-primary border-primary text-white'
-                      : 'bg-card border-border text-foreground hover:border-primary'
-                  }`}>
+                <button key={String(val)} type="button" aria-pressed={formData.has_used_koachai === val}
+                  onClick={() => setFormData({ ...formData, has_used_koachai: val })} className={chip(formData.has_used_koachai === val)}>
                   {val ? 'Yes' : 'No'}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={appMutation.isPending}
-            className="w-full py-3 rounded-xl font-black text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-            {appMutation.isPending ? 'Submitting...' : 'Submit Application'}
-          </button>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+            <Button type="submit" disabled={appMutation.isPending}>{appMutation.isPending ? 'Sending' : 'Send application'}</Button>
+            <p className="text-[13px] text-muted-foreground">We reply within 48 hours.</p>
+          </div>
+        </Panel>
 
-          <p className="text-center text-xs text-muted-foreground">⏱ Applications reviewed within 48 hours</p>
-        </form>
+        <Panel className="order-1 lg:order-2">
+          <PanelHeader title="What you get" />
+          <ul className="divide-y divide-border px-5 sm:px-6 pb-2">
+            {BENEFITS.map(([title, desc]) => (
+              <li key={title} className="py-3">
+                <p className="text-[15px] font-semibold text-foreground">{title}</p>
+                <p className="text-sm text-muted-foreground">{desc}</p>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       </div>
-    </div>
+    </Page>
   );
 }

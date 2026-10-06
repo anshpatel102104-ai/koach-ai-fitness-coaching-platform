@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { ArrowLeft, RefreshCw, Check } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DialogTitle } from '@/components/ui/dialog';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
 import AIProfileStep from './steps/AIProfileStep';
@@ -54,9 +54,9 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
         throw new Error(program?.error || 'Invalid program returned from AI');
       }
       // Resilient coercion — only fail if truly critical fields are absent
-      if (!program.title) program.title = 'AI Generated Program';
+      if (!program.title) program.title = 'New program';
       if (!Array.isArray(program.workouts) || program.workouts.length === 0) {
-        throw new Error('AI did not return any workout days. Please try again.');
+        throw new Error('The draft came back with no training days. Try again.');
       }
       // Ensure every exercise has minimum required fields
       program.workouts = program.workouts.map((w, wi) => ({
@@ -88,95 +88,86 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
         is_template: false,
         is_ai_generated: true,
       });
-      toast.success('Program created!');
+      toast.success('Program saved');
       onProgramCreated(newProgram);
     } catch (error) {
-      toast.error('Failed to save program');
+      toast.error("Couldn't save the program. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const isReview = step === 'review';
+  const STEP_LABELS = {
+    profile: 'Step 1 of 4: the client',
+    preferences: 'Step 2 of 4: how the program runs',
+    generating: 'Step 3 of 4: drafting',
+    review: 'Step 4 of 4: check it over',
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, height: '100%' }}>
-      {/* Sticky Header */}
-      <div className="flex-shrink-0 px-4 sm:px-6 pt-5 pb-4 border-b border-border space-y-3">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="hover:bg-accent rounded-lg p-1.5">
-            <ArrowLeft className="w-4 h-4" />
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 space-y-3 border-b border-border px-5 pb-4 pt-5 sm:px-6">
+        <div className="flex items-start gap-2 pr-8">
+          <button onClick={onBack} className="touch-compact -ml-1.5 mt-1 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Back">
+            <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <h2 className="font-heading text-xl">Build with AI</h2>
-            <p className="text-sm text-muted-foreground">
-              {{
-                profile: 'Step 1 of 4 — Client Profile',
-                preferences: 'Step 2 of 4 — Program Settings',
-                generating: 'Step 3 of 4 — Generating',
-                review: 'Step 4 of 4 — Review & Save',
-              }[step]}
-            </p>
+            <DialogTitle className="text-[26px]">Generate with AI</DialogTitle>
+            <p className="text-sm text-muted-foreground">{STEP_LABELS[step]}</p>
           </div>
         </div>
-        <AiUsageMeter />
-        {/* Progress bar */}
-        <div className="flex gap-1.5 h-1">
+        <div className="flex h-1 gap-1.5" aria-hidden>
           {STEPS.map((s) => (
-            <div
-              key={s}
-              className={`flex-1 rounded-full transition-colors ${
-                STEPS.indexOf(s) <= STEPS.indexOf(step) ? 'bg-primary' : 'bg-border'
-              }`}
-            />
+            <div key={s} className={`flex-1 rounded-full ${STEPS.indexOf(s) <= STEPS.indexOf(step) ? 'bg-foreground' : 'bg-secondary'}`} />
           ))}
         </div>
+        <AiUsageMeter />
       </div>
 
-      {/* Scrollable Content */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }} className="px-4 sm:px-6 py-5">
-        <AnimatePresence mode="wait">
-          {step === 'profile' && (
-            <AIProfileStep key="profile" onSubmit={handleProfileSubmit} />
-          )}
-          {step === 'preferences' && (
-            <AIPreferencesStep
-              key="prefs"
-              profile={profile}
-              onSubmit={handlePreferencesSubmit}
-              isLoading={loading}
-            />
-          )}
-          {step === 'generating' && (
-            <AIGeneratingStep
-              key="gen"
-              error={generateError}
-              onRetry={() => {
-                setGenerateError(null);
-                generateProgram(preferences);
-              }}
-              onBack={() => setStep('preferences')}
-            />
-          )}
-          {step === 'review' && generatedProgram && (
-            <AIReviewStep
-              key="review"
-              program={generatedProgram}
-              onProgramChange={setReviewData}
-              onRegenerate={() => {
-                setStep('generating');
-                generateProgram(preferences);
-              }}
-              onRating={setRating}
-              currentRating={rating}
-            />
-          )}
-        </AnimatePresence>
+      {/* Scrollable content */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        {step === 'profile' && (
+          <AIProfileStep key="profile" onSubmit={handleProfileSubmit} />
+        )}
+        {step === 'preferences' && (
+          <AIPreferencesStep
+            key="prefs"
+            profile={profile}
+            onSubmit={handlePreferencesSubmit}
+            isLoading={loading}
+          />
+        )}
+        {step === 'generating' && (
+          <AIGeneratingStep
+            key="gen"
+            error={generateError}
+            onRetry={() => {
+              setGenerateError(null);
+              generateProgram(preferences);
+            }}
+            onBack={() => setStep('preferences')}
+          />
+        )}
+        {step === 'review' && generatedProgram && (
+          <AIReviewStep
+            key="review"
+            program={generatedProgram}
+            onProgramChange={setReviewData}
+            onRegenerate={() => {
+              setStep('generating');
+              generateProgram(preferences);
+            }}
+            onRating={setRating}
+            currentRating={rating}
+          />
+        )}
       </div>
 
-      {/* Sticky Footer — only shown on review step */}
+      {/* Footer — review step only */}
       {isReview && (
-        <div className="px-4 sm:px-6" style={{ flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', paddingBottom: '12px', borderTop: '1px solid var(--tc-border)', background: 'var(--tc-background)' }}>
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-border bg-card px-5 py-3 sm:px-6">
           <Button
             variant="outline"
             onClick={() => {
@@ -184,18 +175,14 @@ export default function AIBuilder({ onBack, onProgramCreated }) {
               generateProgram(preferences);
             }}
             disabled={loading}
-            className="gap-2 text-xs"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+            Draft it again
           </Button>
           <Button
             onClick={() => handleSaveProgram(reviewData)}
             disabled={loading || !(reviewData?.title ?? generatedProgram?.title)}
-            className="gap-2 text-sm font-semibold"
-            style={{ background: 'var(--tc-primary)' }}
           >
-            <Check className="w-4 h-4" />
-            {loading ? 'Saving...' : 'Save & Open Builder'}
+            {loading ? 'Saving…' : 'Save and open in builder'}
           </Button>
         </div>
       )}

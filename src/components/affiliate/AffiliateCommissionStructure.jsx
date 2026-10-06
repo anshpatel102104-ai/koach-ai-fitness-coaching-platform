@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { Panel, PanelHeader, InkPanel, Segmented } from '@/components/kit';
 import { PLAN_PRICES } from '@/lib/planPricing';
 
 const TIERS = [
@@ -22,79 +22,52 @@ export default function AffiliateCommissionStructure({ profile }) {
 
   const monthlyEarnings = referralCount * selectedPlan * (profile.commission_rate / 100);
 
+  const planName = PLANS.find(p => p.price === selectedPlan)?.name;
+
   return (
-    <div className="space-y-8">
-      {/* Tier breakdown */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h2 className="text-lg font-black text-foreground mb-6">Commission Tiers</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {TIERS.map((t, i) => {
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+      <Panel>
+        <PanelHeader title="Commission tiers" subtitle="Based on how many coaches are paying through your link." />
+        <ul className="divide-y divide-border px-5 sm:px-6 pb-2">
+          {TIERS.map((t) => {
             const isCurrentTier = profile.active_referrals >= t.min && (t.max === null || profile.active_referrals <= t.max);
             return (
-              <motion.div key={i}
-                className={`p-4 rounded-2xl border-2 transition-all ${
-                  isCurrentTier
-                    ? 'border-primary bg-accent'
-                    : 'border-border bg-card'
-                }`}>
-                <p className="font-bold text-foreground">{t.tier}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t.min}-{t.max === null ? '∞' : t.max} referrals</p>
-                <p className="text-2xl font-black mt-3" style={{ color: isCurrentTier ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)' }}>
-                  {t.rate}%
-                </p>
-                {isCurrentTier && (
-                  <p className="text-xs font-bold text-primary mt-2">✓ Current Tier</p>
-                )}
-              </motion.div>
+              <li key={t.tier} className="flex items-center justify-between py-3">
+                <div>
+                  <p className={isCurrentTier ? 'text-[15px] font-semibold text-foreground' : 'text-[15px] text-foreground/80'}>
+                    {t.tier}
+                    {isCurrentTier && <span className="text-[13px] font-medium text-muted-foreground ml-2">You are here</span>}
+                  </p>
+                  <p className="text-[13px] text-muted-foreground">{t.max === null ? `${t.min}+ referrals` : `${t.min} to ${t.max} referrals`}</p>
+                </div>
+                <span className={isCurrentTier ? 'num text-[26px] text-foreground' : 'num text-[26px] text-muted-foreground'}>{t.rate}%</span>
+              </li>
             );
           })}
-        </div>
-      </div>
+        </ul>
+      </Panel>
 
-      {/* Calculator */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <h3 className="text-lg font-black text-foreground mb-4">Earnings Calculator</h3>
-        <div className="space-y-6">
+      <Panel>
+        <PanelHeader title="What you could earn" subtitle="Move the numbers to see a monthly figure." />
+        <div className="px-5 sm:px-6 pb-6 space-y-5">
           <div>
-            <label className="block text-sm font-bold text-foreground mb-2">
-              Plan: {PLANS.find(p => p.price === selectedPlan)?.name}
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PLANS.map(p => (
-                <button key={p.price} onClick={() => setSelectedPlan(p.price)}
-                  className={`px-3 py-2 rounded-lg font-bold text-sm border transition-all ${
-                    selectedPlan === p.price
-                      ? 'border-primary bg-accent text-primary'
-                      : 'border-border bg-card text-foreground hover:border-primary'
-                  }`}>
-                  {p.name}<br/><span className="text-xs">${p.price}/mo</span>
-                </button>
-              ))}
+            <p className="text-sm font-medium text-foreground mb-1.5">Plan they're on</p>
+            <Segmented size="sm" value={selectedPlan} onChange={setSelectedPlan} options={PLANS.map(p => ({ value: p.price, label: `${p.name} $${p.price}` }))} />
+          </div>
+          <div>
+            <label htmlFor="ac-count" className="text-sm font-medium text-foreground">Coaches referred</label>
+            <div className="flex items-center gap-4 mt-1.5">
+              <input id="ac-count" type="range" min="1" max="100" value={referralCount} onChange={(e) => setReferralCount(parseInt(e.target.value))}
+                className="flex-1 accent-[rgb(var(--primary))]" />
+              <span className="num text-[26px] min-w-[48px] text-right">{referralCount}</span>
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-bold text-foreground mb-2">
-              Number of Referrals
-            </label>
-            <div className="flex items-center gap-4">
-              <input type="range" min="1" max="100" value={referralCount} onChange={(e) => setReferralCount(parseInt(e.target.value))}
-                className="flex-1" />
-              <span className="text-2xl font-black text-primary min-w-[60px]">{referralCount}</span>
-            </div>
-          </div>
-
-          <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }}
-            className="mt-6 p-4 rounded-2xl"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary) 0%, var(--tc-ai) 100%)' }}>
-            <p className="text-white/80 text-sm">Monthly Recurring Revenue</p>
-            <p className="text-4xl font-black text-white mt-1">
-              ${monthlyEarnings.toFixed(2)}/month
-            </p>
-            <p className="text-white/60 text-xs mt-2">@ {profile.commission_rate}% commission rate</p>
-          </motion.div>
+          <InkPanel>
+            <p className="text-sm text-ai-foreground/70">{referralCount} coaches on {planName} at {profile.commission_rate}%</p>
+            <p className="num text-[40px] leading-none mt-2 text-ai-foreground">${monthlyEarnings.toFixed(2)}<span className="text-xl"> a month</span></p>
+          </InkPanel>
         </div>
-      </div>
+      </Panel>
     </div>
   );
 }

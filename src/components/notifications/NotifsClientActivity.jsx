@@ -31,9 +31,9 @@ export default function NotifsClientActivity({ s, set }) {
   const upd = (key, val) => set('client_activity', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Client Activity" emoji="👥"
+    <NSection title="Client activity"
       onReset={() => set('client_activity', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Client Activity')}>
+      onTest={() => toast.success('Test notification sent for client activity')}>
 
       <NRow enabled={d.checkin_submitted.enabled} onToggle={v => upd('checkin_submitted', { enabled: v })}
         title="New check-in submitted"

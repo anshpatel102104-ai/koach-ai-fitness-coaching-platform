@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Calendar, ChevronRight, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export default function NextCheckIn({ daysUntil, nextDate, lastCheckIn, clientId }) {
@@ -13,70 +13,25 @@ export default function NextCheckIn({ daysUntil, nextDate, lastCheckIn, clientId
 
   const go = () => navigate(clientId ? `/submit-checkin?clientId=${clientId}` : '/submit-checkin');
 
+  const title = noCheckIn
+    ? 'No check-in scheduled'
+    : overdue
+      ? `Check-in ${Math.abs(daysUntil)} days late`
+      : dueToday
+        ? 'Check-in due today'
+        : `Check-in in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
+
   return (
-    <div className={cn(
-      'rounded-2xl border shadow-sm overflow-hidden',
-      urgent ? 'bg-warning/10 border-warning' : 'bg-card border-border'
-    )}>
-      <div className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0',
-              urgent ? 'bg-warning' : 'bg-muted')}>
-              {urgent
-                ? <AlertCircle className="w-5 h-5 text-[var(--kc-ea580c)]" />
-                : <ClipboardList className="w-5 h-5 text-muted-foreground" />
-              }
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Weekly Check-In</p>
-              <p className={cn('text-base font-bold leading-tight', urgent ? 'text-[var(--kc-9a3412)]' : 'text-foreground')}>
-                {noCheckIn
-                  ? 'No check-in scheduled'
-                  : overdue
-                  ? `${Math.abs(daysUntil)} days overdue`
-                  : dueToday
-                  ? 'Due today!'
-                  : `${daysUntil} day${daysUntil !== 1 ? 's' : ''} away`}
-              </p>
-              {nextDate && !noCheckIn && (
-                <p className={cn('text-xs flex items-center gap-1 mt-0.5', urgent ? 'text-[var(--kc-c2410c)]' : 'text-muted-foreground')}>
-                  <Calendar className="w-3 h-3" /> {format(nextDate, 'EEE, MMM d')}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {urgent && (
-            <span className={cn('text-xs font-bold px-2.5 py-1 rounded-full',
-              overdue ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning')}>
-              {overdue ? 'Overdue' : 'Due Today'}
-            </span>
-          )}
-        </div>
-
-        {lastCheckIn && (
-          <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl bg-card/60 border border-border">
-            <p className="text-xs text-muted-foreground">
-              Last check-in: <span className="font-semibold text-foreground">{format(new Date(lastCheckIn.date), 'MMM d')}</span>
-              {lastCheckIn.weight ? <span className="text-muted-foreground"> · {lastCheckIn.weight} lbs</span> : ''}
-            </p>
-          </div>
-        )}
-
-        <button
-          onClick={go}
-          className={cn(
-            'w-full h-12 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98]',
-            urgent
-              ? 'text-white shadow-sm'
-              : 'border border-border text-foreground hover:border-foreground bg-card'
-          )}
-          style={urgent ? { background: 'linear-gradient(135deg, var(--kc-ea580c), var(--kc-c2410c))' } : {}}
-        >
-          Submit Check-in <ChevronRight className="w-4 h-4 opacity-60" />
-        </button>
-      </div>
-    </div>
+    <section className="panel relative overflow-hidden py-4 pl-5 pr-4">
+      <span className={cn('absolute inset-y-0 left-0 w-1', overdue ? 'bg-destructive' : urgent ? 'bg-brand' : 'bg-input')} aria-hidden />
+      <h2 className="text-xl text-foreground">{title}</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        {nextDate && !noCheckIn ? `${format(nextDate, 'EEEE, MMM d')}. ` : ''}
+        {lastCheckIn ? `Last one ${format(new Date(lastCheckIn.date), 'MMM d')}${lastCheckIn.weight ? `, ${lastCheckIn.weight} lb` : ''}.` : ''}
+      </p>
+      <Button variant={urgent ? 'brand' : 'outline'} size="lg" className="mt-3 w-full" onClick={go}>
+        {urgent ? 'Start check-in' : 'Send it early'}
+      </Button>
+    </section>
   );
 }

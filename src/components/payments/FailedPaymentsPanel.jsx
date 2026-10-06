@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { AlertTriangle, RefreshCcw, CreditCard, MessageSquare, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { parseISO, differenceInDays } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Panel, Initials } from '@/components/kit';
+import { money, plural } from '@/components/business/ui';
 
 const FAILURE_REASONS = {
   card_declined: 'Card declined',
@@ -8,9 +11,10 @@ const FAILURE_REASONS = {
   expired_card: 'Card expired',
   incorrect_cvc: 'Incorrect CVC',
   processing_error: 'Processing error',
-  do_not_honor: 'Card declined (do not honor)',
+  do_not_honor: 'Card declined by the bank',
 };
 
+/** Failed payments: a red-ruled list, one row per client. */
 export default function FailedPaymentsPanel({ payments = [], onRetry, onMessage }) {
   const [expanded, setExpanded] = useState(true);
   const failed = payments.filter(p => p.status === 'failed');
@@ -20,66 +24,54 @@ export default function FailedPaymentsPanel({ payments = [], onRetry, onMessage 
     try { return differenceInDays(new Date(), parseISO(d)); }
     catch { return 0; }
   };
+  const total = failed.reduce((s, p) => s + Number(p.amount || 0), 0);
+
+  const link = 'touch-compact text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2';
 
   return (
-    <div style={{ background: 'var(--tc-destructive)', border: '1.5px solid var(--tc-destructive)', borderRadius: 14, marginBottom: 20, overflow: 'hidden' }}>
+    <Panel className="overflow-hidden border-l-[3px] border-destructive">
       <button
+        type="button"
         onClick={() => setExpanded(e => !e)}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+        aria-expanded={expanded}
+        className="touch-compact w-full flex items-center gap-3 px-5 sm:px-6 py-4 text-left"
       >
-        <AlertTriangle size={16} color="var(--tc-destructive)" />
-        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--tc-destructive)', flex: 1 }}>
-          {failed.length} Failed Payment{failed.length > 1 ? 's' : ''} — Action Required
+        <span className="flex-1 min-w-0">
+          <span className="block text-[17px] font-semibold text-destructive">
+            {plural(failed.length, 'payment')} failed
+          </span>
+          <span className="block text-sm text-muted-foreground">
+            {money(total, { cents: true })} not collected. Stripe retries 3, 5 and 7 days after a failure.
+          </span>
         </span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tc-destructive)' }}>
-          ${failed.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(2)}
-        </span>
-        {expanded ? <ChevronUp size={14} color="var(--tc-destructive)" /> : <ChevronDown size={14} color="var(--tc-destructive)" />}
+        <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
       </button>
 
       {expanded && (
-        <div style={{ padding: '0 18px 14px' }}>
+        <div className="border-t border-border">
           {failed.map(p => (
-            <div key={p.id} style={{ background: 'var(--tc-card)', borderRadius: 10, padding: '12px 14px', marginBottom: 8, border: '1px solid var(--tc-destructive)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--tc-foreground)' }}>{p.client_name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', marginTop: 2 }}>{p.description || 'Payment'}</div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 11, color: 'var(--tc-destructive)', fontWeight: 600 }}>
-                      ✗ {FAILURE_REASONS[p.failure_reason] || p.failure_reason || 'Payment failed'}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>
-                      {daysSince(p.paid_date || p.created_date)} days ago
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>
-                      Auto-retry: 3, 5, 7 days after failure
-                    </span>
-                  </div>
+            <div key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 sm:px-6 py-3.5 border-b border-border last:border-b-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1 basis-[220px]">
+                <Initials name={p.client_name} tone="alert" />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-foreground truncate">{p.client_name}</p>
+                  <p className="text-[13px] text-muted-foreground truncate">
+                    <span className="text-destructive">{FAILURE_REASONS[p.failure_reason] || p.failure_reason || 'Payment failed'}</span>
+                    {' · '}{daysSince(p.paid_date || p.created_date)} days ago{p.description ? ` · ${p.description}` : ''}
+                  </p>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--tc-destructive)' }}>${Number(p.amount || 0).toFixed(2)}</div>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                <ActionBtn icon={RefreshCcw} label="Retry Payment" onClick={() => onRetry(p)} color="var(--tc-primary)" />
-                <ActionBtn icon={CreditCard} label="Update Card" onClick={() => {}} color="var(--tc-ai)" />
-                <ActionBtn icon={MessageSquare} label="Message Client" onClick={() => onMessage(p)} color="var(--tc-muted-foreground)" />
-                <ActionBtn icon={X} label="Waive" onClick={() => {}} color="var(--tc-muted-foreground)" />
+              <p className="num text-[18px] text-destructive">{money(p.amount, { cents: true })}</p>
+              <div className="flex items-center gap-4 w-full sm:w-auto pl-12 sm:pl-0">
+                <button type="button" className={link} onClick={() => onRetry(p)}>Retry</button>
+                <button type="button" className={link} onClick={() => {}}>Update card</button>
+                <button type="button" className={link} onClick={() => onMessage(p)}>Message</button>
+                <button type="button" className={cn(link, 'text-muted-foreground')} onClick={() => {}}>Waive</button>
               </div>
             </div>
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ActionBtn({ icon: Icon, label, onClick, color }) {
-  const [h, setH] = useState(false);
-  return (
-    <button onClick={onClick}
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${color}30`, background: h ? color + '10' : 'var(--tc-card)', color, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'background 0.12s' }}>
-      <Icon size={12} /> {label}
-    </button>
+    </Panel>
   );
 }

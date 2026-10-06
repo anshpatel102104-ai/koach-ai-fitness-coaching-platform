@@ -1,6 +1,8 @@
 import React from 'react';
 import { Plus, X } from 'lucide-react';
-import { WLSection, WLRow, WLInput, WLDivider } from './WLHelpers';
+import { WLSection, WLRow, WLInput, WLGroup, WLPlanNote } from './WLHelpers';
+import { Button } from '@/components/ui/button';
+import { textareaClass } from '@/components/settings/SettingsLayout';
 
 export default function WLCustomContent({ s, set, locked, enterpriseLocked }) {
   const pages = s.custom_pages || [];
@@ -13,82 +15,69 @@ export default function WLCustomContent({ s, set, locked, enterpriseLocked }) {
   const removePage = (id) => set('custom_pages', pages.filter(p => p.id !== id));
 
   return (
-    <WLSection title="Custom Content" emoji="📄"
-      description="Add your own terms, policies, and custom pages" locked={locked}>
+    <WLSection title="Pages and policies"
+      description="Your terms, privacy policy, extra pages and first-login welcome." locked={locked}>
 
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Terms & Policies</p>
-      <WLRow label="Terms of Service" hint="Replaces KOACH AI's default terms">
+      <WLGroup>Terms and policies</WLGroup>
+      <WLRow label="Terms of service" hint="Replaces the KOACH default terms.">
         <div className="space-y-2">
           <WLInput value={s.terms_url} onChange={v => set('terms_url', v)} placeholder="https://yourdomain.com/terms" />
           <textarea value={s.terms_text || ''} onChange={e => set('terms_text', e.target.value)}
-            placeholder="Or paste your terms text here..."
+            placeholder="Or paste the text here"
             rows={3}
-            className="w-full px-3 py-2 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary resize-none" />
+            className={textareaClass} />
         </div>
-        <p className="text-xs text-warning mt-2 font-medium">⚠️ You are responsible for your own terms and privacy policy</p>
+        <p className="mt-2 text-[13px] text-muted-foreground">You are responsible for the terms and policy you publish.</p>
       </WLRow>
 
-      <WLRow label="Privacy Policy" hint="Replaces KOACH AI's default privacy policy">
+      <WLRow label="Privacy policy" hint="Replaces the KOACH default policy.">
         <div className="space-y-2">
           <WLInput value={s.privacy_url} onChange={v => set('privacy_url', v)} placeholder="https://yourdomain.com/privacy" />
           <textarea value={s.privacy_text || ''} onChange={e => set('privacy_text', e.target.value)}
-            placeholder="Or paste your privacy policy here..."
+            placeholder="Or paste the text here"
             rows={3}
-            className="w-full px-3 py-2 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary resize-none" />
+            className={textareaClass} />
         </div>
       </WLRow>
-
-      <WLDivider />
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Custom Pages</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Add up to 3 custom pages to your portal {enterpriseLocked && '· Enterprise only'}</p>
-        </div>
-        {enterpriseLocked && <span className="text-[10px] bg-ai/10 text-ai font-bold px-2 py-0.5 rounded-full">Enterprise</span>}
-      </div>
+      <WLGroup right={enterpriseLocked ? <WLPlanNote>Enterprise plan</WLPlanNote> : <span className="text-[13px] tabular-nums text-muted-foreground">{pages.length} of 3</span>}>Extra pages</WLGroup>
 
       {!enterpriseLocked && (
-        <div className="space-y-3">
-          {pages.map(page => (
-            <div key={page.id} className="p-4 rounded-xl border border-border bg-muted space-y-2">
+        <div className="space-y-3 py-4">
+          {pages.map((page, i) => (
+            <div key={page.id} className="space-y-2 rounded-lg bg-secondary p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-muted-foreground">Custom Page</p>
-                <button onClick={() => removePage(page.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                  <X className="w-3.5 h-3.5" />
+                <p className="text-[13px] font-semibold text-foreground">Page {i + 1}</p>
+                <button onClick={() => removePage(page.id)} aria-label="Remove page" className="touch-compact text-muted-foreground transition-colors hover:text-destructive">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-              <WLInput value={page.title} onChange={v => updatePage(page.id, 'title', v)} placeholder="Page title (e.g. My Coaching Philosophy)" />
+              <WLInput value={page.title} onChange={v => updatePage(page.id, 'title', v)} placeholder="Page title, like How I coach" />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono flex-shrink-0">portal.app/</span>
+                <span className="flex-shrink-0 font-mono text-[13px] text-muted-foreground">portal.app/</span>
                 <WLInput value={page.slug} onChange={v => updatePage(page.id, 'slug', v)} placeholder="page-slug" />
               </div>
               <textarea value={page.content} onChange={e => updatePage(page.id, 'content', e.target.value)}
-                placeholder="Page content..."
+                placeholder="Page content"
                 rows={4}
-                className="w-full px-3 py-2 rounded-xl border border-border text-foreground text-sm focus:outline-none focus:border-primary resize-none" />
+                className={textareaClass} />
             </div>
           ))}
           {pages.length < 3 && (
-            <button onClick={addPage}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-              <Plus className="w-4 h-4" /> Add Custom Page ({pages.length}/3)
-            </button>
+            <Button variant="outline" onClick={addPage}><Plus /> Add a page</Button>
           )}
         </div>
       )}
-
-      <WLDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Onboarding Customization</p>
-      <WLRow label="Welcome video" hint="Shown to new clients on first login">
+      <WLGroup>First login</WLGroup>
+      <WLRow label="Welcome video" hint="Plays the first time a client logs in.">
         <WLInput value={s.welcome_video_url} onChange={v => set('welcome_video_url', v)} placeholder="https://youtube.com/..." />
       </WLRow>
       <WLRow label="Onboarding headline">
         <WLInput value={s.onboarding_headline} onChange={v => set('onboarding_headline', v)}
-          placeholder={`Welcome to ${s.business_name || 'Your Coaching App'}!`} />
+          placeholder={`Welcome to ${s.business_name || 'your coaching app'}`} />
       </WLRow>
       <WLRow label="Onboarding subtitle">
         <WLInput value={s.onboarding_subtitle} onChange={v => set('onboarding_subtitle', v)}
-          placeholder="Let's set up your profile and get you started on your transformation journey" />
+          placeholder="Five quick questions, then your plan is ready" />
       </WLRow>
     </WLSection>
   );

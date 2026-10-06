@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { isCoachRole } from '@/lib/useRoleGuard';
+import { Page } from '@/components/kit';
 import ChallengesHub from '@/components/community/ChallengesHub';
 
 export default function Challenges() {
@@ -18,8 +19,8 @@ export default function Challenges() {
   }, []);
 
   return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+    <Page>
       <ChallengesHub isCoach={isCoach} user={currentUser} />
-    </div>
+    </Page>
   );
 }

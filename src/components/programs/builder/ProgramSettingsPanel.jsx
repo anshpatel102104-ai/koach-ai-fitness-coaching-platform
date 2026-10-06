@@ -49,7 +49,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
     <div className="space-y-3 overflow-y-auto flex-1">
       {/* Duration */}
       <div className="px-4 pt-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Duration (weeks)</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Duration (weeks)</Label>
         <div className="flex items-center gap-2 mt-2">
           <button
             onClick={() => onMetaChange({
@@ -81,7 +81,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Difficulty */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Difficulty</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Difficulty</Label>
         <div className="flex gap-2 mt-2">
           {Object.entries(DIFFICULTY_STYLES).map(([diff, style]) => (
             <button
@@ -102,7 +102,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Category */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Category</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Category</Label>
         <Select value={meta.category} onValueChange={v => onMetaChange({ ...meta, category: v })}>
           <SelectTrigger className="h-8 text-sm mt-2 border-border bg-muted">
             <SelectValue />
@@ -119,7 +119,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Frequency */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sessions per Week</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Sessions per Week</Label>
         <div className="flex items-center gap-2 mt-2">
           <button
             onClick={() => onMetaChange({
@@ -150,7 +150,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Session Length */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Est. Session Length</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Est. Session Length</Label>
         <Select value={meta.estimated_session_length || '60'} onValueChange={v => onMetaChange({ ...meta, estimated_session_length: v })}>
           <SelectTrigger className="h-8 text-sm mt-2 border-border bg-muted">
             <SelectValue />
@@ -165,7 +165,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Equipment */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Equipment Needed</Label>
+        <Label className="text-xs font-semibold text-muted-foreground mb-2 block">Equipment Needed</Label>
         <div className="flex flex-wrap gap-2">
           {EQUIPMENT_OPTIONS.map(eq => (
             <button
@@ -186,7 +186,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Tags */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Tags</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Tags</Label>
         <div className="flex flex-wrap gap-2 mt-2 mb-2">
           {(meta.tags || []).map((tag, idx) => (
             <div key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-accent text-primary text-xs font-medium">
@@ -210,7 +210,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
       {/* Description */}
       <div className="px-4">
-        <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Description</Label>
+        <Label className="text-xs font-semibold text-muted-foreground">Description</Label>
         <Textarea
           value={meta.description || ''}
           onChange={e => onMetaChange({ ...meta, description: e.target.value })}
@@ -234,7 +234,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
           <div className="pb-4 space-y-3">
             {/* Progression Model */}
             <div>
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Progression Model</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">Progression Model</Label>
               <Select value={meta.progression_model || 'linear'} onValueChange={v => onMetaChange({ ...meta, progression_model: v })}>
                 <SelectTrigger className="h-8 text-sm mt-2 border-border bg-muted">
                   <SelectValue />
@@ -249,7 +249,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
             {/* Deload Frequency */}
             <div>
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Deload Week Frequency</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">Deload Week Frequency</Label>
               <Select value={meta.deload_frequency || 'never'} onValueChange={v => onMetaChange({ ...meta, deload_frequency: v })}>
                 <SelectTrigger className="h-8 text-sm mt-2 border-border bg-muted">
                   <SelectValue />
@@ -264,7 +264,7 @@ export default function ProgramSettingsPanel({ meta, onMetaChange }) {
 
             {/* Rest Day Notes */}
             <div>
-              <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Rest Day Recommendations</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">Rest Day Recommendations</Label>
               <Textarea
                 value={meta.rest_day_notes || ''}
                 onChange={e => onMetaChange({ ...meta, rest_day_notes: e.target.value })}

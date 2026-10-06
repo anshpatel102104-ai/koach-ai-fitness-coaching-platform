@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function CreateSubscriptionDialog({ open, onOpenChange, clients, onSuccess }) {
-  const [form, setForm] = useState({ client_id: '', amount: '', interval: 'month', description: 'Coaching Subscription' });
+  const [form, setForm] = useState({ client_id: '', amount: '', interval: 'month', description: 'Coaching subscription' });
   const [loading, setLoading] = useState(false);
 
   const activeClients = clients.filter(c => c.status === 'active' || c.lifecycle_status === 'active');
@@ -36,7 +36,7 @@ export default function CreateSubscriptionDialog({ open, onOpenChange, clients, 
     setLoading(false);
 
     if (res.data?.subscription_id) {
-      toast.success('Subscription created in Stripe!');
+      toast.success('Subscription created in Stripe');
       onSuccess();
     } else {
       toast.error(res.data?.error || 'Failed to create subscription');
@@ -47,36 +47,37 @@ export default function CreateSubscriptionDialog({ open, onOpenChange, clients, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-heading">Create Stripe Subscription</DialogTitle>
+          <DialogTitle>New subscription</DialogTitle>
+          <p className="text-sm text-muted-foreground">Bills the client through Stripe on a schedule.</p>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div>
-            <Label>Client *</Label>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label>Client</Label>
             <Select value={form.client_id} onValueChange={v => setForm({ ...form, client_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select active client" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Choose an active client" /></SelectTrigger>
               <SelectContent>
                 {activeClients.map(c => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name} {c.email ? `(${c.email})` : '⚠ no email'}
+                    {c.name} {c.email ? `(${c.email})` : '(no email)'}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Monthly Amount ($) *</Label>
+            <div className="space-y-1.5">
+              <Label>Amount (USD)</Label>
               <Input
                 type="number"
                 min="1"
-                placeholder="e.g. 250"
+                placeholder="250"
                 value={form.amount}
                 onChange={e => setForm({ ...form, amount: e.target.value })}
                 required
               />
             </div>
-            <div>
-              <Label>Billing Interval</Label>
+            <div className="space-y-1.5">
+              <Label>Billed</Label>
               <Select value={form.interval} onValueChange={v => setForm({ ...form, interval: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -87,21 +88,21 @@ export default function CreateSubscriptionDialog({ open, onOpenChange, clients, 
               </Select>
             </div>
           </div>
-          <div>
+          <div className="space-y-1.5">
             <Label>Description</Label>
             <Input
               value={form.description}
               onChange={e => setForm({ ...form, description: e.target.value })}
-              placeholder="e.g. 1-on-1 Coaching"
+              placeholder="1:1 coaching"
             />
           </div>
-          <p className="text-xs text-muted-foreground bg-secondary/40 rounded-lg px-3 py-2">
-            ⚡ A Stripe subscription will be created. The client must have a valid email. Payment collection requires a payment method via Stripe dashboard or payment link.
+          <p className="text-[13px] text-muted-foreground">
+            The client needs an email address. Stripe collects payment once they add a card from the dashboard or a payment link.
           </p>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Subscription'}
+              {loading ? 'Creating…' : 'Create subscription'}
             </Button>
           </div>
         </form>

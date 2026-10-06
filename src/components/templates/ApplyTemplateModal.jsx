@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Initials } from '@/components/kit';
 import { Button } from '@/components/ui/button';
-import { Check, Loader2, Users } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -53,19 +54,20 @@ export default function ApplyTemplateModal({ template, onClose }) {
 
     setApplying(false);
     setDone(true);
-    toast.success(`${template.label} template applied to ${client?.name}!`);
+    toast.success(`${template.label} template applied to ${client?.name}`);
     setTimeout(onClose, 1200);
   };
+
+  const selectedClient = clients.find(c => c.id === selectedClientId);
 
   if (done) {
     return (
       <Dialog open onOpenChange={v => !v && onClose()}>
-        <DialogContent className="max-w-xs p-8 flex flex-col items-center gap-3 text-center">
-          <div className="w-14 h-14 rounded-full bg-success/10 border border-success flex items-center justify-center">
-            <Check className="w-7 h-7 text-success" />
-          </div>
-          <p className="font-semibold text-foreground">Template applied!</p>
-          <p className="text-sm text-muted-foreground">Program, nutrition & automations are ready.</p>
+        <DialogContent className="sm:max-w-sm">
+          <DialogTitle className="text-[22px]">Template applied</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            {selectedClient ? `${selectedClient.name} has` : 'They have'} the program, nutrition plan and automation rules now.
+          </p>
         </DialogContent>
       </Dialog>
     );
@@ -73,61 +75,42 @@ export default function ApplyTemplateModal({ template, onClose }) {
 
   return (
     <Dialog open onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-xs p-0 overflow-hidden rounded-xl">
-        <div className="px-4 pt-4 pb-3 border-b border-border">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-lg">{template.emoji}</span>
-            <DialogTitle className="text-sm font-semibold">Apply {template.label} template</DialogTitle>
-          </div>
-          <p className="text-xs text-muted-foreground">Select a client to receive this full coaching setup.</p>
+      <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-md sm:p-0 sm:flex">
+        <div className="px-5 pt-5 pb-3 sm:px-6 sm:pt-6">
+          <DialogTitle className="pr-8 text-[22px]">Apply {template.label}</DialogTitle>
+          <DialogDescription className="mt-1">Sets up the program, nutrition plan, tags and automation rules for one client. Their current program and plan are replaced.</DialogDescription>
         </div>
 
-        <div className="p-2 max-h-60 overflow-y-auto">
+        <div className="max-h-72 overflow-y-auto px-3 pb-2 sm:px-4">
           {clients.length === 0 ? (
-            <div className="py-8 text-center">
-              <Users className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">No clients yet. Add a client first.</p>
-            </div>
+            <p className="px-2 py-6 text-sm text-muted-foreground">No clients yet. Add one first.</p>
           ) : (
             clients.map(c => (
               <button
                 key={c.id}
                 onClick={() => setSelectedClientId(c.id)}
                 className={cn(
-                  'w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors',
-                  selectedClientId === c.id
-                    ? 'bg-primary/10 border border-primary/20'
-                    : 'hover:bg-secondary border border-transparent'
+                  'flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors',
+                  selectedClientId === c.id ? 'bg-accent' : 'hover:bg-accent/60'
                 )}
               >
-                <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  {c.name?.[0]?.toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                <Initials name={c.name} size={32} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-foreground">{c.name}</span>
                   {c.lifecycle_status && (
-                    <p className="text-[11px] text-muted-foreground capitalize">{c.lifecycle_status.replace(/_/g, ' ')}</p>
+                    <span className="block text-[13px] text-muted-foreground">{c.lifecycle_status.replace(/_/g, ' ').replace(/^./, ch => ch.toUpperCase())}</span>
                   )}
-                </div>
-                {selectedClientId === c.id && (
-                  <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                )}
+                </span>
+                {selectedClientId === c.id && <Check className="h-4 w-4 flex-shrink-0 text-foreground" />}
               </button>
             ))
           )}
         </div>
 
-        <div className="p-3 border-t border-border">
-          <Button
-            className="w-full gap-2"
-            disabled={!selectedClientId || applying}
-            onClick={applyTemplate}
-          >
-            {applying ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Applying…</>
-            ) : (
-              <>Apply Template</>
-            )}
+        <div className="flex gap-2 border-t border-border px-5 py-4 sm:px-6">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" disabled={!selectedClientId || applying} onClick={applyTemplate}>
+            {applying ? 'Applying…' : selectedClient ? `Apply to ${selectedClient.name.split(' ')[0]}` : 'Apply'}
           </Button>
         </div>
       </DialogContent>

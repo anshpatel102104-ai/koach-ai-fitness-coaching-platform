@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { differenceInDays, parseISO } from 'date-fns';
+import { Panel, PanelHeader, Stat } from '@/components/kit';
+import { Meter, money } from '@/components/business/ui';
 
 export default function InvoiceSidebar({ invoices = [] }) {
   const topClients = useMemo(() => {
@@ -38,59 +40,44 @@ export default function InvoiceSidebar({ invoices = [] }) {
     return Math.round((onTime / paid.length) * 100);
   }, [invoices]);
 
-  const card = { background: 'var(--tc-card)', borderRadius: 14, border: '1px solid var(--tc-muted)', padding: '16px', marginBottom: 12 };
-  const title = { fontSize: 12, fontWeight: 700, color: 'var(--tc-foreground)', marginBottom: 12, margin: '0 0 12px' };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {/* Top Clients */}
-      <div style={card}>
-        <h4 style={title}>Top Paying Clients</h4>
-        {topClients.length === 0 ? (
-          <p style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', margin: 0 }}>No paid invoices yet</p>
-        ) : topClients.map(([name, amount], i) => (
-          <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, background: 'var(--tc-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--tc-primary)', flexShrink: 0 }}>{i + 1}</div>
-              <span style={{ fontSize: 13, color: 'var(--tc-foreground)', fontWeight: 500 }}>{name}</span>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tc-foreground)' }}>${amount.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Avg days + on-time */}
-      <div style={card}>
-        <h4 style={title}>Payment Stats</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div style={{ textAlign: 'center', background: 'var(--tc-background)', borderRadius: 10, padding: '12px 8px' }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--tc-foreground)' }}>{avgDaysToPay ?? '—'}</div>
-            <div style={{ fontSize: 10, color: 'var(--tc-muted-foreground)', marginTop: 2 }}>Avg days to pay</div>
-          </div>
-          <div style={{ textAlign: 'center', background: 'var(--tc-background)', borderRadius: 10, padding: '12px 8px' }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: onTimeRate >= 80 ? 'var(--tc-success)' : 'var(--tc-warning)' }}>{onTimeRate !== null ? `${onTimeRate}%` : '—'}</div>
-            <div style={{ fontSize: 10, color: 'var(--tc-muted-foreground)', marginTop: 2 }}>On-time rate</div>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Payment habits */}
+      <Panel className="px-5 py-5 sm:px-6">
+        <h2 className="text-[22px] text-foreground mb-4">How clients pay</h2>
+        <div className="grid grid-cols-2 divide-x divide-border">
+          <Stat label="Days to pay" value={avgDaysToPay ?? '—'} sub="on average" />
+          <Stat className="pl-5" label="On time" value={onTimeRate !== null ? `${onTimeRate}%` : '—'} tone={onTimeRate !== null && onTimeRate < 80 ? 'warning' : undefined} sub="paid by the due date" />
         </div>
-      </div>
+        {paymentMethods.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-border space-y-3">
+            {paymentMethods.map(({ method, pct }) => (
+              <div key={method}>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-foreground capitalize">{method.replace(/_/g, ' ')}</span>
+                  <span className="font-semibold text-foreground tabular-nums">{pct}%</span>
+                </div>
+                <Meter value={pct} />
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
 
-      {/* Payment Methods */}
-      {paymentMethods.length > 0 && (
-        <div style={card}>
-          <h4 style={title}>Payment Methods</h4>
-          {paymentMethods.map(({ method, pct }) => (
-            <div key={method} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: 'var(--tc-foreground)', textTransform: 'capitalize' }}>{method.replace(/_/g, ' ')}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--tc-foreground)' }}>{pct}%</span>
-              </div>
-              <div style={{ height: 4, background: 'var(--tc-muted)', borderRadius: 9999 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-ai))', borderRadius: 9999 }} />
-              </div>
+      {/* Top clients */}
+      <Panel>
+        <PanelHeader title="Top clients" subtitle="By amount paid" />
+        <div className="px-5 sm:px-6 pb-4">
+          {topClients.length === 0 ? (
+            <p className="text-sm text-muted-foreground pb-2">No paid invoices yet.</p>
+          ) : topClients.map(([name, amount]) => (
+            <div key={name} className="flex items-center justify-between gap-3 py-2.5 border-b border-border last:border-b-0">
+              <span className="text-sm text-foreground truncate">{name}</span>
+              <span className="num text-[17px] text-foreground">{money(amount)}</span>
             </div>
           ))}
         </div>
-      )}
+      </Panel>
     </div>
   );
 }

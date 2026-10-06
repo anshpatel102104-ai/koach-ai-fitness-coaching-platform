@@ -1,57 +1,55 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronRight, UserPlus, PhoneCall, CheckCircle2, Users } from 'lucide-react';
+import { Panel, PanelHeader } from '@/components/kit';
+import { KANBAN_STAGES } from './KanbanBoard';
 
-const STAGES = [
-  { key: 'lead', label: 'Lead', icon: UserPlus },
-  { key: 'booked', label: 'Booked', icon: PhoneCall },
-  { key: 'closed', label: 'Closed', icon: CheckCircle2 },
-  { key: 'active_client', label: 'Active Client', icon: Users },
-];
+// Funnel uses the live pipeline stages; "lost" is reported as a footnote.
+const STAGES = KANBAN_STAGES.filter(s => s.key !== 'lost');
 
 export default function FunnelView({ leads, onStageClick, selectedStage }) {
   const counts = STAGES.reduce((acc, s) => {
     acc[s.key] = leads.filter(l => l.stage === s.key).length;
     return acc;
   }, {});
+  const lost = leads.filter(l => l.stage === 'lost').length;
+  const max = Math.max(1, ...Object.values(counts));
   const total = leads.length || 1;
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 mb-6">
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-5">Sales Funnel</h2>
-      <div className="flex items-stretch gap-1">
-        {STAGES.map((stage, idx) => {
+    <Panel className="mb-4">
+      <PanelHeader
+        title="Funnel"
+        subtitle={selectedStage ? 'Showing one stage below. Click it again to show everyone.' : 'Click a stage to filter the leads below.'}
+        right={lost > 0 ? <span className="text-sm text-muted-foreground">{lost} lost</span> : null}
+      />
+      <div className="px-5 pb-5 sm:px-6 sm:pb-6 space-y-1">
+        {STAGES.map(stage => {
           const count = counts[stage.key];
           const pct = Math.round((count / total) * 100);
+          const width = Math.max(count > 0 ? 4 : 0, Math.round((count / max) * 100));
           const isSelected = selectedStage === stage.key;
           return (
-            <React.Fragment key={stage.key}>
-              <button
-                onClick={() => onStageClick(isSelected ? null : stage.key)}
-                className={cn(
-                  "flex-1 rounded-xl border p-4 transition-all text-left bg-card border-border",
-                  isSelected ? "ring-2 ring-foreground/20 scale-105 shadow-lg" : "hover:opacity-90"
-                )}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <stage.icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stage.label}</span>
-                </div>
-                <p className="text-3xl font-heading font-bold text-foreground">{count}</p>
-                <p className="text-xs text-muted-foreground mt-1">{pct}% of total</p>
-                <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-sidebar transition-all" style={{ width: `${pct}%` }} />
-                </div>
-              </button>
-              {idx < STAGES.length - 1 && (
-                <div className="flex items-center px-1">
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/40" />
-                </div>
+            <button
+              key={stage.key}
+              onClick={() => onStageClick(isSelected ? null : stage.key)}
+              aria-pressed={isSelected}
+              className={cn(
+                'w-full grid grid-cols-[110px_1fr_auto] sm:grid-cols-[140px_1fr_96px] items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors',
+                isSelected ? 'bg-accent' : 'hover:bg-accent/60'
               )}
-            </React.Fragment>
+            >
+              <span className={cn('text-sm truncate', isSelected ? 'font-semibold text-foreground' : 'text-foreground/90')}>{stage.label}</span>
+              <span className="h-6 rounded-[4px] bg-secondary overflow-hidden">
+                <span className={cn('block h-full rounded-[4px]', isSelected ? 'bg-brand' : 'bg-primary')} style={{ width: `${width}%` }} />
+              </span>
+              <span className="flex items-baseline justify-end gap-2">
+                <span className="num text-lg text-foreground">{count}</span>
+                <span className="text-[13px] text-muted-foreground w-9 text-right">{pct}%</span>
+              </span>
+            </button>
           );
         })}
       </div>
-    </div>
+    </Panel>
   );
 }

@@ -16,12 +16,12 @@ import TemplatePickerSheet from './goals/TemplatePickerSheet';
 
 // ── Event type config ─────────────────────────────────────────────────────────
 const TYPES = {
-  checkin:  { label: 'Check-in',    color: 'var(--tc-primary)', dot: 'var(--tc-primary)', emoji: '📋', icon: ClipboardList },
-  session:  { label: 'Session',     color: 'var(--tc-success)', dot: 'var(--tc-success)', emoji: '📞', icon: Phone },
-  goal:     { label: 'Goal Due',    color: 'var(--tc-warning)', dot: 'var(--tc-warning)', emoji: '🎯', icon: Target },
-  habit:    { label: 'Habit',       color: 'var(--tc-ai)', dot: 'var(--tc-ai)', emoji: '⚡', icon: Zap },
-  weighin:  { label: 'Weigh-in',    color: 'var(--tc-primary)', dot: 'var(--tc-primary)', emoji: '⚖️', icon: Scale },
-  workout:  { label: 'Workout',     color: 'var(--kc-ec4899)', dot: 'var(--kc-f472b6)', emoji: '💪', icon: Dumbbell },
+  checkin:  { label: 'Check-in',    color: 'var(--tc-primary)', dot: 'var(--tc-primary)', emoji: '', icon: ClipboardList },
+  session:  { label: 'Session',     color: 'var(--tc-success)', dot: 'var(--tc-success)', emoji: '', icon: Phone },
+  goal:     { label: 'Goal due',    color: 'var(--tc-warning)', dot: 'var(--tc-warning)', emoji: '', icon: Target },
+  habit:    { label: 'Habit',       color: 'var(--tc-ai)', dot: 'var(--tc-ai)', emoji: '', icon: Zap },
+  weighin:  { label: 'Weigh-in',    color: 'var(--tc-primary)', dot: 'var(--tc-primary)', emoji: '', icon: Scale },
+  workout:  { label: 'Workout',     color: 'var(--tc-muted-foreground)', dot: 'var(--tc-muted-foreground)', emoji: '', icon: Dumbbell },
 };
 
 function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions, habits, habitCompletions) {
@@ -66,7 +66,7 @@ function buildEvents(checkIns, goals, sessions, weighIns, workoutSessions, habit
 function EventChip({ event }) {
   const cfg = TYPES[event.type] || TYPES.checkin;
   return (
-    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold truncate"
+    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold truncate"
       style={{ background: cfg.color + '18', color: cfg.color, border: `1px solid ${cfg.color}30` }}>
       {event.done
         ? <CheckCircle2 className="w-2.5 h-2.5 flex-shrink-0" />
@@ -109,7 +109,7 @@ function DayCell({ day, events, onDayClick }) {
       <div className="space-y-0.5">
         {shown.map(ev => <EventChip key={ev.id} event={ev} />)}
         {overflow > 0 && (
-          <p className="text-[10px] text-muted-foreground font-semibold pl-1">+{overflow} more</p>
+          <p className="text-[11px] text-muted-foreground font-semibold pl-1">+{overflow} more</p>
         )}
       </div>
     </div>
@@ -144,7 +144,7 @@ function RepeatModal({ repeat, onChange, onClose }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.12 }}
-        className="relative bg-card rounded-2xl shadow-2xl w-full max-w-sm p-6"
+        className="relative bg-card rounded-xl w-full max-w-sm p-6"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -251,12 +251,12 @@ function generateRepeatDates(startDate, repeat) {
 
 // ── Activity type config for sidebar ─────────────────────────────────────────
 const ACTIVITY_TYPES = [
-  { key: 'workout',  label: 'Workout',      emoji: '💪', color: 'var(--kc-ec4899)' },
-  { key: 'session',  label: 'Session/Call', emoji: '📞', color: 'var(--tc-success)' },
-  { key: 'goal',     label: 'Goal',         emoji: '🎯', color: 'var(--tc-warning)' },
-  { key: 'habit',    label: 'Habit',        emoji: '⚡', color: 'var(--tc-ai)' },
-  { key: 'weighin',  label: 'Weigh-in',     emoji: '⚖️', color: 'var(--tc-primary)' },
-  { key: 'checkin',  label: 'Check-in Form',emoji: '📋', color: 'var(--tc-primary)' },
+  { key: 'workout',  label: 'Workout',      emoji: '', color: 'var(--tc-muted-foreground)' },
+  { key: 'session',  label: 'Session/Call', emoji: '', color: 'var(--tc-success)' },
+  { key: 'goal',     label: 'Goal',         emoji: '', color: 'var(--tc-warning)' },
+  { key: 'habit',    label: 'Habit',        emoji: '', color: 'var(--tc-ai)' },
+  { key: 'weighin',  label: 'Weigh-in',     emoji: '', color: 'var(--tc-primary)' },
+  { key: 'checkin',  label: 'Check-in Form',emoji: '', color: 'var(--tc-primary)' },
 ];
 
 function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, client, onDone }) {
@@ -317,7 +317,7 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-3xl mb-2">💪</p>
+          <p className="text-3xl mb-2"></p>
           <p className="text-sm font-semibold text-foreground">No program assigned</p>
           <p className="text-xs text-muted-foreground mt-1">Assign a workout program to this client first.</p>
         </div>
@@ -325,7 +325,7 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
     );
   }
 
-  if (isLoading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--kc-ec4899)]" /></div>;
+  if (isLoading) return <div className="flex-1 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-[var(--tc-muted-foreground)]" /></div>;
 
   return (
     <div className="flex-1 flex flex-col justify-between">
@@ -348,11 +348,11 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
         </div>
 
         {program && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--kc-fdf2f8)] border border-[var(--kc-ec4899)]/20">
-            <span>💪</span>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--tc-muted)] border border-[var(--tc-muted-foreground)]/20">
+            <span></span>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-[var(--kc-ec4899)] truncate">{program.title}</p>
-              <p className="text-[10px] text-muted-foreground">{workouts.length} workout days</p>
+              <p className="text-xs font-bold text-[var(--tc-muted-foreground)] truncate">{program.title}</p>
+              <p className="text-[11px] text-muted-foreground">{workouts.length} workout days</p>
             </div>
           </div>
         )}
@@ -361,13 +361,13 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
           <label className="text-xs font-semibold text-foreground block mb-2">Select from current training program</label>
           <div className="space-y-1.5 max-h-40 overflow-y-auto">
             {workouts.map((w, i) => (
-              <label key={i} className={`flex items-center gap-3 p-2.5 rounded-xl border-2 cursor-pointer transition-all ${selectedWorkoutIdx === String(i) ? 'border-[var(--kc-ec4899)] bg-[var(--kc-fdf2f8)]' : 'border-border hover:border-[var(--kc-ec4899)]/40'}`}>
+              <label key={i} className={`flex items-center gap-3 p-2.5 rounded-xl border-2 cursor-pointer transition-all ${selectedWorkoutIdx === String(i) ? 'border-[var(--tc-muted-foreground)] bg-[var(--tc-muted)]' : 'border-border hover:border-[var(--tc-muted-foreground)]/40'}`}>
                 <input type="radio" name="workout_day" value={i} checked={selectedWorkoutIdx === String(i)}
-                  onChange={() => setSelectedWorkoutIdx(String(i))} className="accent-[var(--kc-ec4899)]" />
+                  onChange={() => setSelectedWorkoutIdx(String(i))} className="accent-[var(--tc-muted-foreground)]" />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground">{w.day_name || `Day ${w.day_number || i + 1}`}</p>
                   {w.exercises?.length > 0 && (
-                    <p className="text-[10px] text-muted-foreground">{w.exercises.length} exercises</p>
+                    <p className="text-[11px] text-muted-foreground">{w.exercises.length} exercises</p>
                   )}
                 </div>
               </label>
@@ -382,8 +382,8 @@ function WorkoutContent({ date, dateStr, setDateStr, repeat, setShowRepeat, clie
       </div>
 
       <button onClick={save} disabled={saving || selectedWorkoutIdx === ''}
-        className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-        style={{ background: 'var(--kc-ec4899)' }}>
+        className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-50"
+        style={{ background: 'var(--tc-primary)' }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
         {saving ? 'Adding…' : repeat ? `Add (${generateRepeatDates(parseISO(dateStr), repeat).length} sessions)` : 'Add to Calendar'}
       </button>
@@ -438,14 +438,14 @@ function SessionContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
           <div><label className="text-xs font-semibold text-foreground block mb-1">Time</label><input type="time" className={inputCls} value={time} onChange={e => setTime(e.target.value)} /></div>
           <div><label className="text-xs font-semibold text-foreground block mb-1">Type</label>
             <select className={inputCls} value={type} onChange={e => setType(e.target.value)}>
-              <option value="video_call">Video Call</option>
-              <option value="phone_call">Phone Call</option>
-              <option value="in_person">In Person</option>
+              <option value="video_call">Video call</option>
+              <option value="phone_call">Phone call</option>
+              <option value="in_person">In person</option>
             </select>
           </div>
         </div>
       </div>
-      <button onClick={save} disabled={saving} className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'var(--tc-success)' }}>
+      <button onClick={save} disabled={saving} className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: 'var(--tc-primary)' }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}{saving ? 'Adding…' : 'Add to Calendar'}
       </button>
     </div>
@@ -514,7 +514,7 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
     <div className="flex-1 flex flex-col justify-between">
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">Start Date</label>
+          <label className="text-xs font-semibold text-foreground block mb-1">Start date</label>
           <div className="flex items-center gap-3">
             <input type="date" className={inputCls + ' flex-1'} value={dateStr} onChange={e => setDateStr(e.target.value)} />
             <button onClick={() => setShowRepeat(true)} className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline whitespace-nowrap">
@@ -530,7 +530,7 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1.5">Quick Add</label>
+          <label className="text-xs font-semibold text-foreground block mb-1.5">Quick add</label>
           <div className="flex flex-wrap gap-1.5">
             {QUICK_HABITS.map(s => (
               <button key={s.name} onClick={() => { setName(s.name); setEmoji(s.emoji); }}
@@ -542,7 +542,7 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">Habit Name</label>
+          <label className="text-xs font-semibold text-foreground block mb-1">Habit name</label>
           <div className="flex gap-2">
             <input type="text" maxLength={2} value={emoji} onChange={e => setEmoji(e.target.value)}
               placeholder="😀" className={inputCls + ' w-12 text-center text-base'} />
@@ -575,10 +575,10 @@ function HabitContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDo
       </div>
 
       <button onClick={save} disabled={saving || !name.trim()}
-        className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-        style={{ background: 'var(--tc-ai)' }}>
+        className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-50"
+        style={{ background: 'var(--tc-primary)' }}>
         {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-        {saving ? 'Adding…' : repeat ? `Add Habit (${generateRepeatDates(parseISO(dateStr), repeat).length})` : 'Add Habit'}
+        {saving ? 'Adding…' : repeat ? `Add habit (${generateRepeatDates(parseISO(dateStr), repeat).length})` : 'Add habit'}
       </button>
     </div>
   );
@@ -636,7 +636,7 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
       <div className="flex-1 flex flex-col justify-between">
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Due Date</label>
+            <label className="text-xs font-semibold text-foreground block mb-1">Due date</label>
             <div className="flex items-center gap-3">
               <input type="date" className={inputCls + ' flex-1'} value={dateStr} onChange={e => setDateStr(e.target.value)} />
               <button onClick={() => setShowRepeat(true)} className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline whitespace-nowrap">
@@ -652,7 +652,7 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Goal Template</label>
+            <label className="text-xs font-semibold text-foreground block mb-1">Goal template</label>
             <button
               onClick={() => setShowTemplatePicker(true)}
               className="w-full flex items-center gap-2 border border-border rounded-lg px-3 py-2 text-sm bg-card hover:bg-muted transition-colors text-left"
@@ -665,7 +665,7 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Goal Type</label>
+            <label className="text-xs font-semibold text-foreground block mb-1">Goal type</label>
             <div className="flex gap-1.5">
               {GOAL_TYPES.map(gt => (
                 <button key={gt.key} onClick={() => setGoalType(gt.key)}
@@ -677,14 +677,14 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-foreground block mb-1">Goal Name</label>
+            <label className="text-xs font-semibold text-foreground block mb-1">Goal name</label>
             <input className={inputCls} placeholder="e.g. Reach 175 lbs" value={name} onChange={e => setName(e.target.value)} />
           </div>
 
           {goalType === 'numeric' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs font-semibold text-foreground block mb-1">Target Value</label>
+                <label className="text-xs font-semibold text-foreground block mb-1">Target value</label>
                 <input type="number" className={inputCls} placeholder="175" value={targetValue} onChange={e => setTargetValue(e.target.value)} />
               </div>
               <div>
@@ -701,8 +701,8 @@ function GoalContent({ dateStr, setDateStr, repeat, setShowRepeat, client, onDon
         </div>
 
         <button onClick={save} disabled={saving || !name.trim()}
-          className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: 'var(--tc-warning)' }}>
+          className="mt-4 w-full py-2.5 rounded-xl text-sm font-bold text-primary-foreground flex items-center justify-center gap-2 disabled:opacity-50"
+          style={{ background: 'var(--tc-primary)' }}>
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {saving ? 'Adding…' : repeat ? `Add Goal (${generateRepeatDates(parseISO(dateStr), repeat).length})` : 'Add Goal to Calendar'}
         </button>
@@ -789,7 +789,7 @@ function CheckInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">Coach Note (optional)</label>
+          <label className="text-xs font-semibold text-foreground block mb-1">Coach note (optional)</label>
           <input className={inputCls} placeholder="Any notes for this check-in…" value={note} onChange={e => setNote(e.target.value)} />
         </div>
       </div>
@@ -832,7 +832,7 @@ function WeighInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
     <div className="flex-1 flex flex-col justify-between">
       <div className="space-y-4">
         <div className="p-3 rounded-xl bg-accent border border-accent">
-          <p className="text-xs font-semibold text-primary">📋 Scheduled by coach</p>
+          <p className="text-xs font-semibold text-primary">Scheduled by coach</p>
           <p className="text-xs text-primary mt-0.5">This will appear in the client's calendar as a pending weigh-in task. The client logs their own weight in their portal.</p>
         </div>
 
@@ -853,7 +853,7 @@ function WeighInContent({ dateStr, setDateStr, repeat, setShowRepeat, client, on
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-foreground block mb-1">Coach Note (optional)</label>
+          <label className="text-xs font-semibold text-foreground block mb-1">Coach note (optional)</label>
           <input className={inputCls} placeholder="e.g. Morning weigh-in, fasted" value={note} onChange={e => setNote(e.target.value)} />
         </div>
       </div>
@@ -905,13 +905,13 @@ function AddEventModal({ day, client, onClose }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 8 }}
           transition={{ duration: 0.14 }}
-          className="relative bg-card rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+          className="relative bg-card rounded-xl w-full max-w-lg overflow-hidden flex flex-col"
           style={{ maxHeight: '90vh' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h3 className="font-bold text-foreground text-lg">Add Activity</h3>
+            <h3 className="font-bold text-foreground text-lg">Add activity</h3>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
@@ -920,7 +920,7 @@ function AddEventModal({ day, client, onClose }) {
                 className="px-4 py-1.5 rounded-lg text-sm font-bold text-primary-foreground"
                 style={{ background: 'var(--tc-primary)', opacity: 0.9 }}
               >
-                ADD
+                Add
               </button>
               <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted">
                 <X className="w-4 h-4 text-muted-foreground" />
@@ -942,7 +942,6 @@ function AddEventModal({ day, client, onClose }) {
                 >
                   <input type="checkbox" readOnly checked={activeType === t.key}
                     className="w-3.5 h-3.5 rounded accent-[var(--tc-primary)] flex-shrink-0" />
-                  <span className="mr-1">{t.emoji}</span>
                   <span className="text-xs leading-tight">{t.label}</span>
                 </button>
               ))}
@@ -951,10 +950,9 @@ function AddEventModal({ day, client, onClose }) {
             {/* Right content */}
             <div className="flex-1 p-5 overflow-y-auto flex flex-col">
               <AnimatePresence mode="wait">
-                <motion.div key={activeType} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.1 }} className="flex flex-col flex-1">
+                <div key={activeType} className="flex flex-col flex-1">
                   {renderContent()}
-                </motion.div>
+                </div>
               </AnimatePresence>
             </div>
           </div>
@@ -979,9 +977,9 @@ function AddEventModal({ day, client, onClose }) {
 function Legend() {
   return (
     <div className="flex flex-wrap gap-2 px-4 py-2 border-b border-border bg-background">
-      <span className="text-[10px] font-bold text-muted-foreground mr-1 self-center">LEGEND</span>
+      <span className="text-[11px] font-bold text-muted-foreground mr-1 self-center">LEGEND</span>
       {Object.entries(TYPES).map(([key, cfg]) => (
-        <span key={key} className="flex items-center gap-1 text-[10px] font-semibold" style={{ color: cfg.color }}>
+        <span key={key} className="flex items-center gap-1 text-[11px] font-semibold" style={{ color: cfg.color }}>
           <span className="w-2 h-2 rounded-full inline-block" style={{ background: cfg.dot }} />
           {cfg.label}
         </span>
@@ -1062,11 +1060,11 @@ export default function ClientCalendarTab({ client }) {
   }, [events, viewDate]);
 
   const stats = [
-    { label: 'Workouts',  count: monthEvents.filter(e => e.type === 'workout').length,   color: 'var(--kc-ec4899)', emoji: '💪' },
-    { label: 'Check-ins', count: monthEvents.filter(e => e.type === 'checkin').length,   color: 'var(--tc-primary)', emoji: '📋' },
-    { label: 'Sessions',  count: monthEvents.filter(e => e.type === 'session').length,   color: 'var(--tc-success)', emoji: '📞' },
-    { label: 'Weigh-ins', count: monthEvents.filter(e => e.type === 'weighin').length,   color: 'var(--tc-primary)', emoji: '⚖️' },
-    { label: 'Goals',     count: monthEvents.filter(e => e.type === 'goal').length,      color: 'var(--tc-warning)', emoji: '🎯' },
+    { label: 'Workouts',  count: monthEvents.filter(e => e.type === 'workout').length,   color: 'var(--tc-muted-foreground)', emoji: '' },
+    { label: 'Check-ins', count: monthEvents.filter(e => e.type === 'checkin').length,   color: 'var(--tc-primary)', emoji: '' },
+    { label: 'Sessions',  count: monthEvents.filter(e => e.type === 'session').length,   color: 'var(--tc-success)', emoji: '' },
+    { label: 'Weigh-ins', count: monthEvents.filter(e => e.type === 'weighin').length,   color: 'var(--tc-primary)', emoji: '' },
+    { label: 'Goals',     count: monthEvents.filter(e => e.type === 'goal').length,      color: 'var(--tc-warning)', emoji: '' },
   ];
 
   return (
@@ -1096,7 +1094,6 @@ export default function ClientCalendarTab({ client }) {
         <div className="hidden md:flex items-center gap-3">
           {stats.map(s => (
             <div key={s.label} className="flex items-center gap-1.5">
-              <span className="text-sm">{s.emoji}</span>
               <span className="font-bold text-sm" style={{ color: s.color }}>{s.count}</span>
               <span className="text-[11px] text-muted-foreground">{s.label}</span>
             </div>
@@ -1106,7 +1103,7 @@ export default function ClientCalendarTab({ client }) {
         <button onClick={() => setActiveDay(new Date())}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary-foreground"
           style={{ background: 'var(--tc-primary)' }}>
-          <Plus className="w-3.5 h-3.5" /> Add Event
+          <Plus className="w-3.5 h-3.5" /> Add event
         </button>
       </div>
 

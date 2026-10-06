@@ -16,7 +16,7 @@ export function ThemeToggle({ className }) {
     <div
       role="radiogroup"
       aria-label="Theme"
-      className={cn('inline-flex items-center gap-1 rounded-xl border border-border bg-muted p-1', className)}
+      className={cn('inline-flex items-center gap-0.5 rounded-lg bg-card p-1 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]', className)}
     >
       {OPTIONS.map(({ key, label, icon: Icon }) => {
         const active = theme === key;
@@ -27,13 +27,13 @@ export function ThemeToggle({ className }) {
             aria-checked={active}
             onClick={() => setTheme(key)}
             className={cn(
-              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+              'touch-compact flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium transition-colors',
               active
-                ? 'bg-card text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-foreground/80 hover:bg-accent hover:text-foreground'
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
+            <Icon className="h-4 w-4" />
             {label}
           </button>
         );
@@ -44,7 +44,7 @@ export function ThemeToggle({ className }) {
 
 /**
  * Compact icon button that flips light/dark. Suitable for a topbar or the dark
- * sidebar header — pass `onDark` when it sits on the matte-black surface so it
+ * sidebar header — pass `onDark` when it sits on the graphite surface so it
  * uses light-on-dark colors instead of the token foreground.
  */
 export function ThemeToggleButton({ className, onDark = false }) {
@@ -56,9 +56,9 @@ export function ThemeToggleButton({ className, onDark = false }) {
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Light mode' : 'Dark mode'}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-xl transition-colors',
+        'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
         onDark
-          ? 'text-white/60 hover:bg-[var(--kc-w-10)] hover:text-white'
+          ? 'text-white/60 hover:bg-white/10 hover:text-white'
           : 'text-muted-foreground hover:bg-muted hover:text-foreground',
         className
       )}

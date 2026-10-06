@@ -72,7 +72,7 @@ export default function WaterTracker({ target = 2500, onTargetChange, readOnly =
               className={cn(
                 'w-7 h-7 rounded-lg flex items-center justify-center border transition-all',
                 i < loggedGlasses
-                  ? 'bg-primary border-primary text-white'
+                  ? 'bg-primary border-primary text-primary-foreground'
                   : 'bg-card border-primary text-primary hover:border-primary'
               )}
               title={`${(i + 1) * GLASS_ML}ml`}
@@ -89,7 +89,7 @@ export default function WaterTracker({ target = 2500, onTargetChange, readOnly =
             <button
               key={ml}
               onClick={() => add(ml)}
-              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-accent text-primary hover:bg-primary transition-colors"
+              className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-secondary text-foreground hover:bg-primary transition-colors"
             >
               +{ml}ml
             </button>
@@ -103,7 +103,7 @@ export default function WaterTracker({ target = 2500, onTargetChange, readOnly =
         </div>
 
         {pct >= 100 && (
-          <p className="text-xs font-bold text-success text-center">💧 Goal reached! Great hydration today.</p>
+          <p className="text-xs font-bold text-success text-center">Water goal hit for today.</p>
         )}
       </div>
     </div>

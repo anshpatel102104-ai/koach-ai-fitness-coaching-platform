@@ -83,7 +83,8 @@ export function generateInsights(clients, checkIns, messages = []) {
     const first = client.name?.split(' ')[0] || 'Client';
     const adherence = compositeAdherenceScore(cis);
     const lastCI = cis[0];
-    const daysSinceCI = lastCI ? differenceInDays(now, parseISO(lastCI.date)) : 999;
+    // null = this client has never sent a check-in (worded separately below).
+    const daysSinceCI = lastCI ? differenceInDays(now, parseISO(lastCI.date)) : null;
 
     // ── PERFORMANCE INSIGHTS ─────────────────────────────────────────────────
 
@@ -104,11 +105,11 @@ export function generateInsights(clients, checkIns, messages = []) {
           clientId: client.id,
           clientName: client.name,
           headline: `${first} is ahead of schedule on weight loss`,
-          body: `Losing ~${weeklyLoss.toFixed(1)} lbs/week. At this rate, they'll hit their goal weight of ${client.target_weight} lbs in ~${Math.round(weeksToGoal)} weeks — potentially 2 weeks early.`,
+          body: `Losing about ${weeklyLoss.toFixed(1)} lb a week. At this rate they reach ${client.target_weight} lb in about ${Math.round(weeksToGoal)} weeks.`,
           confidence: 'High',
-          actionLabel: 'View Progress',
+          actionLabel: 'View progress',
           actionPath: `/client-profile?id=${client.id}`,
-          actionAlt: 'Send Message',
+          actionAlt: 'Send message',
           actionAltPath: `/messages`,
           priority: 2,
         });
@@ -125,12 +126,12 @@ export function generateInsights(clients, checkIns, messages = []) {
           type: 'celebration',
           clientId: client.id,
           clientName: client.name,
-          headline: `${first} completed 100% of workouts for 4 weeks 🏆`,
-          body: `Four consecutive weeks of perfect training compliance. They may be ready for a program progression or added challenge.`,
+          headline: `${first} completed every workout for 4 weeks`,
+          body: `Four weeks in a row at full training compliance. They may be ready to progress the program.`,
           confidence: 'High',
-          actionLabel: 'Upgrade Program',
+          actionLabel: 'Progress program',
           actionPath: `/programs`,
-          actionAlt: 'Send Congrats',
+          actionAlt: 'Send a note',
           actionAltPath: `/messages`,
           priority: 1,
         });
@@ -153,12 +154,12 @@ export function generateInsights(clients, checkIns, messages = []) {
           type: 'risk',
           clientId: client.id,
           clientName: client.name,
-          headline: `${first} shows signs of burnout — 3 weeks declining`,
-          body: `Mood and energy scores have dropped for 3 consecutive check-ins (mood: ${['great','good','okay','tired','stressed'][5-moodTrend[2]]||'ok'} → ${['great','good','okay','tired','stressed'][5-moodTrend[0]]||'low'}). Consider a deload week or lifestyle check-in.`,
+          headline: `${first}'s mood and energy have dropped 3 weeks running`,
+          body: `Mood and energy scores have dropped for 3 consecutive check-ins (mood: ${['great','good','okay','tired','stressed'][5-moodTrend[2]]||'ok'} to ${['great','good','okay','tired','stressed'][5-moodTrend[0]]||'low'}). A deload week or a call about sleep and stress may help.`,
           confidence: 'High',
-          actionLabel: 'Schedule Call',
+          actionLabel: 'Schedule call',
           actionPath: `/schedule`,
-          actionAlt: 'Send Message',
+          actionAlt: 'Send message',
           actionAltPath: `/messages`,
           priority: 0,
         });
@@ -178,11 +179,11 @@ export function generateInsights(clients, checkIns, messages = []) {
             clientId: client.id,
             clientName: client.name,
             headline: `${first}'s weight has stalled for 3 weeks despite good adherence`,
-            body: `Weight has barely moved (${last4[0].weight}→${last4[last4.length-1].weight} lbs) despite ${Math.round(avgAdherence)}% compliance. They may need a diet break, refeed day, or calorie adjustment.`,
+            body: `Weight has barely moved (${last4[0].weight} to ${last4[last4.length-1].weight} lb) at ${Math.round(avgAdherence)}% compliance. Consider a diet break, a refeed day or a calorie change.`,
             confidence: 'High',
-            actionLabel: 'Adjust Nutrition',
+            actionLabel: 'Adjust nutrition',
             actionPath: `/nutrition`,
-            actionAlt: 'Send Message',
+            actionAlt: 'Send message',
             actionAltPath: `/messages`,
             priority: 0,
           });
@@ -191,18 +192,23 @@ export function generateInsights(clients, checkIns, messages = []) {
     }
 
     // Churn risk — inactive
-    if (daysSinceCI >= 12 && (client.lifecycle_status === 'active' || client.status === 'active')) {
+    const neverCheckedIn = daysSinceCI === null;
+    if ((neverCheckedIn || daysSinceCI >= 12) && (client.lifecycle_status === 'active' || client.status === 'active')) {
       addInsight({
         id: `risk_churn_${client.id}`,
         type: 'risk',
         clientId: client.id,
         clientName: client.name,
-        headline: `${first} hasn't checked in for ${daysSinceCI} days — churn risk`,
-        body: `No app activity in ${daysSinceCI} days. Active clients who go silent for 2+ weeks have a significantly higher churn rate. Reach out now.`,
-        confidence: daysSinceCI >= 21 ? 'High' : 'Medium',
-        actionLabel: 'Message Now',
+        headline: neverCheckedIn
+          ? `${first} hasn't sent a first check-in yet`
+          : `${first} hasn't checked in for ${daysSinceCI} days`,
+        body: neverCheckedIn
+          ? `${first} is active but no check-in has come in since joining. A short welcome message usually gets the first one sent.`
+          : `Nothing from ${first} in ${daysSinceCI} days. Clients who go quiet for two weeks or more are the ones most likely to cancel, so reach out now.`,
+        confidence: neverCheckedIn || daysSinceCI >= 21 ? 'High' : 'Medium',
+        actionLabel: 'Message',
         actionPath: `/messages`,
-        actionAlt: 'Schedule Call',
+        actionAlt: 'Schedule call',
         actionAltPath: `/schedule`,
         priority: 0,
       });
@@ -227,11 +233,11 @@ export function generateInsights(clients, checkIns, messages = []) {
           clientId: client.id,
           clientName: client.name,
           headline: `${first}'s nutrition drops every weekend`,
-          body: `Weekend nutrition adherence averages ${Math.round(avgWeekend)}% vs ${Math.round(avgWeekday)}% on weekdays. A weekend meal prep strategy could close this gap.`,
+          body: `Weekend nutrition averages ${Math.round(avgWeekend)}% against ${Math.round(avgWeekday)}% on weekdays. A weekend meal-prep plan could close the gap.`,
           confidence: 'Medium',
-          actionLabel: 'Adjust Plan',
+          actionLabel: 'Adjust plan',
           actionPath: `/nutrition`,
-          actionAlt: 'Send Message',
+          actionAlt: 'Send message',
           actionAltPath: `/messages`,
           priority: 1,
         });
@@ -250,11 +256,11 @@ export function generateInsights(clients, checkIns, messages = []) {
           clientId: client.id,
           clientName: client.name,
           headline: `${first} has been on the same program for ${Math.round(daysOnProgram / 7)} weeks`,
-          body: `They've been on their current program for ${Math.round(daysOnProgram / 7)} weeks. The body may be adapting — a new stimulus or program switch could reignite progress.`,
+          body: `${Math.round(daysOnProgram / 7)} weeks on the current program. Progress may be slowing as they adapt; a new block could get it moving again.`,
           confidence: 'High',
-          actionLabel: 'Switch Program',
+          actionLabel: 'Switch program',
           actionPath: `/programs`,
-          actionAlt: 'Message Client',
+          actionAlt: 'Message client',
           actionAltPath: `/messages`,
           priority: 2,
         });
@@ -270,12 +276,12 @@ export function generateInsights(clients, checkIns, messages = []) {
           type: 'opportunity',
           clientId: client.id,
           clientName: client.name,
-          headline: `${first} is within 2 lbs of their goal — upsell moment`,
-          body: `They're almost at their target weight with ${Math.round(adherence)}% adherence. This is the perfect moment to transition to a maintenance or performance package.`,
+          headline: `${first} is within 2 lb of their goal`,
+          body: `Almost at their target weight with ${Math.round(adherence)}% adherence. A good time to talk about a maintenance or performance package.`,
           confidence: 'High',
-          actionLabel: 'View Packages',
+          actionLabel: 'View packages',
           actionPath: `/sales`,
-          actionAlt: 'Send Message',
+          actionAlt: 'Send message',
           actionAltPath: `/messages`,
           priority: 2,
         });
@@ -299,10 +305,10 @@ export function generateInsights(clients, checkIns, messages = []) {
             type: 'celebration',
             clientId: client.id,
             clientName: client.name,
-            headline: `🎉 ${first} just lost ${milestone} lbs — send a celebration message!`,
-            body: `They've hit their ${milestone}-lb milestone! Total lost: ${lost.toFixed(1)} lbs from ${startWeight} → ${currentWeight} lbs. Acknowledge it before they log in today.`,
+            headline: `${first} has lost ${milestone} lb`,
+            body: `Down ${lost.toFixed(1)} lb in total, from ${startWeight} to ${currentWeight} lb. Worth a short note before they next log in.`,
             confidence: 'High',
-            actionLabel: 'Send Congrats',
+            actionLabel: 'Send a note',
             actionPath: `/messages`,
             priority: 1,
           });
@@ -321,10 +327,10 @@ export function generateInsights(clients, checkIns, messages = []) {
           type: 'celebration',
           clientId: client.id,
           clientName: client.name,
-          headline: `${first} had their best week ever 🔥`,
-          body: `${prCount >= 2 ? `Set ${prCount} new PRs this week with` : 'Hit 100% training compliance with'} energy level ${lastCI.energy_level || 9}/10. This is momentum — capitalize on it!`,
+          headline: `${first} had a strong week`,
+          body: `${prCount >= 2 ? `Set ${prCount} new PRs this week with` : 'Hit 100% training compliance with'} energy at ${lastCI.energy_level || 9}/10. A good week to acknowledge it and keep the plan moving.`,
           confidence: 'Medium',
-          actionLabel: 'Celebrate',
+          actionLabel: 'Send a note',
           actionPath: `/messages`,
           priority: 1,
         });
@@ -346,10 +352,10 @@ export function generateInsights(clients, checkIns, messages = []) {
       type: 'opportunity',
       clientId: null,
       clientName: null,
-      headline: `${staleLeads.length} lead${staleLeads.length > 1 ? 's' : ''} waiting 14+ days to convert`,
-      body: `${names}${staleLeads.length > 2 ? ` +${staleLeads.length - 2} more` : ''} have been in your pipeline without converting. A personalized follow-up could close them this week.`,
+      headline: `${staleLeads.length} lead${staleLeads.length > 1 ? 's have' : ' has'} waited 14 days or more`,
+      body: `${names}${staleLeads.length > 2 ? ` and ${staleLeads.length - 2} more` : ''} ${staleLeads.length > 1 ? 'have' : 'has'} been in your pipeline for two weeks without signing up. A personal follow-up this week is worth a try.`,
       confidence: 'High',
-      actionLabel: 'View Leads',
+      actionLabel: 'View leads',
       actionPath: `/clients`,
       priority: 2,
     });

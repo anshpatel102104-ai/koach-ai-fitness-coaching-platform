@@ -1,114 +1,72 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Dumbbell, Zap } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SignedImg } from '@/components/shared/SignedImage';
+import { InkPanel, Stat } from '@/components/kit';
 
-
-const SECTION_COLOR = {
-  warmup:   'var(--tc-warning)',
-  main:     'var(--tc-primary)',
-  finisher: 'var(--tc-destructive)',
-  cooldown: 'var(--tc-success)',
-};
+const SECTION_LABEL = { warmup: 'Warm-up', main: 'Main', finisher: 'Finisher', cooldown: 'Cool-down' };
 
 function RationaleCard({ rationale }) {
   if (!rationale) return null;
+  const parts = [
+    ['Split', rationale.split],
+    ['Weekly volume', rationale.weekly_volume],
+    ['Rep ranges', rationale.rep_range_rationale],
+    ['Progression', rationale.progression_approach],
+  ].filter(([, v]) => v);
+  if (parts.length === 0) return null;
   return (
-    <div className="rounded-xl p-4 space-y-3 w-full" style={{ background: 'var(--tc-sidebar)', wordBreak: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
-      <div className="flex items-center gap-2 mb-1">
-        <Zap className="w-4 h-4" style={{ color: 'var(--tc-primary)' }} />
-        <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--tc-primary)' }}>AI Coach Rationale</span>
+    <InkPanel title="Why it's built this way" className="min-w-0 break-words">
+      <div className="space-y-3">
+        {parts.map(([label, text]) => (
+          <div key={label}>
+            <p className="text-[13px] font-semibold text-ai-foreground">{label}</p>
+            <p className="whitespace-pre-wrap text-sm text-ai-foreground/80">{text}</p>
+          </div>
+        ))}
       </div>
-      {rationale.split && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--tc-muted-foreground)] mb-0.5">Split</p>
-          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">{rationale.split}</p>
-        </div>
-      )}
-      {rationale.weekly_volume && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--tc-muted-foreground)] mb-0.5">Weekly Volume</p>
-          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">{rationale.weekly_volume}</p>
-        </div>
-      )}
-      {rationale.rep_range_rationale && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--tc-muted-foreground)] mb-0.5">Rep Ranges</p>
-          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">{rationale.rep_range_rationale}</p>
-        </div>
-      )}
-      {rationale.progression_approach && (
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--tc-muted-foreground)] mb-0.5">Progression</p>
-          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words">{rationale.progression_approach}</p>
-        </div>
-      )}
-    </div>
+      <p className="mt-4 text-[13px] text-ai-foreground/60">Drafted by AI from your answers. Edit anything in the builder after saving.</p>
+    </InkPanel>
   );
 }
 
 function DayCard({ workout }) {
   const [open, setOpen] = useState(false);
-  const exCount = (workout.exercises || []).filter(e => !e._type).length;
-  const mainEx = (workout.exercises || []).filter(e => e.section === 'main' || !e.section).slice(0, 3);
+  const exercises = (workout.exercises || []).filter(e => !e._type);
+  const exCount = exercises.length;
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: '0.5px solid var(--tc-border)' }}>
+    <div className="border-b border-border last:border-b-0">
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted transition-colors"
-        style={{ background: 'var(--tc-card)' }}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-accent/50"
+        aria-expanded={open}
       >
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
-          style={{ background: 'var(--tc-sidebar)' }}>
-          {workout.day_number}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">{workout.day_name}</p>
-          {workout.workout_notes && (
-            <p className="text-[11px] text-muted-foreground truncate">{workout.workout_notes}</p>
-          )}
-        </div>
-        <span className="text-[11px] text-muted-foreground flex-shrink-0">{exCount} exercises</span>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-[var(--tc-muted-foreground)]" /> : <ChevronDown className="w-3.5 h-3.5 text-[var(--tc-muted-foreground)]" />}
+        <span className="num w-6 flex-shrink-0 text-[17px] text-muted-foreground">{workout.day_number}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold text-foreground">{workout.day_name}</span>
+          {workout.workout_notes && <span className="block truncate text-[13px] text-muted-foreground">{workout.workout_notes}</span>}
+        </span>
+        <span className="flex-shrink-0 text-[13px] text-muted-foreground">{exCount} exercises</span>
+        <ChevronDown className={cn('h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
-        <div className="divide-y" style={{ borderTop: '0.5px solid var(--tc-muted)' }}>
-          {(workout.exercises || []).map((ex, i) => (
-            <div key={i} className="flex items-start gap-2.5 px-3 py-2 bg-card">
-              <div
-                className="w-1 rounded-full flex-shrink-0 mt-1"
-                style={{ height: 28, background: SECTION_COLOR[ex.section] || 'var(--tc-muted-foreground)' }}
-              />
-              {ex.image_url ? (
-                <SignedImg src={ex.image_url} alt={ex.name} className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
-              ) : (
-                <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-muted">
-                  <Dumbbell className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate">{ex.name}</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {ex.prescription || `${ex.sets} × ${ex.reps}${ex.rpe ? ` @ RPE ${ex.rpe}` : ''}`}
-                </p>
-                {ex.notes && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">{ex.notes}</p>
+        <div className="space-y-2 px-4 pb-4 sm:pl-[52px]">
+          {exercises.map((ex, i) => (
+            <div key={i} className="rounded-lg bg-secondary px-3 py-2.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-[15px] font-semibold text-foreground">{ex.name}</p>
+                {ex.section && ex.section !== 'main' && (
+                  <span className="flex-shrink-0 text-[13px] text-muted-foreground">{SECTION_LABEL[ex.section] || ex.section}</span>
                 )}
               </div>
-              <span
-                className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0 mt-0.5"
-                style={{
-                  background: (SECTION_COLOR[ex.section] || 'var(--tc-muted-foreground)') + '20',
-                  color: SECTION_COLOR[ex.section] || 'var(--tc-muted-foreground)',
-                }}
-              >
-                {ex.section || 'main'}
-              </span>
+              <p className="text-[15px] font-bold tabular-nums text-foreground">
+                {ex.prescription || `${ex.sets} × ${ex.reps}`}
+                {!ex.prescription && ex.rpe && <span className="ml-2 text-[13px] font-normal text-muted-foreground">RPE {ex.rpe}</span>}
+              </p>
+              {ex.notes && <p className="mt-0.5 line-clamp-2 text-[13px] text-muted-foreground">{ex.notes}</p>}
             </div>
           ))}
         </div>
@@ -135,79 +93,54 @@ export default function AIReviewStep({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-4 pb-4"
-      style={{ minWidth: 0, width: '100%' }}
-    >
-      {/* Stats row */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: 'Days / Week', value: program.days_per_week || '—' },
-          { label: 'Duration', value: `${program.duration_weeks || '—'} wks` },
-          { label: 'Exercises', value: totalExercises },
-        ].map(s => (
-          <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: 'var(--tc-muted)', border: '0.5px solid var(--tc-border)' }}>
-            <p className="text-lg font-bold text-foreground">{s.value}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.label}</p>
-          </div>
-        ))}
+    <div className="min-w-0 space-y-6 pb-4">
+      <div className="grid grid-cols-3 gap-4">
+        <Stat label="Days a week" value={program.days_per_week || '—'} size="sm" />
+        <Stat label="Length" value={program.duration_weeks || '—'} unit="weeks" size="sm" />
+        <Stat label="Exercises" value={totalExercises} size="sm" />
       </div>
 
-      {/* AI Rationale */}
       {program.coach_rationale && <RationaleCard rationale={program.coach_rationale} />}
 
-      {/* Edit name / description */}
-      <div className="space-y-3 pt-1">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Program Name</p>
-          <Input
-            value={title}
-            onChange={e => handleChange('title', e.target.value)}
-            className="h-9 text-sm font-semibold"
-          />
-        </div>
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Description</p>
-          <Textarea
-            value={description}
-            onChange={e => handleChange('description', e.target.value)}
-            rows={2}
-            className="text-sm"
-          />
-        </div>
+      <div className="space-y-3">
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] text-muted-foreground">Program name</span>
+          <Input value={title} onChange={e => handleChange('title', e.target.value)} className="font-semibold" />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] text-muted-foreground">Description</span>
+          <Textarea value={description} onChange={e => handleChange('description', e.target.value)} rows={2} className="text-sm" />
+        </label>
       </div>
 
-      {/* Schedule preview */}
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Training Schedule</p>
-        <div className="space-y-2">
+        <p className="mb-2 text-[13px] text-muted-foreground">Training days</p>
+        <div className="overflow-hidden rounded-xl border border-border">
           {(program.workouts || []).map((workout, idx) => (
             <DayCard key={idx} workout={workout} />
           ))}
         </div>
       </div>
 
-      {/* Rating */}
-      <div className="flex items-center gap-3 pt-2 pb-1">
-        <p className="text-xs font-semibold text-muted-foreground">Rate this output:</p>
-        <button
-          onClick={() => onRating('up')}
-          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all', currentRating === 'up' ? 'text-primary-foreground' : 'border border-border hover:border-primary')}
-          style={currentRating === 'up' ? { background: 'var(--tc-primary)' } : {}}
-        >
-          <ThumbsUp className="w-3.5 h-3.5" /> Good
-        </button>
-        <button
-          onClick={() => onRating('down')}
-          className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all', currentRating === 'down' ? 'text-white' : 'border border-border hover:border-destructive')}
-          style={currentRating === 'down' ? { background: 'var(--tc-destructive)' } : {}}
-        >
-          <ThumbsDown className="w-3.5 h-3.5" /> Needs work
-        </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="mr-1 text-[13px] text-muted-foreground">How was this draft?</p>
+        {[
+          { v: 'up', label: 'Good' },
+          { v: 'down', label: 'Needs work' },
+        ].map(o => (
+          <button
+            key={o.v}
+            onClick={() => onRating(o.v)}
+            aria-pressed={currentRating === o.v}
+            className={cn(
+              'h-8 rounded-md px-3 text-[13px] font-medium transition-colors',
+              currentRating === o.v ? 'bg-primary text-primary-foreground' : 'border border-input bg-card text-foreground hover:bg-accent'
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
       </div>
-    </motion.div>
+    </div>
   );
 }

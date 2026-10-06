@@ -3,7 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
-import KoachLogo from '@/components/brand/KoachLogo.jsx';
+import { Camera, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input as UIInput } from '@/components/ui/input';
+import { Textarea as UITextarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 const SPECIALTIES = [
@@ -25,106 +30,99 @@ const TIMEZONES = [
   'Australia/Sydney', 'Pacific/Auckland',
 ];
 
-function ProgressBar({ step }) {
+/* ── Shared chrome ── */
+function Shell({ step, onSkip, children, footer }) {
   return (
-    <div style={{ height: 3, background: 'color-mix(in srgb, white 7%, transparent)', width: '100%' }}>
-      <div style={{
-        height: '100%',
-        width: `${(step / 5) * 100}%`,
-        background: 'linear-gradient(90deg, var(--tc-primary), var(--tc-ai))',
-        transition: 'width 0.3s ease',
-      }} />
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="flex-shrink-0 bg-sidebar">
+        <div className="mx-auto flex max-w-[560px] items-center justify-between px-5 py-3.5">
+          <img src="/koach-logo-white.png" alt="KOACH AI" className="h-6 w-auto" />
+          {onSkip && (
+            <button type="button" onClick={onSkip} className="touch-compact text-[13px] font-medium text-white/70 underline underline-offset-4 hover:text-white">
+              Skip setup
+            </button>
+          )}
+        </div>
+      </header>
+      {typeof step === 'number' && (
+        <div className="mx-auto w-full max-w-[560px] px-5 pt-5">
+          <div className="grid grid-cols-5 gap-1.5" aria-label={`Step ${step} of 5`}>
+            {[1, 2, 3, 4, 5].map(i => (
+              <span key={i} className={cn('h-1 rounded-full', i < step ? 'bg-success' : i === step ? 'bg-foreground' : 'bg-input')} />
+            ))}
+          </div>
+        </div>
+      )}
+      <main className="mx-auto w-full max-w-[560px] flex-1 px-5 pb-8 pt-6">{children}</main>
+      {footer && (
+        <div className="sticky bottom-0 border-t border-border bg-card">
+          <div className="mx-auto flex max-w-[560px] gap-2 px-5 pt-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+            {footer}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function TopBar({ step, onSkip }) {
+function StepHeader({ step, title, sub }) {
   return (
-    <div style={{ flexShrink: 0 }}>
-      <ProgressBar step={step} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 8px' }}>
-        <KoachLogo size={28} rounded="rounded-lg" glow={false} bg />
-        <button onClick={onSkip} style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>
-          Skip setup
-        </button>
-      </div>
+    <div className="mb-5">
+      <p className="text-[13px] font-medium text-muted-foreground">Step {step} of 5</p>
+      <h1 className="mt-1 text-[32px] text-foreground">{title}</h1>
+      {sub && <p className="mt-1 text-[15px] text-muted-foreground">{sub}</p>}
     </div>
   );
 }
 
-function BackBtn({ onClick }) {
+function StepFooter({ onBack, onNext, disabled, label = 'Continue' }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--tc-muted-foreground)', fontSize: 13, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 20px 0' }}>
-      ← Back
-    </button>
+    <>
+      <Button variant="outline" size="lg" className="h-12 px-6" onClick={onBack}>Back</Button>
+      <Button size="lg" className="h-12 flex-1 text-base font-bold" onClick={onNext} disabled={disabled}>{label}</Button>
+    </>
   );
 }
 
 function Label({ children }) {
-  return <div style={{ color: 'var(--tc-muted-foreground)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{children}</div>;
+  return <div className="mb-1.5 text-[13px] font-medium text-muted-foreground">{children}</div>;
+}
+
+function Req() {
+  return <span className="ml-1 text-foreground" aria-hidden>*</span>;
 }
 
 function Input({ label, value, onChange, type = 'text', placeholder, required, hint }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      {label && <Label>{label}{required && <span style={{ color: 'var(--tc-primary)', marginLeft: 4 }}>*</span>}</Label>}
-      <input
-        type={type}
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: '100%', padding: '12px 16px', borderRadius: 12, fontSize: 14,
-          background: 'var(--tc-foreground)', color: 'var(--tc-sidebar-accent-foreground)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)',
-          outline: 'none', boxSizing: 'border-box',
-        }}
-        onFocus={e => e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 60%, transparent)'}
-        onBlur={e => e.target.style.borderColor = 'color-mix(in srgb, white 8%, transparent)'}
-      />
-      {hint && <div style={{ color: 'var(--tc-foreground)', fontSize: 10, marginTop: 4 }}>{hint}</div>}
+    <div className="mb-3.5">
+      {label && <Label>{label}{required && <Req />}</Label>}
+      <UIInput type={type} value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="h-11 text-base" />
+      {hint && <div className="mt-1 text-[13px] text-muted-foreground">{hint}</div>}
     </div>
   );
 }
 
 function Textarea({ label, value, onChange, placeholder, rows = 3 }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div className="mb-3.5">
       {label && <Label>{label}</Label>}
-      <textarea
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={rows}
-        style={{
-          width: '100%', padding: '12px 16px', borderRadius: 12, fontSize: 14,
-          background: 'var(--tc-foreground)', color: 'var(--tc-sidebar-accent-foreground)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)',
-          outline: 'none', resize: 'none', boxSizing: 'border-box',
-        }}
-        onFocus={e => e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 60%, transparent)'}
-        onBlur={e => e.target.style.borderColor = 'color-mix(in srgb, white 8%, transparent)'}
-      />
+      <UITextarea value={value || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} className="text-base" />
     </div>
   );
 }
 
 function Select({ label, value, onChange, options, required }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      {label && <Label>{label}{required && <span style={{ color: 'var(--tc-primary)', marginLeft: 4 }}>*</span>}</Label>}
+    <div className="mb-3.5">
+      {label && <Label>{label}{required && <Req />}</Label>}
       <select
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        style={{
-          width: '100%', padding: '12px 16px', borderRadius: 12, fontSize: 14,
-          background: 'var(--tc-foreground)', color: value ? 'var(--tc-sidebar-accent-foreground)' : 'var(--tc-muted-foreground)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)',
-          outline: 'none', appearance: 'none', boxSizing: 'border-box',
-        }}
+        className={cn('h-11 w-full appearance-none rounded-md border border-input bg-card px-3 text-base focus:border-foreground focus:outline-none', value ? 'text-foreground' : 'text-muted-foreground')}
       >
-        <option value="" disabled style={{ color: 'var(--tc-muted-foreground)' }}>Select…</option>
+        <option value="" disabled>Select</option>
         {options.map(o => (
-          <option key={o.value || o} value={o.value || o} style={{ background: 'var(--tc-foreground)', color: 'var(--tc-primary-foreground)' }}>
-            {o.label || o}
-          </option>
+          <option key={o.value || o} value={o.value || o}>{o.label || o}</option>
         ))}
       </select>
     </div>
@@ -134,38 +132,26 @@ function Select({ label, value, onChange, options, required }) {
 function PasswordInput({ value, onChange }) {
   const [show, setShow] = useState(false);
   const strength = !value ? 0 : value.length < 6 ? 1 : value.length < 10 ? 2 : /[A-Z]/.test(value) && /[0-9]/.test(value) ? 4 : 3;
-  const colors = ['', 'var(--tc-destructive)', 'var(--tc-warning)', 'var(--tc-success)', 'var(--tc-success)'];
   const labels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
   return (
-    <div style={{ marginBottom: 14 }}>
-      <Label>Password<span style={{ color: 'var(--tc-primary)', marginLeft: 4 }}>*</span></Label>
-      <div style={{ position: 'relative' }}>
-        <input
-          type={show ? 'text' : 'password'}
-          value={value || ''}
-          onChange={e => onChange(e.target.value)}
-          placeholder="Create a secure password"
-          style={{
-            width: '100%', padding: '12px 56px 12px 16px', borderRadius: 12, fontSize: 14,
-            background: 'var(--tc-foreground)', color: 'var(--tc-sidebar-accent-foreground)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)',
-            outline: 'none', boxSizing: 'border-box',
-          }}
-          onFocus={e => e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 60%, transparent)'}
-          onBlur={e => e.target.style.borderColor = 'color-mix(in srgb, white 8%, transparent)'}
-        />
+    <div className="mb-3.5">
+      <Label>Password<Req /></Label>
+      <div className="relative">
+        <UIInput type={show ? 'text' : 'password'} value={value || ''} onChange={e => onChange(e.target.value)}
+          placeholder="At least 6 characters" className="h-11 pr-16 text-base" autoComplete="new-password" />
         <button type="button" onClick={() => setShow(s => !s)}
-          style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 11, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+          className="touch-compact absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-medium text-muted-foreground hover:text-foreground">
           {show ? 'Hide' : 'Show'}
         </button>
       </div>
       {value && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-          <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-            {[1,2,3,4].map(i => (
-              <div key={i} style={{ flex: 1, height: 3, borderRadius: 9999, background: i <= strength ? colors[strength] : 'color-mix(in srgb, white 8%, transparent)', transition: 'background 0.2s' }} />
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex flex-1 gap-1">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className={cn('h-1 flex-1 rounded-full', i <= strength ? (strength === 1 ? 'bg-destructive' : strength === 2 ? 'bg-partial' : 'bg-success') : 'bg-input')} />
             ))}
           </div>
-          <span style={{ fontSize: 10, fontWeight: 600, color: colors[strength] }}>{labels[strength]}</span>
+          <span className="text-[13px] text-muted-foreground">{labels[strength]}</span>
         </div>
       )}
     </div>
@@ -174,71 +160,32 @@ function PasswordInput({ value, onChange }) {
 
 function Chip({ label, selected, onClick }) {
   return (
-    <button type="button" onClick={onClick} style={{
-      padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer',
-      background: selected ? 'color-mix(in srgb, var(--tc-primary) 12%, transparent)' : 'color-mix(in srgb, white 4%, transparent)',
-      border: `1.5px solid ${selected ? 'color-mix(in srgb, var(--tc-primary) 55%, transparent)' : 'color-mix(in srgb, white 7%, transparent)'}`,
-      color: selected ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)',
-      transition: 'all 0.15s',
-    }}>
+    <button type="button" onClick={onClick} aria-pressed={selected}
+      className={cn('touch-compact rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        selected ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground shadow-[inset_0_0_0_1px_rgb(var(--input))] hover:bg-accent')}>
       {label}
     </button>
-  );
-}
-
-function CTAButton({ label, onClick, disabled }) {
-  return (
-    <div style={{ padding: '12px 20px 32px', flexShrink: 0, background: 'linear-gradient(to top, var(--kc-0f0f1a) 60%, transparent)' }}>
-      <button onClick={onClick} disabled={disabled} style={{
-        width: '100%', padding: '16px', borderRadius: 16, fontSize: 16, fontWeight: 700,
-        background: disabled ? 'color-mix(in srgb, white 6%, transparent)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))',
-        boxShadow: disabled ? 'none' : '0 0 28px color-mix(in srgb, var(--tc-primary) 30%, transparent)',
-        color: disabled ? 'var(--kc-444444)' : 'var(--tc-primary-foreground)',
-        border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s',
-      }}>
-        {label}
-      </button>
-    </div>
   );
 }
 
 // ── STEP 0: WELCOME ──
 function Welcome({ onNext, onSkip }) {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 48px', textAlign: 'center', position: 'relative' }}>
-      <div style={{ position: 'absolute', top: 20, right: 20 }}>
-        <button onClick={onSkip} style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer' }}>
-          Skip setup
-        </button>
-      </div>
-
-      <div style={{ maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-        <KoachLogo size={80} rounded="rounded-3xl" glow bg />
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ color: 'var(--tc-primary)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>KOACH AI</div>
-          <h1 style={{ color: 'var(--tc-primary-foreground)', fontSize: 32, fontWeight: 900, lineHeight: 1.2, letterSpacing: '-0.03em', margin: 0 }}>
-            Build your coaching<br />business with AI.
-          </h1>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 15, lineHeight: 1.6, margin: 0 }}>
-            The all-in-one coaching OS to manage clients, deliver programs, and grow your business — powered by AI.
-          </p>
-        </div>
-
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <button onClick={onNext} style={{
-            width: '100%', padding: '16px', borderRadius: 16, fontSize: 16, fontWeight: 700,
-            background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))',
-            boxShadow: '0 0 28px color-mix(in srgb, var(--tc-primary) 35%, transparent)',
-            color: 'var(--tc-primary-foreground)', border: 'none', cursor: 'pointer',
-          }}>
-            Get Started →
-          </button>
-          <p style={{ color: 'var(--tc-foreground)', fontSize: 12, margin: 0 }}>Takes about 3 minutes · 5 steps</p>
-        </div>
-      </div>
-    </div>
+    <Shell onSkip={onSkip}>
+      <h1 className="text-[40px] text-foreground">Set up your coaching business</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
+        Five short steps, about three minutes. Your account, your business, your profile and how you get paid.
+      </p>
+      <ol className="mt-6 divide-y divide-border rounded-xl bg-card shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+        {['Create your account', 'Your coaching business', 'Your coaching profile', 'Payments and packages', 'Done'].map((t, i) => (
+          <li key={t} className="flex items-center gap-3 px-4 py-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] border-input text-[13px] font-semibold text-foreground">{i + 1}</span>
+            <span className="text-[15px] font-semibold text-foreground">{t}</span>
+          </li>
+        ))}
+      </ol>
+      <Button size="lg" className="mt-6 h-12 w-full text-base font-bold" onClick={onNext}>Get started</Button>
+    </Shell>
   );
 }
 
@@ -246,25 +193,16 @@ function Welcome({ onNext, onSkip }) {
 function Step1({ data, set, onNext, onBack, onSkip }) {
   const valid = data.first_name?.trim() && data.last_name?.trim() && data.email?.includes('@') && (data.password || '').length >= 6;
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column' }}>
-      <TopBar step={1} onSkip={onSkip} />
-      <BackBtn onClick={onBack} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 0' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ color: 'var(--tc-primary)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Step 1 of 5</div>
-          <h2 style={{ color: 'var(--tc-primary-foreground)', fontSize: 24, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Create your account</h2>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, margin: '0 0 20px' }}>Get started — it only takes a minute</p>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}><Input label="First Name" value={data.first_name} onChange={v => set('first_name', v)} placeholder="Alex" required /></div>
-            <div style={{ flex: 1 }}><Input label="Last Name" value={data.last_name} onChange={v => set('last_name', v)} placeholder="Johnson" required /></div>
-          </div>
-          <Input label="Email Address" value={data.email} onChange={v => set('email', v)} type="email" placeholder="you@email.com" required />
-          <PasswordInput value={data.password} onChange={v => set('password', v)} />
-          <Input label="Phone (optional)" value={data.phone} onChange={v => set('phone', v)} type="tel" placeholder="+1 (555) 000-0000" />
-        </div>
+    <Shell step={1} onSkip={onSkip} footer={<StepFooter onBack={onBack} onNext={onNext} disabled={!valid} />}>
+      <StepHeader step={1} title="Create your account" sub="Your name and how you'll sign in." />
+      <div className="flex gap-3">
+        <div className="flex-1"><Input label="First name" value={data.first_name} onChange={v => set('first_name', v)} placeholder="Alex" required /></div>
+        <div className="flex-1"><Input label="Last name" value={data.last_name} onChange={v => set('last_name', v)} placeholder="Johnson" required /></div>
       </div>
-      <CTAButton label="Continue →" onClick={onNext} disabled={!valid} />
-    </div>
+      <Input label="Email" value={data.email} onChange={v => set('email', v)} type="email" placeholder="you@email.com" required />
+      <PasswordInput value={data.password} onChange={v => set('password', v)} />
+      <Input label="Phone (optional)" value={data.phone} onChange={v => set('phone', v)} type="tel" placeholder="+1 (555) 000-0000" />
+    </Shell>
   );
 }
 
@@ -275,35 +213,24 @@ function Step2({ data, set, onNext, onBack, onSkip }) {
   const toggle = (key, arr, val) => set(key, arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]);
   const valid = data.business_name?.trim() && specialties.length > 0 && data.experience && data.client_count;
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column' }}>
-      <TopBar step={2} onSkip={onSkip} />
-      <BackBtn onClick={onBack} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 0' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ color: 'var(--tc-primary)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Step 2 of 5</div>
-          <h2 style={{ color: 'var(--tc-primary-foreground)', fontSize: 24, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your coaching business</h2>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, margin: '0 0 20px' }}>Tell us about your practice</p>
-          <Input label="Business / Coaching Name" value={data.business_name} onChange={v => set('business_name', v)} placeholder="e.g. Myles Harris Fitness" required />
-          <div style={{ marginBottom: 14 }}>
-            <Label>Coaching Specialty<span style={{ color: 'var(--tc-primary)', marginLeft: 4 }}>*</span></Label>
-            <div style={{ fontSize: 10, color: 'var(--tc-foreground)', marginBottom: 8 }}>Select all that apply</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {SPECIALTIES.map(s => <Chip key={s} label={s} selected={specialties.includes(s)} onClick={() => toggle('specialties', specialties, s)} />)}
-            </div>
-          </div>
-          <Select label="Years of Experience" value={data.experience} onChange={v => set('experience', v)} options={EXPERIENCE_OPTS} required />
-          <Select label="Current Client Count" value={data.client_count} onChange={v => set('client_count', v)} options={CLIENT_COUNT_OPTS} required />
-          <div style={{ marginBottom: 14 }}>
-            <Label>Where do you currently manage clients?</Label>
-            <div style={{ fontSize: 10, color: 'var(--tc-foreground)', marginBottom: 8 }}>Select all that apply</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {CURRENT_TOOLS.map(t => <Chip key={t} label={t} selected={tools.includes(t)} onClick={() => toggle('current_tools', tools, t)} />)}
-            </div>
-          </div>
+    <Shell step={2} onSkip={onSkip} footer={<StepFooter onBack={onBack} onNext={onNext} disabled={!valid} />}>
+      <StepHeader step={2} title="Your coaching business" sub="So we can set up the app around how you coach." />
+      <Input label="Business or coaching name" value={data.business_name} onChange={v => set('business_name', v)} placeholder="e.g. Myles Harris Fitness" required />
+      <div className="mb-3.5">
+        <Label>What do you coach?<Req /> <span className="font-normal">Pick any that apply.</span></Label>
+        <div className="flex flex-wrap gap-2">
+          {SPECIALTIES.map(s => <Chip key={s} label={s} selected={specialties.includes(s)} onClick={() => toggle('specialties', specialties, s)} />)}
         </div>
       </div>
-      <CTAButton label="Continue →" onClick={onNext} disabled={!valid} />
-    </div>
+      <Select label="Years coaching" value={data.experience} onChange={v => set('experience', v)} options={EXPERIENCE_OPTS} required />
+      <Select label="Clients right now" value={data.client_count} onChange={v => set('client_count', v)} options={CLIENT_COUNT_OPTS} required />
+      <div className="mb-3.5">
+        <Label>Where do you manage clients today? <span className="font-normal">Pick any that apply.</span></Label>
+        <div className="flex flex-wrap gap-2">
+          {CURRENT_TOOLS.map(t => <Chip key={t} label={t} selected={tools.includes(t)} onClick={() => toggle('current_tools', tools, t)} />)}
+        </div>
+      </div>
+    </Shell>
   );
 }
 
@@ -320,38 +247,29 @@ function Step3({ data, set, onNext, onBack, onSkip }) {
     setUploading(false);
   };
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column' }}>
-      <TopBar step={3} onSkip={onSkip} />
-      <BackBtn onClick={onBack} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 0' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ color: 'var(--tc-primary)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Step 3 of 5</div>
-          <h2 style={{ color: 'var(--tc-primary-foreground)', fontSize: 24, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Your coaching profile</h2>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, margin: '0 0 20px' }}>Clients will see this on your profile</p>
-          <div style={{ marginBottom: 16 }}>
-            <Label>Profile Photo (optional)</Label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 16, background: 'color-mix(in srgb, white 5%, transparent)', border: '1.5px dashed color-mix(in srgb, white 12%, transparent)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {data.avatar_url ? <SignedImg src={data.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 24 }}>📷</span>}
-              </div>
-              <div>
-                <button type="button" onClick={() => fileRef.current?.click()} style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'color-mix(in srgb, var(--tc-primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--tc-primary) 30%, transparent)', color: 'var(--tc-primary)', cursor: 'pointer' }}>
-                  {uploading ? 'Uploading…' : data.avatar_url ? 'Change Photo' : 'Upload Photo'}
-                </button>
-                <div style={{ color: 'var(--tc-foreground)', fontSize: 10, marginTop: 4 }}>You can skip and add later</div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhoto} />
-              </div>
-            </div>
+    <Shell step={3} onSkip={onSkip} footer={<StepFooter onBack={onBack} onNext={onNext} />}>
+      <StepHeader step={3} title="Your coaching profile" sub="Clients see this in their app." />
+      <div className="mb-4">
+        <Label>Profile photo (optional)</Label>
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-[1.5px] border-dashed border-input bg-card text-muted-foreground">
+            {data.avatar_url ? <SignedImg src={data.avatar_url} alt="" className="h-full w-full object-cover" /> : <Camera className="h-5 w-5" />}
           </div>
-          <Textarea label="Short Bio" value={data.bio} onChange={v => set('bio', v)} placeholder="Tell clients about yourself and your coaching style…" rows={3} />
-          <Input label="Certifications" value={data.certifications} onChange={v => set('certifications', v)} placeholder="e.g. NASM CPT, ACE, ISSA, CrossFit L2…" />
-          <Input label="Instagram Handle (optional)" value={data.instagram} onChange={v => set('instagram', v)} placeholder="@yourhandle" />
-          <Input label="Website (optional)" value={data.website} onChange={v => set('website', v)} type="url" placeholder="https://yourwebsite.com" />
-          <Select label="Timezone" value={data.timezone} onChange={v => set('timezone', v)} options={TIMEZONES.map(tz => ({ value: tz, label: tz.replace(/_/g, ' ') }))} />
+          <div>
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              {uploading ? 'Uploading' : data.avatar_url ? 'Change photo' : 'Upload photo'}
+            </Button>
+            <div className="mt-1 text-[13px] text-muted-foreground">You can add one later.</div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+          </div>
         </div>
       </div>
-      <CTAButton label="Continue →" onClick={onNext} />
-    </div>
+      <Textarea label="Short bio" value={data.bio} onChange={v => set('bio', v)} placeholder="How you coach and who you work best with." rows={3} />
+      <Input label="Certifications" value={data.certifications} onChange={v => set('certifications', v)} placeholder="e.g. NASM CPT, ACE, ISSA, CrossFit L2" />
+      <Input label="Instagram (optional)" value={data.instagram} onChange={v => set('instagram', v)} placeholder="@yourhandle" />
+      <Input label="Website (optional)" value={data.website} onChange={v => set('website', v)} type="url" placeholder="https://yourwebsite.com" />
+      <Select label="Time zone" value={data.timezone} onChange={v => set('timezone', v)} options={TIMEZONES.map(tz => ({ value: tz, label: tz.replace(/_/g, ' ') }))} />
+    </Shell>
   );
 }
 
@@ -359,62 +277,50 @@ function Step3({ data, set, onNext, onBack, onSkip }) {
 function Step4({ data, set, onNext, onBack, onSkip, saving }) {
   const paymentMethod = data.payment_method || '';
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column' }}>
-      <TopBar step={4} onSkip={onSkip} />
-      <BackBtn onClick={onBack} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px 0' }}>
-        <div style={{ maxWidth: 480, margin: '0 auto' }}>
-          <div style={{ color: 'var(--tc-primary)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Step 4 of 5</div>
-          <h2 style={{ color: 'var(--tc-primary-foreground)', fontSize: 24, fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Set up your business</h2>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 12, margin: '0 0 20px' }}>Payments and packages</p>
+    <Shell step={4} onSkip={onSkip} footer={<StepFooter onBack={onBack} onNext={onNext} disabled={saving} label={saving ? 'Saving' : 'Continue'} />}>
+      <StepHeader step={4} title="Payments and packages" sub="What you charge and how clients pay you." />
 
-          <div style={{ marginBottom: 14 }}>
-            <Label>Monthly Rate per Client</Label>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 14, fontWeight: 600 }}>$</span>
-              <input type="number" value={data.monthly_rate || ''} onChange={e => set('monthly_rate', e.target.value)} placeholder="150"
-                style={{ width: '100%', padding: '12px 48px 12px 32px', borderRadius: 12, fontSize: 14, background: 'var(--tc-foreground)', color: 'var(--tc-sidebar-accent-foreground)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => e.target.style.borderColor = 'color-mix(in srgb, var(--tc-primary) 60%, transparent)'}
-                onBlur={e => e.target.style.borderColor = 'color-mix(in srgb, white 8%, transparent)'} />
-              <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 12 }}>/mo</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: 12, background: 'color-mix(in srgb, white 3%, transparent)', border: '1.5px solid color-mix(in srgb, white 6%, transparent)', marginBottom: 16 }}>
-            <div>
-              <div style={{ color: 'var(--tc-primary-foreground)', fontSize: 14, fontWeight: 600 }}>Offer different packages?</div>
-              <div style={{ color: 'var(--tc-muted-foreground)', fontSize: 11 }}>E.g. 1-month, 3-month, custom</div>
-            </div>
-            <button type="button" onClick={() => set('has_packages', !data.has_packages)}
-              style={{ width: 44, height: 24, borderRadius: 9999, background: data.has_packages ? 'var(--tc-primary)' : 'color-mix(in srgb, white 10%, transparent)', border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--tc-card)', position: 'absolute', top: 4, left: data.has_packages ? 24 : 4, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-
-          <Label>How do you want to get paid?</Label>
-          {[
-            { value: 'stripe', label: '⚡ Stripe', sub: 'Recommended — automatic billing, receipts, payment tracking' },
-            { value: 'manual', label: '💸 Manual', sub: 'Venmo, Zelle, cash — you collect payments yourself' },
-            { value: 'later', label: '🕐 Set up later', sub: "I'll configure this after I get started" },
-          ].map(opt => (
-            <button key={opt.value} type="button" onClick={() => set('payment_method', opt.value)} style={{
-              width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px', borderRadius: 12, textAlign: 'left', marginBottom: 10, cursor: 'pointer',
-              background: paymentMethod === opt.value ? 'color-mix(in srgb, var(--tc-primary) 10%, transparent)' : 'color-mix(in srgb, white 3%, transparent)',
-              border: `1.5px solid ${paymentMethod === opt.value ? 'color-mix(in srgb, var(--tc-primary) 55%, transparent)' : 'color-mix(in srgb, white 7%, transparent)'}`,
-            }}>
-              <div style={{ width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 2, border: `2px solid ${paymentMethod === opt.value ? 'var(--tc-primary)' : 'color-mix(in srgb, white 15%, transparent)'}`, background: paymentMethod === opt.value ? 'var(--tc-primary)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {paymentMethod === opt.value && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--tc-card)' }} />}
-              </div>
-              <div>
-                <div style={{ color: 'var(--tc-primary-foreground)', fontSize: 14, fontWeight: 600 }}>{opt.label}</div>
-                <div style={{ color: 'var(--tc-muted-foreground)', fontSize: 11, marginTop: 2 }}>{opt.sub}</div>
-              </div>
-            </button>
-          ))}
+      <div className="mb-3.5">
+        <Label>Monthly rate per client</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base font-semibold text-muted-foreground">$</span>
+          <UIInput type="number" value={data.monthly_rate || ''} onChange={e => set('monthly_rate', e.target.value)} placeholder="150" className="h-11 pl-7 pr-12 text-base" />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">/mo</span>
         </div>
       </div>
-      <CTAButton label={saving ? 'Saving…' : 'Continue →'} onClick={onNext} disabled={saving} />
-    </div>
+
+      <label className="mb-5 flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-3.5 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+        <span>
+          <span className="block text-[15px] font-semibold text-foreground">Offer different packages?</span>
+          <span className="block text-[13px] text-muted-foreground">For example 1 month, 3 months or custom</span>
+        </span>
+        <Switch checked={!!data.has_packages} onCheckedChange={() => set('has_packages', !data.has_packages)} />
+      </label>
+
+      <Label>How do you want to get paid?</Label>
+      <div className="space-y-2">
+        {[
+          { value: 'stripe', label: 'Stripe', sub: 'Automatic billing, receipts and payment tracking. Recommended.' },
+          { value: 'manual', label: 'Manual', sub: 'Venmo, Zelle or cash. You collect payments yourself.' },
+          { value: 'later', label: 'Set up later', sub: "You can choose after you've started." },
+        ].map(opt => {
+          const on = paymentMethod === opt.value;
+          return (
+            <button key={opt.value} type="button" role="radio" aria-checked={on} onClick={() => set('payment_method', opt.value)}
+              className={cn('flex w-full items-start gap-3 rounded-lg bg-card px-4 py-3 text-left transition-colors',
+                on ? 'shadow-[inset_0_0_0_2px_rgb(var(--foreground))]' : 'shadow-[inset_0_0_0_1px_rgb(var(--input))] hover:bg-accent')}>
+              <span className={cn('mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2', on ? 'border-foreground' : 'border-input')}>
+                {on && <span className="h-2 w-2 rounded-full bg-foreground" />}
+              </span>
+              <span>
+                <span className="block text-[15px] font-semibold text-foreground">{opt.label}</span>
+                <span className="block text-[13px] text-muted-foreground">{opt.sub}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </Shell>
   );
 }
 
@@ -428,61 +334,43 @@ function Step5({ firstName }) {
   };
 
   const checklist = [
-    { label: 'Account created', done: true },
-    { label: 'Add your first client', done: false },
-    { label: 'Build your first program', done: false },
-    { label: 'Connect Stripe payments', done: false },
-    { label: 'Customize your profile', done: false },
+    { label: 'Account created', sub: 'You can change any of this in Settings.', done: true },
+    { label: 'Add your first client', sub: 'Send an invite link or import a list.', done: false },
+    { label: 'Build your first program', sub: 'Start from a template or draft one with AI.', done: false },
+    { label: 'Connect Stripe payments', sub: 'Clients pay you directly.', done: false },
+    { label: 'Finish your profile', sub: 'Photo, bio and brand colour.', done: false },
   ];
+  const doneCount = checklist.filter(c => c.done).length;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--kc-0f0f1a)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
-      <div style={{ maxWidth: 360, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-        <KoachLogo size={72} rounded="rounded-2xl" glow bg />
-
-        <div>
-          <div style={{ color: 'var(--tc-success)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Welcome aboard 🎉</div>
-          <h2 style={{ color: 'var(--tc-primary-foreground)', fontSize: 32, fontWeight: 900, letterSpacing: '-0.03em', margin: '0 0 8px' }}>
-            Welcome to KOACH AI,<br />{firstName || 'Coach'}!
-          </h2>
-          <p style={{ color: 'var(--tc-muted-foreground)', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-            Your coaching OS is ready — let's build something great.
-          </p>
+    <Shell step={5}>
+      <h1 className="text-[36px] text-foreground">Welcome, {firstName || 'coach'}. Let's get your first client checking in.</h1>
+      <p className="mt-2 text-[15px] text-muted-foreground">Your Today page fills in as soon as a client logs a workout.</p>
+      <div className="mt-5 flex items-center gap-3">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-input">
+          <div className="h-full rounded-full bg-foreground" style={{ width: `${(doneCount / checklist.length) * 100}%` }} />
         </div>
-
-        <div style={{ width: '100%', borderRadius: 16, overflow: 'hidden', background: 'color-mix(in srgb, white 3%, transparent)', border: '1.5px solid color-mix(in srgb, white 8%, transparent)', textAlign: 'left' }}>
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid color-mix(in srgb, white 5%, transparent)' }}>
-            <div style={{ color: 'var(--tc-primary-foreground)', fontSize: 12, fontWeight: 700 }}>Quick start checklist</div>
-          </div>
-          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {checklist.map(({ label, done }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? 'color-mix(in srgb, var(--tc-success) 15%, transparent)' : 'color-mix(in srgb, white 5%, transparent)', border: `1.5px solid ${done ? 'var(--tc-success)' : 'color-mix(in srgb, white 10%, transparent)'}` }}>
-                  {done
-                    ? <svg viewBox="0 0 12 12" fill="none" style={{ width: 12, height: 12 }}><path d="M2 6L5 9L10 3" stroke="var(--tc-success)" strokeWidth="2" strokeLinecap="round" /></svg>
-                    : <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'color-mix(in srgb, white 20%, transparent)' }} />}
-                </div>
-                <span style={{ fontSize: 14, color: done ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)' }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={go} style={{
-            width: '100%', padding: '16px', borderRadius: 16, fontSize: 16, fontWeight: 700,
-            background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))',
-            boxShadow: '0 0 32px color-mix(in srgb, var(--tc-primary) 35%, transparent)',
-            color: 'var(--tc-primary-foreground)', border: 'none', cursor: 'pointer',
-          }}>
-            Go to Dashboard →
-          </button>
-          <button onClick={go} style={{ color: 'var(--tc-foreground)', fontSize: 12, background: 'none', border: 'none', cursor: 'pointer' }}>
-            Complete setup later
-          </button>
-        </div>
+        <span className="text-[13px] font-semibold text-foreground">{doneCount} of {checklist.length} done</span>
       </div>
-    </div>
+      <ul className="mt-4 space-y-2">
+        {checklist.map(({ label, sub, done }, i) => (
+          <li key={label} className="flex items-center gap-3 rounded-xl bg-card px-4 py-3.5 shadow-[0_0_0_1px_rgb(var(--border)/0.6)]">
+            <span className={cn('flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
+              done ? 'bg-success text-white' : 'border-[1.5px] border-input text-foreground')}>
+              {done ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
+            </span>
+            <span>
+              <span className="block text-[15px] font-semibold text-foreground">{label}</span>
+              <span className="block text-[13px] text-muted-foreground">{sub}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <Button size="lg" className="mt-6 h-12 w-full text-base font-bold" onClick={go}>Go to your dashboard</Button>
+      <button type="button" onClick={go} className="mt-3 w-full text-center text-sm font-semibold text-foreground underline underline-offset-4">
+        Finish setup later
+      </button>
+    </Shell>
   );
 }
 
@@ -531,7 +419,7 @@ export default function ClientInviteJoin() {
       } catch (_) {}
       next();
     } catch (e) {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('That didn\'t save. Try again.');
     } finally {
       setSaving(false);
     }
@@ -540,7 +428,7 @@ export default function ClientInviteJoin() {
   const sharedProps = { data, set, onNext: next, onBack: back, onSkip: skip };
 
   return (
-    <div style={{ background: 'var(--kc-0f0f1a)', minHeight: '100vh' }}>
+    <div className="min-h-screen bg-background">
       {currentStep === 0 && <Welcome onNext={next} onSkip={skip} />}
       {currentStep === 1 && <Step1 {...sharedProps} />}
       {currentStep === 2 && <Step2 {...sharedProps} />}

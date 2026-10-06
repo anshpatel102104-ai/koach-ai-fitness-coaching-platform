@@ -1,21 +1,13 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Edit, Star, AlertTriangle, Clock, Timer, Play } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { AlertTriangle, Play } from 'lucide-react';
+import { KeyValue, Stat } from '@/components/kit';
 import { SignedImg, SignedVideo } from '@/components/shared/SignedImage';
 
-const MUSCLE_TAG_COLORS = {
-  chest:     'bg-destructive/10 text-destructive',
-  back:      'bg-success/10 text-success',
-  shoulders: 'bg-ai/10 text-ai',
-  biceps:    'bg-accent text-primary',
-  triceps:   'bg-accent text-primary',
-  legs:      'bg-orange-50 text-orange-700',
-  glutes:    'bg-pink-50 text-pink-700',
-  core:      'bg-warning/10 text-warning',
-  full_body: 'bg-accent text-primary',
-  cardio:    'bg-teal-50 text-teal-700',
+const cap = (v = '') => {
+  const t = String(v).replace(/_/g, ' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
 function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
@@ -63,10 +55,10 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
         {displayThumb
           ? <SignedImg src={displayThumb} alt={name} className="w-full h-full object-cover" />
           : <div className="w-full h-full bg-muted" />}
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-          <div className="w-14 h-14 rounded-full bg-[var(--kc-w-95)] shadow-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-            <Play className="w-6 h-6 text-foreground ml-1" fill="currentColor" />
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors group-hover:bg-black/40">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sm font-semibold text-foreground">
+            <Play className="h-4 w-4" fill="currentColor" /> Play demo
+          </span>
         </div>
       </div>
     );
@@ -83,11 +75,8 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
 
   // Nothing at all
   return (
-    <div className="w-full aspect-video bg-muted rounded-xl flex items-center justify-center">
-      <div className="text-center">
-        <Play className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">No demo available</p>
-      </div>
+    <div className="flex aspect-[16/5] w-full items-center justify-center rounded-xl bg-secondary">
+      <p className="text-sm text-muted-foreground">No demo yet. Add a video link with Edit.</p>
     </div>
   );
 }
@@ -95,16 +84,21 @@ function VideoPlayer({ url, imageUrl, thumbnailUrl, name }) {
 export default function ExerciseDetailModal({ exercise, open, onClose, onEdit }) {
   if (!exercise) return null;
 
-  const muscleTagClass = MUSCLE_TAG_COLORS[exercise.muscle_group] || 'bg-muted text-muted-foreground';
   // Use instructions if present, fall back to form_cues
   const steps = (exercise.instructions?.length > 0 ? exercise.instructions : exercise.form_cues) || [];
+  const facts = [
+    exercise.muscle_group && ['Muscle', cap(exercise.muscle_group)],
+    exercise.secondary_muscles?.length > 0 && ['Also works', exercise.secondary_muscles.map(cap).join(', ')],
+    exercise.equipment && ['Equipment', cap(exercise.equipment)],
+    exercise.movement_pattern && ['Pattern', cap(exercise.movement_pattern)],
+    exercise.difficulty && ['Level', cap(exercise.difficulty)],
+    exercise.category && ['Category', cap(exercise.category)],
+  ].filter(Boolean);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0 rounded-2xl">
-
-        {/* Media */}
-        <div className="p-5 pb-0">
+      <DialogContent className="max-h-[92vh] overflow-y-auto p-0 sm:max-w-2xl sm:p-0 sm:block">
+        <div className="p-5 pb-0 sm:p-6 sm:pb-0">
           <VideoPlayer
             url={exercise.video_url}
             imageUrl={exercise.image_url}
@@ -113,130 +107,66 @@ export default function ExerciseDetailModal({ exercise, open, onClose, onEdit })
           />
         </div>
 
-        <div className="p-6 space-y-5">
-
-          {/* Header */}
+        <div className="space-y-6 p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              {exercise.is_coach_branded && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-warning/10 text-warning mb-1">
-                  <Star className="w-2.5 h-2.5" fill="currentColor" /> Coach-Branded
-                </span>
-              )}
-              <h2 className="text-xl font-bold text-foreground">{exercise.name}</h2>
+            <div className="min-w-0 flex-1">
+              {exercise.is_coach_branded && exercise.video_url && <p className="mb-1 text-sm font-medium text-muted-foreground">Your demo</p>}
+              <DialogTitle className="text-[28px] text-foreground">{exercise.name}</DialogTitle>
               {exercise.description && (
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{exercise.description}</p>
+                <p className="mt-1 text-[15px] leading-relaxed text-muted-foreground">{exercise.description}</p>
               )}
             </div>
             {onEdit && (
-              <Button variant="outline" size="sm" onClick={onEdit} className="flex-shrink-0 text-xs h-8">
-                <Edit className="w-3.5 h-3.5 mr-1.5" /> Edit
-              </Button>
+              <Button variant="outline" size="sm" onClick={onEdit} className="mr-8 flex-shrink-0">Edit</Button>
             )}
           </div>
 
-          {/* Tags */}
-          <div className="flex flex-wrap gap-2">
-            {exercise.muscle_group && (
-              <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', muscleTagClass)}>
-                {exercise.muscle_group.replace('_', ' ')}
-              </span>
-            )}
-            {exercise.equipment && (
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-foreground">
-                {exercise.equipment.replace('_', ' ')}
-              </span>
-            )}
-            {exercise.difficulty && (
-              <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full capitalize',
-                exercise.difficulty === 'beginner' ? 'bg-success/10 text-success' :
-                exercise.difficulty === 'advanced' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning')}>
-                {exercise.difficulty}
-              </span>
-            )}
-            {exercise.category && (
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-accent/10 text-[var(--kc-3730a3)]">
-                {exercise.category}
-              </span>
-            )}
-          </div>
-
-          {/* Secondary muscles */}
-          {exercise.secondary_muscles?.length > 0 && (
-            <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Also Works</p>
-              <div className="flex flex-wrap gap-1.5">
-                {exercise.secondary_muscles.map(m => (
-                  <span key={m} className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{m}</span>
-                ))}
+          {(facts.length > 0 || exercise.tempo || exercise.default_rest_seconds) && (
+            <div className="grid gap-x-8 sm:grid-cols-2">
+              <div>
+                {facts.map(([label, value]) => <KeyValue key={label} label={label} value={value} />)}
               </div>
-            </div>
-          )}
-
-          {/* Stats */}
-          {(exercise.tempo || exercise.default_rest_seconds) && (
-            <div className="grid grid-cols-2 gap-3">
-              {exercise.tempo && (
-                <div className="bg-muted rounded-xl p-3" style={{ border: '0.5px solid var(--tc-border)' }}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Timer className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tempo</span>
-                  </div>
-                  <p className="font-bold text-lg text-foreground">{exercise.tempo}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">ecc–pause–con–pause</p>
-                </div>
-              )}
-              {exercise.default_rest_seconds && (
-                <div className="bg-muted rounded-xl p-3" style={{ border: '0.5px solid var(--tc-border)' }}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Clock className="w-3.5 h-3.5 text-primary" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Rest Time</span>
-                  </div>
-                  <p className="font-bold text-lg text-foreground">{exercise.default_rest_seconds}s</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">between sets</p>
+              {(exercise.tempo || exercise.default_rest_seconds) && (
+                <div className="mt-4 flex gap-8 sm:mt-1">
+                  {exercise.tempo && <Stat label="Tempo" value={exercise.tempo} sub="Down, pause, up, pause" size="sm" />}
+                  {exercise.default_rest_seconds ? <Stat label="Rest" value={exercise.default_rest_seconds} unit="s" sub="Between sets" size="sm" /> : null}
                 </div>
               )}
             </div>
           )}
 
-          {/* Instructions / Form Cues */}
           {steps.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">How to Perform</p>
-              <div className="space-y-2.5">
+              <h3 className="mb-2 text-[18px] text-foreground">How to do it</h3>
+              <ol className="space-y-2">
                 {steps.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted" style={{ border: '0.5px solid var(--tc-border)' }}>
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-primary-foreground text-xs font-bold"
-                      style={{ background: 'var(--tc-primary)', minWidth: 24 }}>
-                      {i + 1}
-                    </div>
-                    <p className="text-sm text-foreground leading-relaxed">{step}</p>
-                  </div>
+                  <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-foreground">
+                    <span className="num w-5 flex-shrink-0 text-[17px] text-muted-foreground">{i + 1}</span>
+                    <span>{String(step).replace(/^\d+\.\s*/, '')}</span>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
           )}
 
-          {/* Common Mistakes */}
           {exercise.common_mistakes?.length > 0 && (
             <div>
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Common Mistakes</p>
-              <div className="space-y-2">
+              <h3 className="mb-2 text-[18px] text-foreground">Common mistakes</h3>
+              <ul className="space-y-1.5">
                 {exercise.common_mistakes.map((m, i) => (
-                  <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10" style={{ border: '0.5px solid var(--tc-destructive)' }}>
-                    <AlertTriangle className="w-3.5 h-3.5 text-destructive flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-foreground leading-relaxed">{m}</p>
-                  </div>
+                  <li key={i} className="flex gap-2.5 text-[15px] text-foreground">
+                    <AlertTriangle className="mt-1 h-4 w-4 flex-shrink-0 text-warning" />
+                    <span>{m}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           )}
 
-          {/* Coach notes */}
           {exercise.notes && (
-            <div className="p-3 rounded-xl bg-accent" style={{ border: '0.5px solid var(--tc-accent)' }}>
-              <p className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Coach Notes</p>
-              <p className="text-sm text-foreground">{exercise.notes}</p>
+            <div className="rounded-xl bg-secondary p-4">
+              <p className="mb-1 text-[13px] text-muted-foreground">Your notes, not shown to clients</p>
+              <p className="text-[15px] text-foreground">{exercise.notes}</p>
             </div>
           )}
         </div>

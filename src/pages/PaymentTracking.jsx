@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Search, Download, ChevronDown, ExternalLink } from 'lucide-react';
+import { Search, Download, ExternalLink } from 'lucide-react';
+import { Panel, Segmented, EmptyState } from '@/components/kit';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import PaymentStatCards from '@/components/payments/PaymentStatCards';
 import PaymentFeedItem from '@/components/payments/PaymentFeedItem';
@@ -14,8 +17,8 @@ const STATUS_OPTS = ['all', 'paid', 'pending', 'failed', 'refunded'];
 const SORT_OPTS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
-  { value: 'amount_hi', label: 'Amount: High → Low' },
-  { value: 'amount_lo', label: 'Amount: Low → High' },
+  { value: 'amount_hi', label: 'Largest amount' },
+  { value: 'amount_lo', label: 'Smallest amount' },
 ];
 
 export default function PaymentTracking() {
@@ -86,7 +89,7 @@ export default function PaymentTracking() {
     // client was repaid when they were not. Refunds move real money and must be
     // issued in Stripe. Do not write a misleading status. (A real stripeRefund
     // edge function is tracked in REMEDIATION_PLAN.)
-    toast.info('Issue this refund from your Stripe dashboard — refunds are not processed here yet.');
+    toast.info('Issue this refund from your Stripe dashboard. Refunds are not processed here yet.');
     setRefundTarget(null);
   };
 
@@ -106,110 +109,103 @@ export default function PaymentTracking() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'payments.csv'; a.click();
   };
 
-  return (
-    <div>
-      {/* Stats */}
-      <div style={{ marginBottom: 20 }}>
-        <PaymentStatCards payments={allEntries} />
-      </div>
+  const statusCount = (k) => (k === 'all' ? allEntries.length : allEntries.filter(p => p.status === k).length);
 
-      {/* Failed Payments Alert */}
+  return (
+    <div className="flex flex-col gap-5">
+      <PaymentStatCards payments={allEntries} />
+
       <FailedPaymentsPanel payments={allEntries} onRetry={handleRetry} onMessage={handleMessage} />
 
-      {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: 20, alignItems: 'start' }}>
-        {/* Left: Feed */}
-        <div>
-          {/* Filter Bar */}
-          <div style={{ background: 'var(--tc-card)', borderRadius: '14px 14px 0 0', border: '1px solid var(--tc-muted)', borderBottom: 'none', padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
-              <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)' }} />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by client or amount…"
-                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: 8, fontSize: 13, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', outline: 'none', boxSizing: 'border-box' }} />
-            </div>
-            {/* Status filter pills */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {STATUS_OPTS.map(s => (
-                <button key={s} onClick={() => setStatusFilter(s)}
-                  style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: statusFilter === s ? 'var(--tc-primary)' : 'var(--tc-muted)', color: statusFilter === s ? 'var(--tc-primary-foreground)' : 'var(--tc-muted-foreground)', textTransform: 'capitalize' }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-            <div style={{ position: 'relative' }}>
-              <select value={sort} onChange={e => setSort(e.target.value)}
-                style={{ padding: '6px 28px 6px 10px', borderRadius: 8, fontSize: 12, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', outline: 'none', appearance: 'none', cursor: 'pointer' }}>
-                {SORT_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <ChevronDown size={11} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', pointerEvents: 'none' }} />
-            </div>
-            <button onClick={exportCSV}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', color: 'var(--tc-foreground)', cursor: 'pointer' }}>
-              <Download size={12} /> Export
-            </button>
-          </div>
-
-          {/* Payment Feed */}
-          <div style={{ background: 'var(--tc-card)', border: '1px solid var(--tc-muted)', borderTop: 'none', borderRadius: '0 0 14px 14px', overflow: 'hidden' }}>
-            {/* Column header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr 70px 90px auto', gap: 12, padding: '8px 16px', background: 'var(--tc-background)', borderBottom: '1px solid var(--tc-muted)' }}>
-              {['', 'Client / Description', 'Amount', 'Status', 'Actions'].map((h, i) => (
-                <div key={i} style={{ fontSize: 10, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: i === 2 ? 'right' : 'left' }}>{h}</div>
-              ))}
-            </div>
-            {isLoading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--tc-muted-foreground)', fontSize: 13 }}>Loading payments…</div>
-            ) : filtered.length === 0 ? (
-              <div style={{ padding: 48, textAlign: 'center' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>💳</div>
-                <p style={{ fontSize: 13, color: 'var(--tc-muted-foreground)', margin: 0 }}>No payments match your filter</p>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
+        <div className="flex flex-col gap-5 min-w-0">
+          <Panel className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 pt-5 pb-4 border-b border-border">
+              <Segmented
+                size="sm"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={STATUS_OPTS.map(s => ({ value: s, label: s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1), count: statusCount(s) }))}
+              />
+              <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-[260px] justify-end">
+                <div className="relative flex-1 sm:max-w-[240px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Client or amount"
+                    className="h-9 w-full rounded-md bg-secondary pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+                <Select value={sort} onValueChange={setSort}>
+                  <SelectTrigger className="h-9 w-[130px] sm:w-[150px] text-[13px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" onClick={exportCSV} title="Export CSV" aria-label="Export CSV">
+                  <Download />
+                </Button>
               </div>
-            ) : (
-              filtered.map(p => (
-                <PaymentFeedItem
-                  key={p.id}
-                  payment={p}
-                  onViewInvoice={() => {}}
-                  onRefund={() => setRefundTarget(p)}
-                />
-              ))
-            )}
-          </div>
+            </div>
 
-          {/* Monthly Summary */}
-          <div style={{ marginTop: 20 }}>
-            <MonthlySummaryTable invoices={invoices} payments={allEntries} />
-          </div>
+            {isLoading ? (
+              <p className="px-6 py-10 text-sm text-muted-foreground">Loading payments…</p>
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                title={allEntries.length === 0 ? 'No payments yet' : 'Nothing matches'}
+                body={allEntries.length === 0 ? 'Paid invoices and Stripe charges land here.' : 'Try another filter or clear the search.'}
+              />
+            ) : (
+              <>
+                <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_120px_130px_96px] gap-4 px-5 sm:px-6 py-2.5 border-b border-border text-[13px] text-muted-foreground">
+                  <div>Client</div>
+                  <div className="text-right">Amount</div>
+                  <div>Status</div>
+                  <div />
+                </div>
+                {filtered.map(p => (
+                  <PaymentFeedItem
+                    key={p.id}
+                    payment={p}
+                    onViewInvoice={() => {}}
+                    onRefund={() => setRefundTarget(p)}
+                  />
+                ))}
+              </>
+            )}
+          </Panel>
+
+          <MonthlySummaryTable invoices={invoices} payments={allEntries} />
         </div>
 
-        {/* Right Sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'sticky', top: 20 }}>
-          {/* Upcoming Payments */}
+        <div className="flex flex-col gap-4 xl:sticky xl:top-5">
           <UpcomingPayments invoices={invoices} payments={allEntries} />
 
-          {/* Stripe Link */}
-          <div style={{ background: 'var(--tc-card)', borderRadius: 14, border: '1px solid var(--tc-muted)', padding: '16px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tc-foreground)', marginBottom: 8 }}>Advanced Management</div>
-            <p style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', margin: '0 0 12px' }}>
-              View full payout history, disputes, and payment methods in your Stripe dashboard.
+          <Panel className="px-5 py-5 sm:px-6">
+            <h2 className="text-lg text-foreground">Payouts and disputes</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-3">
+              Payout history, disputes and saved cards live in your Stripe dashboard.
             </p>
-            <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, fontSize: 13, fontWeight: 600, background: 'var(--tc-background)', border: '1.5px solid var(--tc-border)', color: 'var(--tc-foreground)', textDecoration: 'none' }}>
-              <ExternalLink size={13} /> View in Stripe
+            <a
+              href="https://dashboard.stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2"
+            >
+              Open Stripe <ExternalLink className="h-3.5 w-3.5" />
             </a>
-          </div>
+          </Panel>
 
-          {/* Tax Summary */}
-          <div style={{ background: 'linear-gradient(135deg, var(--tc-ai), var(--tc-accent))', borderRadius: 14, border: '1px solid var(--tc-ai)', padding: '16px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--tc-foreground)', marginBottom: 4 }}>Tax Summary</div>
-            <p style={{ fontSize: 11, color: 'var(--tc-muted-foreground)', margin: '0 0 12px', lineHeight: 1.5 }}>
-              Download your annual transaction history for tax reporting. Consult a tax professional for specific advice.
+          <Panel className="px-5 py-5 sm:px-6">
+            <h2 className="text-lg text-foreground">Tax time</h2>
+            <p className="text-sm text-muted-foreground mt-1 mb-3">
+              Export every transaction for your accountant. This isn't tax advice.
             </p>
-            <button onClick={exportCSV}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, background: 'var(--tc-ai)', color: 'var(--tc-primary-foreground)', border: 'none', cursor: 'pointer' }}>
-              <Download size={12} /> Export for Accountant
-            </button>
-          </div>
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download /> Export for your accountant
+            </Button>
+          </Panel>
         </div>
       </div>
 

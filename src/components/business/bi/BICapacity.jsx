@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Gauge, ArrowUp, CheckCircle2 } from 'lucide-react';
+import { Panel } from '@/components/kit';
+import { Meter, money } from '@/components/business/ui';
 
 const PLAN_LIMITS = { starter: 10, pro: 25, elite: 50, enterprise: 150 };
 
@@ -12,61 +13,39 @@ export default function BICapacity({ clients, user }) {
   const revenuePerSlot = planLimit > 0 ? Math.round(mrr / planLimit) : 0;
   const availableSlots = Math.max(0, planLimit - activeClients.length);
 
-  const color = utilizationPct >= 90 ? 'var(--tc-destructive)' : utilizationPct >= 70 ? 'var(--tc-warning)' : 'var(--tc-success)';
+  const tone = utilizationPct >= 90 ? 'danger' : utilizationPct >= 70 ? 'warning' : 'ink';
 
   // Project weeks to capacity (assume ~2 new clients/month)
   const weeksToCapacity = availableSlots > 0 ? Math.round((availableSlots / 2) * 4.33) : 0;
 
+  const sentence = utilizationPct >= 90
+    ? `You're at ${utilizationPct}% of your plan. At about two sign-ups a month you'll be full in ${weeksToCapacity} weeks.`
+    : utilizationPct >= 80
+      ? `At about two sign-ups a month you'll be full in ${weeksToCapacity} weeks.`
+      : utilizationPct < 60
+        ? `Room for ${availableSlots} more clients on your plan.`
+        : `${availableSlots} spots left on your plan.`;
+
   return (
-    <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-      <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
-        <Gauge className="w-4 h-4 text-primary" /> Capacity Analysis
-      </h3>
+    <Panel className="px-5 py-5 sm:px-6 sm:py-6">
+      <h2 className="text-[22px] text-foreground">Capacity</h2>
+      <p className={utilizationPct >= 90 ? 'text-sm text-destructive mt-1' : 'text-sm text-muted-foreground mt-1'}>{sentence}</p>
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs text-muted-foreground">Client capacity</p>
-            <p className="text-xs font-bold" style={{ color }}>{utilizationPct}%</p>
-          </div>
-          <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${utilizationPct}%`, background: color }} />
-          </div>
-          <div className="flex justify-between mt-1">
-            <p className="text-[10px] text-muted-foreground">{activeClients.length} active</p>
-            <p className="text-[10px] text-muted-foreground">{planLimit} limit</p>
-          </div>
-        </div>
+      <div className="mt-4">
+        <Meter value={utilizationPct} tone={tone} />
+        <p className="text-[13px] text-muted-foreground mt-2">{activeClients.length} of {planLimit} client spots used</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="p-2.5 bg-muted rounded-xl text-center">
-          <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Available Slots</p>
-          <p className="text-lg font-bold text-foreground">{availableSlots}</p>
+      <div className="grid grid-cols-2 mt-5 pt-4 border-t border-border divide-x divide-border">
+        <div>
+          <p className="text-[13px] text-muted-foreground">Open spots</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{availableSlots}</p>
         </div>
-        <div className="p-2.5 bg-muted rounded-xl text-center">
-          <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Revenue / Slot</p>
-          <p className="text-lg font-bold text-foreground">${revenuePerSlot}</p>
+        <div className="pl-5">
+          <p className="text-[13px] text-muted-foreground">Revenue per spot</p>
+          <p className="num text-[26px] leading-none mt-1 text-foreground">{money(revenuePerSlot)}</p>
         </div>
       </div>
-
-      {utilizationPct >= 80 && (
-        <div className="flex items-start gap-2 p-3 rounded-xl text-xs" style={{ background: `${color}10`, border: `1px solid ${color}30` }}>
-          <ArrowUp className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
-          <p style={{ color }}>
-            {utilizationPct >= 90
-              ? `You're at ${utilizationPct}% capacity! At current growth you'll hit your limit in ~${weeksToCapacity} weeks — consider upgrading.`
-              : `At current growth rate you'll reach capacity in ~${weeksToCapacity} weeks.`}
-          </p>
-        </div>
-      )}
-
-      {utilizationPct < 60 && (
-        <div className="flex items-center gap-2 p-3 rounded-xl bg-success/10 border border-success text-xs text-success">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-success" />
-          <p>You have room for <strong>{availableSlots} more clients</strong> — great time to grow your pipeline!</p>
-        </div>
-      )}
-    </div>
+    </Panel>
   );
 }

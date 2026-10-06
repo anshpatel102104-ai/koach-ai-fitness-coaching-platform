@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const REMINDER_TYPES = [
-  { key: 'workout', emoji: '🏋️', label: 'Workout Reminder', time: '07:00', description: 'Morning workout prompt' },
-  { key: 'hydration', emoji: '💧', label: 'Hydration', time: '10:00', description: 'Drink water reminders' },
-  { key: 'steps', emoji: '👟', label: 'Step Goal', time: '18:00', description: 'Evening steps check-in' },
-  { key: 'checkin', emoji: '📋', label: 'Weekly Check-in', time: '20:00', description: 'Submit your weekly check-in' },
+  { key: 'workout', label: 'Workout', time: '07:00', description: 'Morning nudge to train' },
+  { key: 'hydration', label: 'Water', time: '10:00', description: 'Reminder to drink water' },
+  { key: 'steps', label: 'Steps', time: '18:00', description: 'Evening steps check' },
+  { key: 'checkin', label: 'Weekly check-in', time: '20:00', description: 'Reminder to send your check-in' },
 ];
 
 export default function NotificationSettings() {
@@ -38,7 +38,7 @@ export default function NotificationSettings() {
       const activeKeys = Object.keys(enabled).filter(k => enabled[k]);
       if (activeKeys.length > 0) {
         new Notification('FitForge Reminders', {
-          body: `${activeKeys.length} reminder${activeKeys.length > 1 ? 's' : ''} set up! 💪`,
+          body: `${activeKeys.length} reminder${activeKeys.length > 1 ? 's' : ''} set up.`,
           icon: '/favicon.ico'
         });
       }
@@ -46,57 +46,53 @@ export default function NotificationSettings() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Bell className="w-4 h-4 text-primary" />
-          <h3 className="font-heading font-semibold text-sm">Reminders</h3>
+    <section className="panel p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl text-foreground">Reminders</h2>
+          <p className="text-[13px] text-muted-foreground">Pick what we nudge you about, and when.</p>
         </div>
         {permission !== 'granted' && (
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={requestPermission}>
-            Enable Notifications
+          <Button size="sm" variant="outline" onClick={requestPermission}>
+            <Bell /> Turn on
           </Button>
         )}
       </div>
 
       {permission === 'denied' && (
-        <p className="text-xs text-muted-foreground bg-destructive/10 text-destructive rounded-lg px-3 py-2 mb-3">
-          Notifications blocked. Please update your browser settings.
+        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-[13px] text-destructive">
+          Notifications are blocked. Allow them in your browser settings.
         </p>
       )}
 
-      <div className="space-y-2">
+      <ul className="mt-3 divide-y divide-border border-t border-border">
         {REMINDER_TYPES.map(r => (
-          <button
-            key={r.key}
-            onClick={() => toggle(r.key)}
-            disabled={permission !== 'granted'}
-            className={cn(
-              "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
-              enabled[r.key] ? "border-primary/30 bg-primary/5" : "border-border hover:border-border/80 bg-secondary/10",
-              permission !== 'granted' && "opacity-50 cursor-not-allowed"
-            )}
-          >
-            <span className="text-xl">{r.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{r.label}</p>
-              <p className="text-[10px] text-muted-foreground">{r.description} · {r.time}</p>
-            </div>
-            <div className={cn(
-              "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-              enabled[r.key] ? "bg-primary border-primary" : "border-muted-foreground/30"
-            )}>
-              {enabled[r.key] && <Check className="w-3 h-3 text-primary-foreground" />}
-            </div>
-          </button>
+          <li key={r.key}>
+            <button
+              type="button"
+              onClick={() => toggle(r.key)}
+              disabled={permission !== 'granted'}
+              aria-pressed={!!enabled[r.key]}
+              className="flex w-full items-center gap-3 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold text-foreground">{r.label}</span>
+                <span className="block text-[13px] text-muted-foreground">{r.description}, {r.time}</span>
+              </span>
+              <span className={cn('flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full',
+                enabled[r.key] ? 'bg-primary text-primary-foreground' : 'border-[1.5px] border-input')}>
+                {enabled[r.key] && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
 
       {permission === 'granted' && (
-        <Button size="sm" className="w-full mt-4 h-8 text-xs" onClick={saveSettings} variant={saved ? "outline" : "default"}>
-          {saved ? <><Check className="w-3 h-3 mr-1" /> Saved!</> : 'Save Reminders'}
+        <Button className="mt-4 w-full" onClick={saveSettings} variant={saved ? 'outline' : 'default'}>
+          {saved ? <><Check /> Saved</> : 'Save reminders'}
         </Button>
       )}
-    </div>
+    </section>
   );
 }

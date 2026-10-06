@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { CheckCircle2, Utensils, BookOpen, Pill, Plus, Search, ChevronDown, Database } from 'lucide-react';
+import { Check, Plus, Search, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Page, PageHeader, Panel, Segmented, EmptyState } from '@/components/kit';
 import ApprovedFoodsSection from '@/components/food-library/ApprovedFoodsSection';
 import MealTemplatesSection from '@/components/food-library/MealTemplatesSection';
 import SupplementsSection from '@/components/food-library/SupplementsSection';
@@ -13,41 +14,42 @@ import FoodSearchPanel from '@/components/food-library/FoodSearchPanel';
 import FoodDatabaseTab from '@/components/food-library/FoodDatabaseTab';
 
 const TABS = [
-  { id: 'approved',    icon: CheckCircle2, label: 'Approved Foods',  color: 'text-success' },
-  { id: 'database',    icon: Database,     label: 'Food Database',   color: 'text-primary' },
-  { id: 'templates',   icon: BookOpen,     label: 'Meal Templates',  color: 'text-primary' },
-  { id: 'supplements', icon: Pill,         label: 'Supplements',     color: 'text-ai' },
-  { id: 'custom',      icon: Utensils,     label: 'My Custom Foods', color: 'text-orange-600' },
+  { id: 'approved',    label: 'Approved foods' },
+  { id: 'database',    label: 'Food database' },
+  { id: 'templates',   label: 'Meal templates' },
+  { id: 'supplements', label: 'Supplements' },
+  { id: 'custom',      label: 'My custom foods' },
 ];
 
 function FoodRow({ food, onEdit, onDelete, onToggleApproved, updateMutation }) {
+  const macros = [
+    food.protein_g > 0 ? `${food.protein_g} g P` : null,
+    food.carbs_g > 0 ? `${food.carbs_g} g C` : null,
+    food.fats_g > 0 ? `${food.fats_g} g F` : null,
+    food.serving_size || null,
+  ].filter(Boolean).join(' · ');
   return (
-    <div className={cn(
-      'flex items-center gap-3 bg-card border rounded-xl px-4 py-3',
-      food.coach_approved ? 'border-success' : 'border-border'
-    )}>
+    <div className="flex items-center gap-3 px-5 py-3 border-b border-border last:border-b-0">
       <button
         onClick={onToggleApproved}
         title={food.coach_approved ? 'Remove approval' : 'Approve for clients'}
-        className={cn('shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all',
-          food.coach_approved ? 'border-success bg-success' : 'border-muted-foreground/30 hover:border-success'
+        aria-label={food.coach_approved ? 'Remove approval' : 'Approve for clients'}
+        className={cn('touch-compact shrink-0 w-5 h-5 rounded-[5px] border flex items-center justify-center transition-colors',
+          food.coach_approved ? 'border-success bg-success' : 'border-input hover:border-foreground'
         )}
       >
-        {food.coach_approved && <CheckCircle2 className="w-3 h-3 text-white" />}
+        {food.coach_approved && <Check className="w-3 h-3 text-card" />}
       </button>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-foreground truncate">{food.name}</p>
-        <div className="flex gap-2 mt-0.5 text-[11px] text-muted-foreground">
-          {food.calories > 0 && <span className="text-orange-600 font-medium">{food.calories} cal</span>}
-          {food.protein_g > 0 && <span>P {food.protein_g}g</span>}
-          {food.carbs_g > 0 && <span>C {food.carbs_g}g</span>}
-          {food.fats_g > 0 && <span>F {food.fats_g}g</span>}
-          {food.serving_size && <span>· {food.serving_size}</span>}
-        </div>
+        <p className="text-[15px] font-semibold text-foreground truncate">{food.name}</p>
+        {macros && <p className="text-[13px] text-muted-foreground tabular-nums truncate">{macros}</p>}
       </div>
+      {food.calories > 0 && (
+        <span className="flex-shrink-0 flex items-baseline gap-1"><span className="num text-lg text-foreground">{food.calories}</span><span className="text-[13px] text-muted-foreground">kcal</span></span>
+      )}
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onEdit} className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-lg hover:bg-secondary">Edit</button>
-        <button onClick={onDelete} className="text-[11px] text-muted-foreground hover:text-destructive px-2 py-1 rounded-lg hover:bg-secondary">Remove</button>
+        <Button variant="ghost" size="sm" onClick={onEdit}>Edit</Button>
+        <Button variant="ghost" size="sm" onClick={onDelete} className="text-muted-foreground hover:text-destructive">Remove</Button>
       </div>
     </div>
   );
@@ -69,7 +71,7 @@ export default function FoodLibrary() {
 
   const saveMutation = useMutation({
     mutationFn: (food) => db.entities.FoodItem.create(food),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-items'] }); toast.success('Food saved to library!'); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['food-items'] }); toast.success('Saved to your library'); },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => db.entities.FoodItem.update(id, data),
@@ -94,52 +96,32 @@ export default function FoodLibrary() {
   const approvedCount = savedFoods.filter(f => f.coach_approved).length;
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      {/* ── Header ── */}
-      <div className="bg-sidebar rounded-xl p-5 mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">Food Library</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'color-mix(in srgb, white 50%, transparent)' }}>Manage foods for meal planning</p>
-        </div>
-        <button
-          onClick={() => { setEditingFood(null); setShowCustomForm(true); }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
-          style={{ background: 'var(--tc-card)', color: 'var(--tc-foreground)' }}
-        >
-          <Plus className="w-4 h-4" /> Add Food
-        </button>
-      </div>
+    <Page>
+      <PageHeader
+        title="Food library"
+        subtitle={approvedCount > 0
+          ? `${approvedCount} foods approved for clients. Approved foods show first when they search.`
+          : 'The foods, templates and supplements you build meal plans from.'}
+        actions={
+          <Button onClick={() => { setEditingFood(null); setShowCustomForm(true); }}>
+            <Plus /> Add food
+          </Button>
+        }
+      />
 
-      {/* Tabs — simple text tabs, not pill overload */}
-      <div className="flex gap-0 border-b border-border mb-6">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              'flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-all',
-              tab === t.id
-                ? `border-primary ${t.color}`
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <t.icon className="w-3.5 h-3.5" />
-            {t.label}
-            {t.id === 'approved' && approvedCount > 0 && (
-              <span className="bg-success/10 text-success text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5">
-                {approvedCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        className="mb-5"
+        value={tab}
+        onChange={setTab}
+        options={TABS.map(t => ({ value: t.id, label: t.label, count: t.id === 'approved' && approvedCount > 0 ? approvedCount : undefined }))}
+      />
 
       {/* Approved Foods tab */}
       {tab === 'approved' && (
         <div>
           {/* CTA to add foods from database — collapsed by default */}
-          <div className="mb-5 space-y-2">
-            <div className="flex gap-2">
+          <div className="mb-5 space-y-3">
+            <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -147,7 +129,7 @@ export default function FoodLibrary() {
                 onClick={() => setShowSearchPanel(s => !s)}
               >
                 <Search className="w-3.5 h-3.5" />
-                Search Food Database
+                Search the food database
                 <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showSearchPanel && 'rotate-180')} />
               </Button>
               <Button
@@ -157,22 +139,22 @@ export default function FoodLibrary() {
                 onClick={() => { setEditingFood(null); setShowCustomForm(true); }}
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Custom Food
+                Add a custom food
               </Button>
             </div>
 
             {showSearchPanel && (
-              <div className="border border-border rounded-xl overflow-hidden bg-card">
-                <div className="p-4">
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Search 600,000+ foods. Saving a food adds it directly to your Approved list.
+              <Panel className="overflow-hidden">
+                <div className="p-4 sm:p-5">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Search the USDA database. Saving a food approves it for your clients.
                   </p>
                   <FoodSearchPanel
                     onSave={handleSaveFromSearch}
                     isSaved={isSaved}
                   />
                 </div>
-              </div>
+              </Panel>
             )}
           </div>
 
@@ -191,25 +173,23 @@ export default function FoodLibrary() {
 
       {/* Custom Foods */}
       {tab === 'custom' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">Foods you created manually that aren't in the database.</p>
-            <Button size="sm" onClick={() => { setEditingFood(null); setShowCustomForm(true); }}>
-              <Plus className="w-4 h-4 mr-1" /> Add Custom Food
+        <Panel className="overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 pt-5 pb-3">
+            <p className="text-sm text-muted-foreground">Foods you entered yourself, with your own macros and portions.</p>
+            <Button size="sm" variant="outline" onClick={() => { setEditingFood(null); setShowCustomForm(true); }}>
+              <Plus /> Add custom food
             </Button>
           </div>
 
           {customFoods.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <Utensils className="w-9 h-9 mx-auto mb-3 opacity-25" />
-              <p className="font-semibold text-foreground text-sm">No custom foods yet</p>
-              <p className="text-xs mt-1">Create foods with your own macros and portions</p>
-              <Button size="sm" className="mt-4" onClick={() => { setEditingFood(null); setShowCustomForm(true); }}>
-                <Plus className="w-4 h-4 mr-1" /> Create First Food
-              </Button>
-            </div>
+            <EmptyState
+              className="border-t border-border"
+              title="No custom foods yet."
+              body="Add a food that isn't in the database, like a client's homemade protein bar."
+              action={<Button size="sm" onClick={() => { setEditingFood(null); setShowCustomForm(true); }}><Plus /> Add custom food</Button>}
+            />
           ) : (
-            <div className="space-y-2">
+            <div className="border-t border-border">
               {customFoods.map(food => (
                 <FoodRow
                   key={food.id}
@@ -219,13 +199,13 @@ export default function FoodLibrary() {
                   onDelete={() => deleteMutation.mutate(food.id)}
                   onToggleApproved={() => {
                     updateMutation.mutate({ id: food.id, data: { coach_approved: !food.coach_approved, coach_hidden: false } });
-                    toast.success(food.coach_approved ? 'Removed from approved' : '✅ Approved!');
+                    toast.success(food.coach_approved ? 'Removed from approved' : 'Approved for clients');
                   }}
                 />
               ))}
             </div>
           )}
-        </div>
+        </Panel>
       )}
 
       {/* Custom food form */}
@@ -236,13 +216,13 @@ export default function FoodLibrary() {
         onSubmit={(data) => {
           if (editingFood) {
             updateMutation.mutate({ id: editingFood.id, data });
-            toast.success('Food updated!');
+            toast.success('Food updated');
           } else {
             saveMutation.mutate({ ...data, source: 'custom', coach_approved: true });
           }
           setShowCustomForm(false);
         }}
       />
-    </div>
+    </Page>
   );
 }

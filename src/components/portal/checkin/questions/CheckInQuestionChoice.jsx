@@ -1,8 +1,9 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-export default function CheckInQuestionChoice({ value, onChange, options, multi = false }) {
+/** Option rows. Selected = ink border and a check. */
+export default function CheckInQuestionChoice({ value, onChange, options = [], multi = false }) {
   const selected = multi
     ? (Array.isArray(value) ? value : [])
     : value;
@@ -21,31 +22,29 @@ export default function CheckInQuestionChoice({ value, onChange, options, multi 
   const isSelected = (opt) => multi ? selected.includes(opt) : selected === opt;
 
   return (
-    <div className="space-y-3">
-      {options.map((opt, i) => (
-        <motion.button key={opt}
-          onClick={() => toggle(opt)}
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.06 }}
-          whileTap={{ scale: 0.97 }}
-          className="w-full p-4 rounded-2xl text-left flex items-center justify-between transition-all"
-          style={{
-            background: isSelected(opt) ? 'linear-gradient(135deg, rgb(var(--primary) / 0.25), rgba(99,102,241,0.2))' : 'rgba(255,255,255,0.05)',
-            border: `1.5px solid ${isSelected(opt) ? 'rgb(var(--primary) / 0.5)' : 'rgba(255,255,255,0.08)'}`,
-          }}>
-          <span className="text-sm font-semibold"
-            style={{ color: isSelected(opt) ? 'rgb(var(--primary))' : 'rgba(255,255,255,0.7)' }}>
+    <div className="space-y-2" role={multi ? 'group' : 'radiogroup'}>
+      {multi && <p className="text-[13px] text-muted-foreground">Pick any that apply.</p>}
+      {options.map(opt => {
+        const on = isSelected(opt);
+        return (
+          <button
+            key={opt}
+            type="button"
+            role={multi ? 'checkbox' : 'radio'}
+            aria-checked={on}
+            onClick={() => toggle(opt)}
+            className={cn(
+              'flex w-full items-center justify-between gap-3 rounded-lg px-4 py-3.5 text-left text-[15px] font-semibold transition-colors',
+              on ? 'bg-card text-foreground shadow-[inset_0_0_0_2px_rgb(var(--foreground))]' : 'bg-secondary text-foreground hover:bg-accent',
+            )}
+          >
             {opt}
-          </span>
-          {isSelected(opt) && (
-            <div className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{ background: 'rgb(var(--primary) / 0.4)' }}>
-              <Check className="w-3.5 h-3.5 text-primary" />
-            </div>
-          )}
-        </motion.button>
-      ))}
+            <span className={cn('flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full', on ? 'bg-primary text-primary-foreground' : 'border-[1.5px] border-input')}>
+              {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Star, CheckCircle2, XCircle, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Panel, PanelHeader, Stat, EmptyState, Initials } from '@/components/kit';
+import { selectClass } from './MarketingLinksSection';
 import { toast } from 'sonner';
 
 export default function TestimonialCollector({ coachId }) {
@@ -75,116 +80,86 @@ export default function TestimonialCollector({ coachId }) {
     a.click();
   };
 
+  const STATUS = {
+    approved: { label: 'Approved', variant: 'success' },
+    rejected: { label: 'Rejected', variant: 'destructive' },
+    pending_approval: { label: 'Waiting on you', variant: 'warning' },
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total', value: stats.total },
-          { label: 'Pending', value: stats.pending },
-          { label: 'Approved', value: stats.approved },
-          { label: 'Avg Rating', value: `${stats.avg_rating}★` },
-        ].map((stat, i) => (
-          <div key={i} className="p-4 rounded-lg bg-muted border border-border">
-            <p className="text-xs text-muted-foreground font-bold">{stat.label}</p>
-            <p className="text-2xl font-black text-foreground mt-1">{stat.value}</p>
-          </div>
-        ))}
-      </div>
+    <div className="space-y-5">
+      <Panel className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden bg-border [&>*]:bg-card [&>*]:px-5 [&>*]:py-4 sm:[&>*]:px-6">
+        <Stat label="Testimonials" value={stats.total} />
+        <Stat label="Waiting on you" value={stats.pending} tone={stats.pending > 0 ? 'warning' : undefined} />
+        <Stat label="Approved" value={stats.approved} />
+        <Stat label="Average rating" value={stats.avg_rating} unit="/ 5" />
+      </Panel>
 
-      {/* Filters & Export */}
-      <div className="bg-card rounded-2xl border border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground">Testimonials</h3>
-          <button onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-foreground font-bold hover:bg-muted">
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
-        </div>
-
-        <div className="flex gap-2 mb-6 flex-wrap">
+      <Panel>
+        <PanelHeader
+          title="Testimonials"
+          subtitle="Approve the ones you're happy to show. Featured ones go first on your page."
+          right={<Button size="sm" variant="outline" onClick={handleExport}><Download /> Export CSV</Button>}
+        />
+        <div className="flex gap-3 flex-wrap px-5 sm:px-6 pb-4">
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Status</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-1 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            <Label htmlFor="t-status" className="text-[13px] text-muted-foreground">Status</Label>
+            <select id="t-status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={`${selectClass} mt-1 w-44`}>
               <option value="all">All</option>
-              <option value="pending_approval">Pending</option>
+              <option value="pending_approval">Waiting on you</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-muted-foreground mb-1">Rating</label>
-            <select
-              value={filterRating}
-              onChange={(e) => setFilterRating(e.target.value)}
-              className="px-3 py-1 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+            <Label htmlFor="t-rating" className="text-[13px] text-muted-foreground">Rating</Label>
+            <select id="t-rating" value={filterRating} onChange={(e) => setFilterRating(e.target.value)} className={`${selectClass} mt-1 w-44`}>
               <option value="all">All</option>
               <option value="5">5 stars</option>
-              <option value="4">4+ stars</option>
-              <option value="3">3+ stars</option>
+              <option value="4">4 and up</option>
+              <option value="3">3 and up</option>
             </select>
           </div>
         </div>
 
-        {/* Testimonials grid */}
-        <div className="space-y-4">
-          {filtered.length > 0 ? (
-            filtered.map((testimonial) => (
-              <div key={testimonial.id} className={`p-4 rounded-lg border-2 ${
-                testimonial.status === 'approved' ? 'border-success bg-success/10' :
-                testimonial.status === 'rejected' ? 'border-destructive bg-destructive/10' :
-                'border-warning bg-warning/10'
-              }`}>
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-bold text-foreground">{testimonial.client_name}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4" fill={i < testimonial.rating ? 'var(--tc-warning)' : 'var(--tc-border)'} color={i < testimonial.rating ? 'var(--tc-warning)' : 'var(--tc-border)'} />
-                      ))}
+        {filtered.length > 0 ? (
+          <ul className="divide-y divide-border border-t border-border px-5 sm:px-6">
+            {filtered.map((testimonial) => {
+              const st = STATUS[testimonial.status] || { label: String(testimonial.status || '').replace(/_/g, ' '), variant: 'secondary' };
+              return (
+                <li key={testimonial.id} className="py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Initials name={testimonial.client_name || ''} />
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-semibold text-foreground truncate">{testimonial.client_name}</p>
+                        <p className="text-[13px] text-muted-foreground">
+                          {testimonial.rating} of 5{testimonial.submitted_at ? `, ${new Date(testimonial.submitted_at).toLocaleDateString()}` : ''}{testimonial.is_featured ? ', featured' : ''}
+                        </p>
+                      </div>
                     </div>
+                    <Badge variant={st.variant} className="flex-shrink-0">{st.label}</Badge>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                    testimonial.status === 'approved' ? 'bg-success text-success' :
-                    testimonial.status === 'rejected' ? 'bg-destructive text-destructive' :
-                    'bg-warning text-warning'
-                  }`}>
-                    {testimonial.status.replace(/_/g, ' ')}
-                  </span>
-                </div>
-                <p className="text-sm text-foreground mb-3">{testimonial.content}</p>
-                <div className="flex gap-2">
-                  {testimonial.status === 'pending_approval' && (
-                    <>
-                      <button onClick={() => approveMutation.mutate(testimonial.id)}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-success text-white text-xs font-bold hover:bg-success">
-                        <CheckCircle2 className="w-3 h-3" /> Approve
-                      </button>
-                      <button onClick={() => rejectMutation.mutate(testimonial.id)}
-                        className="flex items-center gap-1 px-3 py-1 rounded-lg bg-destructive text-white text-xs font-bold hover:bg-destructive">
-                        <XCircle className="w-3 h-3" /> Reject
-                      </button>
-                    </>
-                  )}
-                  <button onClick={() => toggleFeatureMutation.mutate(testimonial.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                      testimonial.is_featured
-                        ? 'bg-primary text-primary-foreground hover:bg-primary'
-                        : 'bg-border text-foreground hover:bg-border'
-                    }`}>
-                    {testimonial.is_featured ? '⭐ Featured' : 'Feature'}
-                  </button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-muted-foreground py-8">No testimonials yet</p>
-          )}
-        </div>
-      </div>
+                  <p className="text-[15px] text-foreground leading-relaxed mt-3">&ldquo;{testimonial.content}&rdquo;</p>
+                  <div className="flex items-center gap-2 mt-3">
+                    {testimonial.status === 'pending_approval' && (
+                      <>
+                        <Button size="sm" onClick={() => approveMutation.mutate(testimonial.id)}>Approve</Button>
+                        <Button size="sm" variant="outline" onClick={() => rejectMutation.mutate(testimonial.id)}>Reject</Button>
+                      </>
+                    )}
+                    <button onClick={() => toggleFeatureMutation.mutate(testimonial.id)} className="ml-1 text-sm font-semibold text-foreground underline underline-offset-4 decoration-1 hover:decoration-2">
+                      {testimonial.is_featured ? 'Unfeature' : 'Feature'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState className="border-t border-border" title="No testimonials yet" body="They show up here when clients send one from their app." />
+        )}
+      </Panel>
     </div>
   );
 }

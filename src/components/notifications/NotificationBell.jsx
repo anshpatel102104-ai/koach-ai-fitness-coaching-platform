@@ -16,7 +16,7 @@ function useIsMobile() {
   return mobile;
 }
 
-export default function NotificationBell() {
+export default function NotificationBell({ onDark = false }) {
   const [open, setOpen] = useState(false);
   const [pulse, setPulse] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
@@ -84,35 +84,25 @@ export default function NotificationBell() {
       <button
         ref={bellRef}
         onClick={() => setOpen(o => !o)}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl hover:bg-[var(--kc-w-10)] transition-colors"
+        className={onDark
+          ? 'touch-compact relative flex h-10 w-10 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors'
+          : 'touch-compact relative flex h-11 w-11 items-center justify-center rounded-lg border border-input bg-card text-foreground hover:bg-accent transition-colors'}
         title="Notifications (N)"
+        aria-label={displayCount ? `Notifications, ${displayCount} unread` : 'Notifications'}
       >
-        {/* Pulse ring */}
-        {pulse && (
-          <motion.span
-            initial={{ scale: 1, opacity: 0.6 }}
-            animate={{ scale: 2.2, opacity: 0 }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
-            className="absolute inset-0 rounded-xl bg-primary"
-          />
-        )}
         <motion.div
-          animate={pulse ? { rotate: [0, -15, 15, -10, 10, 0] } : {}}
+          animate={pulse ? { rotate: [0, -12, 12, -8, 8, 0] } : {}}
           transition={{ duration: 0.5 }}
         >
-          <Bell className="w-4 h-4 text-white/70" />
+          <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
         </motion.div>
 
-        {/* Badge */}
         {displayCount && (
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 min-w-[17px] h-[17px] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 leading-none"
-            style={{ background: 'linear-gradient(135deg, var(--tc-destructive), var(--tc-destructive))', boxShadow: '0 0 0 2px var(--kc-0d0d0d)' }}
+          <span
+            className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-brand px-1 text-[11px] font-bold leading-none text-brand-foreground flex items-center justify-center ring-2 ${onDark ? 'ring-sidebar' : 'ring-card'}`}
           >
             {displayCount}
-          </motion.span>
+          </span>
         )}
       </button>
 

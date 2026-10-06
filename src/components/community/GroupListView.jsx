@@ -1,14 +1,10 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Users, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Pencil, Trash2, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Panel, EmptyState, Initials } from '@/components/kit';
 import { SignedImg } from '@/components/shared/SignedImage';
-
-function avatarColor(name) {
-  const colors = ['bg-accent text-primary', 'bg-ai/10 text-ai', 'bg-success/10 text-success', 'bg-warning/10 text-warning', 'bg-destructive/10 text-destructive'];
-  return colors[(name?.charCodeAt(0) || 0) % colors.length];
-}
 
 export default function GroupListView({ groups, clients, isCoach, onSelect, onEdit, onCreate }) {
   const queryClient = useQueryClient();
@@ -23,116 +19,82 @@ export default function GroupListView({ groups, clients, isCoach, onSelect, onEd
     return clients.filter(c => ids.includes(c.id));
   };
 
+  if (groups.length === 0) {
+    return (
+      <Panel>
+        <EmptyState
+          title={isCoach ? 'No groups yet' : 'You are not in any groups yet'}
+          body={isCoach ? 'Start one for a cohort, a challenge or everyone on a program.' : 'Ask your coach to add you to a group.'}
+          action={isCoach ? <Button onClick={onCreate}>New group</Button> : null}
+        />
+      </Panel>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Create button for coaches */}
-      {isCoach && (
-        <button onClick={onCreate}
-          className="w-full flex items-center gap-3 p-4 bg-card border-2 border-dashed border-primary/30 rounded-xl hover:border-primary hover:bg-accent/10 transition-all group">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary transition-colors">
-            <Plus className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-semibold text-primary">Create Community</p>
-            <p className="text-xs text-muted-foreground">Set up a new group for your clients</p>
-          </div>
-        </button>
-      )}
+    <Panel className="overflow-hidden">
+      <div className="hidden md:grid grid-cols-[1fr_200px_200px_96px] gap-4 px-6 py-3 border-b border-border text-[13px] text-muted-foreground">
+        <span>Group</span><span>Members</span><span>Turned on</span><span />
+      </div>
+      <ul className="divide-y divide-border">
+        {groups.map(group => {
+          const members = getMembers(group);
+          const features = [
+            group.feed_enabled !== false && 'Feed',
+            group.leaderboard_enabled !== false && 'Leaderboard',
+            group.challenges_enabled !== false && 'Challenges',
+          ].filter(Boolean);
+          return (
+            <li key={group.id} className="md:grid md:grid-cols-[1fr_200px_200px_96px] md:items-center gap-4 px-5 md:px-6 py-4 hover:bg-accent/40 transition-colors">
+              <button onClick={() => onSelect(group)} className="flex items-center gap-4 min-w-0 text-left w-full">
+                <span className="h-12 w-12 rounded-lg bg-secondary overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {group.cover_image_url
+                    ? <SignedImg src={group.cover_image_url} alt="" className="w-full h-full object-cover" />
+                    : <span className="display text-xl text-foreground/40">{(group.name || '?').slice(0, 1).toUpperCase()}</span>}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold text-foreground truncate">{group.name}</span>
+                  <span className="block text-sm text-muted-foreground truncate">{group.description || 'No description'}</span>
+                </span>
+              </button>
 
-      {groups.length === 0 ? (
-        <div className="text-center py-16 bg-card border border-border rounded-xl">
-          <Users className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-          <p className="font-semibold text-sm text-foreground">
-            {isCoach ? 'No communities yet' : 'You are not in any groups yet'}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isCoach ? 'Create a community to get started.' : 'Ask your coach to add you to a group.'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {groups.map(group => {
-            const members = getMembers(group);
-            return (
-              <div key={group.id}
-                className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all">
-                {/* Cover */}
-                {group.cover_image_url ? (
-                  <div className="h-24 overflow-hidden">
-                    <SignedImg src={group.cover_image_url} alt={group.name} className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="h-24 flex items-center justify-center"
-                    style={{ background: 'linear-gradient(135deg, var(--tc-foreground) 0%, var(--tc-primary) 100%)' }}>
-                    <Users className="w-8 h-8 text-white/40" />
-                  </div>
-                )}
-
-                {/* Body */}
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground leading-tight">{group.name}</p>
-                      {group.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{group.description}</p>
-                      )}
-                    </div>
-                    {isCoach && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <button onClick={() => onEdit(group)}
-                          className="w-7 h-7 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
-                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                        </button>
-                        <button onClick={() => {
-                          if (window.confirm('Delete "' + group.name + '"? This cannot be undone.')) {
-                            deleteMutation.mutate(group.id);
-                          }
-                        }}
-                          className="w-7 h-7 rounded-lg hover:bg-destructive/10 flex items-center justify-center transition-colors">
-                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Members preview */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex -space-x-1.5">
-                      {members.slice(0, 5).map(m => (
-                        <div key={m.id} className={cn('w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold flex-shrink-0', avatarColor(m.name))}>
-                          {m.name?.[0]?.toUpperCase()}
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {members.length === 0 ? 'No members yet' : members.length + ' member' + (members.length !== 1 ? 's' : '')}
-                    </p>
-                  </div>
-
-                  {/* Feature badges */}
-                  <div className="flex gap-1 flex-wrap mb-3">
-                    {group.feed_enabled !== false && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/10 text-primary">Feed</span>
-                    )}
-                    {group.leaderboard_enabled !== false && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/10 text-success">Leaderboard</span>
-                    )}
-                    {group.challenges_enabled !== false && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-warning/10 text-warning">Challenges</span>
-                    )}
-                  </div>
-
-                  <button onClick={() => onSelect(group)}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold text-primary-foreground transition-colors"
-                    style={{ background: 'var(--tc-primary)' }}>
-                    Open Group <ChevronRight className="w-4 h-4" />
-                  </button>
+              <div className="flex items-center gap-2 mt-3 md:mt-0">
+                <div className="flex -space-x-1">
+                  {members.slice(0, 4).map(m => (
+                    <Initials key={m.id} name={m.name || ''} size={28} className="ring-2 ring-card" />
+                  ))}
                 </div>
+                <span className="text-sm text-muted-foreground">
+                  {members.length === 0 ? 'No members yet' : `${members.length} member${members.length !== 1 ? 's' : ''}`}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+
+              <p className="text-sm text-foreground mt-1 md:mt-0">{features.length ? features.join(', ') : 'Everything off'}</p>
+
+              <div className="flex items-center justify-end gap-1 -mt-2 md:mt-0">
+                {isCoach && (
+                  <>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground" onClick={() => onEdit(group)} aria-label={`Edit ${group.name}`}>
+                      <Pencil />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-destructive" aria-label={`Delete ${group.name}`}
+                      onClick={() => {
+                        if (window.confirm('Delete "' + group.name + '"? This cannot be undone.')) {
+                          deleteMutation.mutate(group.id);
+                        }
+                      }}>
+                      <Trash2 />
+                    </Button>
+                  </>
+                )}
+                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => onSelect(group)} aria-label={`Open ${group.name}`}>
+                  <ChevronRight />
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }

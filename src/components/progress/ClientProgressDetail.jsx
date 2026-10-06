@@ -8,12 +8,14 @@ import ProgressBodyStatsTab from './tabs/ProgressBodyStatsTab';
 import ProgressMeasurementsTab from './tabs/ProgressMeasurementsTab';
 import ProgressPhotosTab from './tabs/ProgressPhotosTab';
 import ProgressPerformanceTab from './tabs/ProgressPerformanceTab';
-import { SignedImg } from '@/components/shared/SignedImage';
+import { useSignedUrl } from '@/components/shared/SignedImage';
+import { Initials } from '@/components/kit';
+import { Button } from '@/components/ui/button';
 
 const TABS = [
-  { key: 'ai', label: '✨ AI Analysis' },
+  { key: 'ai', label: 'AI read' },
   { key: 'overview', label: 'Overview' },
-  { key: 'body_stats', label: 'Body Stats' },
+  { key: 'body_stats', label: 'Body stats' },
   { key: 'measurements', label: 'Measurements' },
   { key: 'photos', label: 'Photos' },
   { key: 'performance', label: 'Performance' },
@@ -48,57 +50,47 @@ export default function ClientProgressDetail({ client, checkIns, sessions, allCl
   const startDate = client.start_date || first?.date;
   const weeksActive = startDate ? differenceInWeeks(new Date(), parseISO(startDate)) + 1 : 0;
   const score = calcProgressScore(client, checkIns);
-  const goalLabel = { weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', strength: 'Strength', endurance: 'Endurance', flexibility: 'Flexibility', general_fitness: 'General Fitness' }[client.goal] || 'General';
+  const goalLabel = { weight_loss: 'Fat loss', muscle_gain: 'Muscle gain', strength: 'Strength', endurance: 'Endurance', flexibility: 'Mobility', general_fitness: 'General fitness' }[client.goal] || 'General fitness';
+  const avatar = useSignedUrl(client.avatar_url);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] flex flex-col overflow-hidden">
-        {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center gap-4 flex-shrink-0"
-          style={{ background: 'var(--tc-sidebar)' }}>
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-primary-foreground font-bold flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>
-            {client.avatar_url
-              ? <SignedImg src={client.avatar_url} alt={client.name} className="w-12 h-12 rounded-full object-cover" />
-              : client.name?.[0]?.toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-white">{client.name}</h2>
-            <div className="flex items-center gap-3 mt-0.5">
-              <span className="text-xs text-white/50">{goalLabel}</span>
-              {weeksActive > 0 && <span className="text-xs text-white/50">·  {weeksActive}w active</span>}
-              <span className="text-xs text-white/50">· {checkIns.length} check-ins</span>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`${client.name} progress`} className="bg-background rounded-t-xl sm:rounded-xl w-full max-w-5xl h-[95dvh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden ring-1 ring-border" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="px-4 sm:px-6 pt-5 bg-card border-b border-border flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <Initials name={client.name || ''} src={avatar || undefined} tone="ink" size={44} />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-[24px] leading-tight text-foreground truncate">{client.name}</h2>
+              <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+                {[goalLabel, weeksActive > 0 ? `week ${weeksActive}` : null, `${checkIns.length} check-ins`].filter(Boolean).join(', ')}
+              </p>
             </div>
-          </div>
-          {/* Score badge */}
-          <div className="flex-shrink-0 text-center">
-            <div className={cn('text-2xl font-bold',
-              score >= 70 ? 'text-success' : score >= 50 ? 'text-orange-400' : 'text-destructive')}>
-              {score}
+            <div className="flex-shrink-0 text-right">
+              <p className={cn('num text-[28px] leading-none', score < 50 ? 'text-destructive' : 'text-foreground')}>{score}</p>
+              <p className="text-[13px] text-muted-foreground mt-1">Progress score</p>
             </div>
-            <div className="text-[9px] text-white/40 uppercase tracking-wide">Progress Score</div>
+            <Button variant="ghost" size="icon" className="h-9 w-9 flex-shrink-0" onClick={onClose} aria-label="Close">
+              <X className="w-4 h-4" />
+            </Button>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--kc-w-10)] hover:bg-[var(--kc-w-20)] transition-colors">
-            <X className="w-4 h-4 text-white" />
-          </button>
-        </div>
 
-        {/* Tab Bar */}
-        <div className="flex border-b border-border px-6 flex-shrink-0 bg-card overflow-x-auto scrollbar-hide">
-          {TABS.map(t => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                'px-4 py-3 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
-                tab === t.key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+          <div className="flex gap-5 mt-4 overflow-x-auto scrollbar-hide" role="tablist">
+            {TABS.map(t => (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={tab === t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  'touch-compact pb-3 pt-1 text-sm whitespace-nowrap border-b-2 -mb-px transition-colors',
+                  tab === t.key ? 'border-foreground text-foreground font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground font-medium'
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Tab Content */}

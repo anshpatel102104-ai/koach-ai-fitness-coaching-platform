@@ -1,19 +1,9 @@
 import React, { useMemo } from 'react';
 import { format, parseISO, isAfter, isBefore, addDays } from 'date-fns';
-import { Calendar, AlertTriangle } from 'lucide-react';
+import { Panel, PanelHeader } from '@/components/kit';
+import { money } from '@/components/business/ui';
 
-function Avatar({ name }) {
-  const initials = (name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const colors = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--tc-destructive)'];
-  const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
-  return (
-    <div style={{ width: 28, height: 28, borderRadius: 8, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color, flexShrink: 0 }}>
-      {initials}
-    </div>
-  );
-}
-
-export default function UpcomingPayments({ invoices = [], payments = [] }) {
+export default function UpcomingPayments({ invoices = [] }) {
   const now = new Date();
   const in30 = addDays(now, 30);
 
@@ -27,48 +17,36 @@ export default function UpcomingPayments({ invoices = [], payments = [] }) {
         } catch { return false; }
       })
       .sort((a, b) => (a.due_date > b.due_date ? 1 : -1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoices]);
 
   const total = upcoming.reduce((s, i) => s + Number(i.amount || 0), 0);
 
-  if (upcoming.length === 0) {
-    return (
-      <div style={{ background: 'var(--tc-card)', borderRadius: 14, border: '1px solid var(--tc-muted)', padding: '24px', textAlign: 'center' }}>
-        <Calendar size={28} color="var(--tc-muted-foreground)" style={{ margin: '0 auto 8px' }} />
-        <p style={{ fontSize: 13, color: 'var(--tc-muted-foreground)', margin: 0 }}>No upcoming payments in the next 30 days</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ background: 'var(--tc-card)', borderRadius: 14, border: '1px solid var(--tc-muted)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--tc-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Calendar size={15} color="var(--tc-primary)" />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tc-foreground)' }}>Upcoming Payments — Next 30 Days</span>
-        </div>
-        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--tc-success)' }}>${total.toFixed(2)} expected</span>
-      </div>
-      {upcoming.map(inv => {
-        const daysLeft = Math.ceil((parseISO(inv.due_date) - now) / 86400000);
-        const atRisk = daysLeft <= 3;
-        return (
-          <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--tc-background)', background: atRisk ? 'var(--tc-warning)' : 'var(--tc-card)' }}>
-            <Avatar name={inv.client_name} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tc-foreground)' }}>{inv.client_name}</div>
-              <div style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>{inv.description || inv.invoice_number}</div>
-            </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--tc-foreground)' }}>${Number(inv.amount).toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: atRisk ? 'var(--tc-warning)' : 'var(--tc-muted-foreground)', display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'flex-end' }}>
-                {atRisk && <AlertTriangle size={10} />}
-                Due {format(parseISO(inv.due_date), 'MMM d')} ({daysLeft}d)
+    <Panel>
+      <PanelHeader
+        title="Due in 30 days"
+        subtitle={upcoming.length ? `${money(total)} expected` : 'Nothing due in the next 30 days.'}
+      />
+      {upcoming.length > 0 && (
+        <div className="px-5 sm:px-6 pb-3">
+          {upcoming.map(inv => {
+            const daysLeft = Math.ceil((parseISO(inv.due_date) - now) / 86400000);
+            const soon = daysLeft <= 3;
+            return (
+              <div key={inv.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-border last:border-b-0">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{inv.client_name}</p>
+                  <p className={soon ? 'text-[13px] text-warning font-medium' : 'text-[13px] text-muted-foreground'}>
+                    {format(parseISO(inv.due_date), 'EEE, MMM d')} · {daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`}
+                  </p>
+                </div>
+                <p className="num text-[17px] text-foreground">{money(inv.amount)}</p>
               </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </Panel>
   );
 }

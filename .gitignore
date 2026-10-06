@@ -31,3 +31,5 @@ dist-ssr
 .vite
 migration-logs/
 darkmode-audit/out/
+
+design-preview/out/

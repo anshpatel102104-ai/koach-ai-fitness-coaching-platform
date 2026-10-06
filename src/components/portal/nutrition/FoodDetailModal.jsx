@@ -25,8 +25,6 @@ export default function FoodDetailModal({ food, mealName, isOpen, onClose, onAdd
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[70] flex items-end"
       style={{ background: 'rgba(0,0,0,0.4)' }}
@@ -50,8 +48,8 @@ export default function FoodDetailModal({ food, mealName, isOpen, onClose, onAdd
         {food.brand && <p className="text-muted-foreground text-sm mb-4">{food.brand} · {food.category}</p>}
 
         {/* Serving size input */}
-        <div className="bg-muted rounded-2xl p-4 mb-4 border border-border">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Serving Size</p>
+        <div className="bg-muted rounded-xl p-4 mb-4 border border-border">
+          <p className="text-xs font-semibold text-muted-foreground mb-3">Serving Size</p>
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <input
@@ -71,7 +69,7 @@ export default function FoodDetailModal({ food, mealName, isOpen, onClose, onAdd
         </div>
 
         {/* Macro breakdown */}
-        <div className="bg-accent rounded-2xl p-5 mb-5 border border-accent">
+        <div className="bg-accent rounded-xl p-5 mb-5 border border-accent">
           <p className="text-primary text-center font-black text-3xl leading-none">{macros.calories}</p>
           <p className="text-primary text-center text-xs font-semibold mt-1">calories</p>
 
@@ -83,8 +81,8 @@ export default function FoodDetailModal({ food, mealName, isOpen, onClose, onAdd
             ].map(m => (
               <div key={m.label} className="text-center">
                 <p className="text-foreground font-bold text-lg">{m.value}</p>
-                <p className="text-muted-foreground text-[10px] font-semibold mt-0.5">{m.label}</p>
-                <p className="text-muted-foreground text-[10px]">{m.unit}</p>
+                <p className="text-muted-foreground text-[12px] font-semibold mt-0.5">{m.label}</p>
+                <p className="text-muted-foreground text-[12px]">{m.unit}</p>
               </div>
             ))}
           </div>
@@ -94,11 +92,11 @@ export default function FoodDetailModal({ food, mealName, isOpen, onClose, onAdd
         <div className="space-y-2">
           <button
             onClick={() => { onAddToMeal(food, serving, unit); onClose(); }}
-            className="w-full py-4 rounded-2xl font-black text-base text-white"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))', boxShadow: '0 4px 16px rgb(var(--primary) / 0.3)' }}>
+            className="w-full py-4 rounded-xl font-black text-base text-primary-foreground"
+            style={{ background: 'rgb(var(--primary))', boxShadow: 'none' }}>
             Add to {mealName}
           </button>
-          <button className="w-full py-3 rounded-2xl font-bold text-sm text-primary border border-primary bg-accent flex items-center justify-center gap-2">
+          <button className="w-full py-3 rounded-xl font-bold text-sm text-primary border border-primary bg-accent flex items-center justify-center gap-2">
             <Heart className="w-4 h-4" /> Save to Favorites
           </button>
         </div>

@@ -7,17 +7,17 @@ import { cn } from '@/lib/utils';
 import FoodSearchResults from './FoodSearchResults';
 
 const CATEGORIES = [
-  { id: 'proteins', label: '🥩 Proteins' },
-  { id: 'carbs', label: '🍞 Carbs' },
-  { id: 'fats', label: '🥑 Fats' },
-  { id: 'fruits', label: '🍎 Fruits' },
-  { id: 'vegetables', label: '🥦 Vegetables' },
-  { id: 'supplements', label: '💊 Supplements' },
+  { id: 'proteins', label: 'Proteins' },
+  { id: 'carbs', label: 'Carbs' },
+  { id: 'fats', label: 'Fats' },
+  { id: 'fruits', label: 'Fruit' },
+  { id: 'vegetables', label: 'Vegetables' },
+  { id: 'supplements', label: 'Supplements' },
 ];
 
 function MacroPill({ label, value, color }) {
   if (!value) return null;
-  return <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded-full', color)}>{label}: {value}</span>;
+  return <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded-full', color)}>{label}: {value}</span>;
 }
 
 export default function FoodPickerModal({ open, onOpenChange, onSelect }) {
@@ -58,11 +58,11 @@ export default function FoodPickerModal({ open, onOpenChange, onSelect }) {
     >
       <p className="text-sm font-semibold text-foreground">{food.name}</p>
       <div className="flex gap-1 mt-1 flex-wrap">
-        <MacroPill label="Cal" value={food.calories} color="bg-orange-50 text-orange-600" />
-        <MacroPill label="P" value={food.protein_g ? `${food.protein_g}g` : null} color="bg-accent text-primary" />
-        <MacroPill label="C" value={food.carbs_g ? `${food.carbs_g}g` : null} color="bg-warning/10 text-warning" />
-        <MacroPill label="F" value={food.fats_g ? `${food.fats_g}g` : null} color="bg-destructive/10 text-destructive" />
-        {food.serving_size && <span className="text-[10px] text-muted-foreground">per {food.serving_size}</span>}
+        <MacroPill label="Cal" value={food.calories} color="bg-secondary text-foreground" />
+        <MacroPill label="P" value={food.protein_g ? `${food.protein_g}g` : null} color="bg-secondary text-foreground" />
+        <MacroPill label="C" value={food.carbs_g ? `${food.carbs_g}g` : null} color="bg-secondary text-foreground" />
+        <MacroPill label="F" value={food.fats_g ? `${food.fats_g}g` : null} color="bg-secondary text-foreground" />
+        {food.serving_size && <span className="text-xs text-muted-foreground">per {food.serving_size}</span>}
       </div>
     </button>
   );
@@ -111,7 +111,7 @@ export default function FoodPickerModal({ open, onOpenChange, onSelect }) {
                     if (!items.length) return null;
                     return (
                       <div key={cat.id}>
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat.label}</p>
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">{cat.label}</p>
                         <div className="space-y-1.5">
                           {items.map(food => <FoodButton key={food.id} food={food} />)}
                         </div>
@@ -120,7 +120,7 @@ export default function FoodPickerModal({ open, onOpenChange, onSelect }) {
                   })}
                   {uncategorized.length > 0 && (
                     <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Other</p>
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">Other</p>
                       <div className="space-y-1.5">
                         {uncategorized.map(food => <FoodButton key={food.id} food={food} />)}
                       </div>

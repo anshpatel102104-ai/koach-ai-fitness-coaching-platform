@@ -1,46 +1,33 @@
 import React, { useState } from 'react';
-import { Sparkles, Loader2, Check, ChevronDown, ChevronUp, Flame, Footprints, Dumbbell, Utensils, Zap } from 'lucide-react';
+import { Loader2, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { db } from '@/api/supabaseClient';
 import { cn } from '@/lib/utils';
 
-const CATEGORY_META = {
-  calories:  { icon: Flame,     color: 'text-orange-400',  bg: 'bg-orange-500/10 border-orange-500/20' },
-  cardio:    { icon: Footprints, color: 'text-primary',    bg: 'bg-primary/10 border-primary/20' },
-  intensity: { icon: Dumbbell,  color: 'text-ai',  bg: 'bg-ai/10 border-ai/20' },
-  nutrition: { icon: Utensils,  color: 'text-success', bg: 'bg-success/10 border-success/20' },
-  recovery:  { icon: Zap,       color: 'text-warning',   bg: 'bg-warning/10 border-warning/20' },
+const CATEGORY_LABEL = {
+  calories: 'Calories', cardio: 'Cardio', intensity: 'Training', nutrition: 'Nutrition', recovery: 'Recovery',
 };
 
-
-function SuggestionCard({ suggestion, onApply, applied }) {
-  const meta = CATEGORY_META[suggestion.category] || CATEGORY_META.intensity;
-  const Icon = meta.icon;
-  const impactColor = suggestion.impact === 'high' ? 'text-destructive' : suggestion.impact === 'medium' ? 'text-warning' : 'text-muted-foreground';
-
+function SuggestionRow({ suggestion, onApply, applied }) {
+  const high = suggestion.impact === 'high';
   return (
-    <div className={cn('border rounded-xl p-3.5 space-y-2 transition-all', meta.bg, applied && 'opacity-50')}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Icon className={cn('w-4 h-4 flex-shrink-0', meta.color)} />
-          <p className="text-sm font-semibold leading-snug">{suggestion.title}</p>
-        </div>
-        <span className={cn('text-[10px] font-bold uppercase tracking-wide flex-shrink-0', impactColor)}>
-          {suggestion.impact}
-        </span>
+    <div className={cn('flex items-start gap-3 py-3.5 border-b border-ai-foreground/10 last:border-b-0', applied && 'opacity-60')}>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] text-ai-foreground/60">
+          {CATEGORY_LABEL[suggestion.category] || 'Change'}
+          {suggestion.impact && <span className={cn(high && 'text-ai-foreground')}> · {suggestion.impact} impact</span>}
+        </p>
+        <p className="text-[15px] font-semibold text-ai-foreground mt-0.5">{suggestion.title}</p>
+        <p className="text-sm text-ai-foreground/75 leading-relaxed mt-1">{suggestion.rationale}</p>
       </div>
-      <p className="text-xs text-muted-foreground leading-relaxed pl-6">{suggestion.rationale}</p>
-      <div className="flex justify-end pl-6">
-        <Button
-          size="sm"
-          variant={applied ? 'secondary' : 'default'}
-          className="h-7 text-xs gap-1.5"
-          onClick={() => onApply(suggestion)}
-          disabled={applied}
-        >
-          {applied ? <><Check className="w-3 h-3" /> Applied</> : 'Apply Change'}
-        </Button>
-      </div>
+      <Button
+        size="sm"
+        className="bg-ai-foreground text-ai hover:bg-ai-foreground/90 flex-shrink-0 mt-1"
+        onClick={() => onApply(suggestion)}
+        disabled={applied}
+      >
+        {applied ? <><Check /> Noted</> : 'Mark applied'}
+      </Button>
     </div>
   );
 }
@@ -71,83 +58,54 @@ export default function AIProgramSuggestions({ checkIn, client, allClientCIs = [
   const appliedCount = Object.keys(applied).length;
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <p className="text-sm font-semibold">AI Program Suggestions</p>
-          {appliedCount > 0 && (
-            <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
-              {appliedCount} applied
-            </span>
-          )}
+    <section className="rounded-xl bg-ai text-ai-foreground">
+      <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3">
+        <div className="min-w-0">
+          <h2 className="text-[20px]">What to change next week</h2>
+          <p className="text-sm text-ai-foreground/70 mt-0.5">
+            {appliedCount > 0
+              ? `${appliedCount} marked as applied. Update the plan itself to match.`
+              : 'The AI reads weight trend, compliance, sleep and energy and suggests adjustments.'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {suggestions.length > 0 && (
-            <button onClick={() => setExpanded(e => !e)} className="p-1 rounded-lg hover:bg-secondary transition-colors">
-              {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            <button onClick={() => setExpanded(e => !e)} aria-label={expanded ? 'Collapse' : 'Expand'} className="p-1.5 rounded-md hover:bg-ai-foreground/10">
+              <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
             </button>
           )}
           <Button
             size="sm"
-            variant={suggestions.length ? 'outline' : 'default'}
-            className={cn('h-8 text-xs gap-1.5', !suggestions.length && 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/20')}
+            variant="ghost"
+            className={cn(suggestions.length ? 'border border-ai-foreground/25 text-ai-foreground hover:bg-ai-foreground/10' : 'bg-ai-foreground text-ai hover:bg-ai-foreground/90')}
             onClick={generate}
             disabled={loading}
           >
-            {loading
-              ? <Loader2 className="w-3 h-3 animate-spin" />
-              : <Sparkles className="w-3 h-3" />
-            }
-            {loading ? 'Analyzing...' : suggestions.length ? 'Regenerate' : 'Analyze & Suggest'}
+            {loading && <Loader2 className="animate-spin" />}
+            {loading ? 'Reading…' : suggestions.length ? 'Ask again' : 'Suggest changes'}
           </Button>
         </div>
       </div>
 
-      {/* Content */}
-      {!suggestions.length && !loading && (
-        <div className="px-4 py-6 text-center space-y-1.5">
-          <Sparkles className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-          <p className="text-sm text-muted-foreground">Click "Analyze & Suggest" to get AI-powered adjustment recommendations based on this check-in data.</p>
-        </div>
-      )}
-
-      {loading && (
-        <div className="px-4 py-6 text-center space-y-2">
-          <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto" />
-          <p className="text-xs text-muted-foreground">Analyzing weight trend, compliance, sleep & energy...</p>
-        </div>
-      )}
+      {error && <p className="px-5 pb-4 text-sm text-ai-foreground/80">{error}</p>}
 
       {suggestions.length > 0 && expanded && (
-        <div className="p-4 space-y-2.5">
+        <div className="px-5 pb-3">
           {suggestions.map((s, i) => (
-            <SuggestionCard
+            <SuggestionRow
               key={i}
               suggestion={s}
               onApply={handleApply}
               applied={!!applied[s.title]}
             />
           ))}
-          {appliedCount > 0 && (
-            <p className="text-[11px] text-center text-muted-foreground pt-1">
-              {appliedCount} suggestion{appliedCount > 1 ? 's' : ''} marked as applied. Remember to update the client's plan manually.
-            </p>
-          )}
         </div>
       )}
 
       {suggestions.length > 0 && !expanded && (
-        <div className="px-4 py-2.5 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{suggestions.length} suggestions generated</span>
-          {appliedCount > 0 && (
-            <span className="flex items-center gap-1 text-[11px] text-success">
-              <Check className="w-3 h-3" />{appliedCount} applied
-            </span>
-          )}
-        </div>
+        <p className="px-5 pb-4 text-sm text-ai-foreground/70">{suggestions.length} suggestions{appliedCount > 0 ? `, ${appliedCount} applied` : ''}</p>
       )}
-    </div>
+      {!suggestions.length && <div className="pb-2" />}
+    </section>
   );
 }

@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
-import { FileText, Eye, CreditCard, Download, ChevronDown } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-
-const STATUS_CONFIG = {
-  paid: { label: 'Paid', bg: 'rgb(var(--success) / 0.15)', color: 'rgb(var(--success))', border: 'rgb(var(--success) / 0.25)' },
-  sent: { label: 'Unpaid', bg: 'rgb(var(--warning) / 0.15)', color: 'rgb(var(--warning))', border: 'rgb(var(--warning) / 0.25)' },
-  viewed: { label: 'Unpaid', bg: 'rgb(var(--warning) / 0.15)', color: 'rgb(var(--warning))', border: 'rgb(var(--warning) / 0.25)' },
-  draft: { label: 'Pending', bg: 'rgb(var(--muted-foreground) / 0.15)', color: 'rgb(var(--muted-foreground))', border: 'rgb(var(--muted-foreground) / 0.25)' },
-  overdue: { label: 'Overdue', bg: 'rgb(var(--destructive) / 0.15)', color: 'rgb(var(--destructive))', border: 'rgb(var(--destructive) / 0.25)' },
-  cancelled: { label: 'Cancelled', bg: 'rgb(var(--muted-foreground) / 0.15)', color: 'rgb(var(--muted-foreground))', border: 'rgb(var(--muted-foreground) / 0.25)' },
-};
-
-const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmtDate = (d) => { try { return format(parseISO(d), 'MMM d, yyyy'); } catch { return d || '—'; } };
+import { Button } from '@/components/ui/button';
+import { Pill } from '@/components/portal/PortalUI';
+import { fmtMoney as fmt, fmtDate, INVOICE_STATUS } from './shared';
 
 export default function BillingInvoiceList({ invoices, onView, onPay }) {
   const [showAll, setShowAll] = useState(false);
@@ -21,75 +10,52 @@ export default function BillingInvoiceList({ invoices, onView, onPay }) {
 
   if (invoices.length === 0) {
     return (
-      <div className="rounded-2xl p-6 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <FileText className="w-8 h-8 text-white/20 mx-auto mb-2" />
-        <p className="text-white/40 text-sm">No invoices yet</p>
-      </div>
+      <section className="panel px-4 py-5">
+        <p className="text-[15px] font-semibold text-foreground">No invoices yet</p>
+        <p className="mt-1 text-sm text-muted-foreground">They'll show up here when your coach sends one.</p>
+      </section>
     );
   }
 
   return (
-    <div>
-      <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-3">Invoices</p>
-      <div className="space-y-2">
+    <section className="panel px-4 pt-4 pb-1">
+      <h2 className="text-xl text-foreground">Invoices</h2>
+      <ul className="mt-1 divide-y divide-border">
         {displayed.map(inv => {
-          const cfg = STATUS_CONFIG[inv.status] || STATUS_CONFIG.draft;
+          const cfg = INVOICE_STATUS[inv.status] || INVOICE_STATUS.draft;
           const isUnpaid = ['sent', 'viewed', 'overdue', 'draft'].includes(inv.status);
           return (
-            <div key={inv.id} className="rounded-2xl p-3.5" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgb(var(--primary) / 0.15)' }}>
-                  <FileText className="w-4 h-4 text-primary" />
+            <li key={inv.id} className="py-3">
+              <button type="button" onClick={() => onView(inv)} className="flex w-full items-start gap-3 text-left">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-foreground">{inv.description || inv.invoice_number || 'Invoice'}</span>
+                  <span className="block text-[13px] text-muted-foreground">
+                    {inv.invoice_number ? `${inv.invoice_number}, ` : ''}{fmtDate(inv.issue_date)}
+                    {inv.due_date && isUnpaid ? `, due ${fmtDate(inv.due_date)}` : ''}
+                  </span>
+                </span>
+                <span className="text-right">
+                  <span className="block text-[15px] font-semibold tabular-nums text-foreground">{fmt(inv.amount)}</span>
+                  <Pill tone={cfg.tone} className="mt-1 text-[12px]">{cfg.label}</Pill>
+                </span>
+              </button>
+              {(isUnpaid || inv.status === 'paid') && (
+                <div className="mt-2 flex gap-2">
+                  {isUnpaid && <Button size="sm" onClick={() => onPay(inv)}>Pay now</Button>}
+                  {inv.status === 'paid' && <Button size="sm" variant="outline">Receipt</Button>}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-white text-sm font-bold truncate">{inv.invoice_number || 'Invoice'}</p>
-                    <span className="text-white font-bold text-sm flex-shrink-0">{fmt(inv.amount)}</span>
-                  </div>
-                  <p className="text-white/40 text-xs truncate mt-0.5">{inv.description || '—'}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
-                      {cfg.label}
-                    </span>
-                    <span className="text-white/25 text-[10px]">{fmtDate(inv.issue_date)}</span>
-                    {inv.due_date && isUnpaid && (
-                      <span className="text-white/25 text-[10px]">Due {fmtDate(inv.due_date)}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => onView(inv)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold"
-                  style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>
-                  <Eye className="w-3.5 h-3.5" /> View
-                </button>
-                {isUnpaid && (
-                  <button onClick={() => onPay(inv)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold"
-                    style={{ background: 'rgb(var(--primary) / 0.2)', color: 'rgb(var(--primary))', border: '1px solid rgb(var(--primary) / 0.3)' }}>
-                    <CreditCard className="w-3.5 h-3.5" /> Pay
-                  </button>
-                )}
-                {inv.status === 'paid' && (
-                  <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold"
-                    style={{ background: 'rgb(var(--success) / 0.1)', color: 'rgb(var(--success))', border: '1px solid rgb(var(--success) / 0.2)' }}>
-                    <Download className="w-3.5 h-3.5" /> Receipt
-                  </button>
-                )}
-              </div>
-            </div>
+              )}
+            </li>
           );
         })}
-      </div>
+      </ul>
       {invoices.length > 5 && (
-        <button onClick={() => setShowAll(s => !s)}
-          className="w-full mt-3 py-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
-          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          {showAll ? 'Show less' : `Show all ${invoices.length} invoices`}
-          <ChevronDown className="w-3.5 h-3.5" style={{ transform: showAll ? 'rotate(180deg)' : 'none' }} />
-        </button>
+        <div className="border-t border-border py-2.5">
+          <button type="button" onClick={() => setShowAll(s => !s)} className="text-sm font-semibold text-foreground underline underline-offset-4">
+            {showAll ? 'Show fewer' : `Show all ${invoices.length} invoices`}
+          </button>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

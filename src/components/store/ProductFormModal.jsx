@@ -22,17 +22,17 @@ const TYPE_CATEGORY_MAP = {
 };
 
 const TYPE_OPTIONS = [
-  { value: 'workout_program', label: 'Workout Program' },
-  { value: 'nutrition_plan', label: 'Nutrition Plan' },
-  { value: 'coaching_package', label: 'Coaching Package' },
-  { value: 'guide_ebook', label: 'Guide / Ebook' },
-  { value: 'video_course', label: 'Video Course' },
+  { value: 'workout_program', label: 'Workout program' },
+  { value: 'nutrition_plan', label: 'Nutrition plan' },
+  { value: 'coaching_package', label: 'Coaching package' },
+  { value: 'guide_ebook', label: 'Guide or ebook' },
+  { value: 'video_course', label: 'Video course' },
   { value: 'bundle', label: 'Bundle' },
   { value: 'custom', label: 'Custom' },
 ];
 
 const DELIVERY_OPTIONS = [
-  { value: 'downloadable_file', label: 'Downloadable File (PDF, video, zip)' },
+  { value: 'downloadable_file', label: 'A file to download (PDF, video, zip)' },
   { value: 'app_access', label: 'Access to coaching program in app' },
   { value: 'coaching_messages', label: 'Direct coach access via messages' },
   { value: 'scheduled_calls', label: 'Scheduled calls' },
@@ -41,11 +41,11 @@ const DELIVERY_OPTIONS = [
 
 const ACCESS_DURATIONS = [
   { value: 'lifetime', label: 'Lifetime' },
-  { value: '30_days', label: '30 Days' },
-  { value: '60_days', label: '60 Days' },
-  { value: '90_days', label: '90 Days' },
-  { value: '6_months', label: '6 Months' },
-  { value: '1_year', label: '1 Year' },
+  { value: '30_days', label: '30 days' },
+  { value: '60_days', label: '60 days' },
+  { value: '90_days', label: '90 days' },
+  { value: '6_months', label: '6 months' },
+  { value: '1_year', label: '1 year' },
 ];
 
 const BLANK = {
@@ -62,9 +62,8 @@ const BLANK = {
 
 function SectionHeader({ label }) {
   return (
-    <div className="flex items-center gap-3 pt-4 pb-1">
-      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <div className="flex-1 h-px bg-muted" />
+    <div className="pt-5 pb-3 mt-5 first:mt-0 border-t border-border first:border-t-0 first:pt-4">
+      <p className="text-[15px] font-semibold text-foreground">{label}</p>
     </div>
   );
 }
@@ -160,26 +159,26 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-muted">
-          <DialogTitle className="text-foreground font-bold text-lg">
-            {editing ? 'Edit Product' : 'Create Product'}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <DialogTitle>
+            {editing ? 'Edit product' : 'New product'}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-0">
 
           {/* ── BASIC INFO ── */}
-          <SectionHeader label="Basic Info" />
+          <SectionHeader label="Basics" />
 
           <div className="space-y-3">
             <div>
-              <Label className="text-xs font-semibold text-foreground">Product Name *</Label>
-              <Input className="mt-1" value={form.title} onChange={e => set('title', e.target.value)} required placeholder="e.g. 12-Week Fat Loss Program" />
+              <Label>Name</Label>
+              <Input className="mt-1" value={form.title} onChange={e => set('title', e.target.value)} required placeholder="12-week fat loss program" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs font-semibold text-foreground">Product Type</Label>
+                <Label>Type</Label>
                 <Select value={form.product_type} onValueChange={handleTypeChange}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -188,7 +187,7 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
                 </Select>
               </div>
               <div>
-                <Label className="text-xs font-semibold text-foreground">Category</Label>
+                <Label>Category</Label>
                 <Select value={form.category} onValueChange={v => set('category', v)}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -203,25 +202,25 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-foreground">
-                Short Description <span className="text-muted-foreground font-normal">({form.description?.length || 0}/150)</span>
+              <Label>
+                Short description <span className="text-muted-foreground font-normal">({form.description?.length || 0}/150)</span>
               </Label>
-              <Input className="mt-1" value={form.description} onChange={e => set('description', e.target.value.slice(0, 150))} placeholder="One-line summary shown on card" />
+              <Input className="mt-1" value={form.description} onChange={e => set('description', e.target.value.slice(0, 150))} placeholder="One line, shown on the product card" />
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-foreground">Full Description</Label>
-              <Textarea className="mt-1" value={form.long_description} onChange={e => set('long_description', e.target.value)} rows={4} placeholder="Detailed description shown on product page…" />
+              <Label>Full description</Label>
+              <Textarea className="mt-1" value={form.long_description} onChange={e => set('long_description', e.target.value)} rows={4} placeholder="What it is, who it is for, what a week looks like" />
             </div>
 
             {/* Feature bullets */}
             <div>
-              <Label className="text-xs font-semibold text-foreground">Feature Bullets <span className="text-muted-foreground font-normal">(up to 8)</span></Label>
+              <Label>What's included <span className="text-muted-foreground font-normal">(up to 8)</span></Label>
               <div className="flex gap-2 mt-1">
                 <Input
                   value={featureInput}
                   onChange={e => setFeatureInput(e.target.value)}
-                  placeholder="e.g. 5x per week training"
+                  placeholder="5 sessions a week, 45 minutes each"
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addFeature())}
                 />
                 <Button type="button" variant="outline" size="sm" onClick={addFeature} disabled={(form.features?.length || 0) >= 8}>
@@ -231,8 +230,8 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
               {form.features?.length > 0 && (
                 <div className="mt-2 space-y-1.5">
                   {form.features.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-background border border-border rounded-lg">
-                      <span className="text-xs text-foreground">{f}</span>
+                    <div key={i} className="flex items-center justify-between px-3 py-2 bg-secondary rounded-lg">
+                      <span className="text-sm text-foreground">{f}</span>
                       <button type="button" onClick={() => removeFeature(i)} className="text-muted-foreground hover:text-destructive">
                         <X className="w-3 h-3" />
                       </button>
@@ -249,12 +248,12 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
             <ProductImageUpload
               value={form.image_url}
               onChange={v => set('image_url', v)}
-              label="Primary Product Image"
-              tip="Recommended: 1200×675px (16:9)"
+              label="Main image"
+              tip="1200 × 675 px works best"
             />
             {/* Additional images row */}
             <div>
-              <Label className="text-xs font-semibold text-foreground">Additional Images <span className="text-muted-foreground font-normal">(up to 3)</span></Label>
+              <Label>More images <span className="text-muted-foreground font-normal">(up to 3)</span></Label>
               <div className="flex gap-2 mt-1.5">
                 {[0, 1, 2].map(idx => (
                   <ProductImageUpload
@@ -277,36 +276,36 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
           {/* ── PRICING ── */}
           <SectionHeader label="Pricing" />
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary">
               <Switch checked={form.is_free} onCheckedChange={v => set('is_free', v)} />
               <div>
-                <p className="text-sm font-semibold text-foreground">Free Product</p>
-                <p className="text-xs text-muted-foreground">No payment required — delivered immediately</p>
+                <p className="text-sm font-semibold text-foreground">Free</p>
+                <p className="text-xs text-muted-foreground">No payment. Buyers get it straight away.</p>
               </div>
             </div>
 
             {!form.is_free && (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-semibold text-foreground">Price ($) *</Label>
+                    <Label>Price ($)</Label>
                     <Input className="mt-1" type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} placeholder="79.00" />
                   </div>
                   <div>
-                    <Label className="text-xs font-semibold text-foreground">Compare At Price ($) <span className="text-muted-foreground font-normal">crossed out</span></Label>
+                    <Label>Was ($) <span className="text-muted-foreground font-normal">shown crossed out</span></Label>
                     <Input className="mt-1" type="number" min="0" step="0.01" value={form.original_price} onChange={e => set('original_price', e.target.value)} placeholder="99.00" />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-xs font-semibold text-foreground">Payment Type</Label>
+                  <Label>Payment</Label>
                   <div className="flex gap-2 mt-1">
                     {[{ value: 'one_time', label: 'One-time' }, { value: 'subscription', label: 'Subscription' }].map(opt => (
                       <button
                         key={opt.value}
                         type="button"
                         onClick={() => set('payment_type', opt.value)}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-all ${form.payment_type === opt.value ? 'bg-sidebar text-white border-foreground' : 'bg-card text-foreground border-border'}`}
+                        className={`flex-1 h-10 rounded-md border text-sm font-semibold transition-colors ${form.payment_type === opt.value ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground border-input hover:bg-accent'}`}
                       >
                         {opt.label}
                       </button>
@@ -316,7 +315,7 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
 
                 {form.payment_type === 'subscription' && (
                   <div>
-                    <Label className="text-xs font-semibold text-foreground">Billing Frequency</Label>
+                    <Label>Billing</Label>
                     <Select value={form.billing_frequency} onValueChange={v => set('billing_frequency', v)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -335,15 +334,15 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
           <SectionHeader label="Delivery" />
           <div className="space-y-3">
             <div>
-              <Label className="text-xs font-semibold text-foreground mb-2 block">What does the buyer receive?</Label>
+              <Label className="mb-2 block">What does the buyer receive?</Label>
               <div className="space-y-2">
                 {DELIVERY_OPTIONS.map(opt => (
-                  <label key={opt.value} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background cursor-pointer hover:bg-muted transition-colors">
+                  <label key={opt.value} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border cursor-pointer hover:bg-accent/60 transition-colors">
                     <input
                       type="checkbox"
                       checked={form.delivery_types?.includes(opt.value)}
                       onChange={() => toggleDelivery(opt.value)}
-                      className="rounded"
+                      className="rounded accent-[rgb(var(--primary))] h-4 w-4"
                     />
                     <span className="text-sm text-foreground">{opt.label}</span>
                   </label>
@@ -353,11 +352,11 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
 
             {hasDownload && (
               <div>
-                <Label className="text-xs font-semibold text-foreground">Digital Download File</Label>
+                <Label>Download file</Label>
                 <div className="mt-1 flex items-center gap-2">
-                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-muted-foreground rounded-xl bg-background cursor-pointer hover:bg-muted transition-colors text-sm text-foreground">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-4 h-11 border border-dashed border-input rounded-lg cursor-pointer hover:bg-accent/60 transition-colors text-sm font-medium text-foreground">
                     {fileUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    {form.download_file_url ? 'File uploaded ✓' : 'Upload PDF, MP4, or ZIP (max 500MB)'}
+                    {form.download_file_url ? 'File uploaded. Click to replace' : 'Upload a PDF, MP4 or ZIP, up to 500 MB'}
                     <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.mp4,.zip,.mov" />
                   </label>
                   {form.download_file_url && (
@@ -371,7 +370,7 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
 
             {hasAppAccess && (
               <div>
-                <Label className="text-xs font-semibold text-foreground">Access Duration</Label>
+                <Label>Access lasts</Label>
                 <Select value={form.access_duration} onValueChange={v => set('access_duration', v)}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -383,37 +382,37 @@ export default function ProductFormModal({ open, onClose, editing, onCreate, onU
 
             {hasCalls && (
               <div>
-                <Label className="text-xs font-semibold text-foreground">Number of Scheduled Calls</Label>
+                <Label>Number of calls</Label>
                 <Input className="mt-1" type="number" min="1" value={form.scheduled_calls_count} onChange={e => set('scheduled_calls_count', Number(e.target.value))} />
               </div>
             )}
 
             <div>
-              <Label className="text-xs font-semibold text-foreground">Delivery Instructions <span className="text-muted-foreground font-normal">(shown to buyer after purchase)</span></Label>
+              <Label>After purchase <span className="text-muted-foreground font-normal">shown to the buyer</span></Label>
               <Textarea
                 className="mt-1"
                 value={form.delivery_instructions}
                 onChange={e => set('delivery_instructions', e.target.value)}
                 rows={3}
-                placeholder="e.g. Check your email for your download link. DM me on Instagram @yourhandle to get started!"
+                placeholder="Check your email for the download link, then message me to book your first call."
               />
             </div>
           </div>
 
           {/* ── PUBLISH ── */}
           <SectionHeader label="Visibility" />
-          <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary">
             <Switch checked={form.is_published} onCheckedChange={v => set('is_published', v)} />
             <div>
               <p className="text-sm font-semibold text-foreground">Published</p>
-              <p className="text-xs text-muted-foreground">Visible to buyers on your public store page</p>
+              <p className="text-xs text-muted-foreground">Shows on your public store page</p>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-5 border-t border-border mt-4">
+          <div className="flex justify-end gap-2 pt-5 border-t border-border mt-6">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="bg-sidebar hover:bg-black text-white min-w-[130px]" disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save Changes' : 'Create Product'}
+            <Button type="submit" className="min-w-[130px]" disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : editing ? 'Save changes' : 'Create product'}
             </Button>
           </div>
         </form>

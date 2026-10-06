@@ -1,91 +1,63 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { format, parseISO } from 'date-fns';
-import { Eye, RefreshCcw, FileText, CreditCard, Banknote, Wallet } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Initials } from '@/components/kit';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { StatusDot, money } from '@/components/business/ui';
 
 const STATUS_CFG = {
-  paid:              { label: 'Succeeded',   bg: 'var(--tc-success)', color: 'var(--tc-success)' },
-  pending:           { label: 'Pending',      bg: 'var(--tc-accent)', color: 'var(--tc-primary)' },
-  failed:            { label: 'Failed',       bg: 'var(--tc-destructive)', color: 'var(--tc-destructive)' },
-  refunded:          { label: 'Refunded',     bg: 'var(--tc-warning)', color: 'var(--tc-warning)' },
-  partial_refund:    { label: 'Part. Refund', bg: 'var(--tc-warning)', color: 'var(--kc-ca8a04)' },
-  disputed:          { label: 'Disputed',     bg: 'var(--tc-destructive)', color: 'var(--tc-destructive)' },
+  paid:           { label: 'Paid',           tone: 'success' },
+  pending:        { label: 'Pending',        tone: 'muted' },
+  failed:         { label: 'Failed',         tone: 'danger' },
+  refunded:       { label: 'Refunded',       tone: 'muted' },
+  partial_refund: { label: 'Part refunded',  tone: 'muted' },
+  disputed:       { label: 'Disputed',       tone: 'danger' },
 };
 
-function PayMethodIcon({ method }) {
-  if (!method) return <CreditCard size={14} color="var(--tc-muted-foreground)" />;
-  const m = method.toLowerCase();
-  if (m.includes('bank') || m.includes('ach')) return <Banknote size={14} color="var(--tc-primary)" />;
-  if (m.includes('cash') || m.includes('manual')) return <Wallet size={14} color="var(--tc-success)" />;
-  return <CreditCard size={14} color="var(--tc-muted-foreground)" />;
-}
-
-function Avatar({ name }) {
-  const initials = (name || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  const colors = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--tc-destructive)'];
-  const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
-  return (
-    <div style={{ width: 34, height: 34, borderRadius: 10, background: color + '18', border: `1.5px solid ${color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>
-      {initials}
-    </div>
-  );
-}
-
-function Btn({ icon: Icon, label, onClick, color = 'var(--tc-muted-foreground)' }) {
-  const [h, setH] = useState(false);
-  return (
-    <button onClick={e => { e.stopPropagation(); onClick(); }}
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 7, border: 'none', background: h ? color + '12' : 'var(--tc-background)', color, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'background 0.12s' }}>
-      <Icon size={11} /> {label}
-    </button>
-  );
-}
-
 export default function PaymentFeedItem({ payment, onViewInvoice, onRefund }) {
-  const [hovered, setHovered] = useState(false);
   const cfg = STATUS_CFG[payment.status] || STATUS_CFG.pending;
-  const isNegative = ['failed', 'refunded', 'partial_refund', 'disputed'].includes(payment.status);
+  const isNegative = ['refunded', 'partial_refund'].includes(payment.status);
+  const isFailed = ['failed', 'disputed'].includes(payment.status);
 
-  const fmtDate = (d) => { try { return format(parseISO(d), 'MMM d, yyyy · h:mm a'); } catch { return d || '—'; } };
+  const fmtDate = (d) => { try { return format(parseISO(d), 'MMM d, h:mm a'); } catch { return d || '—'; } };
+  const method = payment.payment_method ? payment.payment_method.replace(/_/g, ' ') : null;
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--tc-muted)', background: hovered ? 'var(--tc-background)' : 'var(--tc-card)', transition: 'background 0.12s' }}
-    >
-      <Avatar name={payment.client_name} />
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--tc-foreground)' }}>{payment.client_name}</span>
-          {payment.description && (
-            <span style={{ fontSize: 12, color: 'var(--tc-muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 240 }}>
-              — {payment.description}
-            </span>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--tc-muted-foreground)' }}>{fmtDate(payment.paid_date || payment.created_date)}</span>
-          <PayMethodIcon method={payment.payment_method} />
-          {payment.payment_method && <span style={{ fontSize: 11, color: 'var(--tc-muted-foreground)', textTransform: 'capitalize' }}>{payment.payment_method.replace(/_/g, ' ')}</span>}
+    <div className="relative flex flex-wrap items-center gap-x-4 gap-y-1 pl-5 pr-12 md:pr-6 sm:pl-6 py-3.5 border-b border-border last:border-b-0 hover:bg-accent/60 transition-colors md:grid md:grid-cols-[minmax(0,1fr)_120px_130px_96px]">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <Initials name={payment.client_name} />
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold text-foreground truncate">{payment.client_name}</p>
+          <p className="text-[13px] text-muted-foreground truncate">
+            {[payment.description, fmtDate(payment.paid_date || payment.created_date), method].filter(Boolean).join(' · ')}
+          </p>
         </div>
       </div>
 
-      <div style={{ fontSize: 15, fontWeight: 800, color: isNegative ? 'var(--tc-destructive)' : 'var(--tc-success)', flexShrink: 0, minWidth: 70, textAlign: 'right' }}>
-        {isNegative ? '−' : '+'}${Number(payment.amount || 0).toFixed(2)}
+      <p className={cn('num text-[18px] text-right ml-auto md:ml-0', isFailed ? 'text-destructive' : isNegative ? 'text-muted-foreground' : 'text-foreground')}>
+        {isNegative ? '−' : ''}{money(payment.amount, { cents: true })}
+      </p>
+
+      <div className="w-full pl-12 md:w-auto md:pl-0">
+        <StatusDot tone={cfg.tone}>{cfg.label}</StatusDot>
       </div>
 
-      <div style={{ flexShrink: 0 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 9999, background: cfg.bg, color: cfg.color, fontSize: 11, fontWeight: 700 }}>
-          {cfg.label}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0, opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }}>
-        <Btn icon={Eye} label="Invoice" onClick={onViewInvoice} color="var(--tc-primary)" />
-        {payment.status === 'paid' && <Btn icon={RefreshCcw} label="Refund" onClick={onRefund} color="var(--tc-warning)" />}
-        <Btn icon={FileText} label="Receipt" onClick={() => {}} color="var(--tc-muted-foreground)" />
+      <div className="absolute right-3 top-3 md:static md:flex md:justify-end">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="touch-compact h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Payment actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onViewInvoice}>View invoice</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {}}>Receipt</DropdownMenuItem>
+            {payment.status === 'paid' && <DropdownMenuItem onClick={onRefund}>Refund…</DropdownMenuItem>}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

@@ -1,20 +1,11 @@
 import React, { useState, useCallback } from 'react';
 import { db } from '@/api/supabaseClient';
-import { Search, Loader2, Plus, Check, ShieldCheck, UtensilsCrossed } from 'lucide-react';
+import { Search, Loader2, Plus, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Segmented } from '@/components/kit';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 
 const CATEGORY_FILTERS = ['All', 'Proteins', 'Carbs', 'Vegetables', 'Dairy', 'Fruits', 'Snacks', 'Grains'];
-
-const CATEGORY_STYLES = {
-  Proteins:   'bg-accent text-primary',
-  Carbs:      'bg-warning/10 text-warning',
-  Vegetables: 'bg-success/10 text-success',
-  Dairy:      'bg-accent text-primary',
-  Fruits:     'bg-pink-100 text-pink-700',
-  Snacks:     'bg-orange-100 text-orange-700',
-  Grains:     'bg-warning/10 text-warning',
-};
 
 // Map USDA category strings to our filter buckets
 function mapCategory(food) {
@@ -30,65 +21,33 @@ function mapCategory(food) {
   return null; // uncategorized → shown under All
 }
 
-function getSourceTag(food) {
-  if (food.brand) return { label: food.brand, style: 'bg-muted text-muted-foreground' };
-  if (food.category) return { label: food.category, style: 'bg-muted text-muted-foreground' };
-  return { label: 'Generic', style: 'bg-muted text-muted-foreground' };
-}
-
 function FoodRow({ food, onSave, saved }) {
-  const sourceTag = getSourceTag(food);
+  const source = [food.brand, food.category].filter(Boolean).join(' · ') || 'Generic';
+  const macros = [
+    food.protein_g > 0 ? `${food.protein_g} g P` : null,
+    food.carbs_g > 0 ? `${food.carbs_g} g C` : null,
+    food.fats_g > 0 ? `${food.fats_g} g F` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
-    <div className="px-3 py-3 hover:bg-secondary/30 transition-colors border-b border-border last:border-0">
-      <div className="flex items-start gap-3">
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          {/* Full name */}
-          <p className="text-sm font-bold text-foreground leading-snug">{food.name}</p>
-
-          {/* Source tag + USDA badge */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-1">
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${sourceTag.style}`}>
-              {sourceTag.label}
-            </span>
-            {food.category && food.brand && (
-              <span className="text-[10px] text-muted-foreground">{food.category}</span>
-            )}
-            <span className="flex items-center gap-0.5 text-[10px] text-success font-semibold">
-              <ShieldCheck className="w-3 h-3" />USDA Verified
-            </span>
-          </div>
-
-          {/* Macros per 100g */}
-          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-            <span className="text-[10px] text-muted-foreground font-medium">per 100g:</span>
-            {food.calories  > 0 && <span className="text-[10px] font-semibold text-orange-600">🔥 {food.calories}cal</span>}
-            {food.protein_g > 0 && <span className="text-[10px] font-semibold text-primary">💪 {food.protein_g}g</span>}
-            {food.carbs_g   > 0 && <span className="text-[10px] font-semibold text-warning">🌾 {food.carbs_g}g</span>}
-            {food.fats_g    > 0 && <span className="text-[10px] font-semibold text-success">🥑 {food.fats_g}g</span>}
-          </div>
-
-          {/* Serving hint */}
-          {food.serving_size && (
-            <p className="text-[10px] text-muted-foreground mt-1">Typical serving: {food.serving_size}</p>
-          )}
-        </div>
-
-        {/* Save button */}
-        <button
-          onClick={() => onSave(food)}
-          disabled={saved}
-          className={cn(
-            'shrink-0 flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-semibold transition-all mt-0.5',
-            saved
-              ? 'text-success bg-success/10 border border-success cursor-default'
-              : 'text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20'
-          )}
-        >
-          {saved ? <><Check className="w-3 h-3" /> Saved</> : <><Plus className="w-3 h-3" /> Add</>}
-        </button>
+    <div className="flex items-center gap-3 px-4 py-3 border-b border-border last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-[15px] font-semibold text-foreground leading-snug">{food.name}</p>
+        <p className="text-[13px] text-muted-foreground truncate">{source}, USDA</p>
+        <p className="text-[13px] text-muted-foreground tabular-nums">
+          Per 100 g: {food.calories > 0 ? `${food.calories} kcal` : '—'}{macros ? ` · ${macros}` : ''}
+          {food.serving_size ? ` · usual serving ${food.serving_size}` : ''}
+        </p>
       </div>
+      <Button
+        size="sm"
+        variant={saved ? 'ghost' : 'outline'}
+        onClick={() => onSave(food)}
+        disabled={saved}
+        className="shrink-0"
+      >
+        {saved ? <><Check /> Saved</> : <><Plus /> Add</>}
+      </Button>
     </div>
   );
 }
@@ -132,8 +91,8 @@ export default function FoodSearchPanel({ onSave, isSaved }) {
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search by food name, brand, or category..."
-          className="pl-9 bg-secondary/40 pr-9"
+          placeholder="Search by food, brand or category"
+          className="pl-9 pr-9"
           value={query}
           onChange={handleChange}
           autoFocus
@@ -141,56 +100,37 @@ export default function FoodSearchPanel({ onSave, isSaved }) {
         {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />}
       </div>
 
-      {/* Category filter pills */}
+      {/* Category filter */}
       {searched && results.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          {CATEGORY_FILTERS.map(cat => {
-            const count = cat === 'All' ? results.length : results.filter(f => mapCategory(f) === cat).length;
-            if (count === 0 && cat !== 'All') return null;
-            return (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border',
-                  activeCategory === cat
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card border-border text-muted-foreground hover:border-primary/40'
-                )}
-              >
-                {cat} {count > 0 && <span className="opacity-60">({count})</span>}
-              </button>
-            );
-          })}
-        </div>
+        <Segmented
+          size="sm"
+          className="mb-3"
+          value={activeCategory}
+          onChange={setActiveCategory}
+          options={CATEGORY_FILTERS
+            .map(cat => ({ value: cat, label: cat, count: cat === 'All' ? results.length : results.filter(f => mapCategory(f) === cat).length }))
+            .filter(o => o.value === 'All' || o.count > 0)}
+        />
       )}
 
       {/* States */}
       {!searched && !loading && (
-        <div className="text-center py-8">
-          <UtensilsCrossed className="w-8 h-8 mx-auto mb-2 text-muted-foreground/20" />
-          <p className="text-xs text-muted-foreground">USDA FoodData Central — 600,000+ foods</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Try "chicken breast" or "brown rice"</p>
-        </div>
+        <p className="text-sm text-muted-foreground py-6">Try "chicken breast" or "brown rice". Results come from USDA FoodData Central.</p>
       )}
 
       {searched && !loading && results.length === 0 && (
-        <div className="text-center py-8">
-          <UtensilsCrossed className="w-8 h-8 mx-auto mb-2 text-muted-foreground/20" />
-          <p className="text-sm font-semibold text-foreground">No results for "{query}"</p>
-          <p className="text-xs text-muted-foreground mt-1 mb-3">Try "chicken breast" or "brown rice"</p>
-        </div>
+        <p className="text-sm text-muted-foreground py-6">Nothing found for "{query}". Try a simpler name, like "chicken breast".</p>
       )}
 
       {searched && !loading && results.length > 0 && filtered.length === 0 && (
-        <p className="text-center text-xs text-muted-foreground py-4">
-          No {activeCategory} results — <button className="text-primary font-semibold" onClick={() => setActiveCategory('All')}>Show all {results.length}</button>
+        <p className="text-sm text-muted-foreground py-4">
+          No {activeCategory.toLowerCase()} in these results. <button className="font-semibold text-foreground underline underline-offset-4" onClick={() => setActiveCategory('All')}>Show all {results.length}</button>
         </p>
       )}
 
       {/* Results list */}
       {filtered.length > 0 && (
-        <div className="rounded-xl border border-border overflow-hidden max-h-96 overflow-y-auto bg-card">
+        <div className="rounded-lg border border-border overflow-hidden max-h-96 overflow-y-auto bg-card">
           {filtered.map((food, i) => (
             <FoodRow key={i} food={food} onSave={onSave} saved={isSaved(food)} />
           ))}
@@ -198,8 +138,8 @@ export default function FoodSearchPanel({ onSave, isSaved }) {
       )}
 
       {results.length > 0 && (
-        <p className="text-center text-[10px] text-muted-foreground mt-2">
-          USDA FoodData Central · {results.length} results
+        <p className="text-[13px] text-muted-foreground mt-2">
+          {results.length} results from USDA FoodData Central
         </p>
       )}
     </div>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { TrendingUp, GripVertical, Plus, X } from 'lucide-react';
 import { BSSection, BSRow, BSToggle, BSInput } from './BSSection';
+import { cn } from '@/lib/utils';
+import { fieldClass } from '@/components/settings/SettingsLayout';
 
 const DEFAULT_STAGES = [
   { id: '1', label: 'New Lead' }, { id: '2', label: 'DM\'d' },
@@ -21,28 +23,25 @@ export default function BSLeadSales({ s, set }) {
   const addStage = () => set('pipeline_stages', [...stages, { id: Date.now().toString(), label: 'New Stage' }]);
 
   return (
-    <BSSection icon={TrendingUp} title="Lead & Sales Settings" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Lead Pipeline</p>
-      <BSRow label="Pipeline stages" hint="Drag to reorder (coming soon), click to rename">
+    <BSSection icon={TrendingUp} title="Leads and sales" subtitle="Your pipeline stages and follow-up reminders." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+      <BSGroup>Lead pipeline</BSGroup>
+      <BSRow label="Pipeline stages" hint="Click a stage to rename it.">
         <div className="space-y-2">
           {stages.map((stage, i) => (
             <div key={stage.id} className="flex items-center gap-2">
-              <GripVertical className="w-4 h-4 text-border flex-shrink-0" />
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))' }}>{i + 1}</div>
+              <GripVertical className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
+              <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-input text-[13px] font-semibold tabular-nums text-foreground">{i + 1}</span>
               <input value={stage.label} onChange={e => updateStage(stage.id, e.target.value)}
-                className="flex-1 px-3 py-2 rounded-xl border border-border text-sm focus:outline-none focus:border-primary" />
+                className={cn(fieldClass, 'flex-1')} />
               <button onClick={() => removeStage(stage.id)} className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0">
                 <X className="w-4 h-4" />
               </button>
             </div>
           ))}
-          <button onClick={addStage} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-            <Plus className="w-4 h-4" /> Add Stage
-          </button>
+          <BSAddButton onClick={addStage}><Plus className="w-4 h-4" /> Add stage</BSAddButton>
         </div>
       </BSRow>
-      <BSRow label="Auto-move to next stage" hint="After X days with no activity">
+      <BSRow label="Auto-move to next stage" hint="Moves a lead on after days with no activity.">
         <div className="space-y-2">
           <BSToggle value={s.auto_move_pipeline_enabled} onChange={v => set('auto_move_pipeline_enabled', v)} />
           {s.auto_move_pipeline_enabled && (

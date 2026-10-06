@@ -13,9 +13,9 @@ export default function NotifsCommunity({ s, set }) {
   const upd = (key, val) => set('community', { ...d, [key]: { ...d[key], ...val } });
 
   return (
-    <NSection title="Community" emoji="🏘️"
+    <NSection title="Community"
       onReset={() => set('community', DEFAULTS)}
-      onTest={() => toast.success('Test notification sent for Community')}>
+      onTest={() => toast.success('Test notification sent for community')}>
 
       <NRow enabled={d.new_post.enabled} onToggle={v => upd('new_post', { enabled: v })}
         title="New community post"

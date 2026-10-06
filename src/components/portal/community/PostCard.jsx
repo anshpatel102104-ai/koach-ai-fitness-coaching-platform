@@ -1,44 +1,42 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, MoreHorizontal, Flag, Send } from 'lucide-react';
+import { MessageCircle, MoreHorizontal, Flag, Send, EyeOff, Flame, Dumbbell, Heart, Trophy, ThumbsUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Initials } from '@/components/kit';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { SignedImg } from '@/components/shared/SignedImage';
 
 const REACTIONS = [
-  { emoji: '🔥', key: 'fire' },
-  { emoji: '💪', key: 'muscle' },
-  { emoji: '❤️', key: 'heart' },
-  { emoji: '🏆', key: 'trophy' },
-  { emoji: '👏', key: 'clap' },
+  { icon: Flame, key: 'fire', label: 'Fire' },
+  { icon: Dumbbell, key: 'muscle', label: 'Strong' },
+  { icon: Heart, key: 'heart', label: 'Love' },
+  { icon: Trophy, key: 'trophy', label: 'Win' },
+  { icon: ThumbsUp, key: 'clap', label: 'Nice' },
 ];
 
 function Avatar({ name, isCoach, isAnon, size = 9 }) {
-  const initials = isAnon ? '?' : (name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <div className={`w-${size} h-${size} rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0`}
-      style={{
-        background: isAnon ? 'rgb(var(--muted-foreground))' : isCoach ? 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' : 'linear-gradient(135deg, rgb(var(--success)), rgb(var(--success)))',
-        width: size * 4, height: size * 4,
-      }}>
-      {initials}
-    </div>
-  );
+  return <Initials name={isAnon ? '?' : (name || 'Member')} size={size * 4} tone={isCoach ? 'ink' : 'default'} />;
+}
+
+function CoachTag() {
+  return <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground">Coach</span>;
 }
 
 function CommentItem({ comment }) {
   return (
     <div className="flex gap-2.5 py-2">
       <Avatar name={comment.author_name} isCoach={comment.is_coach} isAnon={!comment.author_name} size={8} />
-      <div className="flex-1 min-w-0">
-        <div className="bg-muted rounded-2xl px-3 py-2">
-          <p className="text-foreground text-xs font-bold">{comment.author_name || 'Community Member'}
-            {comment.is_coach && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[8px] font-black text-white" style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>COACH</span>}
+      <div className="min-w-0 flex-1">
+        <div className="rounded-lg bg-secondary px-3 py-2">
+          <p className="text-[13px] font-semibold text-foreground">{comment.author_name || 'Community member'}
+            {comment.is_coach && <CoachTag />}
           </p>
-          <p className="text-foreground text-xs mt-0.5 leading-relaxed">{comment.content}</p>
+          <p className="mt-0.5 text-sm leading-relaxed text-foreground">{comment.content}</p>
         </div>
-        <p className="text-border text-[9px] mt-1 ml-2">
+        <p className="ml-1 mt-1 text-[12px] text-muted-foreground">
           {comment.created_date ? formatDistanceToNow(new Date(comment.created_date), { addSuffix: true }) : ''}
         </p>
       </div>
@@ -93,127 +91,105 @@ export default function PostCard({ post, user, myClient, queryClient }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['community-posts'] }),
   });
 
-  const displayName = post.is_anonymous ? 'Community Member' : (post.author_name || 'Member');
+  const displayName = post.is_anonymous ? 'Community member' : (post.author_name || 'Member');
   const timeAgo = post.created_date ? formatDistanceToNow(new Date(post.created_date), { addSuffix: true }) : '';
   const totalReactions = Object.values(post.reactions || {}).reduce((sum, arr) => sum + (arr?.length || 0), 0);
 
   return (
-    <div className="bg-card mx-4 mb-3 rounded-2xl overflow-hidden"
-      style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid rgb(var(--muted))' }}>
+    <article className="panel">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-2">
         <Avatar name={displayName} isCoach={post.is_coach} isAnon={post.is_anonymous} size={9} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <p className="text-foreground font-bold text-sm">{displayName}</p>
-            {post.is_coach && (
-              <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black text-white"
-                style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>COACH</span>
-            )}
-            {post.type === 'milestone' && (
-              <span className="px-1.5 py-0.5 rounded-full text-[8px] font-black text-warning bg-warning/10">MILESTONE</span>
-            )}
-          </div>
-          <p className="text-muted-foreground text-[10px]">{timeAgo}</p>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center text-[15px] font-semibold text-foreground">
+            {displayName}
+            {post.is_coach && <CoachTag />}
+            {post.type === 'milestone' && <span className="ml-1.5 rounded-full bg-success-soft px-1.5 py-0.5 text-[11px] font-semibold text-success">Milestone</span>}
+          </p>
+          <p className="text-[13px] text-muted-foreground">{timeAgo}</p>
         </div>
         <div className="relative">
-          <button onClick={() => setShowMenu(!showMenu)} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-            <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+          <button type="button" onClick={() => setShowMenu(!showMenu)} aria-label="Post options"
+            className="touch-compact flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent">
+            <MoreHorizontal className="h-4 w-4" />
           </button>
-          <AnimatePresence>
-            {showMenu && (
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                className="absolute right-0 top-8 bg-card rounded-2xl shadow-xl border border-border z-10 min-w-[140px] overflow-hidden">
-                <button onClick={() => { setShowMenu(false); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted">
-                  <Flag className="w-3.5 h-3.5 text-destructive" /> Report
-                </button>
-                <button onClick={() => { hidePost.mutate(); setShowMenu(false); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-muted">
-                  <span className="text-muted-foreground text-sm">👁</span> Hide post
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {showMenu && (
+            <div className="absolute right-0 top-9 z-10 min-w-[150px] overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+              <button type="button" onClick={() => { setShowMenu(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-accent">
+                <Flag className="h-3.5 w-3.5 text-destructive" /> Report
+              </button>
+              <button type="button" onClick={() => { hidePost.mutate(); setShowMenu(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-accent">
+                <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> Hide post
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="px-4 pb-3">
-        <p className="text-foreground text-sm leading-relaxed">{post.content}</p>
-      </div>
+      <p className="px-4 pb-3 text-[15px] leading-relaxed text-foreground">{post.content}</p>
 
       {/* Media */}
       {post.media_urls?.length > 0 && (
         <div className="px-4 pb-3">
-          <SignedImg src={post.media_urls[0]} alt="post media"
+          <SignedImg src={post.media_urls[0]} alt=""
             onClick={() => setImageExpanded(!imageExpanded)}
-            className={`w-full rounded-2xl object-cover cursor-pointer transition-all ${imageExpanded ? 'max-h-96' : 'max-h-52'}`} />
+            className={`w-full cursor-pointer rounded-lg object-cover ${imageExpanded ? 'max-h-96' : 'max-h-52'}`} />
         </div>
       )}
 
       {/* Reactions */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {REACTIONS.map(r => {
-            const count = (post.reactions?.[r.key] || []).length;
-            const reacted = (post.reactions?.[r.key] || []).includes(userId);
-            return (
-              <motion.button key={r.key} whileTap={{ scale: 0.85 }}
-                onClick={() => reactMutation.mutate({ key: r.key })}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-bold transition-all"
-                style={{
-                  background: reacted ? 'rgb(var(--accent))' : 'rgb(var(--muted))',
-                  border: `1.5px solid ${reacted ? 'rgb(var(--accent))' : 'rgb(var(--muted))'}`,
-                  color: reacted ? 'rgb(var(--primary))' : 'rgb(var(--muted-foreground))',
-                }}>
-                <span>{r.emoji}</span>
-                {count > 0 && <span>{count}</span>}
-              </motion.button>
-            );
-          })}
-        </div>
+      <div className="flex flex-wrap items-center gap-1.5 px-4 pb-3">
+        {REACTIONS.map(r => {
+          const count = (post.reactions?.[r.key] || []).length;
+          const reacted = (post.reactions?.[r.key] || []).includes(userId);
+          return (
+            <button key={r.key} type="button" aria-pressed={reacted} aria-label={r.label}
+              onClick={() => reactMutation.mutate({ key: r.key })}
+              className={cn('touch-compact inline-flex h-8 items-center gap-1 rounded-full !px-2.5 !py-0 text-[13px] font-semibold transition-colors',
+                reacted ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground hover:text-foreground')}>
+              <r.icon className="h-3.5 w-3.5" />
+              {count > 0 && <span className="tabular-nums">{count}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center gap-1 px-3 py-2 border-t border-border">
-        <button onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-muted-foreground text-xs font-semibold hover:bg-muted flex-1 justify-center">
-          <MessageCircle className="w-3.5 h-3.5" />
-          {comments.length > 0 || showComments ? `${comments.length} comments` : 'Comment'}
+      <div className="border-t border-border px-4 py-2">
+        <button type="button" onClick={() => setShowComments(!showComments)}
+          className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <MessageCircle className="h-4 w-4" />
+          {comments.length > 0 || showComments ? `${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'Comment'}
         </button>
       </div>
 
       {/* Comments section */}
-      <AnimatePresence>
-        {showComments && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="border-t border-border overflow-hidden">
+      {showComments && (
+        <div className="border-t border-border">
+          {comments.length > 0 && (
             <div className="px-4 py-2">
               {comments.map(c => <CommentItem key={c.id} comment={c} />)}
             </div>
-            {/* Comment input */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
-              <Avatar name={user?.full_name} isCoach={false} isAnon={false} size={8} />
-              <div className="flex-1 flex items-center gap-2 bg-muted rounded-2xl px-3 py-2 border border-border">
-                <input
-                  value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && commentText.trim() && addComment.mutate(commentText.trim())}
-                  placeholder="Add a comment..."
-                  className="flex-1 bg-transparent text-foreground text-sm outline-none placeholder-border"
-                />
-                <button onClick={() => commentText.trim() && addComment.mutate(commentText.trim())}
-                  disabled={!commentText.trim()}
-                  className="w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-30"
-                  style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--ai)))' }}>
-                  <Send className="w-3 h-3 text-white" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+          )}
+          <div className="flex items-center gap-2 border-t border-border px-4 py-3 first:border-t-0">
+            <Avatar name={user?.full_name} isCoach={false} isAnon={false} size={8} />
+            <Input
+              value={commentText}
+              onChange={e => setCommentText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && commentText.trim() && addComment.mutate(commentText.trim())}
+              placeholder="Add a comment"
+              className="h-10 flex-1 text-base"
+            />
+            <Button size="icon" onClick={() => commentText.trim() && addComment.mutate(commentText.trim())}
+              disabled={!commentText.trim()} aria-label="Post comment">
+              <Send />
+            </Button>
+          </div>
+        </div>
+      )}
+    </article>
   );
 }

@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
 
 const QUICK_CHARGES = [
   { label: '1:1 Session', amount: 150 },
-  { label: 'Monthly Coaching', amount: 299 },
-  { label: 'Program Package', amount: 197 },
-  { label: 'Custom Amount', amount: null },
+  { label: 'Monthly coaching', amount: 299 },
+  { label: 'Program package', amount: 197 },
+  { label: 'Custom amount', amount: null },
 ];
 
 const STATUS_STYLES = {
@@ -100,7 +100,7 @@ export default function PaymentsTab({ client }) {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Paid', value: `$${totalPaid.toFixed(2)}`, icon: CheckCircle2, color: 'text-success' },
+          { label: 'Total paid', value: `$${totalPaid.toFixed(2)}`, icon: CheckCircle2, color: 'text-success' },
           { label: 'Outstanding', value: `$${outstanding.toFixed(2)}`, icon: AlertTriangle, color: 'text-warning' },
           { label: 'Billing', value: client?.billing_status || 'none', icon: DollarSign, color: 'text-primary' },
         ].map(s => (
@@ -108,7 +108,7 @@ export default function PaymentsTab({ client }) {
             <s.icon className={cn('w-4 h-4 flex-shrink-0', s.color)} />
             <div className="min-w-0">
               <p className="text-xs font-bold text-foreground truncate">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground">{s.label}</p>
+              <p className="text-[11px] text-muted-foreground">{s.label}</p>
             </div>
           </div>
         ))}
@@ -116,7 +116,7 @@ export default function PaymentsTab({ client }) {
 
       {/* Quick Charge */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Quick Charge</p>
+        <p className="text-xs font-semibold text-muted-foreground mb-2">Quick charge</p>
         <div className="grid grid-cols-2 gap-2">
           {QUICK_CHARGES.map(item => (
             <button
@@ -125,13 +125,13 @@ export default function PaymentsTab({ client }) {
               className={cn(
                 'p-3 border rounded-xl text-left transition-all',
                 selectedCharge?.label === item.label
-                  ? 'border-foreground bg-sidebar text-white'
+                  ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border hover:border-foreground bg-card'
               )}
             >
               <p className="text-sm font-semibold">{item.label}</p>
               {item.amount && (
-                <p className={cn('text-xs mt-0.5', selectedCharge?.label === item.label ? 'text-white/60' : 'text-muted-foreground')}>
+                <p className={cn('text-xs mt-0.5', selectedCharge?.label === item.label ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                   ${item.amount}
                 </p>
               )}
@@ -185,7 +185,7 @@ export default function PaymentsTab({ client }) {
 
       {/* Invoice History */}
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Invoice History</p>
+        <p className="text-xs font-semibold text-muted-foreground mb-2">Invoice history</p>
         {!client?.stripe_customer_id ? (
           <div className="bg-background border border-border rounded-xl p-4 text-center">
             <p className="text-xs text-muted-foreground">No Stripe customer yet. Send an invoice to create one.</p>

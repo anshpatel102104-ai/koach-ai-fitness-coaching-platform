@@ -1,3 +1,4 @@
+import { Apple } from 'lucide-react';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProfileSectionCard from './ProfileSectionCard';
@@ -24,18 +25,18 @@ export default function ProfileNutritionPrefs({ client, queryClient }) {
   };
 
   return (
-    <ProfileSectionCard icon="🥗" title="Nutrition Preferences">
+    <ProfileSectionCard icon={Apple} title="Nutrition Preferences">
       <div className="pt-3 space-y-5">
         {/* Dietary */}
         <div>
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">Dietary Preferences</p>
+          <p className="text-muted-foreground text-xs mb-2">Dietary Preferences</p>
           <div className="flex flex-wrap gap-2">
             {DIETS.map(d => (
               <button key={d} onClick={() => toggle(d)}
                 className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
                 style={{
-                  background: dietary.includes(d) ? 'rgb(var(--success) / 0.2)' : 'rgba(255,255,255,0.06)',
-                  color: dietary.includes(d) ? 'rgb(var(--success))' : 'rgba(255,255,255,0.4)',
+                  background: dietary.includes(d) ? 'rgb(var(--success) / 0.2)' : 'rgb(var(--secondary))',
+                  color: dietary.includes(d) ? 'rgb(var(--success))' : 'rgb(var(--muted-foreground))',
                   border: `1px solid ${dietary.includes(d) ? 'rgb(var(--success) / 0.4)' : 'transparent'}`,
                 }}>
                 {d}
@@ -46,9 +47,9 @@ export default function ProfileNutritionPrefs({ client, queryClient }) {
 
         {/* Allergies */}
         <div>
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">Food Allergies</p>
+          <p className="text-muted-foreground text-xs mb-1.5">Food Allergies</p>
           <input
-            className="w-full bg-transparent text-white/70 text-sm outline-none border-b border-white/10 pb-1 focus:border-primary transition-colors"
+            className="w-full bg-transparent text-foreground text-sm outline-none border-b border-border pb-1 focus:border-primary transition-colors"
             placeholder="e.g. peanuts, shellfish, tree nuts..."
             value={allergies}
             onChange={e => { setAllergies(e.target.value); setDirty(true); }}
@@ -57,9 +58,9 @@ export default function ProfileNutritionPrefs({ client, queryClient }) {
 
         {/* Dislikes */}
         <div>
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1.5">Foods I Dislike</p>
+          <p className="text-muted-foreground text-xs mb-1.5">Foods I Dislike</p>
           <input
-            className="w-full bg-transparent text-white/70 text-sm outline-none border-b border-white/10 pb-1 focus:border-primary transition-colors"
+            className="w-full bg-transparent text-foreground text-sm outline-none border-b border-border pb-1 focus:border-primary transition-colors"
             placeholder="e.g. broccoli, fish..."
             value={dislikes}
             onChange={e => { setDislikes(e.target.value); setDirty(true); }}
@@ -68,32 +69,32 @@ export default function ProfileNutritionPrefs({ client, queryClient }) {
 
         {/* Water goal */}
         <div>
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-2">Daily Water Goal (glasses)</p>
+          <p className="text-muted-foreground text-xs mb-2">Daily Water Goal (glasses)</p>
           <div className="flex items-center gap-3">
             <button onClick={() => { setWaterGoal(w => Math.max(1, w - 1)); setDirty(true); }}
-              className="w-9 h-9 rounded-full text-white/60 text-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.07)' }}>-</button>
-            <span className="text-white font-bold text-xl w-12 text-center">{waterGoal}</span>
+              className="w-9 h-9 rounded-full text-foreground text-xl flex items-center justify-center"
+              style={{ background: 'rgb(var(--secondary))' }}>-</button>
+            <span className="text-foreground font-bold text-xl w-12 text-center">{waterGoal}</span>
             <button onClick={() => { setWaterGoal(w => Math.min(20, w + 1)); setDirty(true); }}
-              className="w-9 h-9 rounded-full text-white/60 text-xl flex items-center justify-center"
-              style={{ background: 'rgba(255,255,255,0.07)' }}>+</button>
+              className="w-9 h-9 rounded-full text-foreground text-xl flex items-center justify-center"
+              style={{ background: 'rgb(var(--secondary))' }}>+</button>
           </div>
         </div>
 
         {/* Calories — read only */}
-        <div className="p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
-          <p className="text-white/30 text-[10px] uppercase tracking-wider mb-1">Daily Calorie Goal</p>
-          <p className="text-white/60 text-sm">Set by your coach</p>
+        <div className="p-3 rounded-xl" style={{ background: 'rgb(var(--secondary))' }}>
+          <p className="text-muted-foreground text-xs mb-1">Daily Calorie Goal</p>
+          <p className="text-foreground text-sm">Set by your coach</p>
         </div>
       </div>
 
       <AnimatePresence>
         {dirty && (
-          <motion.button initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          <motion.button exit={{ opacity: 0 }}
             onClick={save}
-            className="mt-4 w-full py-3 rounded-xl font-bold text-sm text-white"
-            style={{ background: 'linear-gradient(135deg, rgb(var(--primary)), rgb(var(--primary)))' }}>
-            {saved ? '✓ Saved' : 'Save Preferences'}
+            className="mt-4 w-full py-3 rounded-xl font-bold text-sm text-primary-foreground"
+            style={{ background: 'rgb(var(--primary))' }}>
+            {saved ? 'Saved' : 'Save Preferences'}
           </motion.button>
         )}
       </AnimatePresence>

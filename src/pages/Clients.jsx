@@ -3,20 +3,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 // Step 2 cutover: Clients/CRM surface runs on Supabase via the entity-shaped
 // facade — call sites unchanged.
 import { db } from '@/api/supabaseClient';
-import { Plus, Search, X, AlertTriangle, ArrowRight, Lock, SlidersHorizontal, AlignJustify, LayoutList, Upload, Trash2 } from 'lucide-react';
+import { Search, X, Lock, SlidersHorizontal, MoreHorizontal } from 'lucide-react';
 import ImportClientsModal from '../components/clients/import/ImportClientsModal';
 import ErrorState from '@/components/shared/ErrorState';
 import ImportCleanupModal from '../components/clients/import/ImportCleanupModal';
 import IntelligenceBar from '@/components/intelligence/IntelligenceBar';
-import { Link, useNavigate } from 'react-router-dom';
-import { getAtRiskClients } from '@/lib/riskEngine';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { getAtRiskClients, evaluateClientRisk } from '@/lib/riskEngine';
 import { compositeAdherenceScore } from '@/lib/adherence';
 import { coachingPriorityScore } from '@/lib/insightEngine';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Page, PageHeader, Panel, Segmented, EmptyState, TextLink, ComplianceLegend } from '@/components/kit';
 import ClientForm from '../components/clients/ClientForm';
-import ClientRow from '../components/clients/ClientRow';
+import ClientRow, { ClientTableHeader } from '../components/clients/ClientRow';
 import ClientDashboardModal from '../components/clients/dashboard/ClientDashboardModal';
 import BulkActionBar from '../components/clients/BulkActionBar';
+import { LIFECYCLE_CONFIG } from '../components/clients/LifecycleBadge';
+import {
+  GOAL_SHORT, programLine, statusLine, weeklyCompliance, weightChange, nextCheckIn, needsYou, checkInDue,
+} from '../components/clients/clientSignals';
 import LimitBanner from '@/components/subscription/LimitBanner';
 import UpgradeModal from '@/components/subscription/UpgradeModal';
 import { cn } from '@/lib/utils';
@@ -28,54 +36,91 @@ import { templates } from '@/lib/emailTemplates';
 import { getMyTeamId } from '@/lib/teamUtils';
 
 const LIFECYCLE_ORDER = ['lead', 'active', 'at_risk', 'completed', 'alumni'];
+const DEFAULT_SORT = 'needs_you';
+
+// Where each lifecycle stage sits when sorting by "who needs you most".
+const NEEDS_GROUP = { at_risk: 0, active: 0, lead: 1, completed: 2, alumni: 2 };
+
+const SORTS = [
+  { key: 'needs_you', label: 'Who needs you most' },
+  { key: 'created_date', label: 'Newest' },
+  { key: 'oldest', label: 'Oldest' },
+  { key: 'name', label: 'Name' },
+  { key: 'last_checkin', label: 'Last check-in' },
+  { key: 'adherence_high', label: 'Compliance, high to low' },
+  { key: 'adherence_low', label: 'Compliance, low to high' },
+  { key: 'priority', label: 'Priority score' },
+  { key: 'lifecycle', label: 'Stage' },
+];
+
+const SORT_SENTENCE = {
+  needs_you: 'Sorted by who needs you most.',
+  created_date: 'Newest first.',
+  oldest: 'Oldest first.',
+  name: 'Sorted by name.',
+  last_checkin: 'Most recent check-in first.',
+  adherence_high: 'Highest compliance first.',
+  adherence_low: 'Lowest compliance first.',
+  priority: 'Sorted by priority score.',
+  lifecycle: 'Sorted by stage.',
+};
+
+function Chip({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'touch-compact h-8 px-3 rounded-md text-[13px] font-medium border transition-colors',
+        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-foreground/80 border-border hover:bg-accent hover:text-foreground'
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function Clients() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [search, setSearch] = useState('');
+  const [segment, setSegment] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('');
-  const [sortBy, setSortBy] = useState('created_date');
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [currentUser, setCurrentUser] = useState(null);
+  const [meLoaded, setMeLoaded] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [goalFilter, setGoalFilter] = useState('');
   const [checkInFilter, setCheckInFilter] = useState('');
   const [quickPanelClient, setQuickPanelClient] = useState(null);
-  const [leadPanelClient, setLeadPanelClient] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showImport, setShowImport] = useState(false);
   const [showCleanup, setShowCleanup] = useState(false);
   const queryClient = useQueryClient();
 
-  // View mode: compact vs expanded. Persisted in localStorage.
+  // Row density: compact vs comfortable. Persisted in localStorage.
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const [viewMode, setViewModeState] = useState(() => {
     if (isMobile) return 'compact';
-    return localStorage.getItem('clients_view_mode') || 'expanded';
+    try { return localStorage.getItem('clients_view_mode') || 'expanded'; } catch { return 'expanded'; }
   });
 
   const setViewMode = (mode) => {
-    if (!isMobile) localStorage.setItem('clients_view_mode', mode);
+    if (!isMobile) { try { localStorage.setItem('clients_view_mode', mode); } catch { /* ignore */ } }
     setViewModeState(mode);
   };
 
   useEffect(() => {
-    db.auth.me().then(setCurrentUser).catch(() => {});
+    db.auth.me().then(setCurrentUser).catch(() => {}).finally(() => setMeLoaded(true));
   }, []);
 
-  // Once clients load, set smart default if no saved preference
   const { data: clients = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['clients'],
     queryFn: () => db.entities.Client.list('-created_date'),
   });
-
-  useEffect(() => {
-    if (clients.length > 0 && !localStorage.getItem('clients_view_mode') && !isMobile) {
-      setViewModeState(clients.length >= 10 ? 'compact' : 'expanded');
-    }
-  }, [clients.length]);
 
   const { data: allCheckIns = [] } = useQuery({
     queryKey: ['checkins-clients'],
@@ -111,7 +156,7 @@ export default function Clients() {
     },
     onSuccess: async (result, { sendInvite }) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success(sendInvite ? 'Client added & invite sent!' : 'Client added');
+      toast.success(sendInvite ? 'Client added and invite sent' : 'Client added');
       if (result?.id) {
         sendZapierEvent('client.created', {
           client_id: result.id,
@@ -192,12 +237,58 @@ export default function Clients() {
     return Array.from(set).sort();
   }, [clients]);
 
+  // Everything the table shows per client, computed once.
+  const rowData = useMemo(() => {
+    const map = {};
+    clients.forEach(c => {
+      const cis = checkInMap[c.id] || [];
+      const risk = evaluateClientRisk(c, cis);
+      const last = cis[0];
+      map[c.id] = {
+        cis,
+        last,
+        risk,
+        score: compositeAdherenceScore(cis),
+        priority: coachingPriorityScore(c, cis),
+        alert: needsYou(c, risk),
+        due: checkInDue(c, last),
+        status: statusLine(c, last, risk, cis.length),
+        program: programLine(c),
+        weeks: weeklyCompliance(c, cis),
+        weight: weightChange(cis, c),
+        next: nextCheckIn(c, last),
+      };
+    });
+    return map;
+  }, [clients, checkInMap]);
+
+  const inSegment = (c, seg) => {
+    const life = c.lifecycle_status || 'lead';
+    const r = rowData[c.id];
+    if (seg === 'needs_you') return !!r?.alert;
+    if (seg === 'checkin_due') return !!r?.due;
+    if (seg === 'new') return life === 'lead';
+    if (seg === 'alumni') return life === 'alumni' || life === 'completed';
+    return true;
+  };
+
+  const segmentCounts = useMemo(() => ({
+    all: clients.length,
+    needs_you: clients.filter(c => inSegment(c, 'needs_you')).length,
+    checkin_due: clients.filter(c => inSegment(c, 'checkin_due')).length,
+    new: clients.filter(c => inSegment(c, 'new')).length,
+    alumni: clients.filter(c => inSegment(c, 'alumni')).length,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [clients, rowData]);
+
   const filteredClients = useMemo(() => {
     const now = Date.now();
     let result = clients.filter(c => {
       const q = search.toLowerCase();
-      const matchesSearch = !search || c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q);
-      const matchesStatus = statusFilter === 'all' || c.lifecycle_status === statusFilter;
+      const goalText = (GOAL_SHORT[c.goal] || c.goal || '').toLowerCase();
+      const matchesSearch = !search || c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || goalText.includes(q);
+      const matchesSegment = inSegment(c, segment);
+      const matchesStatus = statusFilter === 'all' || (c.lifecycle_status || 'lead') === statusFilter;
       const matchesTag = !tagFilter || (c.tags || []).includes(tagFilter);
       const matchesGoal = !goalFilter || c.goal === goalFilter;
       let matchesCheckIn = true;
@@ -207,20 +298,30 @@ export default function Clients() {
         if (checkInFilter === 'overdue') matchesCheckIn = lastCi && (now - new Date(lastCi.date)) >= 7 * 86400000;
         if (checkInFilter === 'never') matchesCheckIn = !lastCi;
       }
-      return matchesSearch && matchesStatus && matchesTag && matchesGoal && matchesCheckIn;
+      return matchesSearch && matchesSegment && matchesStatus && matchesTag && matchesGoal && matchesCheckIn;
     });
     result = [...result].sort((a, b) => {
+      if (sortBy === 'needs_you') {
+        const ga = NEEDS_GROUP[a.lifecycle_status || 'lead'] ?? 1;
+        const gb = NEEDS_GROUP[b.lifecycle_status || 'lead'] ?? 1;
+        if (ga !== gb) return ga - gb;
+        const ra = rowData[a.id], rb = rowData[b.id];
+        if (!!ra?.alert !== !!rb?.alert) return ra?.alert ? -1 : 1;
+        const pa = (ra?.priority || 0) + (ra?.risk?.riskScore || 0) / 10;
+        const pb = (rb?.priority || 0) + (rb?.risk?.riskScore || 0) / 10;
+        return pb - pa;
+      }
       if (sortBy === 'oldest') return new Date(a.created_date) - new Date(b.created_date);
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
       if (sortBy === 'lifecycle') return LIFECYCLE_ORDER.indexOf(a.lifecycle_status || 'lead') - LIFECYCLE_ORDER.indexOf(b.lifecycle_status || 'lead');
       if (sortBy === 'adherence_high') {
-        const sa = compositeAdherenceScore(checkInMap[a.id] || []) ?? -1;
-        const sb = compositeAdherenceScore(checkInMap[b.id] || []) ?? -1;
+        const sa = rowData[a.id]?.score ?? -1;
+        const sb = rowData[b.id]?.score ?? -1;
         return sb - sa;
       }
       if (sortBy === 'adherence_low') {
-        const sa = compositeAdherenceScore(checkInMap[a.id] || []) ?? 101;
-        const sb = compositeAdherenceScore(checkInMap[b.id] || []) ?? 101;
+        const sa = rowData[a.id]?.score ?? 101;
+        const sb = rowData[b.id]?.score ?? 101;
         return sa - sb;
       }
       if (sortBy === 'last_checkin') {
@@ -229,14 +330,13 @@ export default function Clients() {
         return db - da;
       }
       if (sortBy === 'priority') {
-        const pa = coachingPriorityScore(a, checkInMap[a.id] || []);
-        const pb = coachingPriorityScore(b, checkInMap[b.id] || []);
-        return pb - pa;
+        return (rowData[b.id]?.priority || 0) - (rowData[a.id]?.priority || 0);
       }
       return new Date(b.created_date) - new Date(a.created_date);
     });
     return result;
-  }, [clients, search, statusFilter, tagFilter, goalFilter, checkInFilter, sortBy, checkInMap]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clients, search, segment, statusFilter, tagFilter, goalFilter, checkInFilter, sortBy, checkInMap, rowData]);
 
   const counts = useMemo(() => {
     const c = { all: clients.length };
@@ -256,13 +356,11 @@ export default function Clients() {
   const openEdit = (client) => {
     setEditingClient(client);
     setQuickPanelClient(null);
-    setLeadPanelClient(null);
     setShowForm(true);
   };
 
   const openQuickPanel = (client) => {
     setQuickPanelClient(client);
-    setLeadPanelClient(null);
   };
 
   const toggleSelect = (id) => {
@@ -276,248 +374,191 @@ export default function Clients() {
   const clientLimit = getLimit(currentUser, 'max_clients');
   const atLimit = clientLimit !== -1 && clients.length >= clientLimit;
 
+  const openNewClient = () => {
+    if (atLimit) { setUpgradeOpen(true); return; }
+    setEditingClient(null);
+    setShowForm(true);
+  };
+
+  // `/clients?new=1` (topbar "Invite a client") opens the new-client form.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    if (isLoading || !meLoaded) return;
+    openNewClient();
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    setSearchParams(next, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isLoading, meLoaded]);
+
   const atRiskClients = useMemo(() => getAtRiskClients(clients, allCheckIns), [clients, allCheckIns]);
   const highRiskCount = atRiskClients.filter(e => e.riskScore >= 60).length;
 
-  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (tagFilter ? 1 : 0) + (goalFilter ? 1 : 0) + (checkInFilter ? 1 : 0) + (sortBy !== 'created_date' ? 1 : 0);
+  const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (tagFilter ? 1 : 0) + (goalFilter ? 1 : 0) + (checkInFilter ? 1 : 0) + (sortBy !== DEFAULT_SORT ? 1 : 0);
+  const clearFilters = () => { setSortBy(DEFAULT_SORT); setGoalFilter(''); setCheckInFilter(''); setTagFilter(''); setStatusFilter('all'); };
+
+  const activeCount = (counts.active || 0) + (counts.at_risk || 0);
+  const subtitle = isLoading
+    ? 'Loading your roster.'
+    : clients.length === 0
+      ? 'No clients yet. Invite your first one or bring your roster over.'
+      : `${activeCount} active, ${counts.lead || 0} lead${counts.lead === 1 ? '' : 's'} in onboarding. ${SORT_SENTENCE[sortBy] || ''}`;
+
+  const segments = [
+    { value: 'all', label: 'Everyone', count: segmentCounts.all },
+    { value: 'needs_you', label: 'Needs you', count: segmentCounts.needs_you },
+    { value: 'checkin_due', label: 'Check-in due', count: segmentCounts.checkin_due },
+    { value: 'new', label: 'New', count: segmentCounts.new },
+    { value: 'alumni', label: 'Alumni', count: segmentCounts.alumni },
+  ];
+
+  const compact = isMobile || viewMode === 'compact';
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ── Top bar ── */}
-      <div className="px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between gap-3 flex-shrink-0" style={{ background: 'var(--tc-sidebar)' }}>
-        <div>
-          <h1 className="text-base sm:text-lg font-heading font-bold text-white leading-tight">Clients</h1>
-          <p className="text-xs" style={{ color: 'color-mix(in srgb, white 45%, transparent)' }}>{counts.active || 0} active · {counts.at_risk || 0} at-risk · {counts.lead || 0} leads</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowCleanup(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors min-h-[44px]"
-            style={{ background: 'color-mix(in srgb, var(--tc-destructive) 15%, transparent)', color: 'var(--tc-destructive)', border: '1px solid color-mix(in srgb, var(--tc-destructive) 25%, transparent)' }}
-            title="Review & delete test import records"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Import Cleanup</span>
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors min-h-[44px]"
-            style={{ background: 'color-mix(in srgb, white 10%, transparent)', color: 'var(--tc-sidebar-accent-foreground)', border: '1px solid color-mix(in srgb, white 15%, transparent)' }}
-            title="Import clients from CSV"
-          >
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Import CSV</span>
-          </button>
-          {/* HIDDEN: Add Client button — hidden per request, code preserved for easy restore */}
-          {false && <button
-            onClick={() => { if (atLimit) { setUpgradeOpen(true); return; } setEditingClient(null); setShowForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-colors min-h-[44px]"
-            style={{ background: atLimit ? 'color-mix(in srgb, white 10%, transparent)' : 'var(--tc-card)', color: atLimit ? 'var(--tc-sidebar-accent-foreground)' : 'var(--tc-foreground)' }}
-          >
-            {atLimit ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {atLimit ? 'Limit' : 'Add Client'}
-          </button>}
-        </div>
-      </div>
+    <Page>
+      <PageHeader
+        title="Clients"
+        subtitle={subtitle}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setShowImport(true)}>Import from Trainerize</Button>
+            <Button onClick={openNewClient}>
+              {atLimit && <Lock className="w-4 h-4" />}
+              {atLimit ? 'Client limit reached' : 'Invite client'}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More roster actions">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setShowImport(true)}>Import from a CSV file</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowCleanup(true)}>Clean up test imports</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/at-risk')}>Open the at-risk report</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
-      {/* ── Alerts ── */}
-      <div className="px-5 pt-3 flex-shrink-0 space-y-2">
+      <div className="space-y-3 empty:hidden mb-4">
         <LimitBanner limitKey="max_clients" currentCount={clients.length} label="clients" featureKey="clients" />
-        {atRiskClients.length > 0 && (
-          <Link to="/at-risk">
-            <div className={cn(
-              'flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all hover:shadow-sm',
-              highRiskCount > 0 ? 'bg-destructive/10 border-destructive text-destructive' : 'bg-warning/10 border-warning text-warning'
-            )}>
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1">{atRiskClients.length} clients need attention{highRiskCount > 0 && <span className="font-normal opacity-70 ml-1">· {highRiskCount} high risk</span>}</span>
-              <ArrowRight className="w-4 h-4 opacity-60" />
-            </div>
-          </Link>
-        )}
       </div>
 
-      {/* ── Intelligence Bar ── */}
-      <IntelligenceBar clients={clients} checkIns={allCheckIns} />
-
-      {/* ── Filters ── */}
-      <div className="px-5 pt-3 pb-3 flex-shrink-0 space-y-2">
-        {/* Lifecycle tabs */}
-        <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide flex-nowrap">
-          {[
-            { key: 'all',       label: 'All',       active: 'bg-sidebar text-white border-foreground',        count: 'bg-[var(--kc-w-20)] text-white' },
-            { key: 'lead',      label: 'Lead',      active: 'bg-primary text-primary-foreground border-primary',           count: 'bg-[var(--kc-w-20)] text-white' },
-            { key: 'active',    label: 'Active',    active: 'bg-success text-white border-success',     count: 'bg-[var(--kc-w-20)] text-white' },
-            { key: 'at_risk',   label: 'At Risk',   active: 'bg-orange-500 text-white border-orange-500',       count: 'bg-[var(--kc-w-20)] text-white' },
-            { key: 'completed', label: 'Completed', active: 'bg-muted-foreground text-background border-border',           count: 'bg-[var(--kc-w-20)] text-white' },
-            { key: 'alumni',    label: 'Alumni',    active: 'bg-ai text-ai-foreground border-ai',       count: 'bg-[var(--kc-w-20)] text-white' },
-          ].map(({ key, label, active, count }) => (
-            <button
-              key={key}
-              onClick={() => setStatusFilter(key)}
-              className={cn(
-                'flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all',
-                statusFilter === key
-                  ? active
-                  : 'bg-card text-muted-foreground border-border hover:text-foreground'
-              )}
-            >
-              {label}
-              <span className={cn('text-[10px] rounded-md px-1 tabular-nums', statusFilter === key ? count : 'bg-muted text-muted-foreground')}>
-                {counts[key] || 0}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {/* Search bar + filter toggle */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      {/* ── Filters + search ── */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
+        <Segmented options={segments} value={segment} onChange={setSegment} className="self-start" />
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-[320px] lg:flex-none">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search by name or email…"
+              placeholder="Name, email or goal"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-8 h-8 text-sm bg-muted border-border"
+              className="pl-10 pr-9 h-11 bg-card"
+              aria-label="Search clients"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2">
-                <X className="w-3.5 h-3.5 text-muted-foreground" />
+              <button onClick={() => setSearch('')} className="touch-compact absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Clear search">
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
-          {/* View toggle */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              title="Compact view"
-              onClick={() => setViewMode('compact')}
-              className={cn(
-                'h-8 w-8 flex items-center justify-center rounded-lg border transition-all',
-                viewMode === 'compact'
-                  ? 'bg-sidebar text-white border-foreground'
-                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-11 gap-2 flex-shrink-0" aria-label="Sort and filter">
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Sort and filter</span>
+                {activeFiltersCount > 0 && <span className="tabular-nums text-muted-foreground">{activeFiltersCount}</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(92vw,380px)] p-0">
+              <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-2">Sort by</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SORTS.map(s => <Chip key={s.key} active={sortBy === s.key} onClick={() => setSortBy(s.key)}>{s.label}</Chip>)}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-2">Stage</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Chip active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>Any <span className="tabular-nums opacity-70 ml-0.5">{counts.all}</span></Chip>
+                    {LIFECYCLE_ORDER.map(s => (
+                      <Chip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                        {LIFECYCLE_CONFIG[s].label} <span className="tabular-nums opacity-70 ml-0.5">{counts[s] || 0}</span>
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-2">Goal</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'weight_loss', label: 'Fat loss' },
+                      { key: 'muscle_gain', label: 'Muscle gain' },
+                      { key: 'strength', label: 'Strength' },
+                      { key: 'general_fitness', label: 'General fitness' },
+                    ].map(({ key, label }) => (
+                      <Chip key={key} active={goalFilter === key} onClick={() => setGoalFilter(v => v === key ? '' : key)}>{label}</Chip>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-2">Last check-in</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'this_week', label: 'This week' },
+                      { key: 'overdue', label: '7 or more days ago' },
+                      { key: 'never', label: 'Never' },
+                    ].map(({ key, label }) => (
+                      <Chip key={key} active={checkInFilter === key} onClick={() => setCheckInFilter(v => v === key ? '' : key)}>{label}</Chip>
+                    ))}
+                  </div>
+                </div>
+                {allTags.length > 0 && (
+                  <div>
+                    <p className="text-[13px] text-muted-foreground mb-2">Tag</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {allTags.map(t => (
+                        <Chip key={t} active={tagFilter === t} onClick={() => setTagFilter(v => v === t ? '' : t)}>#{t}</Chip>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {!isMobile && (
+                  <div>
+                    <p className="text-[13px] text-muted-foreground mb-2">Row density</p>
+                    <Segmented
+                      size="sm"
+                      value={viewMode === 'compact' ? 'compact' : 'expanded'}
+                      onChange={setViewMode}
+                      options={[{ value: 'expanded', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
+                    />
+                  </div>
+                )}
+              </div>
+              {activeFiltersCount > 0 && (
+                <div className="flex justify-end border-t border-border px-4 py-3">
+                  <TextLink onClick={clearFilters}>Clear sort and filters</TextLink>
+                </div>
               )}
-            >
-              <AlignJustify className="w-3.5 h-3.5" />
-            </button>
-            <button
-              title="Expanded view"
-              onClick={() => setViewMode('expanded')}
-              className={cn(
-                'h-8 w-8 flex items-center justify-center rounded-lg border transition-all',
-                viewMode === 'expanded'
-                  ? 'bg-sidebar text-white border-foreground'
-                  : 'bg-muted text-muted-foreground border-border hover:text-foreground'
-              )}
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className={cn(
-              'h-8 w-8 flex items-center justify-center rounded-lg border text-xs transition-all flex-shrink-0',
-              showFilters || activeFiltersCount > 0
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted text-muted-foreground border-border hover:text-foreground'
-            )}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-          </button>
+            </PopoverContent>
+          </Popover>
         </div>
-
-        {/* Expandable filter chips */}
-        {showFilters && (
-          <div className="space-y-2">
-            {/* Sort by */}
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Sort by</p>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { key: 'created_date', label: 'Newest' },
-                  { key: 'oldest', label: 'Oldest' },
-                  { key: 'last_checkin', label: 'Last Check-in' },
-                  { key: 'adherence_high', label: 'Adherence ↓' },
-                  { key: 'adherence_low', label: 'Adherence ↑' },
-                  { key: 'priority', label: '🧠 Priority Score' },
-                ].map(({ key, label }) => (
-                  <button key={key} onClick={() => setSortBy(key)}
-                    className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all',
-                      sortBy === key ? 'bg-sidebar text-white border-foreground' : 'bg-card text-muted-foreground border-border hover:border-foreground'
-                    )}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Goal */}
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Goal</p>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { key: 'weight_loss', label: 'Weight Loss' },
-                  { key: 'muscle_gain', label: 'Muscle Gain' },
-                  { key: 'strength', label: 'Strength' },
-                  { key: 'general_fitness', label: 'General Fitness' },
-                ].map(({ key, label }) => (
-                  <button key={key} onClick={() => setGoalFilter(v => v === key ? '' : key)}
-                    className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all',
-                      goalFilter === key ? 'bg-success text-white border-success' : 'bg-card text-muted-foreground border-border hover:border-success'
-                    )}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Check-in status */}
-            <div>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Check-in Status</p>
-              <div className="flex flex-wrap gap-1">
-                {[
-                  { key: 'this_week', label: 'This week' },
-                  { key: 'overdue', label: 'Overdue (7+ days)' },
-                  { key: 'never', label: 'Never checked in' },
-                ].map(({ key, label }) => (
-                  <button key={key} onClick={() => setCheckInFilter(v => v === key ? '' : key)}
-                    className={cn('px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all',
-                      checkInFilter === key ? 'bg-warning text-white border-warning' : 'bg-card text-muted-foreground border-border hover:border-warning'
-                    )}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Clear link */}
-            {activeFiltersCount > 0 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => { setSortBy('created_date'); setGoalFilter(''); setCheckInFilter(''); setTagFilter(''); setStatusFilter('all'); }}
-                  className="text-xs text-primary underline underline-offset-2 hover:opacity-70 transition-opacity"
-                >
-                  Clear all filters
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* ── Column headers ── */}
-      <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-muted border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-shrink-0">
-        <div className="w-9 flex-shrink-0" />
-        <div className="flex-1">Client</div>
-        <div className="hidden sm:block w-24">Status</div>
-        <div className="hidden md:block w-20 text-right">Adherence</div>
-        <div className="hidden lg:block w-24 text-right">Last Check-in</div>
-        <div className="w-20" />
-      </div>
+      {segment === 'needs_you' && atRiskClients.length > 0 && (
+        <p className="text-sm text-muted-foreground mb-3">
+          {atRiskClients.length} flagged by the risk check{highRiskCount > 0 ? `, ${highRiskCount} high risk` : ''}.{' '}
+          <TextLink onClick={() => navigate('/at-risk')}>Open the at-risk report</TextLink>
+        </p>
+      )}
 
-      {/* ── Client list ── */}
-      <div className="flex-1 overflow-y-auto bg-card">
+      {/* ── Client table ── */}
+      <Panel className="overflow-hidden">
         {isError ? (
           <ErrorState
             title="Couldn't load your clients"
@@ -525,44 +566,73 @@ export default function Clients() {
             onRetry={() => refetch()}
           />
         ) : isLoading ? (
-          <div className="p-5 space-y-2">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />
+          <div className="divide-y divide-border">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="flex items-center gap-3 px-6 py-4">
+                <div className="h-9 w-9 rounded-full bg-secondary animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-40 rounded bg-secondary animate-pulse" />
+                  <div className="h-3 w-24 rounded bg-secondary animate-pulse" />
+                </div>
+              </div>
             ))}
           </div>
+        ) : clients.length === 0 ? (
+          <EmptyState
+            title="No clients yet"
+            body="Invite someone by email, or import your roster from Trainerize or a CSV file."
+            action={<Button onClick={openNewClient}>Invite client</Button>}
+          />
         ) : filteredClients.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-              <Search className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <p className="text-sm font-semibold text-foreground">No clients found</p>
-            <p className="text-xs text-muted-foreground mt-1">Try adjusting your search or filters</p>
-          </div>
+          <EmptyState
+            title="Nobody matches"
+            body={search ? `No client matches "${search}" in this view.` : 'No clients in this view right now.'}
+            action={<TextLink onClick={() => { setSearch(''); setSegment('all'); clearFilters(); }}>Show everyone</TextLink>}
+          />
         ) : (
-          filteredClients.map(client => {
-            const cis = checkInMap[client.id] || [];
-            const score = compositeAdherenceScore(cis);
-            const priorityScore = sortBy === 'priority' ? coachingPriorityScore(client, cis) : null;
-            return (
-              <ClientRow
-                key={client.id}
-                client={client}
-                score={score}
-                priorityScore={priorityScore}
-                lastCheckIn={cis[0]}
-                checkInCount={cis.length}
-                compact={isMobile || viewMode === 'compact'}
-                selected={selectedIds.has(client.id)}
-                onSelect={() => toggleSelect(client.id)}
-                onView={() => openQuickPanel(client)}
-                onEdit={() => openEdit(client)}
-                onDelete={() => deleteMutation.mutate(client.id)}
-                onStatusChange={(s) => updateMutation.mutate({ id: client.id, data: { ...client, lifecycle_status: s } })}
-              />
-            );
-          })
+          <>
+            <ClientTableHeader />
+            {filteredClients.map(client => {
+              const r = rowData[client.id] || {};
+              return (
+                <ClientRow
+                  key={client.id}
+                  client={client}
+                  statusText={r.status}
+                  programText={r.program}
+                  weeks={r.weeks}
+                  weight={r.weight}
+                  next={r.next}
+                  alert={r.alert}
+                  priorityScore={sortBy === 'priority' || sortBy === 'needs_you' ? r.priority : null}
+                  compact={compact}
+                  selected={selectedIds.has(client.id)}
+                  onSelect={() => toggleSelect(client.id)}
+                  onView={() => openQuickPanel(client)}
+                  onOpenProfile={() => navigate(`/client-profile?id=${client.id}`)}
+                  onEdit={() => openEdit(client)}
+                  onDelete={() => deleteMutation.mutate(client.id)}
+                  onStatusChange={(s) => updateMutation.mutate({ id: client.id, data: { ...client, lifecycle_status: s } })}
+                />
+              );
+            })}
+          </>
         )}
-      </div>
+      </Panel>
+
+      {!isLoading && filteredClients.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <ComplianceLegend />
+          <p className="text-[13px] text-muted-foreground">Click a row to open the client. Click an avatar to select.</p>
+        </div>
+      )}
+
+      {/* ── Roster insights (program gaps, quiet clients, progression) ── */}
+      {!isLoading && clients.length > 0 && (
+        <div className="mt-8 -mx-5 [&_.text-xs.font-medium.text-muted-foreground]:text-[13px]">
+          <IntelligenceBar clients={clients} checkIns={allCheckIns} />
+        </div>
+      )}
 
       <ClientForm open={showForm} onOpenChange={setShowForm} onSubmit={handleSubmit} client={editingClient} />
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} featureKey="clients" user={currentUser} />
@@ -589,8 +659,6 @@ export default function Clients() {
         />
       )}
 
-
-
       {/* Bulk action bar */}
       <BulkActionBar
         selectedIds={selectedIds}
@@ -599,6 +667,6 @@ export default function Clients() {
         onClear={() => setSelectedIds(new Set())}
         onRefresh={() => queryClient.invalidateQueries({ queryKey: ['clients'] })}
       />
-    </div>
+    </Page>
   );
 }

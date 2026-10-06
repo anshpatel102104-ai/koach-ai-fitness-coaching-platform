@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Segmented } from '@/components/kit';
 
 const PRESET_IMAGES = [
   'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80',
@@ -12,7 +21,7 @@ const PRESET_IMAGES = [
   'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&q=80',
 ];
 
-const COLOR_PRESETS = ['var(--tc-primary)', 'var(--tc-ai)', 'var(--tc-destructive)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--kc-0891b2)', 'var(--kc-db2777)', 'var(--tc-foreground)'];
+const COLOR_PRESETS = ['var(--tc-primary)', 'var(--tc-brand)', 'var(--tc-success)', 'var(--tc-warning)', 'var(--tc-destructive)', 'var(--kc-0891b2)'];
 
 const INCLUSION_KEYS = [
   { key: 'custom_program', label: 'Custom workout program' },
@@ -22,13 +31,13 @@ const INCLUSION_KEYS = [
   { key: 'unlimited_messaging', label: 'Unlimited messaging' },
   { key: 'progress_tracking', label: 'Progress tracking' },
   { key: 'nutrition_coaching', label: 'Nutrition coaching' },
-  { key: 'app_access', label: '24/7 App access' },
+  { key: 'app_access', label: 'App access' },
 ];
 
 const VIDEO_CALL_OPTIONS = [
   { value: 'none', label: 'Not included' },
-  { value: '1x_month', label: '1x / month' },
-  { value: '2x_month', label: '2x / month' },
+  { value: '1x_month', label: 'Once a month' },
+  { value: '2x_month', label: 'Twice a month' },
   { value: 'weekly', label: 'Weekly' },
 ];
 
@@ -69,12 +78,14 @@ const defaultForm = () => ({
   faqs: [],
 });
 
-const S = {
-  label: { fontSize: 11, fontWeight: 700, color: 'var(--tc-muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'block' },
-  input: { width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, background: 'var(--tc-background)', color: 'var(--tc-foreground)', border: '1.5px solid var(--tc-border)', outline: 'none', boxSizing: 'border-box' },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 13, fontWeight: 800, color: 'var(--tc-foreground)', marginBottom: 14, paddingBottom: 8, borderBottom: '1px solid var(--tc-muted)' },
-};
+function Section({ title, children }) {
+  return (
+    <div className="mb-6">
+      <h3 className="text-lg text-foreground pb-2 mb-1 border-b border-border">{title}</h3>
+      {children}
+    </div>
+  );
+}
 
 export default function PackageFormModal({ pkg, onClose, onSave }) {
   const isEdit = !!pkg?.id;
@@ -111,284 +122,284 @@ export default function PackageFormModal({ pkg, onClose, onSave }) {
   };
 
   const TABS = [
-    { key: 'basic', label: 'Basic Info' },
-    { key: 'pricing', label: 'Pricing' },
-    { key: 'inclusions', label: "What's Included" },
+    { key: 'basic', label: 'Basics' },
+    { key: 'pricing', label: 'Price' },
+    { key: 'inclusions', label: 'Includes' },
     { key: 'settings', label: 'Settings' },
   ];
 
+  const chip = (on) => cn(
+    'touch-compact rounded-md border px-3 py-2 text-left text-sm transition-colors',
+    on ? 'border-primary bg-primary text-primary-foreground font-medium' : 'border-input bg-card text-foreground hover:bg-accent'
+  );
+  const radioRow = (on) => cn(
+    'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm cursor-pointer transition-colors',
+    on ? 'bg-secondary text-foreground font-medium' : 'text-foreground hover:bg-accent/60'
+  );
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb, black 55%, transparent)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: 'var(--tc-card)', borderRadius: 20, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px color-mix(in srgb, black 20%, transparent)', overflow: 'hidden' }}>
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="p-0 sm:p-0 sm:max-w-[680px] sm:flex sm:flex-col sm:gap-0 flex flex-col overflow-hidden">
         {/* Header */}
-        <div style={{ padding: '20px 24px 0', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--tc-foreground)', margin: 0 }}>{isEdit ? 'Edit Package' : 'Create Package'}</h2>
-            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--tc-muted)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <X size={16} color="var(--tc-muted-foreground)" />
-            </button>
-          </div>
-          {/* Tab nav */}
-          <div style={{ display: 'flex', gap: 2 }}>
-            {TABS.map(t => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                style={{ padding: '9px 16px', fontSize: 13, fontWeight: tab === t.key ? 700 : 500, color: tab === t.key ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)', border: 'none', borderBottom: `2px solid ${tab === t.key ? 'var(--tc-primary)' : 'transparent'}`, background: 'transparent', cursor: 'pointer' }}>
-                {t.label}
-              </button>
-            ))}
-          </div>
+        <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
+          <DialogTitle className="mb-4">{isEdit ? 'Edit package' : 'New package'}</DialogTitle>
+          <Segmented size="sm" value={tab} onChange={setTab} options={TABS.map(t => ({ value: t.key, label: t.label }))} />
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
 
-          {/* ── BASIC INFO ── */}
           {tab === 'basic' && (
-            <div>
-              <div style={S.section}>
-                <label style={S.label}>Package Name *</label>
-                <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. 12-Week Transformation" style={S.input} />
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <Label>Name</Label>
+                <Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="12-week transformation" />
               </div>
-              <div style={S.section}>
-                <label style={S.label}>Short Description</label>
-                <input value={form.description} onChange={e => set('description', e.target.value)} placeholder="1-2 line summary shown on card" style={S.input} />
+              <div className="space-y-1.5">
+                <Label>One-line summary</Label>
+                <Input value={form.description} onChange={e => set('description', e.target.value)} placeholder="Shown in your list and at the top of the page" />
               </div>
-              <div style={S.section}>
-                <label style={S.label}>Full Sales Copy</label>
-                <textarea value={form.long_description} onChange={e => set('long_description', e.target.value)} rows={5} placeholder="Describe what makes this package amazing…" style={{ ...S.input, resize: 'none' }} />
+              <div className="space-y-1.5">
+                <Label>Sales page copy</Label>
+                <Textarea value={form.long_description} onChange={e => set('long_description', e.target.value)} rows={5} placeholder="Who it's for, what they get, what changes in 12 weeks" />
               </div>
-              <div style={S.section}>
-                <label style={S.label}>Cover Image</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
+              <div className="space-y-1.5">
+                <Label>Cover image</Label>
+                <div className="grid grid-cols-3 gap-2 mb-2">
                   {PRESET_IMAGES.map(url => (
-                    <div key={url} onClick={() => set('image_url', url)}
-                      style={{ height: 80, borderRadius: 10, overflow: 'hidden', cursor: 'pointer', border: `2.5px solid ${form.image_url === url ? 'var(--tc-primary)' : 'transparent'}`, transition: 'border-color 0.15s' }}>
-                      <img src={url} alt="preset" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </div>
+                    <button
+                      type="button"
+                      key={url}
+                      onClick={() => set('image_url', url)}
+                      className={cn('touch-compact h-20 rounded-md overflow-hidden ring-offset-2 ring-offset-card transition-shadow', form.image_url === url ? 'ring-2 ring-foreground' : 'ring-0')}
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
                   ))}
                 </div>
-                <input value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="Or paste image URL" style={S.input} />
+                <Input value={form.image_url} onChange={e => set('image_url', e.target.value)} placeholder="Or paste an image URL" />
               </div>
-              <div style={S.section}>
-                <label style={S.label}>Brand Color</label>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div className="space-y-1.5">
+                <Label>Page colour</Label>
+                <div className="flex gap-2 flex-wrap items-center">
                   {COLOR_PRESETS.map(c => (
-                    <button key={c} onClick={() => set('color_theme', c)}
-                      style={{ width: 32, height: 32, borderRadius: 9999, background: c, border: `3px solid ${form.color_theme === c ? 'var(--tc-foreground)' : 'transparent'}`, cursor: 'pointer', flexShrink: 0 }} />
+                    <button
+                      type="button"
+                      key={c}
+                      onClick={() => set('color_theme', c)}
+                      aria-label="Pick colour"
+                      className={cn('touch-compact h-8 w-8 rounded-full ring-offset-2 ring-offset-card', form.color_theme === c ? 'ring-2 ring-foreground' : '')}
+                      style={{ background: c }}
+                    />
                   ))}
-                  <input type="color" value={form.color_theme} onChange={e => set('color_theme', e.target.value)}
-                    style={{ width: 32, height: 32, borderRadius: 9999, border: '2px solid var(--tc-border)', cursor: 'pointer', padding: 0, overflow: 'hidden' }} />
+                  <input
+                    type="color"
+                    value={form.color_theme?.startsWith('#') ? form.color_theme : '#111318'}
+                    onChange={e => set('color_theme', e.target.value)}
+                    className="h-8 w-8 rounded-full border border-input cursor-pointer p-0 overflow-hidden"
+                    aria-label="Custom colour"
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── PRICING ── */}
           {tab === 'pricing' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                <div>
-                  <label style={S.label}>Price (USD) *</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 14, fontWeight: 600 }}>$</span>
-                    <input type="number" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" style={{ ...S.input, paddingLeft: 28 }} />
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Price (USD)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input type="number" value={form.price} onChange={e => set('price', e.target.value)} placeholder="0" className="pl-7" />
                   </div>
                 </div>
-                <div>
-                  <label style={S.label}>Original Price (optional)</label>
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--tc-muted-foreground)', fontSize: 14 }}>$</span>
-                    <input type="number" value={form.original_price} onChange={e => set('original_price', e.target.value)} placeholder="Strike-through price" style={{ ...S.input, paddingLeft: 28 }} />
+                <div className="space-y-1.5">
+                  <Label>Was <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input type="number" value={form.original_price} onChange={e => set('original_price', e.target.value)} placeholder="Shown struck through" className="pl-7" />
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <label style={S.label}>Billing Type</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div className="space-y-1.5">
+                <Label>Billed</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { value: 'one_time', label: 'One-time Payment', icon: '💳' },
-                    { value: 'monthly', label: 'Monthly Recurring', icon: '📅' },
-                    { value: 'quarterly', label: 'Quarterly', icon: '🗓' },
-                    { value: 'annual', label: 'Annual', icon: '📆' },
-                    { value: 'custom', label: 'Custom Plan', icon: '⚙️' },
+                    { value: 'one_time', label: 'Once' },
+                    { value: 'monthly', label: 'Monthly' },
+                    { value: 'quarterly', label: 'Quarterly' },
+                    { value: 'annual', label: 'Yearly' },
+                    { value: 'custom', label: 'Custom plan' },
                   ].map(opt => (
-                    <button key={opt.value} type="button" onClick={() => set('billing_type', opt.value)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 10, textAlign: 'left', cursor: 'pointer', border: `1.5px solid ${form.billing_type === opt.value ? 'var(--tc-primary)' : 'var(--tc-border)'}`, background: form.billing_type === opt.value ? 'var(--tc-accent)' : 'var(--tc-card)', fontSize: 13, fontWeight: form.billing_type === opt.value ? 600 : 400, color: form.billing_type === opt.value ? 'var(--tc-primary)' : 'var(--tc-foreground)' }}>
-                      <span>{opt.icon}</span>{opt.label}
+                    <button key={opt.value} type="button" onClick={() => set('billing_type', opt.value)} className={chip(form.billing_type === opt.value)}>
+                      {opt.label}
                     </button>
                   ))}
                 </div>
               </div>
 
               {form.billing_type !== 'one_time' && (
-                <div style={{ marginBottom: 20 }}>
-                  <label style={S.label}>Contract Length</label>
-                  {[
-                    { value: 'month_to_month', label: 'Month to month (cancel anytime)' },
-                    { value: 'minimum_months', label: `Minimum ${form.contract_months || 3} months commitment` },
-                    { value: 'fixed_term', label: 'Fixed term (auto-cancels at end)' },
-                  ].map(opt => (
-                    <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, cursor: 'pointer', fontSize: 13, color: 'var(--tc-foreground)' }}>
-                      <input type="radio" checked={form.contract_type === opt.value} onChange={() => set('contract_type', opt.value)} />
-                      {opt.label}
-                    </label>
-                  ))}
+                <div className="space-y-1.5">
+                  <Label>Commitment</Label>
+                  <div className="space-y-0.5">
+                    {[
+                      { value: 'month_to_month', label: 'Month to month, cancel any time' },
+                      { value: 'minimum_months', label: `At least ${form.contract_months || 3} months` },
+                      { value: 'fixed_term', label: 'Fixed term, ends on its own' },
+                    ].map(opt => (
+                      <label key={opt.value} className={radioRow(form.contract_type === opt.value)}>
+                        <input type="radio" className="accent-[rgb(var(--foreground))]" checked={form.contract_type === opt.value} onChange={() => set('contract_type', opt.value)} />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
                   {form.contract_type !== 'month_to_month' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                      <input type="number" value={form.contract_months} onChange={e => set('contract_months', Number(e.target.value))} style={{ ...S.input, width: 80 }} min={1} />
-                      <span style={{ fontSize: 13, color: 'var(--tc-muted-foreground)' }}>months</span>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Input type="number" value={form.contract_months} onChange={e => set('contract_months', Number(e.target.value))} className="w-20" min={1} />
+                      <span className="text-sm text-muted-foreground">months</span>
                     </div>
                   )}
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                <div>
-                  <label style={S.label}>Trial Period (days)</label>
-                  <input type="number" value={form.trial_days} onChange={e => set('trial_days', Number(e.target.value))} min={0} style={S.input} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Free trial (days)</Label>
+                  <Input type="number" value={form.trial_days} onChange={e => set('trial_days', Number(e.target.value))} min={0} />
                 </div>
-                <div>
-                  <label style={S.label}>Duration (weeks, 0 = ongoing)</label>
-                  <input type="number" value={form.duration_weeks} onChange={e => set('duration_weeks', Number(e.target.value))} min={0} style={S.input} />
+                <div className="space-y-1.5">
+                  <Label>Length in weeks</Label>
+                  <Input type="number" value={form.duration_weeks} onChange={e => set('duration_weeks', Number(e.target.value))} min={0} />
+                  <p className="text-[13px] text-muted-foreground">0 means ongoing.</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── INCLUSIONS ── */}
           {tab === 'inclusions' && (
             <div>
-              <div style={S.section}>
-                <div style={S.sectionTitle}>Service Inclusions</div>
+              <Section title="What clients get">
                 {INCLUSION_KEYS.map(({ key, label }) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--tc-background)' }}>
-                    <span style={{ fontSize: 13, color: 'var(--tc-foreground)' }}>{label}</span>
-                    <button type="button" onClick={() => setInclusion(key, !form.inclusions?.[key])}
-                      style={{ width: 40, height: 22, borderRadius: 9999, border: 'none', cursor: 'pointer', background: form.inclusions?.[key] ? 'var(--tc-primary)' : 'var(--tc-border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
-                      <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--tc-card)', position: 'absolute', top: 3, left: form.inclusions?.[key] ? 20 : 3, transition: 'left 0.2s', boxShadow: '0 1px 4px color-mix(in srgb, black 20%, transparent)' }} />
-                    </button>
-                  </div>
+                  <label key={key} className="flex items-center justify-between gap-4 py-2.5 border-b border-border last:border-b-0 cursor-pointer">
+                    <span className="text-sm text-foreground">{label}</span>
+                    <Switch checked={!!form.inclusions?.[key]} onCheckedChange={v => setInclusion(key, v)} />
+                  </label>
                 ))}
-
-                {/* Video calls special */}
-                <div style={{ padding: '12px 0', borderBottom: '1px solid var(--tc-background)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 13, color: 'var(--tc-foreground)' }}>Video check-in calls</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div className="pt-3">
+                  <p className="text-sm text-foreground mb-2">Video calls</p>
+                  <div className="flex gap-2 flex-wrap">
                     {VIDEO_CALL_OPTIONS.map(opt => (
-                      <button key={opt.value} type="button" onClick={() => setInclusion('video_calls', opt.value)}
-                        style={{ padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', border: `1.5px solid ${form.inclusions?.video_calls === opt.value ? 'var(--tc-primary)' : 'var(--tc-border)'}`, background: form.inclusions?.video_calls === opt.value ? 'var(--tc-accent)' : 'var(--tc-card)', color: form.inclusions?.video_calls === opt.value ? 'var(--tc-primary)' : 'var(--tc-muted-foreground)' }}>
+                      <button key={opt.value} type="button" onClick={() => setInclusion('video_calls', opt.value)} className={chip(form.inclusions?.video_calls === opt.value)}>
                         {opt.label}
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
+              </Section>
 
-              <div style={S.section}>
-                <div style={S.sectionTitle}>Custom Inclusions</div>
+              <Section title="Anything else">
                 {(form.custom_inclusions || []).map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ flex: 1, fontSize: 13, color: 'var(--tc-foreground)', padding: '8px 12px', background: 'var(--tc-background)', borderRadius: 8 }}>{item}</span>
-                    <button type="button" onClick={() => removeCustomInclusion(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--tc-destructive)', padding: 6 }}>
-                      <Trash2 size={14} />
+                  <div key={i} className="flex items-center gap-2 py-2 border-b border-border">
+                    <span className="flex-1 text-sm text-foreground">{item}</span>
+                    <button type="button" onClick={() => removeCustomInclusion(i)} className="touch-compact p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent" aria-label="Remove">
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
-                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <input value={newInclusion} onChange={e => setNewInclusion(e.target.value)}
+                <div className="flex gap-2 mt-3">
+                  <Input
+                    value={newInclusion}
+                    onChange={e => setNewInclusion(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addCustomInclusion()}
-                    placeholder="Add custom inclusion…" style={{ ...S.input, flex: 1 }} />
-                  <button type="button" onClick={addCustomInclusion}
-                    style={{ padding: '10px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'var(--tc-accent)', color: 'var(--tc-primary)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Plus size={14} /> Add
-                  </button>
+                    placeholder="Monthly form review video"
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" onClick={addCustomInclusion}><Plus /> Add</Button>
                 </div>
-              </div>
+              </Section>
             </div>
           )}
 
-          {/* ── SETTINGS ── */}
           {tab === 'settings' && (
             <div>
-              <div style={S.section}>
-                <div style={S.sectionTitle}>Capacity & Visibility</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 14 }}>
-                  <div>
-                    <label style={S.label}>Max Clients (0 = unlimited)</label>
-                    <input type="number" value={form.max_clients} onChange={e => set('max_clients', Number(e.target.value))} min={0} style={S.input} />
+              <Section title="Capacity and visibility">
+                <div className="grid grid-cols-2 gap-4 py-3">
+                  <div className="space-y-1.5">
+                    <Label>Client limit</Label>
+                    <Input type="number" value={form.max_clients} onChange={e => set('max_clients', Number(e.target.value))} min={0} />
+                    <p className="text-[13px] text-muted-foreground">0 means no limit.</p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
-                    <ToggleRow label="Enable waitlist" value={form.waitlist_enabled} onChange={v => set('waitlist_enabled', v)} />
-                  </div>
-                </div>
-
-                <label style={S.label}>Visibility</label>
-                {[
-                  { value: 'public', label: '🌐 Public — appears on your booking page' },
-                  { value: 'private', label: '🔗 Private — only via direct link' },
-                  { value: 'hidden', label: '👁 Hidden — coach assigns manually only' },
-                ].map(opt => (
-                  <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, cursor: 'pointer', fontSize: 13, color: 'var(--tc-foreground)' }}>
-                    <input type="radio" checked={form.visibility === opt.value} onChange={() => set('visibility', opt.value)} />
-                    {opt.label}
+                  <label className="flex items-center justify-between gap-3 self-start mt-7 cursor-pointer">
+                    <span className="text-sm text-foreground">Waitlist when full</span>
+                    <Switch checked={!!form.waitlist_enabled} onCheckedChange={v => set('waitlist_enabled', v)} />
                   </label>
-                ))}
-              </div>
+                </div>
+                <p className="text-sm text-foreground mb-1">Who can see it</p>
+                <div className="space-y-0.5">
+                  {[
+                    { value: 'public', label: 'Public, listed on your booking page' },
+                    { value: 'private', label: 'Private, only people with the link' },
+                    { value: 'hidden', label: 'Hidden, you assign it yourself' },
+                  ].map(opt => (
+                    <label key={opt.value} className={radioRow(form.visibility === opt.value)}>
+                      <input type="radio" className="accent-[rgb(var(--foreground))]" checked={form.visibility === opt.value} onChange={() => set('visibility', opt.value)} />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </Section>
 
-              <div style={S.section}>
-                <div style={S.sectionTitle}>Onboarding Automation</div>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={S.label}>Auto-assign Program</label>
-                  <select value={form.auto_assign_program_id} onChange={e => set('auto_assign_program_id', e.target.value)} style={S.input}>
-                    <option value="">None</option>
-                    {programs.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                  </select>
+              <Section title="When someone signs up">
+                <div className="space-y-4 pt-3">
+                  <div className="space-y-1.5">
+                    <Label>Assign a program</Label>
+                    <Select value={form.auto_assign_program_id || '__none'} onValueChange={v => set('auto_assign_program_id', v === '__none' ? '' : v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Assign a meal plan</Label>
+                    <Select value={form.auto_assign_nutrition_id || '__none'} onValueChange={v => set('auto_assign_nutrition_id', v === '__none' ? '' : v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">None</SelectItem>
+                        {nutritionPlans.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Welcome message</Label>
+                    <Textarea
+                      value={form.auto_welcome_message}
+                      onChange={e => set('auto_welcome_message', e.target.value)}
+                      rows={3}
+                      placeholder="Hi [First Name], welcome to [Package Name]. Your first check-in is Friday."
+                    />
+                  </div>
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <span className="text-sm text-foreground">Book an onboarding call automatically</span>
+                    <Switch checked={!!form.auto_schedule_call} onCheckedChange={v => set('auto_schedule_call', v)} />
+                  </label>
                 </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={S.label}>Auto-assign Meal Plan</label>
-                  <select value={form.auto_assign_nutrition_id} onChange={e => set('auto_assign_nutrition_id', e.target.value)} style={S.input}>
-                    <option value="">None</option>
-                    {nutritionPlans.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={S.label}>Welcome Message (sent on purchase)</label>
-                  <textarea value={form.auto_welcome_message} onChange={e => set('auto_welcome_message', e.target.value)} rows={3}
-                    placeholder="Hi [First Name]! Welcome to [Package Name]! I'm so excited to start this journey with you…"
-                    style={{ ...S.input, resize: 'none' }} />
-                </div>
-                <ToggleRow label="Auto-schedule onboarding call on purchase" value={form.auto_schedule_call} onChange={v => set('auto_schedule_call', v)} />
-              </div>
+              </Section>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--tc-muted)', display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600, background: 'var(--tc-muted)', color: 'var(--tc-foreground)', border: 'none', cursor: 'pointer' }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={!form.name || !form.price}
-            style={{ padding: '10px 24px', borderRadius: 10, fontSize: 14, fontWeight: 700, background: (!form.name || !form.price) ? 'var(--tc-border)' : 'linear-gradient(135deg, var(--tc-primary), var(--tc-ai))', color: (!form.name || !form.price) ? 'var(--tc-muted-foreground)' : 'var(--tc-primary-foreground)', border: 'none', cursor: (!form.name || !form.price) ? 'not-allowed' : 'pointer' }}>
-            {isEdit ? 'Save Changes' : 'Create Package'}
-          </button>
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-border flex-shrink-0">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={!form.name || !form.price}>
+            {isEdit ? 'Save changes' : 'Create package'}
+          </Button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ToggleRow({ label, value, onChange }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
-      <span style={{ fontSize: 13, color: 'var(--tc-foreground)' }}>{label}</span>
-      <button type="button" onClick={() => onChange(!value)}
-        style={{ width: 40, height: 22, borderRadius: 9999, border: 'none', cursor: 'pointer', background: value ? 'var(--tc-primary)' : 'var(--tc-border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
-        <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--tc-card)', position: 'absolute', top: 3, left: value ? 20 : 3, transition: 'left 0.2s', boxShadow: '0 1px 4px color-mix(in srgb, black 20%, transparent)' }} />
-      </button>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

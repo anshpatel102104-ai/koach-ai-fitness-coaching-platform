@@ -1,29 +1,28 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { db } from '@/api/supabaseClient';
-import { Loader2, UtensilsCrossed } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Panel, EmptyState } from '@/components/kit';
 import { cn } from '@/lib/utils';
 
 function sum(logs, field) {
   return Math.round(logs.reduce((s, l) => s + (parseFloat(l[field]) || 0), 0) * 10) / 10;
 }
 
-function MacroBar({ label, consumed, target, colorClass }) {
+function MacroBar({ label, consumed, target }) {
   const pct = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
   const over = target > 0 && consumed > target * 1.1;
-  const near = target > 0 && consumed >= target * 0.9;
-  const barColor = over ? 'bg-destructive' : near ? 'bg-success' : 'bg-warning';
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-xs font-semibold">
-        <span className={colorClass}>{label}</span>
-        <span className="text-muted-foreground">
-          {consumed}g{target > 0 ? ` / ${target}g` : ''}
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <span className={cn('font-semibold tabular-nums', over ? 'text-destructive' : 'text-foreground')}>
+          {consumed} g{target > 0 ? <span className="font-normal text-muted-foreground"> of {target} g</span> : ''}
         </span>
       </div>
       <div className="h-2 rounded-full bg-secondary overflow-hidden">
-        <div className={cn('h-full rounded-full transition-all duration-500', barColor)} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full rounded-full', over ? 'bg-destructive' : 'bg-primary')} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -69,10 +68,9 @@ export default function CheckInNutritionTab({ clientId, checkInDate, nutritionPl
 
   if (foodLogs.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-14 text-center">
-        <UtensilsCrossed className="w-10 h-10 text-muted-foreground/30 mb-3" />
-        <p className="text-sm font-medium text-muted-foreground">Client hasn't logged food for this check-in date</p>
-      </div>
+      <Panel>
+        <EmptyState title="No food logged that day." body="Nothing was logged on the check-in date, so there is nothing to compare against the plan." />
+      </Panel>
     );
   }
 
@@ -81,87 +79,66 @@ export default function CheckInNutritionTab({ clientId, checkInDate, nutritionPl
 
   return (
     <div className="space-y-4">
-
-      {/* Compliance badge */}
-      {calCompliance !== null && (
-        <div className={cn(
-          'flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-semibold',
-          calOver  ? 'bg-destructive/10 border-destructive/20 text-destructive' :
-          calNear  ? 'bg-success/10 border-success/20 text-success' :
-                     'bg-warning/10 border-warning/20 text-warning'
-        )}>
-          <span>Calorie compliance</span>
-          <span className="text-base font-bold">{calCompliance}% of target</span>
-        </div>
-      )}
-
-      {/* Summary card */}
-      <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
-        {/* Calories headline */}
-        <div className="flex items-end justify-between">
+      <Panel className="p-5 space-y-4">
+        <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Total Calories</p>
-            <p className="text-3xl font-bold font-heading leading-none mt-0.5">
-              {totCal}
-              {tCal > 0 && <span className="text-sm font-normal text-muted-foreground ml-1">/ {tCal} kcal</span>}
+            <p className="text-[13px] text-muted-foreground">Calories on the check-in date</p>
+            <p className="mt-1 flex items-baseline gap-1.5">
+              <span className="num text-[34px] leading-none text-foreground">{totCal.toLocaleString()}</span>
+              <span className="text-[15px] text-muted-foreground">{tCal > 0 ? `of ${tCal.toLocaleString()} kcal` : 'kcal'}</span>
             </p>
           </div>
+          {calCompliance !== null && (
+            <p className={cn('text-sm font-semibold text-right', calOver ? 'text-destructive' : calNear ? 'text-success' : 'text-warning')}>
+              {calCompliance}% of target
+            </p>
+          )}
         </div>
 
-        {/* Calorie bar */}
         {tCal > 0 && (
-          <div className="h-3 rounded-full bg-secondary overflow-hidden">
+          <div className="h-2.5 rounded-full bg-secondary overflow-hidden">
             <div
-              className={cn(
-                'h-full rounded-full transition-all duration-500',
-                calOver ? 'bg-destructive' : calNear ? 'bg-success' : 'bg-warning'
-              )}
+              className={cn('h-full rounded-full', calOver ? 'bg-destructive' : 'bg-primary')}
               style={{ width: `${Math.min((totCal / tCal) * 100, 100)}%` }}
             />
           </div>
         )}
 
-        {/* Macro bars */}
         <div className="space-y-3 pt-1">
-          <MacroBar label="Protein"  consumed={totPro}  target={tPro}  colorClass="text-primary" />
-          <MacroBar label="Carbs"    consumed={totCarb} target={tCarb} colorClass="text-warning" />
-          <MacroBar label="Fats"     consumed={totFat}  target={tFat}  colorClass="text-destructive" />
+          <MacroBar label="Protein" consumed={totPro} target={tPro} />
+          <MacroBar label="Carbs" consumed={totCarb} target={tCarb} />
+          <MacroBar label="Fat" consumed={totFat} target={tFat} />
         </div>
-      </div>
+      </Panel>
 
-      {/* Meals */}
-      <div className="space-y-3">
+      <Panel className="overflow-hidden">
         {mealNames.map(mealName => {
           const logs = foodLogs.filter(l => l.meal_name === mealName);
           const mealCal = sum(logs, 'calories');
           return (
-            <div key={mealName} className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/30">
-                <span className="text-sm font-bold text-foreground">{mealName}</span>
-                <span className="text-xs font-semibold text-muted-foreground">{mealCal} kcal</span>
+            <div key={mealName} className="border-b border-border last:border-b-0">
+              <div className="flex items-baseline justify-between px-5 pt-4 pb-1">
+                <span className="text-[15px] font-semibold text-foreground">{mealName}</span>
+                <span className="text-sm text-muted-foreground tabular-nums">{mealCal} kcal</span>
               </div>
-              <div className="divide-y divide-border">
-                {logs.map(log => (
-                  <div key={log.id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{log.food_name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {log.serving_quantity} × {log.serving_unit ?? 'serving'}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 text-[10px] font-semibold shrink-0">
-                      <span className="text-orange-600">{log.calories} kcal</span>
-                      <span className="text-primary">P {log.protein}g</span>
-                      <span className="text-warning">C {log.carbs}g</span>
-                      <span className="text-destructive">F {log.fats}g</span>
-                    </div>
+              {logs.map(log => (
+                <div key={log.id} className="flex items-center gap-3 px-5 py-2.5">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground truncate">{log.food_name}</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {log.serving_quantity} × {log.serving_unit ?? 'serving'}
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <p className="text-[12px] text-muted-foreground tabular-nums shrink-0 text-right">
+                    <span className="font-semibold text-foreground">{log.calories} kcal</span> · P {log.protein} · C {log.carbs} · F {log.fats}
+                  </p>
+                </div>
+              ))}
+              <div className="h-2" />
             </div>
           );
         })}
-      </div>
+      </Panel>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dumbbell } from 'lucide-react';
-import { BSSection, BSRow, BSSelect, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { BSSection, BSRow, BSSelect, BSInput, BSTextarea, BSGroup } from './BSSection';
 
 const MACRO_METHODS = [
   { value: 'manual', label: 'Manual (coach sets custom macros)' },
@@ -20,23 +20,21 @@ const DEFAULTS = {
 
 export default function BSProgramNutrition({ s, set }) {
   return (
-    <BSSection icon={Dumbbell} title="Program & Nutrition Defaults" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Program Settings</p>
-      <BSRow label="Program progression" hint="How clients move to next program">
+    <BSSection icon={Dumbbell} title="Programs and nutrition" subtitle="Starting points for every new program and meal plan." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+      <BSGroup>Program settings</BSGroup>
+      <BSRow label="Program progression" hint="How a client moves on to their next program.">
         <div className="space-y-3">
           <BSSelect value={s.program_progression} onChange={v => set('program_progression', v)}
-            options={[{ value: 'manual', label: 'Manual (coach decides)' }, { value: 'auto', label: 'Automatic (AI decides)' }]} />
+            options={[{ value: 'manual', label: 'Manual, you decide' }, { value: 'auto', label: 'Automatic, by the rules below' }]} />
           {s.program_progression === 'auto' && (
-            <div className="space-y-3 p-4 rounded-xl bg-accent border border-accent">
-              <p className="text-xs font-bold text-primary uppercase tracking-wider">Auto-Progression Rules</p>
+            <div className="space-y-3 rounded-lg bg-secondary p-4">
+              <p className="text-[13px] font-semibold text-foreground">Move a client on when</p>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-40 flex-shrink-0">Progress when</span>
-                <BSInput type="number" value={s.progression_completion_pct} onChange={v => set('progression_completion_pct', v)} min={0} max={100} className="w-20" />
+                                <BSInput type="number" value={s.progression_completion_pct} onChange={v => set('progression_completion_pct', v)} min={0} max={100} className="w-20" />
                 <span className="text-sm text-muted-foreground">% of program completed</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-40 flex-shrink-0">Progress when</span>
-                <BSInput type="number" value={s.progression_adherence_pct} onChange={v => set('progression_adherence_pct', v)} min={0} max={100} className="w-20" />
+                                <BSInput type="number" value={s.progression_adherence_pct} onChange={v => set('progression_adherence_pct', v)} min={0} max={100} className="w-20" />
                 <span className="text-sm text-muted-foreground">% adherence for</span>
                 <BSInput type="number" value={s.progression_adherence_weeks} onChange={v => set('progression_adherence_weeks', v)} min={1} className="w-16" />
                 <span className="text-sm text-muted-foreground">weeks</span>
@@ -45,17 +43,15 @@ export default function BSProgramNutrition({ s, set }) {
           )}
         </div>
       </BSRow>
-      <BSRow label="Default rest day text" hint="Shown to clients on rest days">
+      <BSRow label="Default rest day text" hint="What clients see on a rest day.">
         <BSTextarea value={s.default_rest_day_text} onChange={v => set('default_rest_day_text', v)}
           placeholder="Today is a rest day. Focus on recovery — sleep, hydration, and light movement." rows={2} />
       </BSRow>
-      <BSRow label="Default program notes" hint="Shown to all clients at top of program">
+      <BSRow label="Default program notes" hint="Shown at the top of every program.">
         <BSTextarea value={s.default_program_notes} onChange={v => set('default_program_notes', v)}
-          placeholder="Notes shown to all clients at the top of their program..." rows={3} />
+          placeholder="Shown at the top of every program" rows={3} />
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nutrition Settings</p>
+      <BSGroup>Nutrition settings</BSGroup>
       <BSRow label="Macro calculation method">
         <BSSelect value={s.macro_method} onChange={v => set('macro_method', v)} options={MACRO_METHODS} />
       </BSRow>

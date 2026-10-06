@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Edit3, ChevronRight } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from '@/components/ui/dialog';
+import { ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import AIBuilder from './builder/AIBuilder';
 import ManualBuilder from './builder/ManualBuilder';
 
-const ModeCard = ({ icon: Icon, title, description, onClick }) => (
-  <motion.button
+const ModeRow = ({ title, description, onClick }) => (
+  <button
     onClick={onClick}
-    className="flex flex-col gap-3 p-6 border-2 border-border rounded-2xl hover:border-primary hover:bg-accent transition-all text-left group"
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
+    className="group flex w-full items-center gap-4 border-b border-border py-4 text-left last:border-b-0"
   >
-    <div className="flex items-start justify-between">
-      <Icon className="w-8 h-8 text-primary" />
-      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-    </div>
-    <div>
-      <h3 className="font-semibold text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground mt-1">{description}</p>
-    </div>
-  </motion.button>
+    <span className="min-w-0 flex-1">
+      <span className="block text-[17px] font-semibold text-foreground">{title}</span>
+      <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
+    </span>
+    <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+  </button>
 );
 
 export default function ProgramCreationModal({ open, onOpenChange, onProgramCreated, initialMode = null }) {
@@ -34,29 +28,30 @@ export default function ProgramCreationModal({ open, onOpenChange, onProgramCrea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[900px] p-0 gap-0 overflow-x-hidden" style={{ height: '85dvh', maxHeight: '85dvh', display: 'flex', flexDirection: 'column' }}>
+      <DialogContent
+        className={mode
+          ? 'flex w-full flex-col gap-0 overflow-hidden p-0 sm:flex sm:max-w-[860px] sm:p-0 h-[92dvh] sm:h-[85dvh] sm:max-h-[85dvh]'
+          : 'sm:max-w-lg'}
+      >
         {!mode ? (
-          <div className="p-6">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-2xl">Create New Program</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <ModeCard
-                icon={Zap}
-                title="🤖 Build with AI"
-                description="Describe your client and AI generates a complete program in seconds"
+          <div>
+            <DialogTitle className="text-[26px]">New program</DialogTitle>
+            <DialogDescription className="mt-1">Either way you can edit every day and set afterwards.</DialogDescription>
+            <div className="mt-4">
+              <ModeRow
+                title="Generate with AI"
+                description="Answer a few questions about the client. AI drafts the weeks for you to check."
                 onClick={() => setMode('ai')}
               />
-              <ModeCard
-                icon={Edit3}
-                title="✏️ Build Manually"
-                description="Create a program from scratch with full control over every detail"
+              <ModeRow
+                title="Build it yourself"
+                description="Start from a blank program and add days and exercises."
                 onClick={() => setMode('manual')}
               />
             </div>
           </div>
         ) : mode === 'ai' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div className="flex min-h-0 flex-1 flex-col">
             <AIBuilder
               onBack={() => setMode(null)}
               onProgramCreated={(program) => {
@@ -66,7 +61,7 @@ export default function ProgramCreationModal({ open, onOpenChange, onProgramCrea
             />
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <div className="flex min-h-0 flex-1 flex-col">
             <ManualBuilder
               onBack={() => setMode(null)}
               onProgramCreated={(program) => {

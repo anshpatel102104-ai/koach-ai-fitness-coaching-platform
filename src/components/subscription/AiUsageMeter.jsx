@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { getUserTier } from '@/lib/subscription';
 import { aiUsage } from '@/lib/aiPolicy';
@@ -28,8 +27,8 @@ export default function AiUsageMeter({ className = undefined, bar = false }) {
   const limit = getUserTier(user).limits.max_ai_generations_per_month;
   if (limit === -1) {
     return (
-      <p className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', className)}>
-        <Sparkles className="w-3 h-3" /> Unlimited AI generations on your plan
+      <p className={cn('text-[13px] text-muted-foreground', className)}>
+        Unlimited AI generations on your plan
       </p>
     );
   }
@@ -37,19 +36,18 @@ export default function AiUsageMeter({ className = undefined, bar = false }) {
   const atLimit = used >= limit;
   const pct = Math.min((used / limit) * 100, 100);
   return (
-    <div className={cn('text-xs', className)} data-testid="ai-usage-meter">
-      <p className={cn('flex flex-wrap items-center gap-x-1.5 gap-y-0.5', atLimit ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
-        <Sparkles className="w-3 h-3" />
-        <span>{used} of {limit} AI generations this month, resets {fmtDate(resetsOn)}</span>
+    <div className={cn('text-[13px]', className)} data-testid="ai-usage-meter">
+      <p className={cn('flex flex-wrap items-center gap-x-2 gap-y-0.5', atLimit ? 'text-destructive font-semibold' : 'text-muted-foreground')}>
+        <span>{used} of {limit} AI generations used this month, resets {fmtDate(resetsOn)}</span>
         {atLimit && (
-          <button type="button" onClick={() => navigate('/subscription')} className="text-primary font-semibold hover:underline">
-            Upgrade →
+          <button type="button" onClick={() => navigate('/subscription')} className="text-foreground font-semibold underline underline-offset-4 decoration-1 hover:decoration-2">
+            See plans
           </button>
         )}
       </p>
       {bar && (
-        <div className="h-1.5 rounded-full bg-[var(--kc-w-5)] overflow-hidden mt-2">
-          <div className={cn('h-full rounded-full transition-all duration-700', atLimit ? 'bg-destructive' : pct >= 80 ? 'bg-warning' : 'bg-primary')} style={{ width: `${pct}%` }} />
+        <div className="h-1.5 rounded-full bg-secondary overflow-hidden mt-2">
+          <div className={cn('h-full rounded-full transition-[width] duration-300', atLimit ? 'bg-destructive' : pct >= 80 ? 'bg-partial' : 'bg-foreground')} style={{ width: `${pct}%` }} />
         </div>
       )}
     </div>

@@ -10,15 +10,15 @@ function Ring({ pct, size = 72, color, label, value }) {
     <div className="flex flex-col items-center gap-1">
       <div className="relative">
         <svg width={size} height={size} className="-rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="7" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--secondary))" strokeWidth="7" />
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth="7"
             strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} style={{ transition: 'stroke-dasharray 0.8s ease' }} />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-white font-bold text-sm">{value}%</span>
+          <span className="text-foreground font-bold text-sm">{value}%</span>
         </div>
       </div>
-      <span className="text-white/40 text-[9px] font-semibold text-center leading-tight">{label}</span>
+      <span className="text-muted-foreground text-[12px] font-semibold text-center leading-tight">{label}</span>
     </div>
   );
 }
@@ -26,9 +26,9 @@ function Ring({ pct, size = 72, color, label, value }) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(13,17,28,0.95)', border: '1px solid rgba(255,255,255,0.12)' }}>
-      <p className="text-white font-bold">{Math.round(payload[0].value)}%</p>
-      <p className="text-white/40">{label}</p>
+    <div className="px-3 py-2 rounded-xl text-xs" style={{ background: 'rgba(13,17,28,0.95)', border: '1px solid rgb(var(--border))' }}>
+      <p className="text-foreground font-bold">{Math.round(payload[0].value)}%</p>
+      <p className="text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -74,15 +74,15 @@ export default function ConsistencyCard({ checkIns, workoutSessions, foodLogs })
   const overall = Math.round((workoutAdh + nutritionAdh + checkInAdh) / 3);
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <p className="text-white font-bold text-sm mb-4">🎯 My Consistency</p>
+    <div className="rounded-xl p-4" style={{ background: 'rgb(var(--secondary))', border: '1px solid rgb(var(--secondary))' }}>
+      <p className="text-foreground font-bold text-sm mb-4">My Consistency</p>
 
       {/* Rings row */}
       <div className="flex items-center justify-around mb-4">
         <Ring pct={workoutAdh} value={workoutAdh} color="rgb(var(--primary))" label="Workouts" />
         <div className="text-center">
-          <p className="text-white font-black text-3xl">{overall}%</p>
-          <p className="text-white/30 text-[9px] font-semibold">Overall</p>
+          <p className="text-foreground font-black text-3xl">{overall}%</p>
+          <p className="text-muted-foreground text-[12px] font-semibold">Overall</p>
         </div>
         <Ring pct={nutritionAdh} value={nutritionAdh} color="rgb(var(--success))" label="Nutrition" />
         <Ring pct={checkInAdh} value={checkInAdh} color="rgb(var(--warning))" label="Check-ins" />
@@ -92,8 +92,8 @@ export default function ConsistencyCard({ checkIns, workoutSessions, foodLogs })
       {bestWeek && (
         <div className="p-2.5 rounded-xl mb-3 text-center"
           style={{ background: 'rgba(252,211,77,0.08)', border: '1px solid rgba(252,211,77,0.15)' }}>
-          <p className="text-[10px] text-warning/70">
-            🔥 Your best week was <strong className="text-warning">week of {bestWeek}</strong>!
+          <p className="text-[12px] text-warning/70">
+            Your best week was <strong className="text-warning">week of {bestWeek}</strong>!
           </p>
         </div>
       )}
@@ -102,10 +102,10 @@ export default function ConsistencyCard({ checkIns, workoutSessions, foodLogs })
       <div className="h-24">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={weeklyData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
-            <XAxis dataKey="week" tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="week" tick={{ fill: 'rgb(var(--muted-foreground))', fontSize: 9 }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="pct" fill="rgb(var(--primary) / 0.4)" radius={[4, 4, 0, 0]}
-              label={{ position: 'top', formatter: v => `${Math.round(v)}%`, fill: 'rgba(255,255,255,0.3)', fontSize: 8 }} />
+              label={{ position: 'top', formatter: v => `${Math.round(v)}%`, fill: 'rgb(var(--muted-foreground))', fontSize: 8 }} />
           </BarChart>
         </ResponsiveContainer>
       </div>

@@ -7,27 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  Mail, Send, Loader2, Users, ChevronRight,
-  Smartphone, Monitor, Search, CheckCircle2
-} from 'lucide-react';
+import { Send, Loader2, Search } from 'lucide-react';
+import { Page, PageHeader, Panel, Segmented } from '@/components/kit';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const AUDIENCE_TABS = [
   { id: 'all',    label: 'All' },
-  { id: 'client', label: 'Client Emails' },
-  { id: 'coach',  label: 'Coach Emails' },
+  { id: 'client', label: 'To clients' },
+  { id: 'coach',  label: 'To you' },
 ];
 
-function AudienceBadge({ audience }) {
-  return (
-    <span className={cn(
-      'px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide',
-      audience === 'client' ? 'bg-accent text-primary' : 'bg-ai/10 text-ai'
-    )}>{audience}</span>
-  );
-}
+const AUDIENCE_LABEL = { client: 'To clients', coach: 'To you' };
+// Template labels come from lib/emailTemplates in Title Case; show them in sentence case.
+const sentence = (str = '') => str.split(' ').map((w, i) => (i === 0 || /^[A-Z0-9]{2,}$/.test(w) ? w : w.toLowerCase())).join(' ');
 
 function TemplateList({ templates: tpls, selected, onSelect, search }) {
   const filtered = tpls.filter(t =>
@@ -35,31 +28,29 @@ function TemplateList({ templates: tpls, selected, onSelect, search }) {
     t.desc.toLowerCase().includes(search.toLowerCase())
   );
   return (
-    <div className="space-y-1">
-      {filtered.map(t => (
-        <button
-          key={t.key}
-          onClick={() => onSelect(t.key)}
-          className={cn(
-            'w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all group',
-            selected === t.key
-              ? 'border-primary bg-accent'
-              : 'border-border hover:border-primary bg-card hover:bg-muted'
-          )}
-        >
-          <span className="text-xl leading-none flex-shrink-0">{t.emoji}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className={cn('text-xs font-bold', selected === t.key ? 'text-primary' : 'text-foreground')}>{t.label}</p>
-              <AudienceBadge audience={t.audience} />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{t.desc}</p>
-          </div>
-          <ChevronRight className={cn('w-4 h-4 flex-shrink-0 transition-colors', selected === t.key ? 'text-primary' : 'text-border')} />
-        </button>
-      ))}
+    <div>
+      {filtered.map(t => {
+        const active = selected === t.key;
+        return (
+          <button
+            key={t.key}
+            onClick={() => onSelect(t.key)}
+            className={cn(
+              'relative w-full px-5 py-3 text-left transition-colors',
+              active ? 'bg-accent' : 'hover:bg-accent/50'
+            )}
+          >
+            {active && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-brand" />}
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="text-[15px] font-semibold text-foreground truncate">{sentence(t.label)}</span>
+              <span className="text-[12px] text-muted-foreground flex-shrink-0">{AUDIENCE_LABEL[t.audience] || t.audience}</span>
+            </span>
+            <span className="block text-[13px] text-muted-foreground truncate mt-0.5">{t.desc}</span>
+          </button>
+        );
+      })}
       {filtered.length === 0 && (
-        <p className="text-center py-8 text-sm text-muted-foreground">No templates match "{search}"</p>
+        <p className="px-5 py-6 text-sm text-muted-foreground">No templates match "{search}".</p>
       )}
     </div>
   );
@@ -106,7 +97,7 @@ export default function EmailCenter() {
       checkInSubmitted: { weight: 185, compliance_training: 88, mood: 'great', energy_level: 8 },
       paymentReceived: { amount: 150, description: 'Monthly Coaching', invoice_number: 'INV-0042', payment_method: 'Card' },
       paymentFailed: { amount: 200, failure_reason: 'Insufficient funds' },
-      badgeEarned: { label: '30-Day Warrior', emoji: '🏆', desc: '30 consecutive days of training' },
+      badgeEarned: { label: '30-day streak', desc: '30 days of training in a row' },
       invoiceReceived: { amount: 150, due_date: 'June 1, 2026', invoice_number: 'INV-0042', description: 'Monthly Coaching' },
       paymentConfirmation: { amount: 150, invoice_number: 'INV-0042', next_billing_date: 'July 1, 2026' },
       paymentFailedClient: { amount: 200, failure_reason: 'Card declined' },
@@ -133,7 +124,7 @@ export default function EmailCenter() {
 
   const handleSendToClient = async () => {
     if (toMode === 'single' && !selectedClient) {
-      toast.error('Please select a client first');
+      toast.error('Choose a client first');
       return;
     }
     setSending(true);
@@ -156,7 +147,7 @@ export default function EmailCenter() {
       }
       setSentSuccess(true);
       setTimeout(() => setSentSuccess(false), 3000);
-      toast.success(toMode === 'single' ? `Email sent to ${selectedClient.name}!` : `Email sent to ${targets.length} clients!`);
+      toast.success(toMode === 'single' ? `Email sent to ${selectedClient.name}` : `Email sent to ${targets.length} clients`);
     } catch (err) {
       toast.error(err.message || 'Failed to send email');
     } finally {
@@ -183,41 +174,27 @@ export default function EmailCenter() {
     }
   };
 
+  const withEmail = clients.filter(c => c.email);
+
   return (
-    <div className="p-4 sm:p-6 max-w-screen-xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-black text-foreground">Email Center</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Send beautifully branded emails to your clients</p>
-      </div>
+    <Page wide>
+      <PageHeader
+        title="Email"
+        subtitle="Pick a template, check the preview, then send it to one client or everyone. Replies come to your inbox."
+      />
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-
-        {/* ── Left: Template Picker ── */}
-        <div className="xl:col-span-4 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
-          <div className="px-4 pt-4 pb-3 border-b border-muted">
-            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Templates</p>
-            {/* Audience tabs */}
-            <div className="flex gap-1 mb-3">
-              {AUDIENCE_TABS.map(t => (
-                <button key={t.id} onClick={() => setAudienceTab(t.id)}
-                  className={cn('px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                    audienceTab === t.id ? 'bg-sidebar text-white' : 'bg-muted text-muted-foreground hover:bg-border'
-                  )}>{t.label}</button>
-              ))}
-            </div>
-            {/* Search */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        {/* Templates */}
+        <Panel className="xl:col-span-3 overflow-hidden flex flex-col">
+          <div className="px-5 pt-5 pb-3 space-y-3">
+            <h2 className="text-[22px] text-foreground">Templates</h2>
+            <Segmented size="sm" value={audienceTab} onChange={setAudienceTab} options={AUDIENCE_TABS.map(t => ({ value: t.id, label: t.label }))} />
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search templates..."
-                className="w-full pl-8 pr-3 py-2 text-xs border border-border rounded-lg bg-muted focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Find a template" className="pl-9 bg-secondary border-transparent" aria-label="Find a template" />
             </div>
           </div>
-          <div className="p-3 overflow-y-auto flex-1" style={{ maxHeight: 520 }}>
+          <div className="overflow-y-auto flex-1 border-t border-border" style={{ maxHeight: 560 }}>
             <TemplateList
               templates={filteredTemplates}
               selected={selectedTemplate}
@@ -225,137 +202,81 @@ export default function EmailCenter() {
               search={searchQuery}
             />
           </div>
-        </div>
+        </Panel>
 
-        {/* ── Middle: Compose & Send ── */}
-        <div className="xl:col-span-4 space-y-4">
-          {/* Template info */}
-          {currentTemplate && (
-            <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
-              <span className="text-3xl">{currentTemplate.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-foreground text-sm">{currentTemplate.label}</p>
-                  <AudienceBadge audience={currentTemplate.audience} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{currentTemplate.desc}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Compose */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-            <h2 className="text-sm font-black text-foreground flex items-center gap-2">
-              <Mail className="w-4 h-4" /> Compose & Send
-            </h2>
-
-            {/* Recipients */}
+        {/* Compose */}
+        <div className="xl:col-span-4 space-y-5">
+          <Panel className="p-5 sm:p-6 space-y-5">
             <div>
-              <Label className="text-xs font-bold mb-1.5 block text-muted-foreground">Recipients</Label>
-              <div className="flex gap-1.5 mb-2">
-                {[
-                  { key: 'single', label: 'Single Client', icon: null },
-                  { key: 'all',    label: `All (${clients.filter(c => c.email).length})`, icon: Users },
-                ].map(m => (
-                  <button key={m.key} onClick={() => setToMode(m.key)}
-                    className={cn('flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold border transition-all',
-                      toMode === m.key ? 'bg-sidebar text-white border-border' : 'bg-card text-muted-foreground border-border hover:border-border'
-                    )}>
-                    {m.icon && <m.icon className="w-3.5 h-3.5" />}
-                    {m.label}
-                  </button>
-                ))}
-              </div>
+              <p className="text-[13px] text-muted-foreground">{currentTemplate ? (AUDIENCE_LABEL[currentTemplate.audience] || currentTemplate.audience) : 'Template'}</p>
+              <h2 className="text-[22px] text-foreground mt-0.5">{currentTemplate ? sentence(currentTemplate.label) : 'Choose a template'}</h2>
+              {currentTemplate?.desc && <p className="text-sm text-muted-foreground mt-1">{currentTemplate.desc}</p>}
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">Send to</Label>
+              <Segmented
+                size="sm"
+                value={toMode}
+                onChange={setToMode}
+                options={[{ value: 'single', label: 'One client' }, { value: 'all', label: 'Everyone', count: withEmail.length }]}
+              />
               {toMode === 'single' && (
                 <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger className="text-sm"><SelectValue placeholder="Select a client..." /></SelectTrigger>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="Choose a client" /></SelectTrigger>
                   <SelectContent>
-                    {clients.filter(c => c.email).map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name} — {c.email}</SelectItem>
+                    {withEmail.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}, {c.email}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
+              {toMode === 'all' && <p className="text-[13px] text-muted-foreground mt-2">Goes to {withEmail.length} {withEmail.length === 1 ? 'client' : 'clients'} with an email address, one at a time.</p>}
             </div>
 
-            {/* Subject */}
             <div>
-              <Label className="text-xs font-bold mb-1.5 block text-muted-foreground">Subject</Label>
-              <Input
-                value={customSubject || rendered.subject || ''}
-                onChange={e => setCustomSubject(e.target.value)}
-                placeholder="Auto-generated from template..."
-                className="text-sm"
-              />
+              <Label htmlFor="ec-subject" className="mb-1.5 block">Subject</Label>
+              <Input id="ec-subject" value={customSubject || rendered.subject || ''} onChange={e => setCustomSubject(e.target.value)} placeholder="Filled in from the template" />
             </div>
 
-            {/* Send button */}
-            <Button
-              className="w-full font-bold gap-2"
-              style={{ background: 'linear-gradient(135deg,var(--tc-primary),var(--tc-ai))', boxShadow: '0 4px 12px color-mix(in srgb, var(--tc-primary) 30%, transparent)' }}
-              onClick={handleSendToClient}
-              disabled={sending || (toMode === 'single' && !selectedClient)}
-            >
-              {sending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
-              ) : sentSuccess ? (
-                <><CheckCircle2 className="w-4 h-4" /> Sent!</>
-              ) : (
-                <><Send className="w-4 h-4" /> Send Email</>
-              )}
+            <Button className="w-full" onClick={handleSendToClient} disabled={sending || (toMode === 'single' && !selectedClient)}>
+              {sending ? <><Loader2 className="animate-spin" /> Sending</> : sentSuccess ? 'Sent' : <><Send /> {toMode === 'single' ? 'Send email' : `Send to ${withEmail.length}`}</>}
             </Button>
-          </div>
+          </Panel>
 
-          {/* Test email */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-bold text-foreground">Send Test Email</h3>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={testEmailAddress}
-                onChange={e => setTestEmailAddress(e.target.value)}
-                placeholder="your@email.com"
-                className="flex-1 text-sm"
-              />
-              <Button variant="outline" onClick={handleSendTest} disabled={sending} className="font-semibold text-xs whitespace-nowrap">
-                {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send Test'}
+          <Panel className="p-5 sm:p-6">
+            <p className="text-[15px] font-semibold text-foreground">Send yourself a test first</p>
+            <p className="text-[13px] text-muted-foreground mt-0.5">The subject starts with [TEST].</p>
+            <div className="flex gap-2 mt-3">
+              <Input type="email" value={testEmailAddress} onChange={e => setTestEmailAddress(e.target.value)} placeholder="you@example.com" className="flex-1" aria-label="Test email address" />
+              <Button variant="outline" onClick={handleSendTest} disabled={sending}>
+                {sending ? <Loader2 className="animate-spin" /> : 'Send test'}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">Subject will be prefixed with [TEST]</p>
-          </div>
+          </Panel>
         </div>
 
-        {/* ── Right: Live Preview ── */}
-        <div className="xl:col-span-4 bg-card border border-border rounded-2xl overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-muted bg-background flex-shrink-0">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-muted-foreground">Preview</p>
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{displaySubject}</p>
+        {/* Preview */}
+        <Panel className="xl:col-span-5 overflow-hidden flex flex-col">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-border">
+            <div className="min-w-0 flex-1 basis-48">
+              <p className="text-[13px] text-muted-foreground">Preview</p>
+              <p className="text-[15px] font-semibold text-foreground truncate">{displaySubject || 'No subject'}</p>
             </div>
-            <div className="flex gap-1 ml-3 flex-shrink-0">
-              <button onClick={() => setPreviewDevice('desktop')}
-                className={cn('p-1.5 rounded-lg transition-colors', previewDevice === 'desktop' ? 'bg-border text-foreground' : 'text-muted-foreground hover:text-muted-foreground')}>
-                <Monitor className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => setPreviewDevice('mobile')}
-                className={cn('p-1.5 rounded-lg transition-colors', previewDevice === 'mobile' ? 'bg-border text-foreground' : 'text-muted-foreground hover:text-muted-foreground')}>
-                <Smartphone className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <Segmented size="sm" value={previewDevice} onChange={setPreviewDevice} options={[{ value: 'desktop', label: 'Desktop' }, { value: 'mobile', label: 'Phone' }]} />
           </div>
-          <div className="flex-1 overflow-auto bg-muted p-3" style={{ minHeight: 400 }}>
-            <div className={cn('mx-auto transition-all', previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-full')}>
+          <div className="flex-1 overflow-auto bg-secondary p-4" style={{ minHeight: 400 }}>
+            <div className={cn('mx-auto', previewDevice === 'mobile' ? 'max-w-[375px]' : 'max-w-full')}>
               <iframe
-                srcDoc={rendered.html || '<p style="padding:20px;color:#999999;">Select a template to preview</p>'}
-                className="w-full border-0 rounded-xl shadow-sm"
-                style={{ minHeight: 520, background: 'var(--tc-card)' }}
-                title="Email Preview"
+                srcDoc={rendered.html || '<p style="padding:20px;color:#6b7280;font-family:sans-serif">Pick a template to preview it.</p>'}
+                className="w-full border-0 rounded-lg bg-white"
+                style={{ minHeight: 560 }}
+                title="Email preview"
               />
             </div>
           </div>
-        </div>
-
+        </Panel>
       </div>
-    </div>
+    </Page>
   );
 }

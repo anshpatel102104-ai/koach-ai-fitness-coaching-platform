@@ -1,6 +1,6 @@
 import React from 'react';
 import { BookOpen, GripVertical, Plus, X } from 'lucide-react';
-import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSDivider } from './BSSection';
+import { BSSection, BSRow, BSToggle, BSSelect, BSInput, BSTextarea, BSGroup, BSAddButton } from './BSSection';
 
 const DEFAULT_ONBOARDING_ITEMS = [
   { id: '1', label: 'Complete profile setup', enabled: true },
@@ -29,34 +29,33 @@ export default function BSOnboarding({ s, set, forms }) {
   const updateLabel = (id, label) => set('onboarding_items', items.map(it => it.id === id ? { ...it, label } : it));
 
   return (
-    <BSSection icon={BookOpen} title="Onboarding Settings" onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">New Client Onboarding Flow</p>
-      <BSRow label="Onboarding checklist" hint="Toggle steps on/off for new clients">
+    <BSSection icon={BookOpen} title="Onboarding" subtitle="What a new client has to do in their first week." onReset={() => Object.entries(DEFAULTS).forEach(([k, v]) => set(k, v))}>
+      <BSGroup>New client onboarding flow</BSGroup>
+      <BSRow label="Onboarding checklist" hint="Turn steps on or off. Clients see them in this order.">
         <div className="space-y-2">
+          <div className="divide-y divide-border rounded-lg bg-secondary px-3">
           {items.map(item => (
-            <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
-              <GripVertical className="w-4 h-4 text-border flex-shrink-0" />
+            <div key={item.id} className="flex items-center gap-3 py-1.5">
+              <GripVertical className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
               <BSToggle value={item.enabled} onChange={() => toggleItem(item.id)} />
               {item.custom ? (
                 <input value={item.label} onChange={e => updateLabel(item.id, e.target.value)}
-                  className="flex-1 bg-transparent text-sm text-foreground focus:outline-none" />
+                  className="flex-1 bg-transparent text-[15px] text-foreground focus:outline-none" />
               ) : (
-                <span className={`flex-1 text-sm ${item.enabled ? 'text-foreground' : 'text-muted-foreground line-through'}`}>{item.label}</span>
+                <span className={`flex-1 text-[15px] ${item.enabled ? 'text-foreground' : 'text-muted-foreground line-through'}`}>{item.label}</span>
               )}
               {item.custom && (
                 <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
           ))}
-          <button onClick={addCustom}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary bg-accent border border-primary hover:bg-accent transition-colors">
-            <Plus className="w-4 h-4" /> Add Custom Step
-          </button>
+          </div>
+          <BSAddButton onClick={addCustom}><Plus className="w-4 h-4" /> Add custom step</BSAddButton>
         </div>
       </BSRow>
-      <BSRow label="Completion deadline" hint="Days clients have to complete onboarding">
+      <BSRow label="Completion deadline" hint="How long a new client has to finish onboarding.">
         <div className="flex items-center gap-2">
           <BSInput type="number" value={s.onboarding_deadline_days} onChange={v => set('onboarding_deadline_days', v)} min={1} className="w-24" />
           <span className="text-sm text-muted-foreground">days</span>
@@ -71,15 +70,13 @@ export default function BSOnboarding({ s, set, forms }) {
       <BSRow label="Notify coach on completion">
         <BSToggle value={s.onboarding_notify_coach} onChange={v => set('onboarding_notify_coach', v)} />
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Welcome Package</p>
+      <BSGroup>Welcome package</BSGroup>
       <BSRow label="Auto-send welcome email">
         <div className="space-y-2">
           <BSToggle value={s.welcome_email_enabled} onChange={v => set('welcome_email_enabled', v)} />
           {s.welcome_email_enabled && (
             <BSTextarea value={s.welcome_email_template} onChange={v => set('welcome_email_template', v)}
-              placeholder="Write your welcome email template..." rows={4} />
+              placeholder="Write the email new clients get on day one" rows={4} />
           )}
         </div>
       </BSRow>
@@ -91,12 +88,10 @@ export default function BSOnboarding({ s, set, forms }) {
           )}
         </div>
       </BSRow>
-
-      <BSDivider />
-      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Intake Form</p>
+      <BSGroup>Intake form</BSGroup>
       <BSRow label="Default intake form">
         <BSSelect value={s.intake_form_id || ''} onChange={v => set('intake_form_id', v)}
-          options={[{ value: '', label: '— None —' }, ...forms.map(f => ({ value: f.id, label: f.name }))]} />
+          options={[{ value: '', label: 'None' }, ...forms.map(f => ({ value: f.id, label: f.name }))]} />
       </BSRow>
       <BSRow label="Require before program access">
         <BSToggle value={s.require_intake_before_program} onChange={v => set('require_intake_before_program', v)} />

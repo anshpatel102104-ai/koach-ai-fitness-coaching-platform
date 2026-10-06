@@ -185,5 +185,11 @@ export default function AppLayout() {
 /** A crashing page keeps the shell (sidebar, nav) usable; resets on navigation. */
 function PageBoundary({ children }) {
   const { pathname } = useLocation();
-  return <ErrorBoundary scope="page" resetKey={pathname}>{children}</ErrorBoundary>;
+  return (
+    <ErrorBoundary scope="page" resetKey={pathname}>
+      <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center" role="status" aria-label="Loading"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" /></div>}>
+        {children}
+      </React.Suspense>
+    </ErrorBoundary>
+  );
 }

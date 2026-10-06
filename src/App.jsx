@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -10,66 +10,67 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
 import AppLayout from './components/layout/AppLayout.jsx';
-import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
-import Programs from './pages/Programs';
-import Nutrition from './pages/Nutrition';
-import Schedule from './pages/Schedule.jsx';
-import Messages from './pages/Messages.jsx';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Clients = lazy(() => import('./pages/Clients'));
+const Programs = lazy(() => import('./pages/Programs'));
+const Nutrition = lazy(() => import('./pages/Nutrition'));
+const Schedule = lazy(() => import('./pages/Schedule.jsx'));
+const Messages = lazy(() => import('./pages/Messages.jsx'));
 
-import Progress from './pages/Progress';
-import Store from './pages/Store';
-import Settings from './pages/Settings';
-import Assistant from './pages/Assistant';
-import Adherence from './pages/Adherence.jsx';
-import CheckInReview from './pages/CheckInReview';
-import Sales from './pages/Sales';
+const Progress = lazy(() => import('./pages/Progress'));
+const Store = lazy(() => import('./pages/Store'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Assistant = lazy(() => import('./pages/Assistant'));
+const Adherence = lazy(() => import('./pages/Adherence.jsx'));
+const CheckInReview = lazy(() => import('./pages/CheckInReview'));
+const Sales = lazy(() => import('./pages/Sales'));
 
-import Community from './pages/Community.jsx';
-import Subscription from './pages/Subscription';
-import ExerciseLibrary from './pages/ExerciseLibrary';
-import Automations from './pages/Automations';
-import Analytics from './pages/Analytics';
-import RevenueDashboard from './pages/RevenueDashboard';
-import Business from './pages/Business';
-import ProgramBuilder from './pages/ProgramBuilder';
-import WhiteLabel from './pages/WhiteLabel';
+const Community = lazy(() => import('./pages/Community.jsx'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const ExerciseLibrary = lazy(() => import('./pages/ExerciseLibrary'));
+const Automations = lazy(() => import('./pages/Automations'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
+const Business = lazy(() => import('./pages/Business'));
+const ProgramBuilder = lazy(() => import('./pages/ProgramBuilder'));
+const WhiteLabel = lazy(() => import('./pages/WhiteLabel'));
 import PageGuard from './components/subscription/PageGuard';
 import BillingGate from './components/subscription/BillingGate';
-import SubmitCheckIn from './pages/SubmitCheckIn';
-import CheckInDetail from './pages/CheckInDetail';
-import AtRiskClients from './pages/AtRiskClients.jsx';
-import FastReview from './pages/FastReview';
-import ClientProfile from './pages/ClientProfile';
+const SubmitCheckIn = lazy(() => import('./pages/SubmitCheckIn'));
+const CheckInDetail = lazy(() => import('./pages/CheckInDetail'));
+const AtRiskClients = lazy(() => import('./pages/AtRiskClients.jsx'));
+const FastReview = lazy(() => import('./pages/FastReview'));
+const ClientProfile = lazy(() => import('./pages/ClientProfile'));
 import FocusLayout from './components/layout/FocusLayout';
-import CoachingTemplates from './pages/CoachingTemplates';
-import ClientOnboarding from './pages/ClientOnboarding';
-import OnboardingManager from './pages/OnboardingManager';
-import Migration from './pages/Migration';
-import FoodLibrary from './pages/FoodLibrary';
-import FoodLogPage from './pages/FoodLogPage';
-import PremiumOnboarding from './pages/PremiumOnboarding';
-import ClientPortal from './pages/ClientPortal';
-import ClientWorkoutView from './pages/ClientWorkoutView';
-import ClientInviteJoin from './pages/ClientInviteJoin';
-import ClientSetup from './pages/ClientSetup';
-import Unsubscribe from './pages/Unsubscribe';
-import EmailCenter from './pages/EmailCenter';
-import AIInsightsPage from './pages/AIInsightsPage';
-import Invoicing from './pages/Invoicing';
-import Packages from './pages/Packages';
-import PackageLanding from './pages/PackageLanding';
-import CoachProfile from './pages/CoachProfile';
-import BusinessSettings from './pages/BusinessSettings';
-import AccountSettings from './pages/AccountSettings';
-import NotificationSettings from './pages/NotificationSettings';
-import ReferralProgram from './pages/ReferralProgram';
-import AffiliateApplication from './pages/AffiliateApplication';
-import AffiliateDashboard from './pages/AffiliateDashboard';
-import MarketingTools from './pages/MarketingTools';
-import WeeklySummary from './pages/WeeklySummary';
-import Challenges from './pages/Challenges';
-import Team from './pages/Team';
+const CoachingTemplates = lazy(() => import('./pages/CoachingTemplates'));
+const ClientOnboarding = lazy(() => import('./pages/ClientOnboarding'));
+const OnboardingManager = lazy(() => import('./pages/OnboardingManager'));
+const Migration = lazy(() => import('./pages/Migration'));
+const FoodLibrary = lazy(() => import('./pages/FoodLibrary'));
+const FoodLogPage = lazy(() => import('./pages/FoodLogPage'));
+const PremiumOnboarding = lazy(() => import('./pages/PremiumOnboarding'));
+const ClientPortal = lazy(() => import('./pages/ClientPortal'));
+const ClientWorkoutView = lazy(() => import('./pages/ClientWorkoutView'));
+const ClientInviteJoin = lazy(() => import('./pages/ClientInviteJoin'));
+const ClientSetup = lazy(() => import('./pages/ClientSetup'));
+const Unsubscribe = lazy(() => import('./pages/Unsubscribe'));
+const EmailCenter = lazy(() => import('./pages/EmailCenter'));
+const AIInsightsPage = lazy(() => import('./pages/AIInsightsPage'));
+const Invoicing = lazy(() => import('./pages/Invoicing'));
+const Packages = lazy(() => import('./pages/Packages'));
+const PackageLanding = lazy(() => import('./pages/PackageLanding'));
+const CoachProfile = lazy(() => import('./pages/CoachProfile'));
+const BusinessSettings = lazy(() => import('./pages/BusinessSettings'));
+const AccountSettings = lazy(() => import('./pages/AccountSettings'));
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
+const ReferralProgram = lazy(() => import('./pages/ReferralProgram'));
+const AffiliateApplication = lazy(() => import('./pages/AffiliateApplication'));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
+const MarketingTools = lazy(() => import('./pages/MarketingTools'));
+const WeeklySummary = lazy(() => import('./pages/WeeklySummary'));
+const Challenges = lazy(() => import('./pages/Challenges'));
+const Team = lazy(() => import('./pages/Team'));
+const SystemStatus = lazy(() => import('./pages/SystemStatus'));
 import InstallPrompt from './components/pwa/InstallPrompt';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
@@ -125,6 +126,7 @@ const AuthenticatedApp = () => {
   }
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* ── CLIENT PORTAL (role=client) ── */}
       <Route path="/portal/*" element={<><ClientPortal /><InstallPrompt /></>} />
@@ -177,6 +179,8 @@ const AuthenticatedApp = () => {
         <Route path="/checkin-detail" element={<CheckInDetail />} />
         <Route path="/at-risk" element={<AtRiskClients />} />
         <Route path="/client-profile" element={<ClientProfile />} />
+        {/* Internal diagnostics: platform admins only (renders Not Found for everyone else). */}
+        <Route path="/system" element={<SystemStatus />} />
       </Route>
       <Route element={<BillingGate><FocusLayout /></BillingGate>}>
         <Route path="/fast-review" element={<FastReview />} />
@@ -197,8 +201,18 @@ const AuthenticatedApp = () => {
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </Suspense>
   );
 };
+
+// Pages load as separate chunks (the app used to ship as one 3.7 MB file).
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center" role="status" aria-label="Loading">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+    </div>
+  );
+}
 
 function App() {
   return (

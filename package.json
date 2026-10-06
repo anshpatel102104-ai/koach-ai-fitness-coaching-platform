@@ -25,7 +25,9 @@
     "verify:utils": "node scripts/verify-utils.mjs",
     "verify:ai-structured": "node scripts/verify-ai-structured.mjs",
     "verify:upload-ref": "node scripts/verify-upload-ref.mjs",
-    "verify:gap-closure": "node scripts/verify-gap-closure.mjs"
+    "verify:gap-closure": "node scripts/verify-gap-closure.mjs",
+    "verify:screens": "node scripts/e2e-mock.mjs",
+    "verify:checkin-responses": "node scripts/verify-checkin-responses.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",

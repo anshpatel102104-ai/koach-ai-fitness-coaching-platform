@@ -30,7 +30,7 @@ export default function FocusLayout() {
 
         {/* Page content pushed below header */}
         <main className="pt-14 min-h-screen">
-          <ErrorBoundary scope="page"><Outlet /></ErrorBoundary>
+          <ErrorBoundary scope="page"><React.Suspense fallback={null}><Outlet /></React.Suspense></ErrorBoundary>
         </main>
       </div>
       <UpgradeModal

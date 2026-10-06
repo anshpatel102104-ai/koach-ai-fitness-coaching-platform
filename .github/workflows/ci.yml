@@ -47,6 +47,15 @@ jobs:
       - name: Smoke test
         run: node scripts/smoke.mjs
 
+      # Every coach and client screen against a mocked backend at phone width:
+      # fails on crashes, error-boundary screens, not-found pages, empty pages
+      # and sideways scrolling.
+      - name: Screen sweep
+        run: node scripts/e2e-mock.mjs --widths=390
+
+      - name: Check-in answer mapping
+        run: node scripts/verify-checkin-responses.mjs
+
       # Lint and typecheck are reported but non-blocking for now: the repo
       # carries a known backlog (ESLint problems + pre-existing tsc errors). Flip continue-on-error to false once that backlog
       # is cleared so these become enforced gates.

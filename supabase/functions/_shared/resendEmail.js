@@ -6,6 +6,7 @@
  * Env: RESEND_API_KEY (required), FROM_NAME / FROM_EMAIL (preferred) with the
  * Base44-era VITE_FROM_NAME / VITE_FROM_EMAIL still honored as fallbacks.
  */
+import { escapeHtml, safeSubject } from './escapeHtml.js';
 
 export function resendConfigured() {
   return Boolean(Deno.env.get('RESEND_API_KEY'));
@@ -18,32 +19,38 @@ export function resendConfigured() {
 export async function sendResendEmail({ to, toName, subject, html, text, replyTo }) {
   const apiKey = Deno.env.get('RESEND_API_KEY');
   if (!apiKey) return { ok: false, error: 'RESEND_API_KEY not configured' };
-  if (!to || !subject || (!html && !text)) {
+  const cleanSubject = safeSubject(subject);
+  if (!to || !cleanSubject || (!html && !text)) {
     return { ok: false, error: 'Missing required fields: to, subject, html' };
   }
 
   const fromName = Deno.env.get('FROM_NAME') || Deno.env.get('VITE_FROM_NAME') || 'KOACH AI';
-  const fromEmail = Deno.env.get('FROM_EMAIL') || Deno.env.get('VITE_FROM_EMAIL') || 'onboarding@resend.dev';
+  const configuredFrom = Deno.env.get('FROM_EMAIL') || Deno.env.get('VITE_FROM_EMAIL');
+  if (!configuredFrom) {
+    console.error('[resendEmail] WARNING: FROM_EMAIL (and VITE_FROM_EMAIL) not set — '
+      + 'falling back to onboarding@resend.dev. Set FROM_EMAIL to a verified sender domain.');
+  }
+  const fromEmail = configuredFrom || 'onboarding@resend.dev';
+
+  // Display name is user/coach-controlled: strip quote, backslash, CR/LF and
+  // angle brackets (header/address injection), then quote it.
+  const cleanName = String(toName ?? '').replace(/["\\\r\n<>]/g, '').trim();
 
   const payload = {
     from: `${fromName} <${fromEmail}>`,
     // Base44's trigger functions addressed recipients as "Name <email>"
-    to: toName ? [`${toName} <${to}>`] : [to],
-    subject,
+    to: cleanName ? [`"${cleanName}" <${to}>`] : [to],
+    subject: cleanSubject,
     // Base44's Core.SendEmail took plain-text `body`; preserve those callers by
     // accepting `text` and wrapping it, while html callers pass through as-is.
     html: html || `<pre style="font-family:inherit;white-space:pre-wrap;margin:0">${escapeHtml(text)}</pre>`,
   };
   if (replyTo) payload.reply_to = replyTo;
 
-  // Deliverability + compliance (Phase 9): advertise an unsubscribe endpoint.
-  // The footer links here too; this header lets inbox providers surface a
-  // one-click unsubscribe.
-  const appUrl = Deno.env.get('APP_URL') || 'https://app.koachai.net';
-  payload.headers = {
-    'List-Unsubscribe': `<${appUrl}/unsubscribe?email=${encodeURIComponent(to)}>`,
-    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-  };
+  // TODO(deliverability): re-add List-Unsubscribe (+ List-Unsubscribe-Post
+  // for RFC 8058 one-click) once a real /unsubscribe endpoint exists that
+  // accepts POST and records the opt-out. Advertising a non-existent
+  // one-click endpoint is worse than advertising none.
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
@@ -59,10 +66,4 @@ export async function sendResendEmail({ to, toName, subject, html, text, replyTo
   } catch (e) {
     return { ok: false, error: e.message };
   }
-}
-
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
 }

@@ -15,6 +15,7 @@
  */
 import { differenceInDays } from 'date-fns';
 import { getAtRiskClients } from './riskScoring.js';
+import { escapeHtml } from './escapeHtml.js';
 
 export function buildWeeklyDigest(clients, checkIns, now = new Date()) {
   const ciByClient = new Map();
@@ -74,32 +75,32 @@ export function renderDigestEmail(digest, { tip, appUrl }) {
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#fff;padding:32px;border-radius:16px;border:1px solid #e5e7eb;">
       <div style="background:#111827;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;">
         <h1 style="color:#fff;font-size:20px;margin:0 0 4px;">🧠 Your Weekly AI Coaching Digest</h1>
-        <p style="color:rgba(255,255,255,0.5);font-size:13px;margin:0;">Week of ${week_of}</p>
+        <p style="color:rgba(255,255,255,0.5);font-size:13px;margin:0;">Week of ${escapeHtml(week_of)}</p>
       </div>
       <h2 style="color:#111827;font-size:15px;margin:0 0 12px;">🎯 Top 3 Clients to Prioritize</h2>
       ${top_priority.map((c, i) => `
         <div style="padding:12px;background:#f9fafb;border-radius:10px;margin-bottom:8px;border:1px solid #e5e7eb;">
-          <span style="font-weight:700;color:#111827;">${i + 1}. ${c.name}</span>
-          <span style="color:#6b7280;font-size:12px;margin-left:8px;">Risk score: ${c.risk_score}/100</span>
+          <span style="font-weight:700;color:#111827;">${i + 1}. ${escapeHtml(c.name)}</span>
+          <span style="color:#6b7280;font-size:12px;margin-left:8px;">Risk score: ${escapeHtml(c.risk_score)}/100</span>
         </div>`).join('')}
       ${wins.length > 0 ? `
         <h2 style="color:#111827;font-size:15px;margin:24px 0 12px;">🏆 Biggest Wins Last Week</h2>
-        ${wins.map((w) => `<div style="padding:10px 12px;background:#f0fdf4;border-radius:8px;margin-bottom:6px;color:#166534;font-size:13px;">✓ ${w}</div>`).join('')}
+        ${wins.map((w) => `<div style="padding:10px 12px;background:#f0fdf4;border-radius:8px;margin-bottom:6px;color:#166534;font-size:13px;">✓ ${escapeHtml(w)}</div>`).join('')}
       ` : ''}
       ${churn_risks.length > 0 ? `
         <h2 style="color:#111827;font-size:15px;margin:24px 0 12px;">⚠️ Churn Risk Clients</h2>
-        ${churn_risks.map((name) => `<div style="padding:10px 12px;background:#fff7ed;border-radius:8px;margin-bottom:6px;color:#9a3412;font-size:13px;">🔴 ${name} — hasn't checked in in 14+ days</div>`).join('')}
+        ${churn_risks.map((name) => `<div style="padding:10px 12px;background:#fff7ed;border-radius:8px;margin-bottom:6px;color:#9a3412;font-size:13px;">🔴 ${escapeHtml(name)} — hasn't checked in in 14+ days</div>`).join('')}
       ` : ''}
       ${leads_to_convert.length > 0 ? `
         <h2 style="color:#111827;font-size:15px;margin:24px 0 12px;">💡 Leads Ready to Convert</h2>
-        ${leads_to_convert.map((name) => `<div style="padding:10px 12px;background:#f0f9ff;border-radius:8px;margin-bottom:6px;color:#0c4a6e;font-size:13px;">→ ${name}</div>`).join('')}
+        ${leads_to_convert.map((name) => `<div style="padding:10px 12px;background:#f0f9ff;border-radius:8px;margin-bottom:6px;color:#0c4a6e;font-size:13px;">→ ${escapeHtml(name)}</div>`).join('')}
       ` : ''}
       <div style="margin:24px 0;padding:16px;background:#faf5ff;border-radius:10px;border:1px solid #e9d5ff;">
         <p style="margin:0 0 4px;font-weight:700;color:#6d28d9;font-size:13px;">💬 Coaching Tip of the Week</p>
-        <p style="margin:0;color:#4c1d95;font-size:13px;">${tip}</p>
+        <p style="margin:0;color:#4c1d95;font-size:13px;">${escapeHtml(tip)}</p>
       </div>
       <div style="text-align:center;padding:16px;background:#f9fafb;border-radius:10px;">
-        <p style="margin:0 0 8px;color:#6b7280;font-size:12px;">${active_clients} active clients · $${mrr.toLocaleString()}/mo MRR</p>
+        <p style="margin:0 0 8px;color:#6b7280;font-size:12px;">${escapeHtml(active_clients)} active clients · $${escapeHtml(Number(mrr).toLocaleString())}/mo MRR</p>
         <a href="${appUrl}/ai-insights" style="display:inline-block;background:#111827;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;">View Full Digest →</a>
       </div>
     </div>`;

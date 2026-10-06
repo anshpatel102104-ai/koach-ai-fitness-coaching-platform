@@ -22,11 +22,17 @@ Deno.serve(async (req) => {
     const { listing } = await req.json();
     if (!listing) return jsonResponse({ error: 'listing required' }, 400);
 
-    // If the listing already exists, it must belong to the caller.
+    // If a listing id is given it must EXIST and belong to the caller — a
+    // missing row is no longer silently skipped.
     if (listing.id) {
       const svc = serviceClient();
-      const { data: existing } = await svc.from('plan_listings').select('coach_id, created_by').eq('id', listing.id).maybeSingle();
-      if (existing && existing.coach_id !== user.id && existing.created_by !== user.id) {
+      const { data: existing, error: lookupErr } = await svc.from('plan_listings').select('coach_id, created_by').eq('id', listing.id).maybeSingle();
+      if (lookupErr) {
+        console.error('storeCreateProduct: listing lookup failed', lookupErr.message);
+        return jsonResponse({ error: 'Server error' }, 500);
+      }
+      if (!existing) return jsonResponse({ error: 'Listing not found' }, 404);
+      if (existing.coach_id !== user.id && existing.created_by !== user.id) {
         return jsonResponse({ error: 'Forbidden: listing not owned by you' }, 403);
       }
     }
@@ -35,7 +41,7 @@ Deno.serve(async (req) => {
       name: listing.title,
       description: listing.description || listing.title,
       images: listing.image_url ? [listing.image_url] : [],
-      metadata: { coach_id: user.email, listing_id: listing.id || '' },
+      metadata: { coach_id: user.email || '', coach_user_id: user.id, listing_id: listing.id || '' },
     });
 
     const priceParams = { product: stripeProduct.id, currency: 'usd' };
@@ -57,6 +63,7 @@ Deno.serve(async (req) => {
     const stripePrice = await stripe.prices.create(priceParams);
     return jsonResponse({ stripe_product_id: stripeProduct.id, stripe_price_id: stripePrice.id });
   } catch (error) {
-    return jsonResponse({ error: (error && error.message) || 'Server error' }, 500);
+    console.error('storeCreateProduct error:', error);
+    return jsonResponse({ error: 'Failed to create Stripe product' }, 500);
   }
 });

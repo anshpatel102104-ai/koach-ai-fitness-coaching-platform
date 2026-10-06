@@ -442,9 +442,9 @@ await awardBadge(admin, null, { client_id: client.id, client_name: 'Cli Ent', ba
   check('sendResendEmail accepts the defensive-invoker body {to,subject,html}',
     r.ok === true && captured.url === 'https://api.resend.com/emails'
     && captured.auth === 'Bearer rk_test_shim');
-  check('Resend envelope matches legacy shape (from name, Name <email>, reply_to)',
+  check('Resend envelope matches legacy shape (from name, quoted "Name" <email>, reply_to)',
     shaped.ok === true && captured.body.from === 'KOACH AI <noreply@koachai.test>'
-    && captured.body.to[0] === 'Coach C <c@x.io>' && captured.body.reply_to === 'r@x.io');
+    && captured.body.to[0] === '"Coach C" <c@x.io>' && captured.body.reply_to === 'r@x.io');
 }
 
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nALL CHECKS PASSED');

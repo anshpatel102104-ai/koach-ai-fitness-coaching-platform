@@ -53,16 +53,21 @@ async function sendDigestFor(svc, coach: { id: string; email?: string | null }, 
 
   let sent = false;
   if (coach.email && !dryRun) {
+    // functions.invoke resolves to { data, error } and does NOT throw on a
+    // non-2xx — only count the digest as sent when there is no error.
     try {
-      await svc.functions.invoke('sendEmailNotification', {
+      const { error } = await svc.functions.invoke('sendEmailNotification', {
         body: {
           to: coach.email,
           subject: `🧠 Your Weekly AI Coaching Digest — ${digest.week_of}`,
           html: emailHtml,
         },
       });
-      sent = true;
-    } catch (_) { /* mailer re-platformed in Step 5c; non-fatal */ }
+      if (error) console.error('[weeklyDigest] send failed for coach', uid, error?.message ?? error);
+      else sent = true;
+    } catch (e) {
+      console.error('[weeklyDigest] send threw for coach', uid, (e as Error)?.message ?? e);
+    }
   }
   return { digest, sent };
 }

@@ -2,12 +2,29 @@
 //
 // Faithful port of base44/functions/stripeClientProxy. Coach-facing. A
 // multi-action proxy for client billing; EVERY action that touches a specific
-// client verifies ownership (ownsClient) and, where a customer id is supplied,
-// checks it matches the client's stored stripe_customer_id — a client-supplied
-// customer id is never trusted. Payment rows written via service role. Secrets
-// from env only; none logged.
+// client verifies ownership (ownsClient) and uses the client's OWN stored
+// Stripe customer — a client-supplied customer id or email is never trusted.
+// Payment rows written via service role. Secrets from env only; none logged.
+//
+// SECURITY (audit 2026-10-05):
+//  - portal clients (callers who own no clients and aren't admin) are rejected;
+//  - mutating actions require coach billing access (billingAccess.js);
+//  - no customers.search by email (could hand back another tenant's customer);
+//  - sendInvoice / createPaymentLink require an owned client_id;
+//  - products are scoped by metadata.coach_user_id (shared Stripe account);
+//  - testConnection is admin-only (it exposes the platform account identity);
+//  - Stripe error details are logged, never returned.
 import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
+import { billingAccess } from '../_shared/billingAccess.js';
+import { resolveClientCustomer } from '../_shared/stripeSync.js';
+
+const MUTATING = new Set(['createCustomer', 'sendInvoice', 'createPaymentLink', 'createProduct']);
+
+const validAmount = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -19,14 +36,41 @@ Deno.serve(async (req) => {
     // coach out of client billing. This proxy is CLIENT billing (client
     // work), so any authenticated coach may use it — every client-touching
     // action below is already ownsClient-scoped to the caller.
-    const userId = caller.profile.id;
+    const profile = caller.profile;
+    const userId = profile.id;
+    const isAdmin = profile.role === 'admin';
     const svc = serviceClient();
 
-    const { action, payload } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const action = body?.action;
+    const payload = body?.payload || {};
+
+    // Reject portal clients: only coaches (own >= 1 client) or admins.
+    if (!isAdmin) {
+      const { data: owned, error: ownErr } = await svc
+        .from('clients')
+        .select('id')
+        .or(`user_id.eq.${userId},created_by.eq.${userId}`)
+        .limit(1);
+      if (ownErr) {
+        console.error('stripeClientProxy: owned-clients lookup failed', ownErr.message);
+        return jsonResponse({ error: 'Server error' }, 500);
+      }
+      if (!owned?.length) return jsonResponse({ error: 'Forbidden' }, 403);
+    }
+
+    // Mutating actions require an active coach subscription (or trial/comp/admin).
+    if (MUTATING.has(action) && !billingAccess(profile).hasAccess) {
+      return jsonResponse({ error: 'An active KOACH subscription is required for this action.' }, 403);
+    }
+
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));
 
     if (action === 'testConnection') {
+      // Coaches only learn whether payments are available; the PLATFORM
+      // account identity (email) is admin-only.
       const account = await stripe.accounts.retrieve();
+      if (!isAdmin) return jsonResponse({ ok: true, display_name: 'KOACH AI Payments' });
       return jsonResponse({ ok: true, email: account.email, display_name: account.display_name || account.business_profile?.name });
     }
 
@@ -49,33 +93,36 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'createCustomer') {
-      const { email, name, client_id } = payload;
-      if (client_id) {
-        const client = await ownsClient(svc, userId, client_id);
-        if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
-      }
-      const existing = await stripe.customers.search({ query: `email:'${email}'`, limit: 1 });
-      if (existing.data.length > 0) return jsonResponse({ customer: existing.data[0] });
-      const customer = await stripe.customers.create({
-        email, name,
-        metadata: { client_id: client_id || '', coach_user_id: userId, app: 'KOACH AI' },
-      });
-      return jsonResponse({ customer });
+      // No email search: the body email/name are ignored. The customer is the
+      // owned client's own (tag-verified) customer, or a new one persisted on it.
+      const { client_id } = payload;
+      if (!client_id) return jsonResponse({ error: 'client_id is required' }, 400);
+      const client = await ownsClient(svc, userId, client_id);
+      if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
+      const customerId = await resolveClientCustomer(stripe, svc, client, userId);
+      // Minimal shape — the frontend only reads customer.id.
+      return jsonResponse({ customer: { id: customerId } });
     }
 
     if (action === 'sendInvoice') {
-      const { customer_id, amount, description, client_id, client_name } = payload;
+      // body customer_id is IGNORED — only the owned client's stored customer is billed.
+      const { amount, description, client_id } = payload;
+      if (!client_id) return jsonResponse({ error: 'client_id is required' }, 400);
       const client = await ownsClient(svc, userId, client_id);
       if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
-      if (client.stripe_customer_id && client.stripe_customer_id !== customer_id) {
-        return jsonResponse({ error: 'Forbidden: customer ID mismatch' }, 403);
-      }
-      await stripe.invoiceItems.create({ customer: customer_id, amount: Math.round(amount * 100), currency: 'usd', description });
-      const invoice = await stripe.invoices.create({ customer: customer_id, auto_advance: true, collection_method: 'send_invoice', days_until_due: 7 });
+      const customerId = client.stripe_customer_id;
+      if (!customerId) return jsonResponse({ error: 'Client has no Stripe customer yet' }, 400);
+      const amt = validAmount(amount);
+      if (!amt) return jsonResponse({ error: 'Invalid amount' }, 400);
+      await stripe.invoiceItems.create({ customer: customerId, amount: Math.round(amt * 100), currency: 'usd', description });
+      const invoice = await stripe.invoices.create({
+        customer: customerId, auto_advance: true, collection_method: 'send_invoice', days_until_due: 7,
+        metadata: { client_id: client.id, coach_user_id: userId },
+      });
       await stripe.invoices.finalizeInvoice(invoice.id);
       const sent = await stripe.invoices.sendInvoice(invoice.id);
       await svc.from('payments').insert({
-        client_id, client_name, amount, type: 'one_time', status: 'pending',
+        client_id: client.id, client_name: client.name, amount: amt, type: 'one_time', status: 'pending',
         description, stripe_payment_id: invoice.id, due_date: new Date().toISOString().split('T')[0],
         created_by: userId,
       });
@@ -83,20 +130,32 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'createPaymentLink') {
+      // client_id is optional (the Payment Links panel creates generic links),
+      // but when given it must be owned. Every link is tagged to the coach, and
+      // MUTATING above already requires an active KOACH subscription.
       const { name, amount, description, client_id } = payload;
+      let client = null;
       if (client_id) {
-        const client = await ownsClient(svc, userId, client_id);
+        client = await ownsClient(svc, userId, client_id);
         if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
       }
-      const product = await stripe.products.create({ name, description: description || '', metadata: { client_id: client_id || '', coach_user_id: userId } });
-      const price = await stripe.prices.create({ product: product.id, unit_amount: Math.round(amount * 100), currency: 'usd' });
-      const link = await stripe.paymentLinks.create({ line_items: [{ price: price.id, quantity: 1 }] });
+      const amt = validAmount(amount);
+      if (!amt || !name) return jsonResponse({ error: 'name and a valid amount are required' }, 400);
+      const meta = client ? { client_id: client.id, coach_user_id: userId } : { coach_user_id: userId };
+      const product = await stripe.products.create({ name, description: description || '', metadata: meta });
+      const price = await stripe.prices.create({ product: product.id, unit_amount: Math.round(amt * 100), currency: 'usd' });
+      const link = await stripe.paymentLinks.create({ line_items: [{ price: price.id, quantity: 1 }], metadata: meta });
       return jsonResponse({ url: link.url, id: link.id });
     }
 
     if (action === 'listProducts') {
-      const products = await stripe.products.list({ active: true, limit: 20 });
-      const withPrices = await Promise.all(products.data.map(async (p) => {
+      // Shared Stripe account: only this coach's products (metadata.coach_user_id).
+      // products.list + filter (not products.search): search is eventually
+      // consistent, so a just-created product would vanish from the panel.
+      // Capped scan; move to a DB-side product table / Stripe Connect at scale.
+      const all = await stripe.products.list({ active: true, limit: 100 }).autoPagingToArray({ limit: 1000 });
+      const owned = all.filter((p) => p.metadata?.coach_user_id === userId).slice(0, 20);
+      const withPrices = await Promise.all(owned.map(async (p) => {
         const prices = await stripe.prices.list({ product: p.id, active: true, limit: 5 });
         return { ...p, prices: prices.data };
       }));
@@ -105,9 +164,16 @@ Deno.serve(async (req) => {
 
     if (action === 'createProduct') {
       const { name, amount, description, interval } = payload;
-      const product = await stripe.products.create({ name, description: description || '' });
-      const priceData = { product: product.id, unit_amount: Math.round(amount * 100), currency: 'usd' };
-      if (interval) priceData.recurring = { interval };
+      const amt = validAmount(amount);
+      if (!amt || !name) return jsonResponse({ error: 'name and a valid amount are required' }, 400);
+      const product = await stripe.products.create({
+        name, description: description || '', metadata: { coach_user_id: userId },
+      });
+      const priceData = { product: product.id, unit_amount: Math.round(amt * 100), currency: 'usd' };
+      if (interval) {
+        if (!['day', 'week', 'month', 'year'].includes(interval)) return jsonResponse({ error: 'Invalid interval' }, 400);
+        priceData.recurring = { interval };
+      }
       const price = await stripe.prices.create(priceData);
       return jsonResponse({ product, price });
     }
@@ -137,6 +203,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ error: 'Unknown action' }, 400);
   } catch (error) {
-    return jsonResponse({ error: (error && error.message) || 'Server error' }, 500);
+    console.error('stripeClientProxy error:', error);
+    return jsonResponse({ error: 'Stripe request failed' }, 500);
   }
 });

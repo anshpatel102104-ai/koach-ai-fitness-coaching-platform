@@ -315,8 +315,22 @@ const auth = {
       .eq('id', user.id)
       .maybeSingle();
     throwIf(pErr);
+    // profiles.role is only 'admin' | 'user' (DB CHECK), so portal clients
+    // were never tagged 'client' and every login after the first landed in the
+    // coach app behind the paywall (audit 2026-10-05). Derive the portal role:
+    // a non-admin who is linked as a portal client and owns no clients of
+    // their own is a client. Server-side access is still enforced by RLS.
+    let role = profile?.role;
+    if (role !== 'admin') {
+      const [{ data: portalRow }, { data: ownClient }] = await Promise.all([
+        sb.from('clients_portal_view').select('id').eq('portal_user_id', user.id).limit(1).maybeSingle(),
+        sb.from('clients').select('id').or(`user_id.eq.${user.id},created_by.eq.${user.id}`).limit(1).maybeSingle(),
+      ]);
+      if (portalRow && !ownClient) role = 'client';
+    }
     return aliasRow({
       ...(profile ?? {}),
+      role,
       id: user.id,
       email: profile?.email ?? user.email,
       full_name: profile?.full_name ?? user.user_metadata?.full_name ?? '',

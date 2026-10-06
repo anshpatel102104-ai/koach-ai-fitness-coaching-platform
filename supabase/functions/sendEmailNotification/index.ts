@@ -12,8 +12,38 @@
 //
 // Env: RESEND_API_KEY, FROM_NAME/FROM_EMAIL (VITE_* fallbacks), plus the
 // standard SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY.
-import { getCaller, callerClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
+import { billingAccess } from '../_shared/billingAccess.js';
+import { resolveTeamRole } from '../_shared/teamRole.js';
+
+/**
+ * Conservative sanitizer for coach-composed HTML (session callers only).
+ * Formatting is a feature, so we do NOT escape — we strip active content:
+ * script/iframe/object/embed/form (with bodies where they have them),
+ * inline on*= event handlers, and javascript:/vbscript: URLs.
+ * Regex-based by design (no DOM in the edge runtime); errs on removing.
+ */
+function sanitizeCoachHtml(input) {
+  let html = String(input ?? '');
+  // paired tags with content
+  html = html.replace(/<\s*(script|iframe|object|form)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+  // any remaining opening/closing/self-closing occurrences (incl. embed)
+  html = html.replace(/<\s*\/?\s*(script|iframe|object|embed|form)\b[^>]*>/gi, '');
+  // inline event handlers: on*="..." | on*='...' | on*=bare
+  // (preceded by whitespace, '/', or a quote — covers <img/onerror=...>)
+  html = html.replace(/(?<=[\s\/"'])on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // javascript:/vbscript: URLs (allowing whitespace/entity obfuscation of the colon)
+  // (whitespace may also be smuggled in as &#9; &#x0a; &Tab; etc.)
+  const ws = String.raw`(?:\s|&#0*(?:9|10|13);?|&#x0*(?:9|a|d);?|&(?:tab|newline);)*`;
+  html = html.replace(new RegExp(`(?:java|vb)${ws}script${ws}(?::|&#0*58;?|&#x0*3a;?|&colon;)`, 'gi'), 'blocked:');
+  return html;
+}
+
+// TODO(abuse): add a per-caller daily send cap for session callers. There is
+// no sent-email log table yet (automation_logs is rule-scoped and requires a
+// rule_id/client_id); add an `email_send_log (sender_id, created_at, ...)`
+// migration and count rows for the last 24h here.
 
 function isServiceRoleCall(req) {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -75,6 +105,19 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Missing required fields: to, subject, html' }, 400);
     }
 
+    // Session callers must have billing access (trialing/active/grace/comped),
+    // mirroring aiMetering: team coaches ride on their owner's billing.
+    if (!serviceCall) {
+      const now = new Date();
+      if (!billingAccess(caller.profile, now).hasAccess
+        && (await resolveTeamRole(serviceClient(), caller.profile.id)) !== 'coach') {
+        return jsonResponse({
+          error: 'billing_required',
+          message: 'Your subscription is not active. Subscribe on the billing page to send emails.',
+        }, 402);
+      }
+    }
+
     // Recipient allowlist for session callers (service-role path is trusted).
     if (!serviceCall && !(await callerMayEmail(req, caller, to))) {
       return jsonResponse({ error: 'Recipient not permitted for this account' }, 403);
@@ -93,14 +136,19 @@ Deno.serve(async (req) => {
         ? replyTo.trim() : undefined);
 
     const result = await sendResendEmail({
-      to: serviceCall ? to : to.trim(), subject, html, replyTo: safeReplyTo,
+      to: serviceCall ? to : to.trim(),
+      subject,
+      html: serviceCall ? html : sanitizeCoachHtml(html),
+      replyTo: safeReplyTo,
     });
     if (!result.ok) {
-      return jsonResponse({ error: result.error || 'Resend API error', details: result.details }, 500);
+      console.error('[sendEmailNotification] send failed:', result.error, result.details);
+      return jsonResponse({ error: 'Email could not be sent' }, 500);
     }
 
     return jsonResponse({ success: true, id: result.id, templateKey });
   } catch (error) {
-    return jsonResponse({ error: error.message }, 500);
+    console.error('[sendEmailNotification] error:', error);
+    return jsonResponse({ error: 'Email could not be sent' }, 500);
   }
 });

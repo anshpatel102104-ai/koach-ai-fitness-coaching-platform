@@ -17,6 +17,7 @@
  * through the injected `sendEmail` (production: _shared/resendEmail.js).
  */
 import { notifyCoach } from './automationActions.js';
+import { escapeHtml } from './escapeHtml.js';
 
 export function startOfCurrentWeek(now = new Date()) {
   const day = now.getUTCDay(); // 0=Sun, 1=Mon …
@@ -59,7 +60,7 @@ export function buildReminderEmail({ clientName, missedCheckin, missedWorkout },
     <span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.5px;">KOACH AI</span>
   </td></tr>
   <tr><td style="padding:32px 36px 24px;">
-    <h1 style="margin:0 0 8px;font-size:22px;font-weight:900;color:#0F172A;letter-spacing:-0.5px;">⏰ Friday reminder, ${clientName.split(' ')[0]}</h1>
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:900;color:#0F172A;letter-spacing:-0.5px;">⏰ Friday reminder, ${escapeHtml(String(clientName || 'there').split(' ')[0])}</h1>
     <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
       The week's almost over — here's what still needs your attention before the weekend:
     </p>
@@ -75,7 +76,7 @@ export function buildReminderEmail({ clientName, missedCheckin, missedWorkout },
 </body></html>`;
 }
 
-/** Run the Friday reminder sweep. Returns { count, remindersSent, skippedIdempotent }. */
+/** Run the Friday reminder sweep. Returns { count, remindersSent, skippedIdempotent, failed }. */
 export async function runCheckinReminders(admin, { sendEmail, appUrl, now = new Date() }) {
   const weekStart = startOfCurrentWeek(now);
   const weekStartIso = weekStart.toISOString();
@@ -95,6 +96,7 @@ export async function runCheckinReminders(admin, { sendEmail, appUrl, now = new 
   const alreadyReminded = new Set((priorReminders ?? []).map((n) => n.related_client_id));
   const remindersSent = [];
   let skippedIdempotent = 0;
+  let failed = 0;
 
   for (const client of clients ?? []) {
     if (!client.email) continue;
@@ -117,11 +119,19 @@ export async function runCheckinReminders(admin, { sendEmail, appUrl, now = new 
         ? "⏰ Don't forget your weekly check-in"
         : "⏰ You've still got time for a workout this week";
 
-    await sendEmail({
+    const sendResult = await sendEmail({
       to: client.email, toName: client.name,
       subject,
       html: buildReminderEmail({ clientName: client.name, missedCheckin, missedWorkout }, appUrl),
     });
+    // Only record the reminder (these notifications double as the weekly
+    // dedupe marker) when the email actually went out — otherwise a mailer
+    // outage would silently suppress this week's reminder on retry.
+    if (!sendResult?.ok) {
+      failed++;
+      console.error('[checkinReminders] email send failed for client', client.id, sendResult?.error);
+      continue;
+    }
 
     // In-app copy to the client's portal identity (when linked)
     if (client.portal_user_id) {
@@ -161,5 +171,5 @@ export async function runCheckinReminders(admin, { sendEmail, appUrl, now = new 
     remindersSent.push({ name: client.name, missedCheckin, missedWorkout });
   }
 
-  return { count: remindersSent.length, remindersSent, skippedIdempotent };
+  return { count: remindersSent.length, remindersSent, skippedIdempotent, failed };
 }

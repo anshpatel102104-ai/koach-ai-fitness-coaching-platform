@@ -33,6 +33,7 @@ import {
   buildNewClientCoachEmail, buildClientConfirmEmail, buildCoachNotifyEmail,
   buildWorkoutEmail,
 } from './entityEventEmails.js';
+import { safeSubject } from './escapeHtml.js';
 
 async function getClient(admin, clientId) {
   if (!clientId) return null;
@@ -84,7 +85,7 @@ async function onCheckInCreated(admin, checkIn, deps) {
     const html = buildCheckInEmail({ name: clientName, id: checkIn.client_id }, checkIn, coach.full_name || 'Coach', appUrl);
     await sendEmail({
       to: coach.email, toName: coach.full_name,
-      subject: `${clientName} submitted their check-in 📋`, html,
+      subject: safeSubject(`${clientName} submitted their check-in 📋`), html,
     });
     emails++;
   }
@@ -121,7 +122,7 @@ async function onCheckInResponded(admin, checkIn, oldCheckIn, { sendEmail, appUr
   // portal clients have no auth.users identity (see module doc).
   await sendEmail({
     to: client.email, toName: client.name,
-    subject: `${coachName} reviewed your check-in ✓`,
+    subject: safeSubject(`${coachName} reviewed your check-in ✓`),
     html: buildReviewedEmail(client, checkIn, coachName, appUrl),
     replyTo: coach?.email,
   });
@@ -190,7 +191,7 @@ async function onClientCreated(admin, client, { sendEmail, appUrl }) {
   if (coach?.email) {
     await sendEmail({
       to: coach.email, toName: coach.full_name,
-      subject: `${client.name} just joined your roster! 💪`,
+      subject: safeSubject(`${client.name} just joined your roster! 💪`),
       html: buildNewClientCoachEmail(client, coach.full_name || 'Coach', appUrl),
     });
     emails++;
@@ -199,7 +200,7 @@ async function onClientCreated(admin, client, { sendEmail, appUrl }) {
     const coachName = coach?.full_name || 'Your Coach';
     await sendEmail({
       to: client.email, toName: client.name,
-      subject: `Welcome to ${coachName}'s coaching! Your journey starts now 💪`,
+      subject: safeSubject(`Welcome to ${coachName}'s coaching! Your journey starts now 💪`),
       html: buildWelcomeEmail(client, coachName, appUrl),
       replyTo: coach?.email,
     });
@@ -220,7 +221,7 @@ async function onIntakeSubmitted(admin, intake, { sendEmail, appUrl, now }) {
   // 1. Confirmation email to the prospect
   await sendEmail({
     to: intake.email,
-    subject: `You're in, ${intake.name} — intake received ✅`,
+    subject: safeSubject(`You're in, ${intake.name} — intake received ✅`),
     html: buildClientConfirmEmail({ clientName: intake.name, coachName }, appUrl),
   });
   let emails = 1;
@@ -229,7 +230,7 @@ async function onIntakeSubmitted(admin, intake, { sendEmail, appUrl, now }) {
   if (coach?.email) {
     await sendEmail({
       to: coach.email,
-      subject: `New intake from ${intake.name} — pending review 📋`,
+      subject: safeSubject(`New intake from ${intake.name} — pending review 📋`),
       html: buildCoachNotifyEmail({
         coachName, clientName: intake.name, clientEmail: intake.email, submittedAt,
       }, appUrl),
@@ -288,7 +289,7 @@ async function onWorkoutCompleted(admin, session, { sendEmail, appUrl }) {
   if (coach?.email) {
     await sendEmail({
       to: coach.email, toName: coach.full_name,
-      subject: `💪 ${clientName} just completed ${workout}`,
+      subject: safeSubject(`💪 ${clientName} just completed ${workout}`),
       html: buildWorkoutEmail(clientName, session, coach.full_name || 'Coach', appUrl),
     });
     emails++;

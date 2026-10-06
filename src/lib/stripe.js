@@ -15,8 +15,8 @@ export const createStripeCustomer = (client) =>
 export const sendStripeInvoice = (customerId, amount, description, clientId, clientName) =>
   invoke('sendInvoice', { customer_id: customerId, amount, description, client_id: clientId, client_name: clientName });
 
-export const getClientInvoices = (customerId) =>
-  invoke('getClientInvoices', { customer_id: customerId });
+export const getClientInvoices = (customerId, clientId) =>
+  invoke('getClientInvoices', { customer_id: customerId, client_id: clientId });
 
 export const createPaymentLink = (name, amount, description, clientId) =>
   invoke('createPaymentLink', { name, amount, description, client_id: clientId });

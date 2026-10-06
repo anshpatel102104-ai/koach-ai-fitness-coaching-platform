@@ -8,6 +8,7 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { sendResendEmail } from '../_shared/resendEmail.js';
 import { sendMessage } from '../_shared/automationActions.js';
 import { ownsClient } from '../_shared/ownership.js';
+import { safeSubject } from '../_shared/escapeHtml.js';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -35,11 +36,22 @@ Deno.serve(async (req) => {
 
     const results = [];
 
-    // Email reminder
-    if (invoice.client_email) {
+    // Email reminder — the recipient is resolved from the caller-owned clients
+    // row, never from invoice.client_email (a free-text column the invoice
+    // author controls, which would make this an arbitrary-recipient mailer).
+    if (!invoice.client_id || !(await ownsClient(svc, userId, invoice.client_id))) {
+      return jsonResponse({ error: 'Invoice has no linked client to remind' }, 400);
+    }
+    const { data: client } = await svc.from('clients').select('email')
+      .eq('id', invoice.client_id).maybeSingle();
+    const recipient = typeof client?.email === 'string' ? client.email.trim() : '';
+    if (!recipient) {
+      return jsonResponse({ error: 'Client has no email address on file' }, 400);
+    }
+    {
       const sent = await sendResendEmail({
-        to: invoice.client_email,
-        subject: `Payment Reminder: Invoice ${invoice.invoice_number} — $${Number(invoice.amount).toFixed(2)}`,
+        to: recipient,
+        subject: safeSubject(`Payment Reminder: Invoice ${invoice.invoice_number} — $${Number(invoice.amount).toFixed(2)}`),
         text: body,
         replyTo: caller.profile.email,
       });
@@ -61,6 +73,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({ success: true, sent_via: results });
   } catch (error) {
-    return jsonResponse({ error: (error as Error).message }, 500);
+    console.error('[sendInvoiceReminder] error:', error);
+    return jsonResponse({ error: 'Could not send reminder' }, 500);
   }
 });

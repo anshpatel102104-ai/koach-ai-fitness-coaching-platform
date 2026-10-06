@@ -36,7 +36,7 @@ export default function PaymentsTab({ client }) {
   // Only fetch invoices if we have a stripe customer id
   const { data: invoiceData, isLoading: invoicesLoading } = useQuery({
     queryKey: ['stripe-invoices', client?.id, client?.stripe_customer_id],
-    queryFn: () => getClientInvoices(client.stripe_customer_id),
+    queryFn: () => getClientInvoices(client.stripe_customer_id, client.id),
     enabled: !!client?.stripe_customer_id,
   });
 

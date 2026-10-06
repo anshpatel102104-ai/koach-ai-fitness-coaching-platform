@@ -30,7 +30,24 @@ async function findProfile(svc, subscription) {
   return null;
 }
 
+// SECURITY (B-STRIPE-XT): coaches bill their own clients on the SAME Stripe
+// account as KOACH SaaS billing (no Connect). A coach->client subscription must
+// never touch a coach's profiles billing row — otherwise a coach could create a
+// subscription on another coach's SaaS customer and the webhook would
+// downgrade/lock the victim via the stripe_customer_id fallback.
+// A subscription is KOACH SaaS billing only if it is not tagged with a
+// client_id AND (it carries metadata.user_id from our checkout OR one of its
+// prices has a koach_* plan lookup_key — see stripePlans.js lookupKeyFor).
+export function isKoachPlanSubscription(subscription) {
+  const md = subscription?.metadata || {};
+  if (md.client_id) return false;
+  if (md.user_id) return true;
+  const items = subscription?.items?.data || [];
+  return items.some((it) => typeof it?.price?.lookup_key === 'string' && it.price.lookup_key.startsWith('koach_'));
+}
+
 export async function syncSubscriptionToUser(svc, subscription) {
+  if (!isKoachPlanSubscription(subscription)) return; // coach->client billing, not ours to sync
   const profile = await findProfile(svc, subscription);
   if (!profile) return; // not one of ours (or user deleted) — nothing to update
 
@@ -66,4 +83,36 @@ export async function syncSubscriptionToUser(svc, subscription) {
 
   const { error } = await svc.from('profiles').update(patch).eq('id', profile.id);
   if (error) throw new Error(`profile update failed: ${error.message}`);
+}
+
+/**
+ * Resolve the Stripe customer for a coach's CLIENT (coach->client billing).
+ *
+ * SECURITY (B-STRIPE-XT): never searches customers by email. clients.stripe_customer_id
+ * is coach-writable through RLS, so a stored id is only reused when the Stripe
+ * customer is tagged with THIS client's id (metadata.client_id) — a coach can't
+ * point their client row at another coach's SaaS customer. Otherwise a fresh
+ * customer is created, tagged {client_id, coach_user_id}, and persisted on the
+ * client row via the service client (scoped by id).
+ * Returns the customer id.
+ */
+export async function resolveClientCustomer(stripe, svc, client, coachUserId) {
+  const stored = client.stripe_customer_id;
+  if (stored) {
+    try {
+      const existing = await stripe.customers.retrieve(stored);
+      if (existing && !existing.deleted && existing.metadata?.client_id === client.id) return existing.id;
+      console.error('resolveClientCustomer: stored customer not tagged to this client; replacing', { client_id: client.id });
+    } catch (e) {
+      console.error('resolveClientCustomer: stored customer lookup failed; replacing', { client_id: client.id, err: e?.message });
+    }
+  }
+  const customer = await stripe.customers.create({
+    email: client.email || undefined,
+    name: client.name || undefined,
+    metadata: { client_id: client.id, coach_user_id: coachUserId, app: 'KOACH AI' },
+  });
+  const { error } = await svc.from('clients').update({ stripe_customer_id: customer.id }).eq('id', client.id);
+  if (error) console.error('resolveClientCustomer: persist failed', { client_id: client.id, err: error.message });
+  return customer.id;
 }

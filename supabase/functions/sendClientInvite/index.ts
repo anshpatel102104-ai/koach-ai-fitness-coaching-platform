@@ -8,12 +8,14 @@
 // reintroduce plaintext tokens even though validation was fixed.
 //
 // Auth: requires a signed-in coach (verify_jwt). The coach may only invite a
-// client they own — enforced by doing the client update with the CALLER's
-// JWT (RLS applies), not the service role.
+// client they own — enforced by an ownership read under the CALLER's JWT (RLS
+// applies) before the service-role token write.
 //
 // Env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { generateInviteToken } from '../_shared/portalToken.js';
+import { escapeHtml, safeSubject } from '../_shared/escapeHtml.js';
+import { sendResendEmail } from '../_shared/resendEmail.js';
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://app.koachai.net';
 const INVITE_TTL_DAYS = 7;
@@ -24,7 +26,11 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-function buildInviteEmailHtml({ clientName, coachName, setupUrl, welcomeMessage }) {
+function buildInviteEmailHtml({ clientName: rawClientName, coachName: rawCoachName, setupUrl, welcomeMessage: rawWelcome }) {
+  // Every coach/client-controlled value is escaped (audit 2026-10-05).
+  const clientName = escapeHtml(rawClientName);
+  const coachName = escapeHtml(rawCoachName);
+  const welcomeMessage = escapeHtml(String(rawWelcome ?? '').slice(0, 1000));
   // (unchanged markup from the Base44 version — email template only)
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
@@ -75,41 +81,61 @@ Deno.serve(async (req) => {
     const { token, tokenHash } = await generateInviteToken();
     const expires = new Date(Date.now() + INVITE_TTL_DAYS * 86400_000).toISOString();
 
-    // Store ONLY the hash. RLS ensures the caller owns this client; zero rows
-    // back means the client doesn't exist or isn't the caller's.
-    const { data: invited, error: updErr } = await asCaller
+    // Ownership check under the CALLER's RLS: zero rows back means the client
+    // doesn't exist or isn't the caller's. The token write itself then goes
+    // through the service role, because invite/portal columns are now
+    // server-managed (migration 20261006000200 blocks direct coach writes).
+    const { data: owned, error: ownErr } = await asCaller
       .from('clients')
-      .update({ invite_token_hash: tokenHash, invite_token_expires: expires })
+      .select('id, name, email')
       .eq('id', clientId)
-      .select('email')
       .maybeSingle();
-    if (updErr) return json({ error: updErr.message }, 403);
-    if (!invited) return json({ error: 'Client not found' }, 403);
+    if (ownErr) {
+      console.error('sendClientInvite: ownership lookup failed:', ownErr.message);
+      return json({ error: 'Could not load client' }, 403);
+    }
+    if (!owned) return json({ error: 'Client not found' }, 403);
 
     // SECURITY (S1): the token is mailed ONLY to the email on the client row —
-    // the same address setupPortalAccount provisions. Trusting a request-body
-    // address let a coach mail the token to themselves and then claim a
-    // confirmed account for someone else's email. (A later email change on the
-    // row clears the token — migration 20261002000100.)
-    const clientEmail = invited.email;
+    // the same address setupPortalAccount provisions. (A later email change on
+    // the row clears the token — migration 20261002000100.)
+    const clientEmail = owned.email;
     if (!clientEmail) return json({ error: 'Client has no email on file' }, 400);
 
-    const setupUrl = `${APP_URL}/client-setup/${token}`; // plaintext only here
-    const html = buildInviteEmailHtml({ clientName, coachName, setupUrl, welcomeMessage });
+    const svc = createClient(
+      Deno.env.get('SUPABASE_URL'),
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
+      { auth: { persistSession: false } },
+    );
+    const { error: updErr } = await svc
+      .from('clients')
+      .update({ invite_token_hash: tokenHash, invite_token_expires: expires })
+      .eq('id', owned.id);
+    if (updErr) {
+      console.error('sendClientInvite: token write failed:', updErr.message);
+      return json({ error: 'Could not create invite' }, 500);
+    }
 
-    // Email delivery is re-platformed with the rest of the functions in Step 5;
-    // invoke the (not-yet-ported) mailer and don't fail the invite if it's absent.
-    try {
-      await asCaller.functions.invoke('sendEmailNotification', {
-        body: {
-          to: clientEmail,
-          toName: clientName,
-          subject: `${coachName} invited you to KOACH AI — set up your account`,
-          html,
-        },
-      });
-    } catch (mailErr) {
-      console.error('sendClientInvite: mailer not available yet (Step 5):', mailErr?.message ?? mailErr);
+    // Use the client row's name, not the request body.
+    const displayName = owned.name || clientName || '';
+    const setupUrl = `${APP_URL}/client-setup/${token}`; // plaintext only here
+    const html = buildInviteEmailHtml({ clientName: displayName, coachName, setupUrl, welcomeMessage });
+
+    // Send directly (no HTTP hop) and surface failures: the token exists only in
+    // this email, so a silent failure leaves the client with no way in.
+    const sent = await sendResendEmail({
+      to: clientEmail,
+      toName: displayName,
+      subject: safeSubject(`${coachName} invited you to KOACH AI — set up your account`),
+      html,
+    });
+    if (!sent?.ok) {
+      console.error('sendClientInvite: email send failed:', sent?.error);
+      // Invalidate the unusable token so a retry mints a fresh one cleanly.
+      await svc.from('clients')
+        .update({ invite_token_hash: null, invite_token_expires: null })
+        .eq('id', owned.id);
+      return json({ success: false, emailSent: false, error: 'Invite email could not be sent. Please try again.' }, 502);
     }
 
     // SECURITY (S1): do NOT return the plaintext token / setupUrl. The token is
@@ -117,7 +143,7 @@ Deno.serve(async (req) => {
     // only place it may travel is inside the emailed link. Returning it in the
     // HTTP response let any caller read a live token out of the JSON and drive
     // setupPortalAccount directly. Report only whether the email was sent.
-    return json({ success: true });
+    return json({ success: true, emailSent: true });
   } catch (err) {
     console.error('sendClientInvite error:', err?.message ?? err);
     return json({ error: 'Server error' }, 500);

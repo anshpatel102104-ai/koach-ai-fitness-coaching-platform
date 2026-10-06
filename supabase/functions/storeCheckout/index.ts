@@ -7,6 +7,18 @@
 // Secrets from env only; none logged.
 import Stripe from 'npm:stripe@17.3.1';
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
+import { appUrl } from '../_shared/stripePlans.js';
+
+// SECURITY (audit 2026-10-05): redirect URLs are never taken verbatim from the
+// body (open redirect / phishing via a genuine Stripe checkout). Only a
+// relative app path ('/x', not '//x' or 'https://...') is honoured, pinned to
+// APP_ORIGIN by appUrl(); anything else falls back to the default path.
+function safeAppUrl(input, fallbackPath) {
+  if (typeof input !== 'string' || !input.startsWith('/') || input.startsWith('//') || input.startsWith('/\\')) {
+    return appUrl(fallbackPath, fallbackPath);
+  }
+  return appUrl(input, fallbackPath);
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -23,9 +35,8 @@ Deno.serve(async (req) => {
     const { data: listing } = await svc.from('plan_listings').select('*').eq('id', listing_id).maybeSingle();
     if (!listing) return jsonResponse({ error: 'Listing not found' }, 404);
 
-    const origin = Deno.env.get('APP_URL') ?? 'https://app.koachai.net';
-    const successUrl = success_url || `${origin}/store/success?listing_id=${listing_id}`;
-    const cancelUrl = cancel_url || `${origin}/store`;
+    const successUrl = safeAppUrl(success_url, '/store?purchase=success');
+    const cancelUrl = safeAppUrl(cancel_url, '/store');
 
     const sessionParams = {
       payment_method_types: ['card'],
@@ -57,6 +68,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create(sessionParams);
     return jsonResponse({ checkout_url: session.url, session_id: session.id });
   } catch (error) {
-    return jsonResponse({ error: (error && error.message) || 'Server error' }, 500);
+    console.error('storeCheckout error:', error);
+    return jsonResponse({ error: 'Could not start checkout' }, 500);
   }
 });

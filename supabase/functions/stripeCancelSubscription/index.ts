@@ -38,16 +38,25 @@ serve('stripeCancelSubscription', async (req, ctx) => {
     let subscriptionId = ownSub;
 
     if (requestedId && requestedId !== ownSub) {
+      // Ownership comes from the subscription itself, as Stripe reports it:
+      // client subscriptions are created server-side with metadata
+      // { client_id, coach_user_id } (stripeCreateSubscription / stripeClientProxy).
+      // It used to come from payments.stripe_payment_id, which coaches can write,
+      // so anyone who knew another tenant's sub_ id could cancel it.
+      if (typeof requestedId !== 'string' || !/^sub_[A-Za-z0-9]+$/.test(requestedId)) {
+        return jsonResponse({ error: 'Invalid subscription id' }, 400);
+      }
+      let sub;
+      try {
+        sub = await stripe.subscriptions.retrieve(requestedId);
+      } catch {
+        return jsonResponse({ error: 'Forbidden: subscription not found for your account' }, 403);
+      }
+      const md = sub?.metadata || {};
       const svc = serviceClient();
-      const { data: pay } = await svc
-        .from('payments')
-        .select('client_id')
-        .eq('stripe_payment_id', requestedId)
-        .limit(1)
-        .maybeSingle();
-      if (!pay?.client_id) return jsonResponse({ error: 'Forbidden: subscription not found for your account' }, 403);
-      const client = await ownsClient(svc, caller.auth.id, pay.client_id);
-      if (!client) return jsonResponse({ error: 'Forbidden: subscription not owned by you' }, 403);
+      const ownsByCoach = md.coach_user_id && md.coach_user_id === caller.auth.id;
+      const ownsByClient = md.client_id && (await ownsClient(svc, caller.auth.id, md.client_id));
+      if (!ownsByCoach && !ownsByClient) return jsonResponse({ error: 'Forbidden: subscription not owned by you' }, 403);
       subscriptionId = requestedId;
     }
 

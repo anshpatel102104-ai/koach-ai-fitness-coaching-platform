@@ -17,7 +17,7 @@
 import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingAccess } from '../_shared/billingAccess.js';
-import { resolveClientCustomer } from '../_shared/stripeSync.js';
+import { resolveClientCustomer, verifiedClientCustomer } from '../_shared/stripeSync.js';
 import { serve } from '../_shared/observe.js';
 
 const MUTATING = new Set(['createCustomer', 'sendInvoice', 'createPaymentLink', 'createProduct']);
@@ -83,8 +83,10 @@ serve('stripeClientProxy', async (req, ctx) => {
       if (!client_id) return jsonResponse({ error: 'client_id is required' }, 400);
       const client = await ownsClient(svc, userId, client_id);
       if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
-      // The customer queried must be THIS client's stored customer.
-      const targetCustomer = client.stripe_customer_id;
+      // The customer queried must be THIS client's customer as Stripe tags it
+      // (clients.stripe_customer_id is coach-writable, so a stored id alone
+      // could point at another tenant's customer).
+      const targetCustomer = await verifiedClientCustomer(stripe, client);
       if (!targetCustomer) return jsonResponse({ invoices: [] });
       if (customer_id && customer_id !== targetCustomer) {
         return jsonResponse({ error: 'Forbidden: customer ID mismatch' }, 403);
@@ -111,8 +113,9 @@ serve('stripeClientProxy', async (req, ctx) => {
       if (!client_id) return jsonResponse({ error: 'client_id is required' }, 400);
       const client = await ownsClient(svc, userId, client_id);
       if (!client) return jsonResponse({ error: 'Forbidden: client not owned by you' }, 403);
-      const customerId = client.stripe_customer_id;
-      if (!customerId) return jsonResponse({ error: 'Client has no Stripe customer yet' }, 400);
+      // Tag-verified customer (replaced by a fresh, correctly tagged one if the
+      // stored id doesn't belong to this client).
+      const customerId = await resolveClientCustomer(stripe, svc, client, userId);
       const amt = validAmount(amount);
       if (!amt) return jsonResponse({ error: 'Invalid amount' }, 400);
       await stripe.invoiceItems.create({ customer: customerId, amount: Math.round(amt * 100), currency: 'usd', description });
@@ -187,11 +190,12 @@ serve('stripeClientProxy', async (req, ctx) => {
       // REMEDIATION_PLAN Phase 8.)
       const { data: myClients } = await svc
         .from('clients')
-        .select('stripe_customer_id')
+        .select('id, stripe_customer_id')
         .or(`user_id.eq.${userId},created_by.eq.${userId}`);
-      const ownedCustomers = new Set(
-        (myClients ?? []).map((c) => c.stripe_customer_id).filter(Boolean),
-      );
+      // Only customers Stripe tags to one of these clients (stored ids are coach-writable).
+      const verified = await Promise.all((myClients ?? []).filter((c) => c.stripe_customer_id)
+        .map((c) => verifiedClientCustomer(stripe, c)));
+      const ownedCustomers = new Set(verified.filter(Boolean));
       if (ownedCustomers.size === 0) return jsonResponse({ charges: [] });
       // Fetch per owned customer so we never read another tenant's charges.
       const results = [];

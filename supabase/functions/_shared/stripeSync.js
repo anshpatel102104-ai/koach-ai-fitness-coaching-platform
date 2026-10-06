@@ -96,6 +96,21 @@ export async function syncSubscriptionToUser(svc, subscription) {
  * client row via the service client (scoped by id).
  * Returns the customer id.
  */
+/**
+ * Read-only check: the client's stored Stripe customer, ONLY if Stripe says it
+ * is tagged to this client (metadata.client_id); otherwise null. Never creates.
+ */
+export async function verifiedClientCustomer(stripe, client) {
+  const stored = client?.stripe_customer_id;
+  if (!stored) return null;
+  try {
+    const c = await stripe.customers.retrieve(stored);
+    return c && !c.deleted && c.metadata?.client_id === client.id ? c.id : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveClientCustomer(stripe, svc, client, coachUserId) {
   const stored = client.stripe_customer_id;
   if (stored) {

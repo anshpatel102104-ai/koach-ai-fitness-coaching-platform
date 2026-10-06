@@ -16,7 +16,7 @@ import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_
 import { sendResendEmail } from '../_shared/resendEmail.js';
 import { billingAccess } from '../_shared/billingAccess.js';
 import { teamOwnerFor } from '../_shared/teamRole.js';
-import { serve } from '../_shared/observe.js';
+import { serve, logError } from '../_shared/observe.js';
 
 /**
  * Conservative sanitizer for coach-composed HTML (session callers only).
@@ -132,6 +132,20 @@ serve('sendEmailNotification', async (req, ctx) => {
       return jsonResponse({ error: 'RESEND_API_KEY not configured' }, 500);
     }
 
+    // Volume cap for signed-in senders (service-role sends are trusted).
+    const svcDb = serviceClient();
+    if (!serviceCall) {
+      const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+      const dayAgo = new Date(Date.now() - 86400_000).toISOString();
+      const [{ count: lastHour }, { count: lastDay }] = await Promise.all([
+        svcDb.from('email_send_events').select('id', { count: 'exact', head: true }).eq('sender_id', caller.auth.id).gte('created_at', hourAgo),
+        svcDb.from('email_send_events').select('id', { count: 'exact', head: true }).eq('sender_id', caller.auth.id).gte('created_at', dayAgo),
+      ]);
+      if ((lastHour ?? 0) >= 60 || (lastDay ?? 0) >= 400) {
+        return jsonResponse({ error: 'rate_limited', message: 'You have sent a lot of emails recently. Please try again later.' }, 429);
+      }
+    }
+
     // Session callers may only set Reply-To to their own address (the
     // EmailCenter passes user.email); anything else would let a caller route
     // replies from our domain to an arbitrary inbox.
@@ -147,8 +161,17 @@ serve('sendEmailNotification', async (req, ctx) => {
       html: serviceCall ? html : sanitizeCoachHtml(html),
       replyTo: safeReplyTo,
     });
+    if (!serviceCall) {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(to.trim().toLowerCase()));
+      const recipientHash = Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+      await svcDb.from('email_send_events').insert({
+        sender_id: caller.auth.id, recipient_hash: recipientHash, template_key: templateKey ?? null,
+        status: result.ok ? 'sent' : 'failed',
+      });
+    }
     if (!result.ok) {
-      console.error('[sendEmailNotification] send failed:', result.error, result.details);
+      // Provider error text only (its details can echo recipient data).
+      logError(ctx, new Error(String(result.error ?? 'send failed')), { status: 500, error_type: 'EMAIL_ERROR' });
       return jsonResponse({ error: 'Email could not be sent' }, 500);
     }
 

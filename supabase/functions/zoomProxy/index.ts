@@ -30,13 +30,13 @@ const getZoomAccessToken = async () => {
   return data.access_token;
 };
 
-// Verify a meeting was created by this coach via our session records
+// A meeting belongs to the coach who created it through this proxy
+// (zoom_meeting_owners is written only here, with the service role).
 const verifyMeetingOwnership = async (svc: ReturnType<typeof serviceClient>, userId: string, meetingId: unknown) => {
-  const { data: sessions } = await svc.from('coaching_sessions')
-    .select('id, created_by').eq('zoom_meeting_id', String(meetingId)).limit(1);
-  const session = sessions?.[0];
-  if (!session) return false; // meeting not in our DB — deny
-  return session.created_by === userId;
+  if (!/^\d{6,20}$/.test(String(meetingId ?? ''))) return false;
+  const { data } = await svc.from('zoom_meeting_owners')
+    .select('coach_id').eq('meeting_id', String(meetingId)).maybeSingle();
+  return data?.coach_id === userId;
 };
 
 serve('zoomProxy', async (req, ctx) => {
@@ -54,6 +54,8 @@ serve('zoomProxy', async (req, ctx) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const data = await res.json();
+      // The shared platform account's identity is for admins only.
+      if (caller.profile?.role !== 'admin') return jsonResponse({ success: res.ok });
       return jsonResponse({ success: true, email: data.email, name: `${data.first_name} ${data.last_name}` });
     }
 
@@ -78,6 +80,9 @@ serve('zoomProxy', async (req, ctx) => {
         }),
       });
       const data = await res.json();
+      if (res.ok && data?.id) {
+        await svc.from('zoom_meeting_owners').insert({ meeting_id: String(data.id), coach_id: caller.auth.id });
+      }
       return jsonResponse(data);
     }
 

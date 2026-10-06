@@ -19,6 +19,7 @@
 import { serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { runCheckinReminders } from '../_shared/checkinReminders.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
+import { serve } from '../_shared/observe.js';
 
 function isServiceRoleCall(req: Request) {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -26,7 +27,7 @@ function isServiceRoleCall(req: Request) {
   return Boolean(serviceKey) && token === serviceKey;
 }
 
-Deno.serve(async (req) => {
+serve('sendCheckInReminders', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     if (!isServiceRoleCall(req)) return jsonResponse({ error: 'Unauthorized' }, 401);

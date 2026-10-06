@@ -18,6 +18,7 @@
 // JWT, so both paths authenticate in-function.
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { buildWeeklyDigest, renderDigestEmail } from '../_shared/weeklyDigest.js';
+import { serve } from '../_shared/observe.js';
 
 const COACH_TIPS = [
   'Send a voice message instead of text this week — clients love the personal touch.',
@@ -72,7 +73,7 @@ async function sendDigestFor(svc, coach: { id: string; email?: string | null }, 
   return { digest, sent };
 }
 
-Deno.serve(async (req) => {
+serve('weeklyDigest', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const svc = serviceClient();

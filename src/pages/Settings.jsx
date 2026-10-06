@@ -16,6 +16,7 @@ import IntegrationsTab from '../components/integrations/IntegrationsTab';
 import DefaultAssignmentSettings from '../components/settings/DefaultAssignmentSettings';
 import { ThemeToggle } from '../components/settings/ThemeToggle';
 import PasswordChange from '../components/settings/PasswordChange';
+import { RELEASE, releaseLabel } from '@/lib/release';
 import {
   SettingsShell, SettingsPanel, SettingsRow, SettingsLinkRow, fieldClass,
 } from '../components/settings/SettingsLayout';
@@ -276,6 +277,10 @@ export default function Settings() {
       {activeTab === 'notifications' && <NotificationsTab />}
       {activeTab === 'security' && <SecurityTab />}
       {activeTab === 'auto-assign' && <DefaultAssignmentSettings />}
+      <p className="mt-8 text-xs text-muted-foreground">
+        KOACH version {releaseLabel()}
+        {RELEASE.builtAt && ` · built ${new Date(RELEASE.builtAt).toLocaleDateString()}`}
+      </p>
     </SettingsShell>
   );
 }

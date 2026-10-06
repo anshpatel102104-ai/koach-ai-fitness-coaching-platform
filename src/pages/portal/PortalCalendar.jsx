@@ -247,7 +247,7 @@ export default function PortalCalendar({ user }) {
   // Fetch client
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-cal-client', user?.email],
-    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];

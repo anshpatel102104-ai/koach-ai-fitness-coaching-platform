@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { useQuery } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -40,7 +41,7 @@ function BottomNav({ user, hideForActiveWorkout }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-nav', user?.email],
-    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -116,6 +117,7 @@ function BottomNav({ user, hideForActiveWorkout }) {
 }
 
 export default function ClientPortal() {
+  const location = useLocation();
   const { me } = useAuth();
   const [user, setUser] = useState(null);
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
@@ -160,6 +162,7 @@ export default function ClientPortal() {
       <div className="absolute inset-0 overflow-y-auto">
         {/* Mobile-first column; centred on larger screens. */}
         <div className="mx-auto min-h-full w-full max-w-[480px] bg-background">
+          <ErrorBoundary scope="page" resetKey={location.pathname} homePath="/portal">
           <Routes>
             <Route path="/"          element={<PortalHome user={user} />} />
             <Route path="/workouts"  element={<PortalWorkouts user={user} onActiveWorkoutChange={setActiveWorkoutMode} />} />
@@ -173,6 +176,7 @@ export default function ClientPortal() {
             <Route path="/profile"   element={<PortalProfile user={user} />} />
             <Route path="/billing"   element={<PortalBilling user={user} />} />
           </Routes>
+          </ErrorBoundary>
         </div>
       </div>
       <BottomNav user={user} hideForActiveWorkout={activeWorkoutMode} />

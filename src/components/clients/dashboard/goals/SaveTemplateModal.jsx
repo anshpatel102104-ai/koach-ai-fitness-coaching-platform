@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, LayoutTemplate } from 'lucide-react';
 import { db } from '@/api/supabaseClient';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/AuthContext';
+import { userMessage } from '@/lib/appErrors';
 
 /**
  * Saves the current form values as a new GoalTemplate.
@@ -12,12 +14,13 @@ import { toast } from 'sonner';
 export default function SaveTemplateModal({ form, onSaved, onClose }) {
   const [templateName, setTemplateName] = useState(form.name || '');
   const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
 
   const handleSave = async () => {
     if (!templateName.trim()) { toast.error('Template name is required'); return; }
     setSaving(true);
     const payload = {
-      coach_id: 'me',
+      coach_id: user?.id,
       name: templateName.trim(),
       goal_type: form.goal_type,
       notes: form.notes || null,
@@ -32,10 +35,15 @@ export default function SaveTemplateModal({ form, onSaved, onClose }) {
       payload.carbs_target    = form.carbs_target    !== '' ? Number(form.carbs_target)    : null;
       payload.fat_target      = form.fat_target      !== '' ? Number(form.fat_target)      : null;
     }
-    await db.entities.GoalTemplate.create(payload);
-    toast.success('Template saved');
-    setSaving(false);
-    onSaved();
+    try {
+      await db.entities.GoalTemplate.create(payload);
+      toast.success('Template saved');
+      onSaved();
+    } catch (err) {
+      toast.error(userMessage(err, "Couldn't save the template. Please try again."));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

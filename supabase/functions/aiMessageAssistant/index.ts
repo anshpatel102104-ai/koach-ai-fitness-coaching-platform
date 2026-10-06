@@ -8,8 +8,9 @@
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('aiMessageAssistant', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

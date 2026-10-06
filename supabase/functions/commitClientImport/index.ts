@@ -11,8 +11,9 @@
 //   - created rows carry user_id/created_by = caller (Base44's created_by_id).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { mappingContext, buildClientRow } from '../_shared/importCommit.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('commitClientImport', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

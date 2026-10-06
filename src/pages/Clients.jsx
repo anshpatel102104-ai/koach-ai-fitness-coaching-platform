@@ -34,6 +34,7 @@ import { sendZapierEvent } from '@/lib/zapier';
 import { sendEmail, isResendEnabled } from '@/lib/sendgrid';
 import { templates } from '@/lib/emailTemplates';
 import { getMyTeamId } from '@/lib/teamUtils';
+import { userMessage } from '@/lib/appErrors';
 
 const LIFECYCLE_ORDER = ['lead', 'active', 'at_risk', 'completed', 'alumni'];
 const DEFAULT_SORT = 'needs_you';
@@ -195,40 +196,20 @@ export default function Clients() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      // Delete all related records in parallel before removing the client
-      const deleteRelated = async (entityName, field) => {
-        try {
-          const records = await db.entities[entityName].filter({ [field]: id });
-          await Promise.all(records.map(r => db.entities[entityName].delete(r.id)));
-        } catch (e) {
-          // Non-blocking: log and continue
-          console.warn(`Failed to delete ${entityName} for client ${id}:`, e);
-        }
-      };
-
-      await Promise.all([
-        deleteRelated('Message', 'client_id'),
-        deleteRelated('WeighIn', 'client_id'),
-        deleteRelated('Goal', 'client_id'),
-        deleteRelated('Habit', 'client_id'),
-        deleteRelated('HabitCompletion', 'client_id'),
-        deleteRelated('NutritionPlan', 'client_id'),
-        deleteRelated('FoodLog', 'client_id'),
-        deleteRelated('CheckIn', 'client_id'),
-        deleteRelated('WorkoutSession', 'client_id'),
-        deleteRelated('DailyLog', 'client_id'),
-        deleteRelated('InBodyScan', 'client_id'),
-        deleteRelated('OnboardingResponse', 'client_id'),
-        deleteRelated('CommunityPost', 'author_id'),
-      ]);
-
+      // The database removes the client's check-ins, messages, workouts, logs,
+      // habits, goals, plans, scans, sessions and AI chats with the client
+      // (ON DELETE CASCADE). Invoices and payments block the delete on purpose:
+      // financial history is never erased silently.
       await db.entities.Client.delete(id);
+      // Community posts reference the author without a foreign key.
+      const posts = await db.entities.CommunityPost.filter({ author_id: id }).catch(() => []);
+      await Promise.allSettled(posts.map((p) => db.entities.CommunityPost.delete(p.id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client and all associated data deleted');
+      toast.success('Client deleted, along with their check-ins, workouts and messages');
     },
-    onError: () => toast.error('Failed to delete client'),
+    onError: (err) => toast.error(userMessage(err, "Couldn't delete this client. Please try again.")),
   });
 
   const allTags = useMemo(() => {

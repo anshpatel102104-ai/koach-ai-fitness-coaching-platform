@@ -225,7 +225,8 @@ const { rows: [ci] } = await db.query(
     const src = readFileSync(file, 'utf8');
     if (!/\binvokeClaude\b/.test(src) || !/\bguardAiUse\b/.test(src)) continue;
     guarded.push(name);
-    const serveAt = src.indexOf('Deno.serve(');
+    // Handler entry: Deno.serve(...) or the observe.js wrapper serve('name', ...).
+    const serveAt = src.search(/\bDeno\.serve\(|^serve\(/m);
     // Module-level helpers that (transitively, one level) call invokeClaude.
     const helpers = [...src.slice(0, serveAt).matchAll(/function\s+(\w+)\s*\(/g)]
       .map((m, i, all) => ({ name: m[1], body: src.slice(m.index, all[i + 1]?.index ?? serveAt) }))

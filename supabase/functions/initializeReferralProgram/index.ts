@@ -5,6 +5,7 @@
 // code, idempotent per coach. Lookup is by coach_id (Base44 used coach_email;
 // the ported table carries both, id is the stable key).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
 function generateReferralCode(name: string | null, email: string) {
   const namePart = (name || email.split('@')[0]).split(' ')[0].toUpperCase().slice(0, 6);
@@ -12,7 +13,7 @@ function generateReferralCode(name: string | null, email: string) {
   return `${namePart}${random}`;
 }
 
-Deno.serve(async (req) => {
+serve('initializeReferralProgram', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

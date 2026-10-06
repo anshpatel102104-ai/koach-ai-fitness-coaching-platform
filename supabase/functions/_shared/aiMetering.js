@@ -18,7 +18,9 @@
 import { billingAccess, effectiveTier } from './billingAccess.js';
 import { TIER_LIMITS, featureAllowed } from './subscriptionTiers.js';
 import { AI_POLICY, ONBOARDING_FEATURE, aiResetDate } from './aiPolicy.js';
-import { resolveTeamRole } from './teamRole.js';
+import { teamOwnerFor } from './teamRole.js';
+import { bindAiRequest, recordBlocked } from './aiLedger.js';
+import { currentRequest } from './requestContext.js';
 
 // Derived from the one limits table — never a second copy.
 export const TIER_AI_LIMITS = Object.fromEntries(
@@ -33,9 +35,9 @@ const TIER_ORDER = ['starter', 'pro', 'elite', 'enterprise'];
  * Base44-shaped upgrade message.
  */
 export async function meterAiGeneration(svc, profile, now = new Date()) {
-  // Billing gate: no subscription / trial / grace => no AI. Team coaches ride on
-  // their owner's billing and are not gated on their own (empty) profile state.
-  if (!billingAccess(profile, now).hasAccess && (await resolveTeamRole(svc, profile.id)) !== 'coach') {
+  // Billing gate: no subscription / trial / grace => no AI. `profile` is the
+  // payer (resolveMeteredProfile): a team coach is metered on the team owner.
+  if (!billingAccess(profile, now).hasAccess) {
     return {
       allowed: false,
       status: 402,
@@ -45,18 +47,34 @@ export async function meterAiGeneration(svc, profile, now = new Date()) {
 
   const tier = effectiveTier(profile);
   const aiLimit = TIER_AI_LIMITS[tier] ?? 15;
-  if (aiLimit === -1) return { allowed: true, used: null, limit: -1 };
-
   const currentMonth = now.toISOString().slice(0, 7); // YYYY-MM
 
-  // Check + increment in ONE atomic statement (public.meter_ai_generation,
-  // migration 20261002000300). The previous read-then-write let parallel
-  // requests all see the same count and exceed the quota.
-  const { data, error } = await svc.rpc('meter_ai_generation', {
-    p_profile: profile.id, p_limit: aiLimit, p_month: currentMonth,
-  });
-  if (error) throw new Error(`meterAiGeneration: ${error.message}`);
-  const row = Array.isArray(data) ? data[0] : data;
+  // Inside a served request: charge through the ledger (public.charge_ai_generation,
+  // migration 20261006200000) — check + increment + ledger row in one statement,
+  // idempotent per request id, and unlimited plans are recorded too.
+  const ctx = currentRequest();
+  let row;
+  if (ctx?.ai) {
+    const { data, error } = await svc.rpc('charge_ai_generation', {
+      p_request_id: ctx.requestId, p_profile: profile.id, p_user: ctx.ai.userId ?? profile.id,
+      p_feature: ctx.ai.feature, p_limit: aiLimit, p_month: currentMonth,
+    });
+    if (error) throw new Error(`meterAiGeneration: ${error.message}`);
+    row = Array.isArray(data) ? data[0] : data;
+    if (row?.duplicate) {
+      return { allowed: false, status: 409, body: { error: 'duplicate_request', message: 'This request is already being processed.' } };
+    }
+    if (row?.allowed) ctx.ai.charged = true;
+  } else {
+    if (aiLimit === -1) return { allowed: true, used: null, limit: -1 };
+    // Check + increment in ONE atomic statement (public.meter_ai_generation,
+    // migration 20261002000300).
+    const { data, error } = await svc.rpc('meter_ai_generation', {
+      p_profile: profile.id, p_limit: aiLimit, p_month: currentMonth,
+    });
+    if (error) throw new Error(`meterAiGeneration: ${error.message}`);
+    row = Array.isArray(data) ? data[0] : data;
+  }
   const count = row?.used ?? 0;
 
   if (!row?.allowed) {
@@ -84,7 +102,8 @@ export async function meterAiGeneration(svc, profile, now = new Date()) {
 }
 
 /**
- * Who pays for an AI call. Coach sessions pay from their own quota. A client
+ * Who pays for an AI call. Coach sessions pay from their own quota (a
+ * coach-tier team member: the team owner's). A client
  * portal session (a real auth user linked via clients.portal_user_id) draws on
  * the OWNING COACH's quota — the portal user's own profile row is a bare
  * starter-tier row that would otherwise cap clients at 15 calls/month, and the
@@ -97,7 +116,15 @@ export async function resolveMeteredProfile(svc, caller) {
     .eq('portal_user_id', caller.auth.id)
     .limit(1)
     .maybeSingle();
-  if (!link) return caller.profile;
+  if (!link) {
+    // A coach-tier team member works under the team owner's plan and billing.
+    // (Previously any accepted 'coach' membership skipped the billing check
+    // entirely, so two free accounts could unlock paid AI for each other.)
+    const ownerId = await teamOwnerFor(svc, caller.auth.id);
+    if (!ownerId) return caller.profile;
+    const { data: owner } = await svc.from('profiles').select('*').eq('id', ownerId).maybeSingle();
+    return owner ?? null;
+  }
   const coachId = link.user_id || link.created_by;
   if (!coachId) return null;
   const { data: coach } = await svc.from('profiles').select('*').eq('id', coachId).maybeSingle();
@@ -126,9 +153,15 @@ export async function guardAiUse(svc, caller, fnKey, { purpose, now = new Date()
   const payer = await resolveMeteredProfile(svc, caller);
   if (!payer) return { status: 403, body: { error: 'No coach account found for this client' } };
   const isPortalClient = payer.id !== caller.profile?.id;
+  const ledger = { svc, feature: fnKey, userId: caller.auth?.id ?? null, payerId: payer.id };
+  bindAiRequest(ledger);
+  const refuse = async (res, errorType) => {
+    await recordBlocked({ ...ledger, errorType, httpStatus: res.status });
+    return res;
+  };
 
-  if (!billingAccess(payer, now).hasAccess && (await resolveTeamRole(svc, payer.id)) !== 'coach') {
-    return {
+  if (!billingAccess(payer, now).hasAccess) {
+    return refuse({
       status: 402,
       body: {
         error: 'billing_required',
@@ -137,7 +170,7 @@ export async function guardAiUse(svc, caller, fnKey, { purpose, now = new Date()
           : 'Your subscription is not active. Subscribe on the billing page to use AI features.',
         upgrade_required: !isPortalClient,
       },
-    };
+    }, 'BILLING_ERROR');
   }
 
   const tier = effectiveTier(payer);
@@ -145,7 +178,7 @@ export async function guardAiUse(svc, caller, fnKey, { purpose, now = new Date()
   if (feature && !featureAllowed(tier, feature)) {
     const need = minTierFor(feature);
     const needName = need ? need[0].toUpperCase() + need.slice(1) : 'a higher';
-    return {
+    return refuse({
       status: 403,
       body: {
         error: 'feature_not_in_plan',
@@ -157,7 +190,7 @@ export async function guardAiUse(svc, caller, fnKey, { purpose, now = new Date()
           : `This AI feature is included in the ${needName} plan and above. Upgrade to use it.`,
         upgrade_required: !isPortalClient,
       },
-    };
+    }, 'PERMISSION_ERROR');
   }
 
   if (policy.counted) {

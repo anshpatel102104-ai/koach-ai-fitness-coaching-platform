@@ -9,8 +9,9 @@ import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingDeniedFor } from '../_shared/teamRole.js';
 import { resolveClientCustomer } from '../_shared/stripeSync.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('stripeCreateSubscription', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

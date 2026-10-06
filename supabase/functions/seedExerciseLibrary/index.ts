@@ -5,6 +5,7 @@
 // The "already seeded" guard and every mapping function are verbatim; rows
 // are created with created_by = caller (Base44 used the user context).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
 const IMAGE_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 const DATA_URL = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json';
@@ -51,7 +52,7 @@ function buildImageUrl(images?: string[]) {
   return IMAGE_BASE + images[0];
 }
 
-Deno.serve(async (req) => {
+serve('seedExerciseLibrary', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

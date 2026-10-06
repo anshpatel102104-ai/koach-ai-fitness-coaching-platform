@@ -5,8 +5,9 @@
 //   npx web-push generate-vapid-keys
 // and set VAPID_PUBLIC_KEY (and VAPID_PRIVATE_KEY, server-side only).
 import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('getPushPublicKey', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

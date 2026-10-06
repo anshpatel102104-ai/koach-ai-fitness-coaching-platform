@@ -16,6 +16,7 @@ import { serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 // Row mapping lives in _shared so the local rehearsal builds the SAME row
 // and proves it satisfies the new CHECK constraints.
 import { buildIntakeRow } from '../_shared/intakeMapping.js';
+import { serve } from '../_shared/observe.js';
 // No inline confirmation email here: the AFTER INSERT trigger on
 // onboarding_responses fires 'intake.submitted' → _shared/entityEvents.js
 // onIntakeSubmitted, which already sends the HTML confirmation to the
@@ -49,7 +50,7 @@ function validEmail(raw: unknown): string | null {
   return email;
 }
 
-Deno.serve(async (req) => {
+serve('submitOnboardingIntake', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {

@@ -16,6 +16,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { generateInviteToken } from '../_shared/portalToken.js';
 import { escapeHtml, safeSubject } from '../_shared/escapeHtml.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
+import { serve } from '../_shared/observe.js';
 
 const APP_URL = Deno.env.get('APP_URL') ?? 'https://app.koachai.net';
 const INVITE_TTL_DAYS = 7;
@@ -51,7 +52,7 @@ function buildInviteEmailHtml({ clientName: rawClientName, coachName: rawCoachNa
 </table></td></tr></table></body></html>`;
 }
 
-Deno.serve(async (req) => {
+serve('sendClientInvite', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
@@ -107,13 +108,20 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'),
       { auth: { persistSession: false } },
     );
-    const { error: updErr } = await svc
+    // Compare-and-set on the email: if the row's email changed after we read it
+    // (a concurrent edit), the token must not be attached to the new address.
+    const { data: written, error: updErr } = await svc
       .from('clients')
       .update({ invite_token_hash: tokenHash, invite_token_expires: expires })
-      .eq('id', owned.id);
+      .eq('id', owned.id)
+      .eq('email', clientEmail)
+      .select('id');
     if (updErr) {
       console.error('sendClientInvite: token write failed:', updErr.message);
       return json({ error: 'Could not create invite' }, 500);
+    }
+    if (!written || written.length !== 1) {
+      return json({ error: "The client's email changed while sending the invite. Please try again." }, 409);
     }
 
     // Use the client row's name, not the request body.

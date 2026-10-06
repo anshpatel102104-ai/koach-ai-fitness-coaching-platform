@@ -10,6 +10,7 @@ import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectExerciseNames, findInjuryViolations, injuryAvoidTerms, parseTermList } from '../_shared/aiSafety.js';
+import { serve } from '../_shared/observe.js';
 
 // Structured output: the program is generated one training day per structured tool
 // call (in parallel), so every response is schema-valid and small, and a
@@ -76,7 +77,7 @@ const DEFAULT_SPLITS: Record<number, string[]> = {
   7: ['Push', 'Pull', 'Legs', 'Upper', 'Lower', 'Full Body', 'Conditioning / Active Recovery'],
 };
 
-Deno.serve(async (req) => {
+serve('generateAIProgram', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const t0 = Date.now();

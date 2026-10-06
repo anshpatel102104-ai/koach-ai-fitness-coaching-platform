@@ -7,6 +7,7 @@
 // reads/deletes stay ownership-verified through coaching_sessions
 // (zoom_meeting_id + created_by), exactly as Base44 did.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
 const getZoomAccessToken = async () => {
   const accountId = Deno.env.get('ZOOM_ACCOUNT_ID');
@@ -38,7 +39,7 @@ const verifyMeetingOwnership = async (svc: ReturnType<typeof serviceClient>, use
   return session.created_by === userId;
 };
 
-Deno.serve(async (req) => {
+serve('zoomProxy', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

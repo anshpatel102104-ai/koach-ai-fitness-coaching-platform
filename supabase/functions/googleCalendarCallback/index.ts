@@ -8,6 +8,7 @@
 // /schedule?google=connected|error.
 import { serviceClient } from '../_shared/edgeClients.js';
 import { GOOGLE_TOKEN_URL, redirectUri, safeReturnOrigin, verifyState } from '../_shared/googleOAuth.js';
+import { serve } from '../_shared/observe.js';
 
 function back(origin: string, status: string, reason?: string) {
   const u = new URL('/schedule', origin);
@@ -16,7 +17,7 @@ function back(origin: string, status: string, reason?: string) {
   return new Response(null, { status: 302, headers: { Location: u.toString() } });
 }
 
-Deno.serve(async (req) => {
+serve('googleCalendarCallback', async (req, ctx) => {
   const appUrl = Deno.env.get('APP_URL') || 'https://app.koachai.net';
   const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
   const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');

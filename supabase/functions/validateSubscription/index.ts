@@ -16,6 +16,7 @@ import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_
 import { tierLimits, tierFeatures, createBlocked } from '../_shared/subscriptionTiers.js';
 import { billingAccess, effectiveTier } from '../_shared/billingAccess.js';
 import { resolveTeamRole } from '../_shared/teamRole.js';
+import { serve } from '../_shared/observe.js';
 
 // RLS-scoped row count, mirroring Base44's user-scoped entities.X.list().length
 async function countRows(caller, table) {
@@ -24,7 +25,7 @@ async function countRows(caller, table) {
   return count ?? 0;
 }
 
-Deno.serve(async (req) => {
+serve('validateSubscription', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {

@@ -8,6 +8,7 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, EXERCISE_LIBRARY } from '../_shared/aiTools.js';
+import { serve } from '../_shared/observe.js';
 
 const PROMPT = `Submit exactly 50 exercises by calling the provided tool (respond with that tool call only). Keep description ≤ 20 words. Each exercise object has this shape (inside the tool's "exercises" array):
 [
@@ -46,7 +47,7 @@ Then use thumbnail: https://img.youtube.com/vi/VIDEOID/maxresdefault.jpg
 
 CRITICAL: Tool arguments must be real JSON arrays/objects, never JSON encoded inside a string.`;
 
-Deno.serve(async (req) => {
+serve('generateExerciseLibrary', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

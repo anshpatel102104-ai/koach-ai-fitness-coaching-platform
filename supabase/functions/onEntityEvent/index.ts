@@ -20,6 +20,7 @@ import { sendResendEmail } from '../_shared/resendEmail.js';
 import { aiFeatureAllowed } from '../_shared/aiMetering.js';
 import { invokeClaude, anthropicConfigured } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, CHECKIN_SUMMARY } from '../_shared/aiTools.js';
+import { serve } from '../_shared/observe.js';
 
 function isServiceRoleCall(req: Request) {
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -27,7 +28,7 @@ function isServiceRoleCall(req: Request) {
   return Boolean(serviceKey) && token === serviceKey;
 }
 
-Deno.serve(async (req) => {
+serve('onEntityEvent', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {

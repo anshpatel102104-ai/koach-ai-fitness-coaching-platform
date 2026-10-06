@@ -4,8 +4,9 @@
 // coach: ensure a teams row owned by the caller, then stamp team_id onto
 // every caller-owned client missing one. Safe to call repeatedly.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('seedTeam', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

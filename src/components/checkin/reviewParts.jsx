@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Panel, KeyValue } from '@/components/kit';
 import { SignedImg, SignedLink } from '@/components/shared/SignedImage';
 import { applyRecommendation, getConfirmText } from '@/lib/applyRecommendation';
+import { extraAnswers, formatAnswer } from '@/lib/checkinResponses';
 
 export const MOOD_LABEL = { great: 'Great', good: 'Good', okay: 'Okay', tired: 'Tired', stressed: 'Stressed' };
 
@@ -112,6 +113,10 @@ export function checkInAnswers(ci) {
   if (ci.compliance_training != null) rows.push({ key: 'training', label: 'Training', value: `${Math.round(ci.compliance_training)}% of sessions`, flagged: ci.compliance_training < 60 });
   if (ci.compliance_nutrition != null) rows.push({ key: 'nutrition', label: 'Nutrition', value: `${Math.round(ci.compliance_nutrition)}% on plan`, flagged: ci.compliance_nutrition < 60 });
   if (ci.body_fat_pct != null) rows.push({ key: 'bf', label: 'Body fat', value: `${ci.body_fat_pct}%`, flagged: false });
+  // Custom form questions (stored in check_ins.responses).
+  for (const r of extraAnswers(ci)) {
+    rows.push({ key: `r-${r.question_id}`, label: r.label, value: formatAnswer(r), flagged: r.preset_key === 'injuries' && r.value === true });
+  }
   return rows;
 }
 

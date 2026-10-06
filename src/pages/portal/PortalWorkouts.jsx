@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { portalDb } from '@/api/supabaseClient';
+import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startOfWeek, addDays, subDays, isSameDay } from 'date-fns';
 import { CalendarDays } from 'lucide-react';
@@ -46,7 +47,7 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
   // Client
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-profile', user?.email],
-    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -111,10 +112,13 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
   };
 
   const handleSaveSession = (rating, note) => {
+    // Never fall back to the auth uid / 'me': workout_sessions.client_id is the
+    // clients row id, and a wrong id silently loses the workout.
+    if (!myClient?.id) { toast.error('Still loading your profile. Try again in a moment.'); return; }
     const durationMin = Math.round((Date.now() - startTimeRef.current) / 60000);
     const workout = workouts[selectedProgIdx];
     saveMutation.mutate({
-      client_id: myClient?.id || user?.id || 'me',
+      client_id: myClient.id,
       program_id: myProgram?.id,
       workout_day_name: workout?.day_name || '',
       workout_day_index: selectedProgIdx,
@@ -126,8 +130,11 @@ export default function PortalWorkouts({ user, onActiveWorkoutChange }) {
         exercise_name: ex.name,
         sets_completed: exerciseLogs[i]?.sets_completed || [],
       })),
+    }, {
+      // Close only once it's saved: on failure the sheet (and the logged sets)
+      // stay put and the global handler explains what happened.
+      onSuccess: () => { setCompleteMode(false); toast.success('Workout logged'); },
     });
-    setCompleteMode(false);
   };
 
   if (!myProgram) {

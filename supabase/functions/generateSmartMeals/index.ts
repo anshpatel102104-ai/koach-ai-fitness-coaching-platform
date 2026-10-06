@@ -13,6 +13,7 @@ import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, SMART_MEALS_BATCH, SMART_MEAL_SINGLE } from '../_shared/aiTools.js';
 import { collectFoodNames, findAllergenViolations } from '../_shared/aiSafety.js';
+import { serve } from '../_shared/observe.js';
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Pre-Workout', 'Post-Workout', 'Snack'];
 
@@ -33,7 +34,7 @@ ${avoid ? avoid + '\n' : ''}Each option: 2-4 foods with accurate macros. Give ea
 Return ONLY valid JSON with a "meals" array (${mealNames.length} item${mealNames.length > 1 ? 's' : ''}); each meal: {"meal_name":"...","time":"...","options":[{"label":"...","foods":[{"food_name":"...","portion":"...","calories":0,"protein":0,"carbs":0,"fats":0}]}]}.`;
 }
 
-Deno.serve(async (req) => {
+serve('generateSmartMeals', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

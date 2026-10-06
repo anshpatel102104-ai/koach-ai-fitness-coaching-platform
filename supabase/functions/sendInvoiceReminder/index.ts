@@ -9,8 +9,9 @@ import { sendResendEmail } from '../_shared/resendEmail.js';
 import { sendMessage } from '../_shared/automationActions.js';
 import { ownsClient } from '../_shared/ownership.js';
 import { safeSubject } from '../_shared/escapeHtml.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('sendInvoiceReminder', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

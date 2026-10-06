@@ -5,6 +5,9 @@ import { AnimatePresence } from 'framer-motion';
 import CheckInFormScreen from './CheckInFormScreen';
 import CheckInReview from './CheckInReview';
 import CheckInSuccessScreen from './CheckInSuccessScreen';
+import { toast } from 'sonner';
+import { checkInRowFromAnswers, DEFAULT_CHECKIN_FORM } from '@/lib/checkinResponses';
+import { userMessage } from '@/lib/appErrors';
 
 const DRAFT_KEY = 'checkin_draft';
 
@@ -19,11 +22,12 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
   const queryClient = useQueryClient();
 
   // Get check-in form (assume one assigned form)
-  const { data: forms = [] } = useQuery({
+  const { data: forms = [], isLoading: formsLoading } = useQuery({
     queryKey: ['checkin-forms'],
     queryFn: () => portalDb.entities.CheckInForm.filter({ is_active: true }, '-created_date', 1),
   });
-  const form = forms[0];
+  // No form assigned by the coach → the standard weekly check-in, never a blank screen.
+  const form = forms[0] ?? (formsLoading ? null : DEFAULT_CHECKIN_FORM);
 
   // Auto-save draft after each response
   useEffect(() => {
@@ -53,20 +57,22 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
+      // Answers are keyed by question id; map them to real columns + `responses`
+      // (spreading them into the row made every custom-question form fail).
       const checkIn = await portalDb.entities.CheckIn.create({
         client_id: client.id,
         client_name: client.name,
         date: new Date().toISOString().split('T')[0],
-        form_id: form?.id,
-        ...responses,
+        form_id: form?.id ?? null,
+        ...checkInRowFromAnswers(form, responses),
       });
       localStorage.removeItem(DRAFT_KEY);
       onSubmitted(checkIn);
       setView('success');
       queryClient.invalidateQueries({ queryKey: ['portal-checkins'] });
     } catch (err) {
-      console.error('Submit failed:', err);
       setSubmitting(false);
+      toast.error(`${userMessage(err, "We couldn't send your check-in.")} Your answers are saved on this device. Please try again.`);
     }
   };
 
@@ -78,7 +84,7 @@ export default function CheckInForm({ client, lastCheckIn, totalCheckIns, onSubm
     onExit();
   };
 
-  if (!form) return null;
+  if (!form) return <p className="p-6 text-sm text-muted-foreground" role="status">Loading your check-in…</p>;
 
   return (
     <AnimatePresence mode="wait">

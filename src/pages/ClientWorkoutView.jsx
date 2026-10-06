@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { db } from '@/api/supabaseClient';
+import { portalDb as db } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -218,7 +218,7 @@ export default function ClientWorkoutView() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
-  const programId = urlParams.get('program');
+  const programParam = urlParams.get('program');
   const dayIdx = parseInt(urlParams.get('day') || '0', 10);
 
   const [user, setUser] = useState(null);
@@ -228,16 +228,20 @@ export default function ClientWorkoutView() {
 
   useEffect(() => { me().then(setUser).catch(() => {}); }, []);
 
-  const { data: clients = [] } = useQuery({
-    queryKey: ['cwv-client', user?.email],
-    queryFn: () => db.entities.Client.filter({ email: user.email }, '-created_date', 1),
-    enabled: !!user?.email,
+  // Portal session: the client's own row via the durable portal link (the base
+  // clients table is coach-only; reading it here left this page spinning forever).
+  const { data: clients = [], isFetched: clientFetched } = useQuery({
+    queryKey: ['cwv-client', user?.id],
+    queryFn: () => db.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
+    enabled: !!user?.id,
   });
   const myClient = clients[0];
+  // Opened without ?program= (e.g. from Today's workout card): the assigned program.
+  const programId = programParam || myClient?.assigned_program_id || null;
 
-  const { data: program } = useQuery({
+  const { data: program, isFetched: programFetched } = useQuery({
     queryKey: ['program', programId],
-    queryFn: () => db.entities.WorkoutProgram.filter({ id: programId }).then(r => r[0]),
+    queryFn: () => db.entities.WorkoutProgram.filter({ id: programId }).then(r => r[0] ?? null),
     enabled: !!programId,
   });
 
@@ -288,6 +292,18 @@ export default function ClientWorkoutView() {
     setShowComplete(false);
   };
 
+  const nothingToShow = (clientFetched && !programId) || (programFetched && (!program || !workout));
+  if (nothingToShow) return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
+      <div className="max-w-sm text-center">
+        <p className="text-[17px] font-semibold text-foreground">No workout to show</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {programId ? "This workout isn't in your program any more." : "Your coach hasn't assigned a program yet."} Check your Train tab or message your coach.
+        </p>
+        <Button className="mt-5" onClick={() => navigate('/portal/workouts')}>Go to Train</Button>
+      </div>
+    </div>
+  );
   if (!program || !workout) return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading workout</p>

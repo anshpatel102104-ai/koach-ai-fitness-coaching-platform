@@ -8,6 +8,7 @@
 import Stripe from 'npm:stripe@17.3.1';
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { appUrl } from '../_shared/stripePlans.js';
+import { serve } from '../_shared/observe.js';
 
 // SECURITY (audit 2026-10-05): redirect URLs are never taken verbatim from the
 // body (open redirect / phishing via a genuine Stripe checkout). Only a
@@ -20,7 +21,7 @@ function safeAppUrl(input, fallbackPath) {
   return appUrl(input, fallbackPath);
 }
 
-Deno.serve(async (req) => {
+serve('storeCheckout', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));

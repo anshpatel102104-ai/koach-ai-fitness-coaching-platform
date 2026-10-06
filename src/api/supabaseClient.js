@@ -22,6 +22,8 @@
  *     existing page code keeps working during the incremental cutover.
  */
 import { createClient } from '@supabase/supabase-js';
+import { AppError, fromDbError, fromFunctionError, newRequestId } from '../lib/appErrors.js';
+import { reportError, setErrorSink } from '../lib/errorReporting.js';
 import { COUNTED_AI_FUNCTIONS } from '../lib/aiPolicy.js';
 
 // Entity name -> Postgres table (SCHEMA_MIGRATION.md is authoritative)
@@ -147,19 +149,40 @@ export function getSupabase() {
   return _client;
 }
 
+// Error reports go to public.client_error_events (insert-own, admin-read). Only
+// for signed-in users; never awaited by the app; never throws.
+setErrorSink(async (report) => {
+  let sb;
+  try { sb = getSupabase(); } catch { return; }
+  const { data } = await sb.auth.getSession();
+  if (!data?.session) return;
+  await sb.from('client_error_events').insert(report);
+});
+
 // Test seam: lets verification scripts inject a driver without a live
 // Supabase project. Not for application code.
 export function __setSupabaseClientForTests(client) {
   _client = client;
 }
 
+// Every data-layer failure is thrown as an AppError (src/lib/appErrors.js):
+// a message safe to show people, the taxonomy type, and the technical text kept
+// for logs. Supabase Auth messages ("Invalid login credentials") are already
+// written for people and pass through unchanged.
 const throwIf = (error) => {
-  if (error) {
-    const e = new Error(error.message || String(error));
-    e.code = error.code;
-    e.details = error.details;
-    throw e;
+  if (!error) return;
+  if (error instanceof AppError) throw error;
+  if (error.__isAuthError || /^Auth/.test(error.name || '')) {
+    throw new AppError(error.message || 'Sign-in failed. Please try again.', {
+      errorType: 'AUTH_ERROR', code: error.code, status: error.status, technical: error.message,
+    });
   }
+  if (/^Storage/.test(error.name || '')) {
+    throw new AppError("We couldn't upload that file. Please try again.", {
+      errorType: 'DATABASE_ERROR', technical: error.message, status: error.statusCode ?? error.status,
+    });
+  }
+  throw fromDbError(error);
 };
 
 // '-created_date' -> order created_at desc; 'name' -> order name asc
@@ -235,16 +258,23 @@ function makeEntity(name, { table, readOnly = false }) {
         .select();
       throwIf(error);
       if (!data || data.length === 0) {
-        throw new Error(
-          `${name}.update(${id}) affected no rows — the record is missing or the write was not permitted.`,
-        );
+        throw new AppError("Your changes couldn't be saved. The record may have been removed, or you don't have permission to edit it.", {
+          errorType: 'PERMISSION_ERROR', technical: `${name}.update(${id}) affected no rows`,
+        });
       }
       return aliasRow(data[0]);
     },
     async delete(id) {
       assertWritable('delete');
-      const { error } = await getSupabase().from(table).delete().eq('id', id);
+      // Like update(): a DELETE that RLS filtered to zero rows returns no error,
+      // so ask for the deleted id back and treat "nothing deleted" as a failure.
+      const { data, error } = await getSupabase().from(table).delete().eq('id', id).select('id');
       throwIf(error);
+      if (!data || data.length === 0) {
+        throw new AppError("This couldn't be deleted. It may already be gone, or you don't have permission.", {
+          errorType: 'PERMISSION_ERROR', technical: `${name}.delete(${id}) affected no rows`,
+        });
+      }
       return { id };
     },
     /**
@@ -418,6 +448,26 @@ const auth = {
     return { updated: true };
   },
 
+  /**
+   * Start a confirmed email change. Supabase emails a confirmation link; the
+   * address changes only after it is clicked (profiles.email then follows via
+   * the sync trigger in migration 20261006200100).
+   */
+  async requestEmailChange(newEmail) {
+    const emailRedirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/account-settings` : undefined;
+    const { error } = await getSupabase().auth.updateUser({ email: newEmail }, { emailRedirectTo });
+    throwIf(error);
+    return { sent: true };
+  },
+
+  /** Revoke every session except this one (other browsers and devices). */
+  async signOutOtherSessions() {
+    const { error } = await getSupabase().auth.signOut({ scope: 'others' });
+    throwIf(error);
+    return { done: true };
+  },
+
   /** Subscribe to auth-state changes (login/logout/token refresh). */
   onAuthStateChange(cb) {
     const { data } = getSupabase().auth.onAuthStateChange((_event, session) => cb(session));
@@ -434,19 +484,34 @@ const functions = {
    * Invoking an undeployed function rejects — do not swallow that here.
    */
   async invoke(name, payload) {
-    const { data, error } = await getSupabase().functions.invoke(name, { body: payload });
+    // One id per call, echoed by the edge function (x-request-id) into its logs
+    // and the AI usage ledger, and attached to any error we throw.
+    const requestId = newRequestId();
+    const { data, error } = await getSupabase().functions.invoke(name, {
+      body: payload,
+      headers: { 'x-request-id': requestId },
+    });
+    const counted = COUNTED_AI_FUNCTIONS.includes(name);
     if (error) {
-      // Plan/limit refusals from the server carry a JSON body. Surface them
-      // (dialog + readable error) instead of a generic "non-2xx" failure.
-      const body = await error.context?.clone?.().json?.().catch(() => null);
+      // Counted AI calls refund the credit server-side on failure; refresh the meter either way.
+      if (counted) window.dispatchEvent(new CustomEvent('koach:ai-usage-changed'));
+      const res = error.context;
+      const body = await res?.clone?.().json?.().catch(() => null);
+      // Plan/limit refusals carry a JSON body: dialog + readable error.
       if (body && PLAN_BLOCK_ERRORS.has(body.error)) {
         window.dispatchEvent(new CustomEvent('koach:plan-block', { detail: body }));
         if (body.error === 'monthly_ai_limit_reached') return { data: body }; // callers show body.message
-        throw Object.assign(new Error(body.message || body.error), { planBlock: body });
+        throw Object.assign(new AppError(body.message || body.error, { errorType: body.error === 'billing_required' ? 'BILLING_ERROR' : 'QUOTA_EXCEEDED', status: res?.status, requestId }), { planBlock: body });
       }
+      const status = typeof res?.status === 'number' ? res.status : (error.name === 'FunctionsFetchError' ? 0 : undefined);
+      const appErr = fromFunctionError({
+        name, status, body, technical: body?.error || error.message,
+        requestId: res?.headers?.get?.('x-request-id') || requestId,
+      });
+      reportError(appErr, { source: 'edge_function', fn: name });
+      throw appErr;
     }
-    throwIf(error);
-    if (COUNTED_AI_FUNCTIONS.includes(name)) window.dispatchEvent(new CustomEvent('koach:ai-usage-changed'));
+    if (counted) window.dispatchEvent(new CustomEvent('koach:ai-usage-changed'));
     return { data };
   },
 };

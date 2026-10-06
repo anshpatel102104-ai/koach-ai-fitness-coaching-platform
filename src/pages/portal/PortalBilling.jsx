@@ -30,7 +30,7 @@ export default function PortalBilling({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-billing', user?.email],
-    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];
@@ -142,10 +142,7 @@ export default function PortalBilling({ user }) {
       {payingInvoice && (
         <PaymentFlowModal
           invoice={payingInvoice}
-          client={myClient}
-          user={user}
-          onClose={() => setPayingInvoice(null)}
-          onComplete={handlePaymentComplete}
+          onClose={handlePaymentComplete}
         />
       )}
       {showManageSub && (

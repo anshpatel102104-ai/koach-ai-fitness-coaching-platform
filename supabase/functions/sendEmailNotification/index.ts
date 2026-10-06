@@ -15,7 +15,8 @@
 import { getCaller, callerClient, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { sendResendEmail } from '../_shared/resendEmail.js';
 import { billingAccess } from '../_shared/billingAccess.js';
-import { resolveTeamRole } from '../_shared/teamRole.js';
+import { teamOwnerFor } from '../_shared/teamRole.js';
+import { serve } from '../_shared/observe.js';
 
 /**
  * Conservative sanitizer for coach-composed HTML (session callers only).
@@ -88,7 +89,7 @@ async function callerMayEmail(req, caller, to) {
   return Boolean(teamMatch?.length);
 }
 
-Deno.serve(async (req) => {
+serve('sendEmailNotification', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {
@@ -106,11 +107,16 @@ Deno.serve(async (req) => {
     }
 
     // Session callers must have billing access (trialing/active/grace/comped),
-    // mirroring aiMetering: team coaches ride on their owner's billing.
+    // mirroring aiMetering: a team coach needs the team OWNER's billing.
     if (!serviceCall) {
       const now = new Date();
-      if (!billingAccess(caller.profile, now).hasAccess
-        && (await resolveTeamRole(serviceClient(), caller.profile.id)) !== 'coach') {
+      let billedProfile = caller.profile;
+      const ownerId = await teamOwnerFor(serviceClient(), caller.profile.id);
+      if (ownerId) {
+        const { data: owner } = await serviceClient().from('profiles').select('*').eq('id', ownerId).maybeSingle();
+        billedProfile = owner ?? { id: ownerId };
+      }
+      if (!billingAccess(billedProfile, now).hasAccess) {
         return jsonResponse({
           error: 'billing_required',
           message: 'Your subscription is not active. Subscribe on the billing page to send emails.',

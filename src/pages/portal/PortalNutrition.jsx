@@ -55,7 +55,7 @@ export default function PortalNutrition({ user }) {
   // Resolve this client's row (by email) + nutrition plan for targets
   useEffect(() => {
     if (!user?.email) return;
-    portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1).then(clients => {
+    portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1).then(clients => {
       const client = clients[0];
       setMyClient(client || null);
       if (client?.assigned_nutrition_id) {

@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
@@ -203,9 +204,11 @@ function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
+        <ErrorBoundary scope="app">
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+        </ErrorBoundary>
         <Toaster />
         <SonnerToaster position="top-right" />
       </QueryClientProvider>

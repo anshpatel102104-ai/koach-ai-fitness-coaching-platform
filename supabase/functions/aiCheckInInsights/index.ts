@@ -11,12 +11,13 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, REVIEW_CHECKIN, PROGRAM_SUGGESTIONS } from '../_shared/aiTools.js';
+import { serve } from '../_shared/observe.js';
 
 function num(n: unknown): number | null {
   return typeof n === 'number' && !Number.isNaN(n) ? n : null;
 }
 
-Deno.serve(async (req) => {
+serve('aiCheckInInsights', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -21,6 +21,7 @@ import {
 // Action executors extracted to _shared in Step 5c so the entity-event
 // trigger function (onEntityEvent) reuses the SAME write paths.
 import { executeAction } from '../_shared/automationActions.js';
+import { serve } from '../_shared/observe.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -55,7 +56,7 @@ function ruleOwnsClient(rule: Record<string, unknown>, client: Record<string, un
   return client.user_id === owner || client.created_by === owner;
 }
 
-Deno.serve(async (req) => {
+serve('runAutomations', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const json = (b: unknown, status = 200) =>
     new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });

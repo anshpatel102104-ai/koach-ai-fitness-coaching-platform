@@ -8,8 +8,9 @@
 // Secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (APP_URL optional).
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
 import { buildConsentUrl, redirectUri, safeReturnOrigin, signState } from '../_shared/googleOAuth.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('googleCalendarConnect', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -11,8 +11,9 @@ import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeCli
 import { billingDeniedFor } from '../_shared/teamRole.js';
 import { subscriptionPeriodEnd, renewalDateFromSubscription } from '../_shared/stripePeriod.js';
 import { PLANS, resolvePrice, planFromPrice, appUrl, BILLING_PATH } from '../_shared/stripePlans.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('stripeCheckout', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { httpClient: Stripe.createFetchHttpClient() });
@@ -47,16 +48,17 @@ Deno.serve(async (req) => {
     }
     if (!customerId) {
       const esc = (v) => String(v).replace(/['\\]/g, '');
-      let existing = await stripe.customers.search({ query: `metadata['user_id']:'${esc(user.id)}'`, limit: 1 });
-      if (!existing.data.length && user.email) {
-        existing = await stripe.customers.search({ query: `email:'${esc(user.email)}'`, limit: 1 });
-      }
+      // Only a customer tagged with THIS user's id is reused. Never match by
+      // email: an email-matched customer may belong to someone else (this was a
+      // Billing Portal takeover path while profiles.email was self-writable).
+      const existing = await stripe.customers.search({ query: `metadata['user_id']:'${esc(user.id)}'`, limit: 1 });
+      const verifiedEmail = caller.auth.email || user.email;
       if (existing.data.length > 0) {
         customerId = existing.data[0].id;
       } else {
         const customer = await stripe.customers.create({
-          email: user.email,
-          name: user.full_name || user.business_name || user.email,
+          email: verifiedEmail,
+          name: user.full_name || user.business_name || verifiedEmail,
           metadata: { user_id: user.id },
         });
         customerId = customer.id;

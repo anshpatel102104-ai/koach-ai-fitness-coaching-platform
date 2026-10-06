@@ -8,6 +8,8 @@
  * default model for every call that doesn't pin one).
  */
 
+import { recordLlmCall } from './aiLedger.js';
+
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';
 // Default to the latest generally available Sonnet; callers may pin another.
@@ -137,9 +139,31 @@ export function coerceBySchema(value, schema, path = '', notes = []) {
  * text_length, head, tail } (first/last 300 chars) — also console.error'd so
  * the edge logs carry it.
  */
-export async function invokeClaude({ prompt, system, model, maxTokens = 4096, expectJson = false, imageUrls, tool, timeoutMs, thinking = { type: 'between_tools' } }) {
+/**
+ * Every call is timed and recorded in the AI usage ledger (aiLedger.js): model,
+ * tokens, latency, attempts, outcome and estimated cost. Results are unchanged
+ * for callers; `errorType` is added on failures.
+ */
+export async function invokeClaude(args) {
+  const started = Date.now();
+  const tel = { model: normalizeModelId(args?.model) || anthropicModel(), attempts: 0, httpStatus: null, usage: null, providerRequestId: null };
+  let result;
+  try {
+    result = await invokeClaudeOnce(args, tel);
+  } catch (e) {
+    result = { ok: false, error: `Claude call failed: ${e?.message ?? e}`, status: 500, errorType: 'UNKNOWN_ERROR' };
+  }
+  await recordLlmCall({
+    ok: result.ok, errorType: result.errorType, model: tel.model, usage: tel.usage,
+    latencyMs: Date.now() - started, attempts: tel.attempts, httpStatus: tel.httpStatus,
+    stopReason: result.stopReason ?? result.diagnostics?.stop_reason ?? null, providerRequestId: tel.providerRequestId,
+  });
+  return result;
+}
+
+async function invokeClaudeOnce({ prompt, system, model, maxTokens = 4096, expectJson = false, imageUrls, tool, timeoutMs, thinking = { type: 'between_tools' } }, tel) {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!apiKey) return { ok: false, error: 'ANTHROPIC_API_KEY not configured', status: 500 };
+  if (!apiKey) return { ok: false, error: 'ANTHROPIC_API_KEY not configured', status: 500, errorType: 'CONFIG_ERROR' };
 
   // Vision: when imageUrls are supplied, the user message becomes a content
   // array of image blocks + the text prompt (the Base44 InvokeLLM `file_urls`
@@ -188,6 +212,7 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
 
   let response;
   for (let attempt = 0; attempt < 2; attempt++) {
+    tel.attempts = attempt + 1;
     try {
       response = await doFetch();
     } catch (e) {
@@ -195,8 +220,10 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
       // wait would exceed the edge function's request limit.
       if (attempt === 0 && e?.name !== 'AbortError') continue;
       const reason = e?.name === 'AbortError' ? 'timed out' : `unreachable: ${e.message}`;
-      return { ok: false, error: `Claude API ${reason}`, status: 504 };
+      return { ok: false, error: `Claude API ${reason}`, status: 504, errorType: e?.name === 'AbortError' ? 'AI_TIMEOUT' : 'NETWORK_ERROR' };
     }
+    tel.httpStatus = response.status;
+    tel.providerRequestId = response.headers?.get?.('request-id') ?? null;
     if ((response.status === 429 || response.status >= 500) && attempt === 0) {
       continue; // transient → retry once
     }
@@ -205,15 +232,20 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
 
   if (!response.ok) {
     const errText = await response.text().catch(() => '');
-    return { ok: false, error: `Claude API error: ${errText.slice(0, 500)}`, status: response.status };
+    const errorType = response.status === 429 ? 'RATE_LIMIT' : 'AI_PROVIDER_ERROR';
+    return { ok: false, error: `Claude API error: ${errText.slice(0, 500)}`, status: response.status, errorType };
   }
 
   const data = await response.json().catch(() => null);
+  tel.usage = data?.usage ?? null;
+  if (data?.model) tel.model = data.model;
   const stopReason = data?.stop_reason ?? null;
   const outputTokens = data?.usage?.output_tokens ?? null;
   const toolBlock = tool ? data?.content?.find((b) => b?.type === 'tool_use') : null;
   const text = tool ? JSON.stringify(toolBlock?.input ?? null) : (data?.content?.find((b) => b?.type === 'text')?.text ?? data?.content?.[0]?.text ?? '');
 
+  // Log-safe view: structure only, never model text (it can contain client health data).
+  const logDiag = () => { const { head: _h, tail: _t, ...rest } = diagnostics(); return JSON.stringify(rest); };
   const diagnostics = () => ({
     stop_reason: stopReason, output_tokens: outputTokens, max_tokens: maxTokens,
     block_types: (data?.content ?? []).map((b) => b?.type),
@@ -222,12 +254,12 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
 
   if (tool) {
     if (stopReason === 'max_tokens') {
-      console.error('invokeClaude: output truncated at max_tokens', JSON.stringify(diagnostics()));
-      return { ok: false, error: 'Model output was truncated (max_tokens)', status: 502, diagnostics: diagnostics() };
+      console.error('invokeClaude: output truncated at max_tokens', logDiag());
+      return { ok: false, error: 'Model output was truncated (max_tokens)', status: 502, errorType: 'AI_OUTPUT_INVALID', diagnostics: diagnostics() };
     }
     if (!toolBlock || typeof toolBlock.input !== 'object' || toolBlock.input === null) {
-      console.error('invokeClaude: no tool_use block', JSON.stringify(diagnostics()));
-      return { ok: false, error: 'Model did not return structured output', status: 502, diagnostics: diagnostics() };
+      console.error('invokeClaude: no tool_use block', logDiag());
+      return { ok: false, error: 'Model did not return structured output', status: 502, errorType: 'AI_OUTPUT_INVALID', diagnostics: diagnostics() };
     }
     const notes = [];
     const coerced = coerceBySchema(toolBlock.input, tool.input_schema, '', notes);
@@ -236,8 +268,8 @@ export async function invokeClaude({ prompt, system, model, maxTokens = 4096, ex
 
   const parsed = expectJson ? extractJson(text) : null;
   if (expectJson && parsed === null) {
-    console.error('invokeClaude: unparseable JSON', JSON.stringify(diagnostics()));
-    return { ok: false, error: 'Model response was not parseable JSON', status: 502, text, diagnostics: diagnostics() };
+    console.error('invokeClaude: unparseable JSON', logDiag());
+    return { ok: false, error: 'Model response was not parseable JSON', status: 502, errorType: 'AI_OUTPUT_INVALID', text, diagnostics: diagnostics() };
   }
   return { ok: true, text, parsed, stopReason, outputTokens };
 }

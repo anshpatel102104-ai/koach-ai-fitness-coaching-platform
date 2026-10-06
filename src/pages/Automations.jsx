@@ -66,7 +66,8 @@ function useAutomationEngine(rules, clients, checkIns, plans, badges, queryClien
         if (msg) await db.entities.Message.create({ client_id: client.id, content: msg, sender: 'coach' });
         break;
       case 'notify_coach':
-        await db.entities.Notification.create({ recipient_id: 'coach', title: `Automation: ${client.name}`, body: msg || `Rule triggered for ${client.name}`, type: 'general', related_client_id: client.id });
+        // The client's coach (a literal 'coach' here was never a valid recipient id).
+        await db.entities.Notification.create({ recipient_id: client.user_id || client.created_by, title: `Automation: ${client.name}`, body: msg || `Rule triggered for ${client.name}`, type: 'general', related_client_id: client.id });
         break;
       case 'award_badge': {
         if (!action.value) break;

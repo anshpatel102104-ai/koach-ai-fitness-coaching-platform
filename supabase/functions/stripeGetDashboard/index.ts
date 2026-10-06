@@ -8,8 +8,9 @@
 import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { subscriptionPeriodEnd } from '../_shared/stripePeriod.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('stripeGetDashboard', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

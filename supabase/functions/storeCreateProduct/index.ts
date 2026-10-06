@@ -10,8 +10,9 @@
 // from env only; none logged.
 import Stripe from 'npm:stripe@17.3.1';
 import { getCaller, serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('storeCreateProduct', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

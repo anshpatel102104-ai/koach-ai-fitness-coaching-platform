@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link } from 'react-router-dom';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import UpgradeModal from '@/components/subscription/UpgradeModal';
@@ -29,7 +30,7 @@ export default function FocusLayout() {
 
         {/* Page content pushed below header */}
         <main className="pt-14 min-h-screen">
-          <Outlet />
+          <ErrorBoundary scope="page"><Outlet /></ErrorBoundary>
         </main>
       </div>
       <UpgradeModal

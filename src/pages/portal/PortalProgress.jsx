@@ -179,7 +179,7 @@ export default function PortalProgress({ user }) {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['portal-client-prog', user?.email],
-    queryFn: () => portalDb.entities.Client.filter({ email: user.email }, '-created_date', 1),
+    queryFn: () => portalDb.entities.Client.filter({ portal_user_id: user.id }, '-created_date', 1),
     enabled: !!user?.email,
   });
   const myClient = clients[0];

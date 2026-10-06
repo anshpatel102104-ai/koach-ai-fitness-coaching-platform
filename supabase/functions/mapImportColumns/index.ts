@@ -10,6 +10,7 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { KOACH_FIELDS, deterministicMap, mergeResults } from '../_shared/importMapping.js';
 import { invokeClaude, anthropicConfigured, normalizeModelId } from '../_shared/anthropic.js';
+import { serve } from '../_shared/observe.js';
 
 // Sanitized like ANTHROPIC_MODEL (a pasted secret with a trailing '.' made every call 404).
 const HAIKU_MODEL = normalizeModelId(Deno.env.get('ANTHROPIC_FAST_MODEL')) || 'claude-haiku-4-5-20251001';
@@ -54,7 +55,7 @@ Include ALL ${headers.length} headers in both objects.`;
   return llm.parsed;
 }
 
-Deno.serve(async (req) => {
+serve('mapImportColumns', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -12,6 +12,7 @@
 //
 // The four Calendar API actions are verbatim.
 import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
 const CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
@@ -59,7 +60,7 @@ async function getAccessToken(svc: ReturnType<typeof serviceClient>, userId: str
   return { accessToken: data.access_token };
 }
 
-Deno.serve(async (req) => {
+serve('googleCalendarProxy', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

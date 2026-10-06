@@ -56,19 +56,23 @@ function validateMacros(input) {
   return null;
 }
 
-/** Does this workout program belong to the caller (created by them, or assigned only to their clients)? */
+/**
+ * Does this workout program belong to the caller: created by them, or scoped to
+ * a team they own or are an accepted member of? (Being assigned to the caller's
+ * clients is NOT ownership: assignment ids used to be settable to any program.)
+ */
 async function ownsProgram(svc, userId, programId) {
   if (!programId) return null;
   const { data: prog } = await svc.from('workout_programs').select('*').eq('id', programId).maybeSingle();
   if (!prog) return null;
   if (prog.created_by === userId) return prog;
-  const { data: assignees } = await svc.from('clients').select('id, user_id, created_by')
-    .eq('assigned_program_id', programId);
-  // Someone else's program is only editable when EVERY client it is assigned to
-  // is the caller's — never a shared template that other coaches' clients use.
-  const list = assignees ?? [];
-  if (list.length > 0 && list.every((c) => c.user_id === userId || c.created_by === userId)) return prog;
-  return null;
+  if (!prog.team_id) return null;
+  const [{ data: team }, { data: member }] = await Promise.all([
+    svc.from('teams').select('owner_coach_id').eq('id', prog.team_id).maybeSingle(),
+    svc.from('team_members').select('id').eq('team_id', prog.team_id)
+      .eq('user_id', userId).eq('invite_status', 'accepted').limit(1).maybeSingle(),
+  ]);
+  return team?.owner_coach_id === userId || member ? prog : null;
 }
 
 /**

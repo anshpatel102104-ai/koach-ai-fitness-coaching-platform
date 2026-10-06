@@ -7,8 +7,9 @@
 import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingDeniedFor } from '../_shared/teamRole.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('stripeCancelSubscription', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'));

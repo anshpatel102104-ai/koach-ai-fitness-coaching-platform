@@ -21,6 +21,7 @@ import { invokeClaude } from '../_shared/anthropic.js';
 import {
   executeAssistantTool, previewAssistantWrite, READ_TOOLS, WRITE_TOOLS,
 } from '../_shared/assistantTools.js';
+import { serve } from '../_shared/observe.js';
 
 const TOOLS_PROMPT = `You are an expert AI fitness coach assistant with REAL ACTION capabilities inside the KOACH AI coaching platform.
 
@@ -79,7 +80,7 @@ IMPORTANT RULES:
 - Calories must be 800-8000 and macros sensible; the server rejects anything else
 - For nutrition plans, calculate sensible macros based on goals if not specified`;
 
-Deno.serve(async (req) => {
+serve('claudeAssistant', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

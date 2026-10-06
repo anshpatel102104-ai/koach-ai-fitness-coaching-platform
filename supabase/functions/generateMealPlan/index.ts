@@ -15,6 +15,7 @@ import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { collectFoodNames, findAllergenViolations, parseTermList } from '../_shared/aiSafety.js';
 import { validateMealPlan } from '../_shared/aiShape.js';
+import { serve } from '../_shared/observe.js';
 
 const num = { type: 'number' };
 const str = { type: 'string' };
@@ -66,7 +67,7 @@ const REST_TOOL = {
   },
 };
 
-Deno.serve(async (req) => {
+serve('generateMealPlan', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const t0 = Date.now();

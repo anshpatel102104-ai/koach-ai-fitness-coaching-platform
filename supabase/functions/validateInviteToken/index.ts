@@ -14,6 +14,7 @@
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { hashInviteToken, mintPortalJwt, isTokenLive } from '../_shared/portalToken.js';
+import { serve } from '../_shared/observe.js';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,7 @@ const cors = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-Deno.serve(async (req) => {
+serve('validateInviteToken', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   const json = (body, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });

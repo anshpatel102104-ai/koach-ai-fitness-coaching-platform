@@ -9,6 +9,7 @@ import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, INBODY_SCAN } from '../_shared/aiTools.js';
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { parseUploadRef, UPLOADS_BUCKET } from '../_shared/uploadRef.js';
+import { serve } from '../_shared/observe.js';
 
 const EXTRACT_PROMPT = `Extract all metrics from this InBody scan image and return ONLY a JSON object with no markdown fences:
 {
@@ -40,7 +41,7 @@ const EXTRACT_PROMPT = `Extract all metrics from this InBody scan image and retu
 }
 Return null for any field not visible in the scan. Do not include markdown or code fences.`;
 
-Deno.serve(async (req) => {
+serve('aiInBodyScan', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -1,5 +1,6 @@
 import React, { useState, createContext, useContext } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { useAuth } from '@/lib/AuthContext';
@@ -163,7 +164,7 @@ export default function AppLayout() {
         <main className="lg:ml-[248px] min-h-screen pb-24 lg:pb-0 pt-14 lg:pt-0 bg-background overflow-x-hidden">
           <Topbar />
           <BillingBanners user={user} />
-          <Outlet />
+          <PageBoundary><Outlet /></PageBoundary>
         </main>
 
         <BottomNav />
@@ -179,4 +180,10 @@ export default function AppLayout() {
       </CommandPaletteProvider>
     </SubscriptionContext.Provider>
   );
+}
+
+/** A crashing page keeps the shell (sidebar, nav) usable; resets on navigation. */
+function PageBoundary({ children }) {
+  const { pathname } = useLocation();
+  return <ErrorBoundary scope="page" resetKey={pathname}>{children}</ErrorBoundary>;
 }

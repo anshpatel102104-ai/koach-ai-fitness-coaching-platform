@@ -11,8 +11,9 @@ import { getCaller, serviceClient, cors, jsonResponse } from '../_shared/edgeCli
 import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { TOOL_SYSTEM, INTERVENTION_PLAN, BUSINESS_INSIGHTS, CLIENT_ALERTS } from '../_shared/aiTools.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('aiBusinessInsights', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -26,6 +26,7 @@ import Stripe from 'npm:stripe@14.21.0';
 import { serviceClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { APP_ORIGIN, BILLING_PATH } from '../_shared/stripePlans.js';
 import { syncSubscriptionToUser, invoiceSubscriptionId } from '../_shared/stripeSync.js';
+import { serve, logError } from '../_shared/observe.js';
 
 // Email is delivered by sendEmailNotification; a missing mailer must never fail
 // the webhook (Stripe would retry the whole event).
@@ -37,7 +38,7 @@ async function sendEmail(svc, { to, subject, body }) {
   }
 }
 
-Deno.serve(async (req) => {
+serve('stripeWebhook', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY'), { httpClient: Stripe.createFetchHttpClient() });
@@ -67,6 +68,7 @@ Deno.serve(async (req) => {
       .insert({ event_id: event.id, event_type: event.type });
     if (claimErr) {
       if (claimErr.code === '23505') return jsonResponse({ received: true, duplicate: true });
+      logError(ctx, claimErr, { status: 500, stripe_event_id: event.id, stripe_event_type: event.type });
       return jsonResponse({ error: 'idempotency claim failed' }, 500); // Stripe retries
     }
 
@@ -149,6 +151,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ received: true });
     } catch (procErr) {
       // Release the claim so Stripe's redelivery can re-attempt this event.
+      logError(ctx, procErr, { status: 500, error_type: 'WEBHOOK_ERROR', stripe_event_id: event.id, stripe_event_type: event.type });
       await svc.from('processed_stripe_events').delete().eq('event_id', event.id);
       return jsonResponse({ error: 'processing failed' }, 500);
     }

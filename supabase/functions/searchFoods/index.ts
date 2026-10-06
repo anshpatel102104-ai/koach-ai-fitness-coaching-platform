@@ -5,6 +5,7 @@
 // when USDA_API_KEY was missing (bricking the function with an opaque boot
 // error); the check now happens per-request with a clean 500.
 import { getCaller, cors, jsonResponse } from '../_shared/edgeClients.js';
+import { serve } from '../_shared/observe.js';
 
 function mapUsdaFood(food: Record<string, any>) {
   const get = (name: string) => {
@@ -40,7 +41,7 @@ function mapUsdaFood(food: Record<string, any>) {
   };
 }
 
-Deno.serve(async (req) => {
+serve('searchFoods', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

@@ -1,32 +1,39 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
+import { db } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 
-const MOCK_HISTORY = [
-  { id: 1, type: 'client_activity', title: 'New check-in submitted', body: 'Sarah Johnson submitted her weekly check-in', time: new Date(), read: false },
-  { id: 2, type: 'payments', title: 'Payment received', body: '$299 received from Marcus Williams', time: subDays(new Date(), 1), read: false },
-  { id: 3, type: 'messages', title: 'New message from client', body: 'Alex Torres: "Hey coach, quick question about..."', time: subDays(new Date(), 1), read: true },
-  { id: 4, type: 'ai_insights', title: 'At-risk client flagged', body: 'Emily Chen hasn\'t logged in for 8 days — risk of churn', time: subDays(new Date(), 2), read: true },
-  { id: 5, type: 'scheduling', title: 'Session starting in 1 hour', body: 'Video call with Marcus Williams at 3:00 PM', time: subDays(new Date(), 2), read: true },
-  { id: 6, type: 'client_activity', title: 'Client milestone achieved', body: 'Jake Miller is down 10 lb since starting', time: subDays(new Date(), 3), read: true },
-  { id: 7, type: 'payments', title: 'Payment failed', body: 'Retry needed: Chris Lee — $199/month', time: subDays(new Date(), 4), read: true },
-  { id: 8, type: 'leads', title: 'New lead added', body: 'Jordan Smith entered your pipeline', time: subDays(new Date(), 5), read: true },
-  { id: 9, type: 'system', title: 'Plan limit approaching', body: 'You\'re at 90% of your 20-client limit', time: subDays(new Date(), 7), read: true },
-  { id: 10, type: 'client_activity', title: 'Check-in overdue', body: 'Ryan Chen hasn\'t submitted this week\'s check-in', time: subDays(new Date(), 10), read: true },
-];
-
+// Filter chips -> notifications.category values (CHECK constraint in the DB).
 const TYPE_LABELS = {
-  all: 'All', client_activity: 'Client', payments: 'Payments',
-  messages: 'Messages', ai_insights: 'AI', scheduling: 'Schedule',
-  leads: 'Leads', system: 'System',
+  all: 'All', client: 'Client', payment: 'Payments',
+  message: 'Messages', ai: 'AI', schedule: 'Schedule', system: 'System',
+};
+const CATEGORY_GROUP = {
+  client: 'client', client_activity: 'client', checkin: 'client', workout: 'client', achievement: 'client',
+  nutrition: 'client', intake: 'client', reminder: 'client',
+  payment: 'payment', message: 'message', ai: 'ai', atrisk: 'ai', schedule: 'schedule', system: 'system',
 };
 
+/** The coach's real notifications from the last 30 days (previously a hardcoded sample list). */
 export default function NotifsHistory({ onClose }) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [readFilter, setReadFilter] = useState('all');
-  const [items, setItems] = useState(MOCK_HISTORY);
+
+  const { data: rows = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ['notification-history', user?.id],
+    queryFn: () => db.entities.Notification.filter({ recipient_id: user.id }, '-created_date', 300),
+    enabled: !!user?.id,
+  });
+  const since = subDays(new Date(), 30);
+  const items = rows
+    .filter((n) => new Date(n.created_at) >= since)
+    .map((n) => ({ id: n.id, type: CATEGORY_GROUP[n.category] || 'system', title: n.title, body: n.body, time: new Date(n.created_at), read: !!n.is_read }));
 
   const filtered = items.filter(i => {
     if (filter !== 'all' && i.type !== filter) return false;
@@ -35,8 +42,18 @@ export default function NotifsHistory({ onClose }) {
     return true;
   });
 
-  const markAllRead = () => setItems(prev => prev.map(i => ({ ...i, read: true })));
-  const markRead = (id) => setItems(prev => prev.map(i => i.id === id ? { ...i, read: true } : i));
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['notification-history'] });
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  };
+  const markRead = async (id) => {
+    await db.entities.Notification.update(id, { is_read: true });
+    refresh();
+  };
+  const markAllRead = async () => {
+    await Promise.allSettled(items.filter(i => !i.read).map(i => db.entities.Notification.update(i.id, { is_read: true })));
+    refresh();
+  };
 
   const unreadCount = items.filter(i => !i.read).length;
 
@@ -89,23 +106,30 @@ export default function NotifsHistory({ onClose }) {
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <p className="px-5 py-10 text-sm text-muted-foreground" role="status">Loading notifications…</p>
+          ) : isError ? (
             <div className="px-5 py-10">
-              <p className="text-[15px] font-semibold text-foreground">Nothing here.</p>
-              <p className="text-sm text-muted-foreground mt-1">Try a different filter.</p>
+              <p className="text-[15px] font-semibold text-foreground">Notifications didn't load.</p>
+              <button onClick={() => refetch()} className="mt-2 text-sm font-semibold text-foreground underline underline-offset-4">Try again</button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-5 py-10">
+              <p className="text-[15px] font-semibold text-foreground">{items.length ? 'Nothing matches this filter.' : 'No notifications in the last 30 days.'}</p>
+              <p className="text-sm text-muted-foreground mt-1">{items.length ? 'Try a different filter.' : 'Check-ins, messages, payments and at-risk alerts show up here.'}</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
               {filtered.map(n => (
-                <div key={n.id} onClick={() => markRead(n.id)}
-                  className="flex items-start gap-3 px-5 py-3.5 cursor-pointer hover:bg-accent transition-colors">
+                <button type="button" key={n.id} onClick={() => !n.read && markRead(n.id)}
+                  className="flex w-full items-start gap-3 px-5 py-3.5 text-left hover:bg-accent transition-colors">
                   <span aria-hidden className={cn('mt-[7px] h-2 w-2 rounded-full flex-shrink-0', n.read ? 'bg-transparent' : 'bg-brand')} />
                   <div className="flex-1 min-w-0">
                     <p className={cn('text-sm text-foreground truncate', n.read ? 'font-medium' : 'font-semibold')}>{n.title}</p>
                     <p className="text-[13px] text-muted-foreground mt-0.5 truncate">{n.body}</p>
                     <p className="text-[12px] text-muted-foreground mt-1">{format(n.time, 'MMM d, h:mm a')}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

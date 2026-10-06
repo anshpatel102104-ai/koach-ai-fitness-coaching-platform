@@ -18,6 +18,7 @@ import Stripe from 'npm:stripe@14.21.0';
 import { getCaller, serviceClient, ownsClient, jsonResponse, cors } from '../_shared/edgeClients.js';
 import { billingAccess } from '../_shared/billingAccess.js';
 import { resolveClientCustomer } from '../_shared/stripeSync.js';
+import { serve } from '../_shared/observe.js';
 
 const MUTATING = new Set(['createCustomer', 'sendInvoice', 'createPaymentLink', 'createProduct']);
 
@@ -26,7 +27,7 @@ const validAmount = (v) => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-Deno.serve(async (req) => {
+serve('stripeClientProxy', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);

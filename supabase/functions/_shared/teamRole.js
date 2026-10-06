@@ -41,3 +41,16 @@ export async function billingDeniedFor(svc, userId) {
     team_role: role,
   };
 }
+
+/**
+ * For a coach-tier team member, the team owner's user id (whose plan and
+ * billing the member works under); null for owners and solo coaches.
+ */
+export async function teamOwnerFor(svc, userId) {
+  if (!userId || (await resolveTeamRole(svc, userId)) !== 'coach') return null;
+  const { data } = await svc.from('team_members')
+    .select('teams(owner_coach_id)')
+    .eq('user_id', userId).eq('invite_status', 'accepted').eq('role_label', 'coach')
+    .limit(1).maybeSingle();
+  return data?.teams?.owner_coach_id ?? null;
+}

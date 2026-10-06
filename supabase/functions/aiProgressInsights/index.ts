@@ -13,8 +13,9 @@ import { guardAiUse } from '../_shared/aiMetering.js';
 import { invokeClaude } from '../_shared/anthropic.js';
 import { buildCheckInSummaryPrompt } from '../_shared/progressAnalysis.js';
 import { TOOL_SYSTEM, CHECKIN_SUMMARY, PROGRESS_CLIENT, PROGRESS_COACH } from '../_shared/aiTools.js';
+import { serve } from '../_shared/observe.js';
 
-Deno.serve(async (req) => {
+serve('aiProgressInsights', async (req, ctx) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     const caller = await getCaller(req);
